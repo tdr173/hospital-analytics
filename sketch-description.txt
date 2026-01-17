@@ -1,0 +1,206 @@
+Summary of Dropped Tables and Attributes
+
+The original Synthea dataset contains a large number of CSV files and attributes designed for simulation completeness, not for efficient relational storage or analysis.
+To obtain a clean PostgreSQL database in Third Normal Form (3NF), several tables and attributes were intentionally excluded.
+
+The selection was guided by the following principles:
+
+avoid data redundancy
+
+remove simulation-specific metadata
+
+keep only attributes with analytical or clinical relevance
+
+maintain a compact schema (8–10 tables)
+
+1. Dropped Tables
+payers
+
+Reason for removal:
+
+Contains insurance company information used only for billing simulation
+
+Not relevant for medical analysis, patient clustering, or clinical history
+
+Introduces dependencies unrelated to healthcare events
+
+Conclusion:
+Dropped because it does not contribute to medical or analytical objectives.
+
+payer_transitions
+
+Reason for removal:
+
+Tracks insurance changes over time
+
+Highly specific to the Synthea simulator
+
+Not required for patient health modeling or medical outcomes
+
+Conclusion:
+Dropped due to low analytical value and strong simulator coupling.
+
+supplies
+
+Reason for removal:
+
+Represents consumable items (gloves, syringes, materials)
+
+Not clinically relevant at patient level
+
+Strongly overlaps with procedures and encounters
+
+Conclusion:
+Dropped to avoid unnecessary low-level operational data.
+
+imaging_studies
+
+Reason for removal:
+
+Largely overlaps with procedures and observations
+
+Very sparse and inconsistent across patients
+
+Adds complexity without increasing analytical insight
+
+Conclusion:
+Dropped to reduce redundancy and simplify the schema.
+
+devices
+
+Reason for removal:
+
+Represents implanted or temporary medical devices
+
+Low frequency in the dataset
+
+Limited impact on patient-level analysis
+
+Conclusion:
+Dropped due to low usage and weak analytical relevance.
+
+careplans
+
+Reason for removal:
+
+Abstract and high-level planning data
+
+Not directly linked to measurable outcomes
+
+Often duplicates information found in conditions and procedures
+
+Conclusion:
+Dropped to maintain a concrete, event-based data model.
+
+2. Dropped Attributes from Kept Tables
+Patients
+
+Dropped attributes include:
+
+exact address (street level)
+
+latitude / longitude
+
+simulation identifiers
+
+internal Synthea metadata
+
+Reason:
+
+Not required for medical analysis
+
+Violates minimal data principles
+
+Geographic aggregation (city/state) is sufficient
+
+Encounters
+
+Dropped attributes include:
+
+cost fields
+
+payer references
+
+detailed billing codes
+
+duplicate organization or provider names
+
+Reason:
+
+Financial data is outside application scope
+
+Redundant information already normalized via foreign keys
+
+Medications / Procedures / Conditions
+
+Dropped attributes include:
+
+internal UUIDs used only by Synthea
+
+textual duplicates of patient or encounter data
+
+simulation timing metadata
+
+Reason:
+
+These attributes depend on non-key fields
+
+Keeping them would violate 3NF
+
+Observations
+
+Dropped attributes include:
+
+raw JSON values
+
+reference ranges
+
+device metadata
+
+Reason:
+
+Value + unit + code is sufficient
+
+Extra metadata adds complexity without analytical benefit
+
+3. Benefits of Dropping These Elements
+
+By removing the above tables and attributes, the final database:
+
+strictly follows Third Normal Form
+
+avoids transitive dependencies
+
+minimizes redundancy
+
+improves query performance
+
+is easier to maintain and extend
+
+matches real-world EMR relational designs
+
+4. Final Result
+
+The resulting schema contains 10 carefully selected tables:
+
+patients
+
+providers
+
+organizations
+
+encounters
+
+conditions
+
+medications
+
+procedures
+
+immunizations
+
+observations
+
+allergies
+
+This structure preserves all clinically relevant information while eliminating unnecessary simulation and billing data.
