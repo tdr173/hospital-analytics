@@ -1,1 +1,3 @@
 fastapi~=0.128.0
+sqlalchemy
+pandas
