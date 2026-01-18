@@ -1,8 +1,9 @@
 import os
-import pandas as pd
-from dotenv import load_dotenv
 
-from sqlalchemy import URL, create_engine, MetaData
+from dotenv import (load_dotenv)
+from sqlalchemy import URL, create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlmodel import SQLModel
 
 load_dotenv()
 
@@ -23,5 +24,14 @@ url = URL.create(
 
 engine = create_engine(url)
 
+SQLModel.metadata.create_all(engine)
 
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
