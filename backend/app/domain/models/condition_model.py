@@ -14,4 +14,4 @@ class ConditionModel(SQLModel, table=True):
     end_date: Optional[datetime] = None
 
     condition_code: str = Field(index=True)
-    description: int
+    description: str

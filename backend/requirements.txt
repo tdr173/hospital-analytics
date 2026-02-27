@@ -2,3 +2,5 @@ fastapi~=0.128.0
 sqlalchemy
 pandas
 sqlmodel
+numpy
+google-genai

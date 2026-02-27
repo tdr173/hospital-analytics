@@ -35,7 +35,7 @@ def load_patients(engine):
     }
 
     patients_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
-    patients_df["marital"] = patients_df["marital"].fillna("unmarried")
+    patients_df["marital"] = patients_df["marital"].fillna("S ")
 
     ref_date = pd.Timestamp.now()
     patients_df["birthdate"] = pd.to_datetime(patients_df["birthdate"])
