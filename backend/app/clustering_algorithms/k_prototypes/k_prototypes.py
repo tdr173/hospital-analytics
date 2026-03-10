@@ -9,7 +9,6 @@ from sklearn.preprocessing import StandardScaler, RobustScaler, PowerTransformer
 from sklearn.decomposition import PCA
 from kmodes.kprototypes import KPrototypes
 from google import genai
-from google.genai import types
 from dotenv import load_dotenv
 
 from pathlib import Path
@@ -358,18 +357,14 @@ def remove_outliers_zscore(df, threshold=3):
 
 
 def interpret_clusters(df_clustered, engine):
-    """Build a summary of clusters and send to Gemini for interpretation."""
-
-    # 1. Numerical means per cluster
     cluster_means = df_clustered.groupby("cluster")[NUMERICAL_FEATURES].mean().round(2)
 
-    # 2. Categorical distributions per cluster
     cat_tables = ""
     for cat in CATEGORICAL_FEATURES:
         table = pd.crosstab(df_clustered["cluster"], df_clustered[cat], normalize="index").round(2)
         cat_tables += f"\n{cat}:\n{table.to_string()}\n"
 
-    # 3. Top 10 conditions per cluster
+    # also add the top 10 conditions for each cluster, for interpretation
     conditions = pd.read_sql(text("SELECT patient_id, description FROM condition"), con=engine)
     conditions = conditions.merge(df_clustered[["patient_id", "cluster"]], on="patient_id")
     top_conditions = (
@@ -379,10 +374,8 @@ def interpret_clusters(df_clustered, engine):
         .groupby("cluster").head(10)
     )
 
-    # 4. Cluster sizes
     sizes = df_clustered["cluster"].value_counts().sort_index().to_string()
 
-    # 5. Build prompt
     prompt = f"""You are a medical data analyst writing for a hospital manager who doesn't have a technical background.
 
 Here is the clustering data:
@@ -407,7 +400,6 @@ For each cluster write:
 
 Keep it concise and conversational. No markdown formatting, no bold, no headers, no bullet symbols. Write in plain paragraphs like you're explaining to a colleague over coffee."""
 
-    # 6. Send to Gemini
     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     response = client.models.generate_content(
         model="gemini-2.5-pro",
@@ -433,7 +425,7 @@ if __name__ == "__main__":
     df_cleaned = remove_outliers_zscore(df, threshold=3)
     print(f"Patients after outlier removal: {len(df_cleaned)} (removed {len(df) - len(df_cleaned)})")
 
-    n_clusters = 5
+    n_clusters = 4
 
     df_result = run_kprototypes(
         df_cleaned,
@@ -460,7 +452,7 @@ if __name__ == "__main__":
     #
     # df_result1.to_csv("patient_features_kproto1.csv", index=False)
 
-    # interpret_clusters(df_result, db_engine)
+    interpret_clusters(df_result, db_engine)
 
     # # K-Prototypes with StandardScaler for comparison
     # run_kprototypes(
