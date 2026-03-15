@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  transpilePackages: ["@mui/icons-material", "@mui/material", "@mui/system"],
 };
 
 export default nextConfig;
