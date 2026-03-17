@@ -1,0 +1,58 @@
+from sqlalchemy.orm import Session
+
+from app.repository.statistics_repository.observation_repository import ObservationRepository
+from app.domain.schemas.statistics_schema.patient_schema import ChartEntry
+from app.domain.schemas.statistics_schema.condition_schema import PerPatientStats
+from app.domain.schemas.statistics_schema.observation_schema import (
+    NumericStatsEntry,
+    ObservationStatisticsResponse,
+)
+
+
+class ObservationService:
+    def __init__(self, db: Session):
+        self.repo = ObservationRepository(db)
+
+    def get_observation_summary(self) -> ObservationStatisticsResponse:
+        per_patient = self.repo.get_per_patient_stats()
+
+        return ObservationStatisticsResponse(
+            total_observations=self.repo.get_total_observations(),
+            unique_observation_types=self.repo.get_unique_observation_types(),
+            per_patient=PerPatientStats(**per_patient),
+            top_observation_types=self._to_chart_entries(
+                self.repo.get_top_observation_types(), "observation"
+            ),
+            numeric_stats=self._to_numeric_entries(self.repo.get_numeric_stats()),
+        )
+
+    @staticmethod
+    def _to_chart_entries(rows: list[dict], category: str) -> list[ChartEntry]:
+        return [
+            ChartEntry(
+                name=row["label"] or "Unknown",
+                value=row["count"],
+                tooltip=f"{row['label'] or 'Unknown'}: {row['count']} ({row['percentage']}%)",
+            )
+            for row in rows
+        ]
+
+    @staticmethod
+    def _to_numeric_entries(rows: list[dict]) -> list[NumericStatsEntry]:
+        return [
+            NumericStatsEntry(
+                name=row["label"],
+                count=row["count"],
+                patient_count=row["patient_count"],
+                percentage=row["percentage"],
+                min_value=row["min_value"],
+                max_value=row["max_value"],
+                avg_value=row["avg_value"],
+                units=row["units"],
+                tooltip=(
+                    f"{row['label']}: avg {row['avg_value']} {row['units']}, "
+                    f"range {row['min_value']}-{row['max_value']}"
+                ),
+            )
+            for row in rows
+        ]

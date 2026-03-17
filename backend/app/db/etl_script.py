@@ -35,7 +35,7 @@ def load_patients(engine):
     }
 
     patients_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
-    patients_df["marital"] = patients_df["marital"].fillna("S ")
+    patients_df["marital"] = patients_df["marital"].fillna("S")
 
     ref_date = pd.Timestamp.now()
     patients_df["birthdate"] = pd.to_datetime(patients_df["birthdate"])
@@ -164,6 +164,19 @@ def load_encounters(engine):
     encounters_df["start_date"] = pd.to_datetime(encounters_df["start_date"])
     encounters_df["end_date"] = pd.to_datetime(encounters_df["end_date"])
     encounters_df["duration"] = (encounters_df["end_date"] - encounters_df["start_date"]).dt.total_seconds() / 60
+
+    # Cap durations at reasonable maximums per encounter class
+    duration_caps = {
+        "wellness": 120,        # 2 hours
+        "ambulatory": 480,      # 8 hours
+        "outpatient": 1440,     # 1 day
+        "urgentcare": 1440,     # 1 day
+        "emergency": 4320,      # 3 days
+        "inpatient": 43200,     # 30 days
+    }
+    for enc_class, max_minutes in duration_caps.items():
+        mask = (encounters_df["encounter_class"] == enc_class) & (encounters_df["duration"] > max_minutes)
+        encounters_df.loc[mask, "duration"] = max_minutes
 
     categorical_cols = ["encounter_class", "description", "reason_description"]
     for col in categorical_cols:
