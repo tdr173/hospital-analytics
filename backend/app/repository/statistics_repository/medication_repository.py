@@ -41,6 +41,8 @@ class MedicationRepository:
                 ),
                 2,
             ).label("median_duration"),
+        ).filter(
+            MedicationModel.duration_days > 0
         ).one()
 
         return {

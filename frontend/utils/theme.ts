@@ -41,6 +41,23 @@ export interface Theme {
       500: string;
       600: string;
     };
+    surface: {
+      base: string;
+      containerLow: string;
+      containerLowest: string;
+      containerHighest: string;
+    };
+    navigation: {
+      bg: string;
+      container: string;
+      activeIndicator: string;
+      activeIndicatorDim: string;
+    };
+    accent: {
+      teal: string;
+      tealDark: string;
+      gradient: string;
+    };
   };
   spacing: {
     xs: string;
@@ -71,6 +88,7 @@ export interface Theme {
       relaxed: number;
     };
     fontFamily: string;
+    fontFamilyHeading: string;
   };
   borderRadius: {
     xs: string;
@@ -84,6 +102,7 @@ export interface Theme {
     md: string;
     lg: string;
     xl: string;
+    ambient: string;
   };
   layout: {
     sidebarWidth: string;
@@ -96,45 +115,62 @@ export interface Theme {
 const theme: Theme = {
   colors: {
     primary: {
-      main: "#0066CC", // Medical blue
-      dark: "#0052A3",
-      light: "#3385DB",
-      lighter: "#E6F0FF",
+      main: "#006780",
+      dark: "#004d60",
+      light: "#028fb0",
+      lighter: "#b7eaff",
     },
     secondary: {
-      main: "#00A651", // Healthcare green
-      dark: "#008040",
-      light: "#4CAF7F",
+      main: "#515f74",
+      dark: "#3a4555",
+      light: "#d5e3fc",
     },
     background: {
-      default: "#FFFFFF",
-      paper: "#F5F7FA",
-      alt: "#FAFBFC",
+      default: "#ffffff",
+      paper: "#f7f9fb",
+      alt: "#f2f4f6",
     },
     text: {
-      primary: "#1F2937",
-      secondary: "#6B7280",
-      disabled: "#9CA3AF",
+      primary: "#191c1e",
+      secondary: "#6b7280",
+      disabled: "#9ca3af",
     },
     border: {
-      light: "#E5E7EB",
-      main: "#D1D5DB",
-      dark: "#9CA3AF",
+      light: "rgba(198, 198, 205, 0.2)",
+      main: "rgba(198, 198, 205, 0.35)",
+      dark: "#c6c6cd",
     },
     status: {
-      success: "#10B981",
+      success: "#00201d",
       warning: "#F59E0B",
       error: "#EF4444",
-      info: "#3B82F6",
+      info: "#006780",
     },
     grey: {
-      50: "#F9FAFB",
-      100: "#F3F4F6",
-      200: "#E5E7EB",
-      300: "#D1D5DB",
-      400: "#9CA3AF",
-      500: "#6B7280",
-      600: "#4B5563",
+      50: "#f7f9fb",
+      100: "#f2f4f6",
+      200: "#e0e3e5",
+      300: "#c6c6cd",
+      400: "#9ca3af",
+      500: "#6b7280",
+      600: "#515f74",
+    },
+    surface: {
+      base: "#f7f9fb",
+      containerLow: "#f2f4f6",
+      containerLowest: "#ffffff",
+      containerHighest: "#e0e3e5",
+    },
+    navigation: {
+      bg: "#515f74",
+      container: "#d5e3fc",
+      activeIndicator: "#b7eaff",
+      activeIndicatorDim: "#6cd3f7",
+    },
+    accent: {
+      teal: "#006780",
+      tealDark: "#00201d",
+      gradient: "linear-gradient(135deg, #191c1e 0%, #028fb0 100%)",
     },
   },
   spacing: {
@@ -147,11 +183,11 @@ const theme: Theme = {
   },
   typography: {
     fontSize: {
-      xs: "12px",
-      sm: "14px",
-      md: "16px",
-      lg: "18px",
-      xl: "24px",
+      xs: "0.75rem",
+      sm: "0.875rem",
+      md: "1rem",
+      lg: "1.125rem",
+      xl: "2rem",
     },
     fontWeight: {
       light: 300,
@@ -165,26 +201,28 @@ const theme: Theme = {
       normal: 1.5,
       relaxed: 1.75,
     },
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontFamilyHeading: '"Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   borderRadius: {
     xs: "2px",
     sm: "4px",
-    md: "8px",
+    md: "6px",
     lg: "12px",
     full: "9999px",
   },
   shadows: {
-    sm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-    md: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-    lg: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-    xl: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+    sm: "0px 2px 8px rgba(25, 28, 30, 0.04)",
+    md: "0px 4px 16px rgba(25, 28, 30, 0.06)",
+    lg: "0px 8px 24px rgba(25, 28, 30, 0.08)",
+    xl: "0px 12px 32px rgba(25, 28, 30, 0.06)",
+    ambient: "0px 12px 32px rgba(25, 28, 30, 0.06)",
   },
   layout: {
-    sidebarWidth: "200px",
-    sidebarColor: "#ffffff",
+    sidebarWidth: "220px",
+    sidebarColor: "#515f74",
     headerColor: "#ffffff",
-    pageColor: "#f8f6f7",
+    pageColor: "#f7f9fb",
   },
 };
 

@@ -1,0 +1,90 @@
+import { Theme } from "@/utils/theme";
+
+export const AllergiesPageStyles = (theme: Theme) => ({
+  container: {
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
+  },
+  summaryRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+  },
+  summaryCard: {
+    backgroundColor: theme.colors.surface.containerLowest,
+    border: "none",
+    borderRadius: theme.borderRadius.lg,
+    boxShadow: theme.shadows.sm,
+    padding: theme.spacing.lg,
+    textAlign: "center" as const,
+    fontFamily: theme.typography.fontFamily,
+  },
+  summaryLabel: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.xs,
+  },
+  summaryValue: {
+    fontSize: "28px",
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.main,
+    fontFamily: theme.typography.fontFamilyHeading,
+  },
+  perPatientCard: {
+    backgroundColor: theme.colors.surface.containerLowest,
+    border: "none",
+    borderRadius: theme.borderRadius.lg,
+    boxShadow: theme.shadows.sm,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    fontFamily: theme.typography.fontFamily,
+  },
+  perPatientTitle: {
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.sm,
+    marginTop: 0,
+  },
+  perPatientStats: {
+    display: "flex",
+    justifyContent: "space-around",
+    textAlign: "center" as const,
+  },
+  perPatientStatLabel: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.xs,
+  },
+  perPatientStatValue: {
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
+    fontFamily: theme.typography.fontFamilyHeading,
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: theme.spacing.lg,
+  },
+  loading: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%",
+    fontFamily: theme.typography.fontFamily,
+    fontSize: theme.typography.fontSize.lg,
+    color: theme.colors.text.secondary,
+  },
+  error: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%",
+    fontFamily: theme.typography.fontFamily,
+    color: theme.colors.status.error,
+    textAlign: "center" as const,
+    padding: theme.spacing.xl,
+  },
+});

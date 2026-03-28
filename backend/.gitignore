@@ -1,6 +1,18 @@
+# IDEs
 .idea
+.vscode
+
+# Environment
 .env
 .venv
-.claude
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
+
+# Claude
+.claude/
+
+# Clustering outputs
+app/clustering_algorithms/*/outputs/

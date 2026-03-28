@@ -5,6 +5,7 @@ from app.domain.schemas.statistics_schema.patient_schema import ChartEntry
 from app.domain.schemas.statistics_schema.condition_schema import PerPatientStats
 from app.domain.schemas.statistics_schema.observation_schema import (
     NumericStatsEntry,
+    CategoricalStatsEntry,
     ObservationStatisticsResponse,
 )
 
@@ -24,6 +25,7 @@ class ObservationService:
                 self.repo.get_top_observation_types(), "observation"
             ),
             numeric_stats=self._to_numeric_entries(self.repo.get_numeric_stats()),
+            categorical_stats=self._to_categorical_entries(self.repo.get_categorical_stats()),
         )
 
     @staticmethod
@@ -33,6 +35,20 @@ class ObservationService:
                 name=row["label"] or "Unknown",
                 value=row["count"],
                 tooltip=f"{row['label'] or 'Unknown'}: {row['count']} ({row['percentage']}%)",
+            )
+            for row in rows
+        ]
+
+    @staticmethod
+    def _to_categorical_entries(rows: list[dict]) -> list[CategoricalStatsEntry]:
+        return [
+            CategoricalStatsEntry(
+                name=row["label"],
+                count=row["count"],
+                patient_count=row["patient_count"],
+                percentage=row["percentage"],
+                distinct_values=row["distinct_values"],
+                tooltip=f"{row['label']}: {row['patient_count']} patients ({row['percentage']}%), {row['distinct_values']} distinct values",
             )
             for row in rows
         ]

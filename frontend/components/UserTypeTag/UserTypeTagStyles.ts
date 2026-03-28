@@ -3,6 +3,7 @@ import { Theme } from "@/utils/theme";
 const userTypeTagStyles = (theme: Theme) => ({
   tagContainer: {
     padding: "3px 8px",
+    border: "1px solid currentColor",
     borderRadius: theme.borderRadius.full,
     display: "inline-flex",
     alignItems: "center",
@@ -11,6 +12,7 @@ const userTypeTagStyles = (theme: Theme) => ({
     fontWeight: theme.typography.fontWeight.bold,
     letterSpacing: "0.5px",
     textTransform: "uppercase" as const,
+    fontFamily: theme.typography.fontFamily,
   },
   dot: {
     width: "6px",

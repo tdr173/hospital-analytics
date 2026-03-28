@@ -1,0 +1,32 @@
+Huang + robust + gamma=auto + 6 clusters + seed=42
+==================================================
+Cluster Evaluation Report
+
+Silhouette Score:        0.4506  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
+Gower Silhouette Score:  0.1704  (numerical + categorical, same scale as above)
+Calinski-Harabasz:       1183.63  (range 0 to inf, higher is better)
+Davies-Bouldin:          0.9985  (range 0 to inf, lower is better, <1 good, >2 poor)
+
+Numerical features (epsilon squared, range 0 to 1, higher is better, >=0.14 large, >=0.06 medium, >=0.01 small):
+  total_procedures          eps2=0.4239  p=1.90e-99  (large)
+  total_medications         eps2=0.4042  p=8.65e-95  (large)
+  ambulatory_count          eps2=0.3858  p=1.97e-90  (large)
+  active_conditions_count   eps2=0.3298  p=3.53e-77  (large)
+  outpatient_count          eps2=0.3236  p=1.04e-75  (large)
+  wellness_count            eps2=0.3116  p=7.20e-73  (large)
+  qaly                      eps2=0.2817  p=8.38e-66  (large)
+  days_since_last_encounter eps2=0.2220  p=1.00e-51  (large)
+  emergency_count           eps2=0.2118  p=2.55e-49  (large)
+  inpatient_count           eps2=0.1809  p=4.79e-42  (large)
+  age                       eps2=0.1801  p=7.40e-42  (large)
+
+Categorical features (Cramer's V, range 0 to 1, higher is better, thresholds depend on df):
+  has_hypertension          V=0.5012  p=7.54e-58  (large)
+  medication_intensity      V=0.4459  p=1.20e-130  (large)
+  has_heart_disease         V=0.4393  p=4.47e-44  (medium)
+  condition_burden          V=0.4081  p=7.08e-73  (large)
+  dominant_encounter_class  V=0.3333  p=2.79e-91  (large)
+  gender                    V=0.3307  p=2.19e-24  (medium)
+  has_diabetes              V=0.3167  p=2.85e-22  (medium)
+  age_group                 V=0.2867  p=9.11e-65  (large)
+  bmi_category              V=0.2314  p=8.34e-30  (medium)

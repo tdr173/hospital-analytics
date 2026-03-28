@@ -1,0 +1,38 @@
+Huang + robust + gamma=auto + 3 clusters + seed=42
+==================================================
+Cluster Evaluation Report
+
+Silhouette Score:        0.5021  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
+Gower Silhouette Score:  0.2013  (numerical + categorical, same scale as above)
+Calinski-Harabasz:       638.63  (range 0 to inf, higher is better)
+Davies-Bouldin:          1.0749  (range 0 to inf, lower is better, <1 good, >2 poor)
+
+
+Huang + robust + gamma=auto + 4 clusters + seed=42
+==================================================
+Cluster Evaluation Report
+
+Silhouette Score:        0.5105  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
+Gower Silhouette Score:  0.1910  (numerical + categorical, same scale as above)
+Calinski-Harabasz:       632.22  (range 0 to inf, higher is better)
+Davies-Bouldin:          0.9767  (range 0 to inf, lower is better, <1 good, >2 poor)
+
+
+Huang + robust + gamma=auto + 5 clusters + seed=42
+==================================================
+Cluster Evaluation Report
+
+Silhouette Score:        0.5113  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
+Gower Silhouette Score:  0.1617  (numerical + categorical, same scale as above)
+Calinski-Harabasz:       601.64  (range 0 to inf, higher is better)
+Davies-Bouldin:          0.9791  (range 0 to inf, lower is better, <1 good, >2 poor)
+
+
+Huang + robust + gamma=auto + 6 clusters + seed=42
+==================================================
+Cluster Evaluation Report
+
+Silhouette Score:        0.4642  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
+Gower Silhouette Score:  0.1540  (numerical + categorical, same scale as above)
+Calinski-Harabasz:       556.57  (range 0 to inf, higher is better)
+Davies-Bouldin:          1.0431  (range 0 to inf, lower is better, <1 good, >2 poor)

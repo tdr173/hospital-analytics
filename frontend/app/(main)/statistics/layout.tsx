@@ -4,14 +4,14 @@ import StyledTabs from "@/components/generic_components/StyledTabs/StyledTabs";
 
 const statisticsTabs = [
   { name: "PATIENTS", forward: "/statistics/patients" },
-  { name: "ALLERGIES", forward: "/statistics/allergies" },
-  { name: "CONDITIONS", forward: "/statistics/conditions" },
   { name: "ENCOUNTERS", forward: "/statistics/encounters" },
-  { name: "IMMUNIZATIONS", forward: "/statistics/immunizations" },
-  { name: "MEDICATIONS", forward: "/statistics/medications" },
+  { name: "CONDITIONS", forward: "/statistics/conditions" },
   { name: "OBSERVATIONS", forward: "/statistics/observations" },
-  { name: "ORGANIZATIONS", forward: "/statistics/organizations" },
+  { name: "MEDICATIONS", forward: "/statistics/medications" },
   { name: "PROCEDURES", forward: "/statistics/procedures" },
+  { name: "IMMUNIZATIONS", forward: "/statistics/immunizations" },
+  { name: "ALLERGIES", forward: "/statistics/allergies" },
+  { name: "ORGANIZATIONS", forward: "/statistics/organizations" },
   { name: "PROVIDERS", forward: "/statistics/providers" },
 ];
 
@@ -22,10 +22,10 @@ export default function StatisticsLayout({
 }>) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ padding: "12px 16px" }}>
+      <div style={{ padding: "0 16px" }}>
         <StyledTabs items={statisticsTabs} />
       </div>
-      <div style={{ flex: 1, overflow: "auto", padding: "0 16px 16px" }}>
+      <div style={{ flex: 1, overflow: "auto", padding: "0 16px" }}>
         {children}
       </div>
     </div>

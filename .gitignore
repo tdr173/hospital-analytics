@@ -1,2 +1,36 @@
+# IDEs
 .idea
-sketch-description
+.vscode
+
+# Environment
+.env
+.env.*
+.venv
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Node
+node_modules/
+package-lock.json
+
+# Next.js
+.next/
+out/
+
+# Claude
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Notes
+sketch-description.txt
+de_scris_despre.txt
+
+# Clustering outputs
+backend/app/clustering_algorithms/*/outputs/
+conclusions/

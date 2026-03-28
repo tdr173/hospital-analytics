@@ -1,0 +1,93 @@
+import { Theme } from "@/utils/theme";
+
+export const EncountersPageStyles = (theme: Theme) => ({
+  container: {
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
+  },
+  totalCard: {
+    backgroundColor: theme.colors.surface.containerLowest,
+    border: "none",
+    borderRadius: theme.borderRadius.lg,
+    boxShadow: theme.shadows.sm,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    textAlign: "center" as const,
+    fontFamily: theme.typography.fontFamily,
+  },
+  totalLabel: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.xs,
+  },
+  totalValue: {
+    fontSize: "36px",
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.main,
+    fontFamily: theme.typography.fontFamilyHeading,
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: theme.spacing.lg,
+  },
+  durationTable: {
+    backgroundColor: theme.colors.surface.containerLowest,
+    border: "none",
+    borderRadius: theme.borderRadius.lg,
+    boxShadow: theme.shadows.sm,
+    padding: theme.spacing.md,
+    gridColumn: "1 / -1",
+  },
+  durationTitle: {
+    fontFamily: theme.typography.fontFamily,
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.sm,
+    marginTop: 0,
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse" as const,
+    fontFamily: theme.typography.fontFamily,
+    fontSize: theme.typography.fontSize.sm,
+  },
+  th: {
+    textAlign: "left" as const,
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    borderBottom: `1px solid ${theme.colors.border.main}`,
+    color: theme.colors.text.secondary,
+    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: theme.typography.fontSize.xs,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.5px",
+  },
+  td: {
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    borderBottom: `1px solid ${theme.colors.border.light}`,
+    color: theme.colors.text.primary,
+  },
+  fullWidthChart: {
+    marginTop: theme.spacing.lg,
+  },
+  loading: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%",
+    fontFamily: theme.typography.fontFamily,
+    fontSize: theme.typography.fontSize.lg,
+    color: theme.colors.text.secondary,
+  },
+  error: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%",
+    fontFamily: theme.typography.fontFamily,
+    color: theme.colors.status.error,
+    textAlign: "center" as const,
+    padding: theme.spacing.xl,
+  },
+});

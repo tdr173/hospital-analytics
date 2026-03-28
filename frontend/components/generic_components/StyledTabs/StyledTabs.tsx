@@ -27,8 +27,19 @@ export default function StyledTabs({ items }: StyledTabsProps) {
     <Tabs
       value={currentValue}
       onChange={(_e, newValue: number) => router.push(items[newValue].forward)}
+      variant="scrollable"
+      scrollButtons="auto"
       slotProps={{ indicator: { style: { display: "none" } } }}
-      sx={{ minHeight: "unset", width: "100%", "& .MuiTabs-flexContainer": { gap: "6px", width: "100%" } }}
+      sx={{
+        minHeight: "unset",
+        width: "100%",
+        borderBottom: "1px solid rgba(198, 198, 205, 0.3)",
+        "& .MuiTabs-flexContainer": { gap: "0px", width: "100%" },
+        "& .MuiTabs-scrollButtons": {
+          color: "#6b7280",
+          "&.Mui-disabled": { opacity: 0.3 },
+        },
+      }}
     >
       {items.map((item, index) => (
         <Tab

@@ -63,6 +63,38 @@ class ObservationRepository:
             for row in rows
         ]
 
+    def get_categorical_stats(self, limit: int = 15):
+        total_patients = self.db.query(func.count(PatientModel.patient_id)).scalar()
+
+        rows = (
+            self.db.query(
+                ObservationModel.description.label("label"),
+                func.count(ObservationModel.observation_code).label("count"),
+                func.count(func.distinct(ObservationModel.patient_id)).label("patient_count"),
+                func.count(func.distinct(ObservationModel.value)).label("distinct_values"),
+            )
+            .filter(
+                ObservationModel.value_numeric.is_(None),
+                ObservationModel.value.isnot(None),
+                ObservationModel.value != "",
+            )
+            .group_by(ObservationModel.description)
+            .order_by(func.count(func.distinct(ObservationModel.patient_id)).desc())
+            .limit(limit)
+            .all()
+        )
+
+        return [
+            {
+                "label": row.label,
+                "count": row.count,
+                "patient_count": row.patient_count,
+                "percentage": round(row.patient_count * 100.0 / total_patients, 2) if total_patients else 0,
+                "distinct_values": row.distinct_values,
+            }
+            for row in rows
+        ]
+
     def get_per_patient_stats(self):
         subquery = (
             self.db.query(

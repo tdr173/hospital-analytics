@@ -14,38 +14,39 @@ export default function StyledButton({
 }: StyledButtonProps) {
   const variantStyles = {
     primary: {
-      backgroundColor: "white",
-      color: "black",
-      border: "2px solid black",
-      boxShadow: "3px 3px 0px 0px black",
+      background: "linear-gradient(135deg, #191c1e 0%, #028fb0 100%)",
+      color: "#ffffff",
+      border: "none",
+      boxShadow: "0px 2px 8px rgba(25, 28, 30, 0.12)",
       "&:hover": {
-        backgroundColor: "white",
-        boxShadow: "1px 1px 0px 0px black",
-        transform: "translate(2px, 2px)",
+        background: "linear-gradient(135deg, #2a2d30 0%, #039fc4 100%)",
+        boxShadow: "0px 4px 16px rgba(25, 28, 30, 0.16)",
+        transform: "translateY(-1px)",
       },
       "&:active": {
-        backgroundColor: "white",
-        boxShadow: "none",
-        transform: "translate(3px, 3px)",
+        background: "linear-gradient(135deg, #0f1112 0%, #027a98 100%)",
+        boxShadow: "0px 1px 4px rgba(25, 28, 30, 0.1)",
+        transform: "translateY(0)",
       },
     },
     secondary: {
       backgroundColor: "transparent",
-      color: "black",
-      border: "2px solid black",
+      color: "#191c1e",
+      border: "1px solid rgba(198, 198, 205, 0.35)",
       boxShadow: "none",
       "&:hover": {
-        backgroundColor: "rgba(0,0,0,0.05)",
+        backgroundColor: "rgba(0, 103, 128, 0.04)",
+        borderColor: "rgba(198, 198, 205, 0.5)",
       },
     },
     ghost: {
       backgroundColor: "transparent",
-      color: "black",
-      border: "2px solid transparent",
+      color: "#191c1e",
+      border: "1px solid transparent",
       boxShadow: "none",
       "&:hover": {
-        backgroundColor: "transparent",
-        border: "2px solid black",
+        backgroundColor: "rgba(0, 103, 128, 0.04)",
+        border: "1px solid rgba(198, 198, 205, 0.35)",
       },
     },
   };
@@ -56,13 +57,13 @@ export default function StyledButton({
       disableElevation
       {...props}
       sx={{
-        fontFamily: '"Balsamiq Sans", cursive',
-        fontWeight: 700,
-        fontSize: "14px",
+        fontFamily: '"Inter", sans-serif',
+        fontWeight: 600,
+        fontSize: "0.875rem",
         textTransform: "none",
-        borderRadius: "10px",
+        borderRadius: "6px",
         padding: "8px 18px",
-        transition: "box-shadow 0.1s, transform 0.1s",
+        transition: "all 0.2s ease",
         minWidth: "unset",
         ...variantStyles[variant],
         ...sx,

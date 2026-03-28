@@ -1,24 +1,23 @@
 import { Theme } from "@/utils/theme";
 
-const headerStyles = (_theme: Theme) => ({
+const headerStyles = (theme: Theme) => ({
   headerContainer: {
-    backgroundColor: "white",
+    backgroundColor: theme.colors.surface.containerLowest,
     height: "70px",
     width: "100%",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     padding: "0px 24px",
-    borderBottom: "2px solid black",
+    boxShadow: theme.shadows.sm,
   },
   pageTitle: {
-    fontSize: "28px",
-    fontWeight: 800,
-    color: "#0f172a",
-    fontFamily: '"Balsamiq Sans", cursive',
+    fontSize: "1.1rem",
+    fontWeight: 600,
+    color: theme.colors.text.primary,
+    fontFamily: theme.typography.fontFamilyHeading,
     lineHeight: 1,
-    paddingLeft: "16px",
-    borderLeft: "3px solid #0f172a",
+    letterSpacing: "-0.01em",
   },
 });
 

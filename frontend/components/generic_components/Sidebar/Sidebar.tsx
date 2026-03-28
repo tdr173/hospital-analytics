@@ -2,9 +2,8 @@
 
 import useClasses from "@/utils/useClasses";
 import sidebarStyles from "./SidebarStyles";
-import Image from "next/image";
-import HospitaiLogo from "../../../public/hospitai_logo_light.svg";
 import UserTypeTag from "../../UserTypeTag/UserTypeTag";
+import AddIcon from "@mui/icons-material/Add";
 
 import AnalyticsIcon from "@mui/icons-material/Analytics";
 import DashboardIcon from "@mui/icons-material/Dashboard";
@@ -13,8 +12,13 @@ import React from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 const sidebarElements = [
-  { name: "Dashboard", icon: DashboardIcon, forward: "/home" },
-  { name: "Statistics", icon: AnalyticsIcon, forward: "/statistics" },
+  // { name: "Home", icon: DashboardIcon, forward: "/home" },
+  // { name: "Dashboard", icon: DashboardIcon, forward: "/dashboard" },
+  {
+    name: "Dataset Statistics",
+    icon: AnalyticsIcon,
+    forward: "/statistics",
+  },
 ];
 
 export default function Sidebar() {
@@ -40,9 +44,8 @@ export default function Sidebar() {
         style={
           isRouteActive(forward)
             ? {
-                border: "2px solid black",
-                boxShadow: "3px 3px 0px 0px black",
-                transform: "translate(-1px, -1px)",
+                backgroundColor: "rgba(183, 234, 255, 0.2)",
+                color: "#ffffff",
               }
             : undefined
         }
@@ -57,10 +60,20 @@ export default function Sidebar() {
   return (
     <div className={classes.sidebarContainer}>
       <div className={classes.sidebarHeader}>
-        <Image src={HospitaiLogo} width={50} height={50} alt="HospitAI Logo" />
         <div className={classes.headerInfo}>
-          <span className={classes.appName}>HospitAI</span>
-          <div className={classes.tagOffset}>
+          <div className={classes.appNameRow}>
+            <AddIcon
+              sx={{
+                color: "#ffffff",
+                fontSize: "32px",
+                fontWeight: "bold",
+                stroke: "#ffffff",
+                strokeWidth: 2,
+              }}
+            />
+            <span className={classes.appName}>HospitAI</span>
+          </div>
+          <div className={classes.appNameRow} style={{ marginTop: 4 }}>
             <UserTypeTag userType="admin" />
           </div>
         </div>

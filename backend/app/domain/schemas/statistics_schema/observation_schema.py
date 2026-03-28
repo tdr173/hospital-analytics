@@ -15,9 +15,19 @@ class NumericStatsEntry(BaseModel):
     tooltip: str
 
 
+class CategoricalStatsEntry(BaseModel):
+    name: str
+    count: int
+    patient_count: int
+    percentage: float
+    distinct_values: int
+    tooltip: str
+
+
 class ObservationStatisticsResponse(BaseModel):
     total_observations: int
     unique_observation_types: int
     per_patient: PerPatientStats
     top_observation_types: list[ChartEntry]
     numeric_stats: list[NumericStatsEntry]
+    categorical_stats: list[CategoricalStatsEntry]
