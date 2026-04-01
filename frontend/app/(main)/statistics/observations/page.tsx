@@ -131,7 +131,7 @@ export default function ObservationsPage() {
       </div>
 
       {data.categorical_stats && data.categorical_stats.length > 0 && (
-        <div className={classes.grid} style={{ marginTop: 24 }}>
+        <div className={classes.gridWithMargin}>
           <div className={classes.numericTable}>
             <h3 className={classes.numericTitle}>Categorical Observations</h3>
             <table className={classes.table}>

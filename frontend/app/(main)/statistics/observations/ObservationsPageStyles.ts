@@ -72,6 +72,12 @@ export const ObservationsPageStyles = (theme: Theme) => ({
     gridTemplateColumns: "repeat(2, 1fr)",
     gap: theme.spacing.lg,
   },
+  gridWithMargin: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: theme.spacing.lg,
+    marginTop: "24px",
+  },
   numericTable: {
     backgroundColor: theme.colors.surface.containerLowest,
     border: "none",

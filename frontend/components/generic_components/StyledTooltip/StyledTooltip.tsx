@@ -1,41 +1,45 @@
 "use client";
 
-import { useState } from "react";
-import useClasses from "@/utils/useClasses";
-import { StyledTooltipStyles } from "./StyledTooltipStyles";
+import MuiTooltip from "@mui/material/Tooltip";
+import theme from "@/utils/theme";
 
 interface StyledTooltipProps {
-  text: string;
-  children: React.ReactNode;
+  text: React.ReactNode;
+  children: React.ReactElement;
+  placement?: "top" | "bottom" | "left" | "right";
+  disabled?: boolean;
 }
 
-export default function StyledTooltip({ text, children }: StyledTooltipProps) {
-  const [show, setShow] = useState(false);
-  const classes = useClasses(StyledTooltipStyles, { name: "StyledTooltip" });
-
+export default function StyledTooltip({
+  text,
+  children,
+  placement = "top",
+  disabled = false,
+}: StyledTooltipProps) {
   return (
-    <span
-      style={{ position: "relative", display: "inline-block", cursor: "pointer" }}
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
+    <MuiTooltip
+      title={disabled ? "" : text}
+      placement={placement}
+      arrow
+      slotProps={{
+        tooltip: {
+          sx: {
+            backgroundColor: "#1e2530",
+            color: "#f1f5f9",
+            boxShadow: theme.shadows.lg,
+            fontSize: theme.typography.fontSize.sm,
+            fontFamily: theme.typography.fontFamily,
+            borderRadius: theme.borderRadius.sm,
+            padding: "6px 10px",
+            maxWidth: 320,
+          },
+        },
+        arrow: {
+          sx: { color: "#1e2530" },
+        },
+      }}
     >
       {children}
-      {show && (
-        <div
-          className={classes.tooltip}
-          style={{
-            position: "absolute",
-            bottom: "100%",
-            left: "50%",
-            transform: "translateX(-50%)",
-            marginBottom: "4px",
-            whiteSpace: "nowrap",
-            zIndex: 10,
-          }}
-        >
-          {text}
-        </div>
-      )}
-    </span>
+    </MuiTooltip>
   );
 }

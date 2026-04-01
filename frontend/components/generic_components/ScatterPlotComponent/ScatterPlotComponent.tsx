@@ -2,6 +2,8 @@
 
 import ReactECharts from "echarts-for-react";
 import { PcaPoint } from "@/models/generic/clusters";
+import useClasses from "@/utils/useClasses";
+import { ScatterPlotComponentStyles } from "./ScatterPlotComponentStyles";
 
 const CLUSTER_COLORS = [
   "#2563EB",
@@ -24,6 +26,7 @@ interface ScatterPlotComponentProps {
 }
 
 export default function ScatterPlotComponent({ points, title = "PCA Scatter Plot", clusterColors }: ScatterPlotComponentProps) {
+  const classes = useClasses(ScatterPlotComponentStyles, { name: "ScatterPlotComponent" });
   const clusterIds = Array.from(new Set(points.map((p) => p.cluster))).filter((id) => id !== -1).sort((a, b) => a - b);
 
   const series = clusterIds.map((clusterId, idx) => ({
@@ -70,17 +73,8 @@ export default function ScatterPlotComponent({ points, title = "PCA Scatter Plot
   };
 
   return (
-    <div
-      style={{
-        backgroundColor: "#ffffff",
-        borderRadius: 12,
-        boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
-        padding: "16px",
-      }}
-    >
-      <p style={{ fontFamily: "Inter, sans-serif", fontSize: "1rem", fontWeight: 600, color: "#191c1e", margin: "0 0 8px 0" }}>
-        {title}
-      </p>
+    <div className={classes.card}>
+      <p className={classes.title}>{title}</p>
       <ReactECharts option={option} style={{ height: 480 }} />
     </div>
   );

@@ -7,8 +7,8 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import StyledButton from "../StyledButton/StyledButton";
 
 import AnalyticsIcon from "@mui/icons-material/Analytics";
+import Groups3Icon from "@mui/icons-material/Groups3";
 import GroupIcon from "@mui/icons-material/Group";
-import DashboardIcon from "@mui/icons-material/Dashboard";
 
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -21,7 +21,8 @@ const sidebarElements = [
     icon: AnalyticsIcon,
     forward: "/statistics",
   },
-  { name: "Clusters", icon: GroupIcon, forward: "/clusters" },
+  { name: "Clusters", icon: Groups3Icon, forward: "/clusters" },
+  { name: "Patients", icon: GroupIcon, forward: "/patients" },
 ];
 
 export default function Sidebar() {

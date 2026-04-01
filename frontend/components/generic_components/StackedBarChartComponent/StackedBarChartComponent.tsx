@@ -11,6 +11,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { CategoricalFeatureChartData } from "@/models/generic/clusters";
+import useClasses from "@/utils/useClasses";
+import { StackedBarChartComponentStyles } from "./StackedBarChartComponentStyles";
 
 const ORDERED_COLORS = [
   "#DC2626", // red
@@ -43,6 +45,7 @@ interface StackedBarChartComponentProps {
 export default function StackedBarChartComponent({ featureData }: StackedBarChartComponentProps) {
   const { feature, categories, data } = featureData;
   const colors = getCategoryColors(categories.length);
+  const classes = useClasses(StackedBarChartComponentStyles, { name: "StackedBarChartComponent" });
 
   const chartData = data.map((entry) => ({
     name: `Cluster ${entry.cluster_id}`,
@@ -50,23 +53,8 @@ export default function StackedBarChartComponent({ featureData }: StackedBarChar
   }));
 
   return (
-    <div
-      style={{
-        backgroundColor: "#ffffff",
-        borderRadius: 12,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-        padding: "16px",
-      }}
-    >
-      <p
-        style={{
-          fontFamily: "Inter, sans-serif",
-          fontSize: "1rem",
-          fontWeight: 600,
-          color: "#191c1e",
-          margin: "0 0 8px 0",
-        }}
-      >
+    <div className={classes.card}>
+      <p className={classes.title}>
         {toTitleCase(feature)}
       </p>
       <ResponsiveContainer width="100%" height={240}>

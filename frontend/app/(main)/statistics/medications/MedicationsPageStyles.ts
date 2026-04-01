@@ -3,6 +3,7 @@ import { Theme } from "@/utils/theme";
 export const MedicationsPageStyles = (theme: Theme) => ({
   container: {
     padding: theme.spacing.md,
+    paddingTop: "24px",
     overflowX: "hidden" as const,
   },
   summaryRow: {

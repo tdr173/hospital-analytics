@@ -1,6 +1,8 @@
 "use client";
 
 import StyledTabs from "@/components/generic_components/StyledTabs/StyledTabs";
+import useClasses from "@/utils/useClasses";
+import { StatisticsLayoutStyles } from "./styles";
 
 const statisticsTabs = [
   { name: "PATIENTS", forward: "/statistics/patients" },
@@ -20,12 +22,14 @@ export default function StatisticsLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const classes = useClasses(StatisticsLayoutStyles, { name: "StatisticsLayout" });
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minWidth: 0 }}>
-      <div style={{ padding: "0 16px", overflow: "hidden", minWidth: 0 }}>
+    <div className={classes.container}>
+      <div className={classes.tabsWrapper}>
         <StyledTabs items={statisticsTabs} />
       </div>
-      <div style={{ flex: 1, overflow: "auto", padding: "0 16px" }}>
+      <div className={classes.content}>
         {children}
       </div>
     </div>

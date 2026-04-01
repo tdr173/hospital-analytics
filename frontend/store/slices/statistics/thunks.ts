@@ -12,6 +12,7 @@ import {
   OrganizationStatisticsResponse,
 } from "@/models/generic/statistics";
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import { toast } from "react-toastify";
 
 const API_BASE = "http://localhost:8000";
 
@@ -30,6 +31,7 @@ export const getPatientsStatistics = createAsyncThunk<
     });
 
     if (!response.ok) {
+      toast.error("Failed to load patients statistics", { toastId: "stat-patients" });
       return thunkAPI.rejectWithValue({
         error: true,
         message: "Failed to fetch patients statistics",
@@ -38,6 +40,7 @@ export const getPatientsStatistics = createAsyncThunk<
 
     return (await response.json()) as PatientStatisticsResponse;
   } catch (error) {
+    toast.error("Failed to load patients statistics", { toastId: "stat-patients" });
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch patients statistics",
@@ -56,6 +59,7 @@ export const getEncountersStatistics = createAsyncThunk<
     });
 
     if (!response.ok) {
+      toast.error("Failed to load encounters statistics", { toastId: "stat-encounters" });
       return thunkAPI.rejectWithValue({
         error: true,
         message: "Failed to fetch encounters statistics",
@@ -64,6 +68,7 @@ export const getEncountersStatistics = createAsyncThunk<
 
     return (await response.json()) as EncounterStatisticsResponse;
   } catch (error) {
+    toast.error("Failed to load encounters statistics", { toastId: "stat-encounters" });
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch encounters statistics",
@@ -82,6 +87,7 @@ export const getConditionsStatistics = createAsyncThunk<
     });
 
     if (!response.ok) {
+      toast.error("Failed to load conditions statistics", { toastId: "stat-conditions" });
       return thunkAPI.rejectWithValue({
         error: true,
         message: "Failed to fetch conditions statistics",
@@ -90,6 +96,7 @@ export const getConditionsStatistics = createAsyncThunk<
 
     return (await response.json()) as ConditionStatisticsResponse;
   } catch (error) {
+    toast.error("Failed to load conditions statistics", { toastId: "stat-conditions" });
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch conditions statistics",
@@ -108,6 +115,7 @@ export const getOrganizationsStatistics = createAsyncThunk<
     });
 
     if (!response.ok) {
+      toast.error("Failed to load organizations statistics", { toastId: "stat-organizations" });
       return thunkAPI.rejectWithValue({
         error: true,
         message: "Failed to fetch organizations statistics",
@@ -116,6 +124,7 @@ export const getOrganizationsStatistics = createAsyncThunk<
 
     return (await response.json()) as OrganizationStatisticsResponse;
   } catch (error) {
+    toast.error("Failed to load organizations statistics", { toastId: "stat-organizations" });
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch organizations statistics",
@@ -134,6 +143,7 @@ export const getProvidersStatistics = createAsyncThunk<
     });
 
     if (!response.ok) {
+      toast.error("Failed to load providers statistics", { toastId: "stat-providers" });
       return thunkAPI.rejectWithValue({
         error: true,
         message: "Failed to fetch providers statistics",
@@ -142,6 +152,7 @@ export const getProvidersStatistics = createAsyncThunk<
 
     return (await response.json()) as ProviderStatisticsResponse;
   } catch (error) {
+    toast.error("Failed to load providers statistics", { toastId: "stat-providers" });
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch providers statistics",
@@ -160,6 +171,7 @@ export const getAllergiesStatistics = createAsyncThunk<
     });
 
     if (!response.ok) {
+      toast.error("Failed to load allergies statistics", { toastId: "stat-allergies" });
       return thunkAPI.rejectWithValue({
         error: true,
         message: "Failed to fetch allergies statistics",
@@ -168,6 +180,7 @@ export const getAllergiesStatistics = createAsyncThunk<
 
     return (await response.json()) as AllergyStatisticsResponse;
   } catch (error) {
+    toast.error("Failed to load allergies statistics", { toastId: "stat-allergies" });
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch allergies statistics",
@@ -186,6 +199,7 @@ export const getMedicationsStatistics = createAsyncThunk<
     });
 
     if (!response.ok) {
+      toast.error("Failed to load medications statistics", { toastId: "stat-medications" });
       return thunkAPI.rejectWithValue({
         error: true,
         message: "Failed to fetch medications statistics",
@@ -194,6 +208,7 @@ export const getMedicationsStatistics = createAsyncThunk<
 
     return (await response.json()) as MedicationStatisticsResponse;
   } catch (error) {
+    toast.error("Failed to load medications statistics", { toastId: "stat-medications" });
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch medications statistics",
@@ -212,6 +227,7 @@ export const getProceduresStatistics = createAsyncThunk<
     });
 
     if (!response.ok) {
+      toast.error("Failed to load procedures statistics", { toastId: "stat-procedures" });
       return thunkAPI.rejectWithValue({
         error: true,
         message: "Failed to fetch procedures statistics",
@@ -220,6 +236,7 @@ export const getProceduresStatistics = createAsyncThunk<
 
     return (await response.json()) as ProcedureStatisticsResponse;
   } catch (error) {
+    toast.error("Failed to load procedures statistics", { toastId: "stat-procedures" });
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch procedures statistics",
@@ -238,6 +255,7 @@ export const getImmunizationsStatistics = createAsyncThunk<
     });
 
     if (!response.ok) {
+      toast.error("Failed to load immunizations statistics", { toastId: "stat-immunizations" });
       return thunkAPI.rejectWithValue({
         error: true,
         message: "Failed to fetch immunizations statistics",
@@ -246,6 +264,7 @@ export const getImmunizationsStatistics = createAsyncThunk<
 
     return (await response.json()) as ImmunizationStatisticsResponse;
   } catch (error) {
+    toast.error("Failed to load immunizations statistics", { toastId: "stat-immunizations" });
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch immunizations statistics",
@@ -264,6 +283,7 @@ export const getObservationsStatistics = createAsyncThunk<
     });
 
     if (!response.ok) {
+      toast.error("Failed to load observations statistics", { toastId: "stat-observations" });
       return thunkAPI.rejectWithValue({
         error: true,
         message: "Failed to fetch observations statistics",
@@ -272,6 +292,7 @@ export const getObservationsStatistics = createAsyncThunk<
 
     return (await response.json()) as ObservationStatisticsResponse;
   } catch (error) {
+    toast.error("Failed to load observations statistics", { toastId: "stat-observations" });
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch observations statistics",
@@ -295,6 +316,7 @@ export const getSqlAgentResponse = createAsyncThunk<
     });
 
     if (!response.ok) {
+      toast.error("Failed to get SQL agent response", { toastId: "stat-sql-agent" });
       return thunkAPI.rejectWithValue({
         error: true,
         message: "Failed to get SQL agent response",
@@ -304,6 +326,7 @@ export const getSqlAgentResponse = createAsyncThunk<
     const data = await response.json();
     return data.response as string;
   } catch (error) {
+    toast.error("Failed to get SQL agent response", { toastId: "stat-sql-agent" });
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to get SQL agent response",

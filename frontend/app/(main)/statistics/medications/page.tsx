@@ -39,7 +39,7 @@ export default function MedicationsPage() {
   }
 
   return (
-    <div className={classes.container} style={{ paddingTop: 24 }}>
+    <div className={classes.container}>
       <div className={classes.summaryRow}>
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Total Medications</div>

@@ -10,5 +10,5 @@ export default function StatisticsPage() {
     router.push("/statistics/patients");
   }, []);
 
-  return <div>StatisticsPage</div>;
+  return <div></div>;
 }

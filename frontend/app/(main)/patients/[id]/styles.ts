@@ -1,0 +1,213 @@
+import { Theme } from "@/utils/theme";
+
+export const PatientDetailPageStyles = (theme: Theme) => ({
+  // ─── Layout ───────────────────────────────────────────────────────────────
+  pageContainer: {
+    display: "flex",
+    flexDirection: "column" as const,
+    height: "100%",
+    overflow: "hidden", // CHANGED: Prevents the whole outer page from scrolling
+    gap: theme.spacing.lg,
+    padding: theme.spacing.lg,
+    fontFamily: theme.typography.fontFamily,
+  },
+  pageLoading: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%",
+    color: theme.colors.text.secondary,
+  },
+  pageError: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%",
+    color: theme.colors.status.error,
+  },
+
+  // ─── Identity card ────────────────────────────────────────────────────────
+  identityCard: {
+    backgroundColor: theme.colors.surface.containerLowest,
+    borderRadius: theme.borderRadius.lg,
+    boxShadow: theme.shadows.md,
+    padding: `${theme.spacing.lg} ${theme.spacing.xl}`,
+    display: "flex",
+    flexWrap: "wrap" as const,
+    gap: theme.spacing.lg,
+    alignItems: "flex-start",
+  },
+  nameBlock: {
+    flex: "1 1 280px",
+  },
+  profileLabel: {
+    fontSize: "0.7rem",
+    fontWeight: theme.typography.fontWeight.bold,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.08em",
+    color: theme.colors.text.secondary,
+    margin: "0 0 4px",
+  },
+  patientFullName: {
+    fontFamily: theme.typography.fontFamilyHeading,
+    fontSize: "1.5rem",
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
+    margin: "0 0 8px",
+  },
+  badgesRow: {
+    display: "flex",
+    flexWrap: "wrap" as const,
+    gap: theme.spacing.sm,
+  },
+  idStatusBadgeAlive: {
+    fontSize: "0.7rem",
+    fontWeight: theme.typography.fontWeight.bold,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.05em",
+    color: "#166534",
+    backgroundColor: "#dcfce7",
+    borderRadius: theme.borderRadius.full,
+    padding: "3px 10px",
+  },
+  idStatusBadgeDeceased: {
+    fontSize: "0.7rem",
+    fontWeight: theme.typography.fontWeight.bold,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.05em",
+    color: "#991b1b",
+    backgroundColor: "#fee2e2",
+    borderRadius: theme.borderRadius.full,
+    padding: "3px 10px",
+  },
+  idClusterBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "5px",
+    fontSize: "0.7rem",
+    fontWeight: theme.typography.fontWeight.semibold,
+    borderRadius: theme.borderRadius.full,
+    padding: "3px 10px",
+  },
+  idClusterBadgeDot: {
+    width: "7px",
+    height: "7px",
+    borderRadius: "50%",
+    flexShrink: 0,
+  },
+  detailsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+    gap: `${theme.spacing.sm} ${theme.spacing.lg}`,
+    flex: "2 1 400px",
+  },
+  detailLabel: {
+    fontSize: "0.65rem",
+    fontWeight: theme.typography.fontWeight.bold,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.06em",
+    color: theme.colors.text.secondary,
+    margin: "0 0 2px",
+  },
+  detailValue: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.medium,
+    color: theme.colors.text.primary,
+    margin: 0,
+  },
+
+  // ─── Metric box ───────────────────────────────────────────────────────────
+  metricsRow: {
+    backgroundColor: theme.colors.surface.containerLowest,
+    borderRadius: theme.borderRadius.lg,
+    boxShadow: theme.shadows.sm,
+    padding: theme.spacing.md,
+    display: "flex",
+    flexWrap: "wrap" as const,
+    gap: theme.spacing.sm,
+  },
+  metricBox: {
+    backgroundColor: theme.colors.surface.containerLow,
+    borderRadius: theme.borderRadius.md,
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    flex: "1 1 130px",
+  },
+  metricLabel: {
+    fontSize: "0.65rem",
+    fontWeight: theme.typography.fontWeight.bold,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.06em",
+    color: theme.colors.text.secondary,
+    margin: "0 0 2px",
+  },
+  metricValue: {
+    fontSize: "1.25rem",
+    fontWeight: theme.typography.fontWeight.bold,
+    fontFamily: theme.typography.fontFamilyHeading,
+    color: theme.colors.text.primary,
+    margin: 0,
+    lineHeight: 1.2,
+  },
+  metricUnit: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.regular,
+    color: theme.colors.text.secondary,
+    marginLeft: "3px",
+  },
+
+  // ─── Tabs panel ───────────────────────────────────────────────────────────
+  tabsPanel: {
+    backgroundColor: theme.colors.surface.containerLowest,
+    borderRadius: theme.borderRadius.lg,
+    boxShadow: theme.shadows.sm,
+    flex: 1,
+    display: "flex",
+    flexDirection: "column" as const,
+    minHeight: 0,
+    overflow: "hidden",
+    minWidth: 0,
+  },
+  tabContentPadding: {
+    padding: theme.spacing.md,
+    position: "relative" as const,
+    flex: 1,
+    minHeight: 0,
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column" as const,
+  },
+  tabLoading: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.sm,
+    height: "100%",
+  },
+
+  // ─── Tab cell variants ────────────────────────────────────────────────────
+  ongoingBadge: {
+    color: "#166534",
+    fontSize: "0.75rem",
+    fontWeight: 600,
+  },
+  allergyResolved: {
+    color: theme.colors.text.secondary,
+    fontSize: "0.75rem",
+  },
+  allergyActive: {
+    color: "#b45309",
+    fontSize: "0.75rem",
+    fontWeight: 600,
+  },
+  encounterTypeBadge: {
+    fontSize: "0.7rem",
+    fontWeight: 600,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.04em",
+    color: theme.colors.primary.main,
+    backgroundColor: theme.colors.secondary.light,
+    borderRadius: theme.borderRadius.sm,
+    padding: "2px 7px",
+  },
+});

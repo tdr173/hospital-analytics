@@ -58,6 +58,14 @@ export interface Theme {
       tealDark: string;
       gradient: string;
     };
+    button: {
+      primary: string;
+      primaryHover: string;
+      primaryActive: string;
+      secondary: string;
+      secondaryHover: string;
+      secondaryActive: string;
+    };
   };
   spacing: {
     xs: string;
@@ -172,6 +180,14 @@ const theme: Theme = {
       tealDark: "#00201d",
       gradient: "linear-gradient(135deg, #191c1e 0%, #028fb0 100%)",
     },
+    button: {
+      primary: "#006780",
+      primaryHover: "#004d60",
+      primaryActive: "#00364a",
+      secondary: "#f2f4f6",
+      secondaryHover: "#e0e3e5",
+      secondaryActive: "#c6c6cd",
+    },
   },
   spacing: {
     xs: "4px",
@@ -201,8 +217,10 @@ const theme: Theme = {
       normal: 1.5,
       relaxed: 1.75,
     },
-    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    fontFamilyHeading: '"Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontFamily:
+      '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontFamilyHeading:
+      '"Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   borderRadius: {
     xs: "2px",

@@ -4,13 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 from sqlalchemy import text
 
-from app import statistics_router, cluster_router
+from app import statistics_router, cluster_router, patient_router
 from db.db_connector import engine
 import domain.models  # noqa: F401 - ensures all models are registered before create_all
 
 routers = [
     statistics_router,
     cluster_router,
+    patient_router,
 ]
 
 

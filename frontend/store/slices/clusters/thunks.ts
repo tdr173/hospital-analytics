@@ -1,4 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import { toast } from "react-toastify";
 import {
   ClustersResponse,
   PcaScatterResponse,
@@ -27,6 +28,7 @@ export const getClusterStatistics = createAsyncThunk<
     });
 
     if (!response.ok) {
+      toast.error("Failed to load cluster statistics", { toastId: "cluster-statistics" });
       return thunkAPI.rejectWithValue({
         error: true,
         message: "Failed to fetch cluster statistics",
@@ -35,6 +37,7 @@ export const getClusterStatistics = createAsyncThunk<
 
     return (await response.json()) as PcaScatterResponse;
   } catch {
+    toast.error("Failed to load cluster statistics", { toastId: "cluster-statistics" });
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch cluster statistics",
@@ -52,10 +55,12 @@ export const getNumericalFeaturesStatistics = createAsyncThunk<
       headers: defaultHeaders,
     });
     if (!response.ok) {
+      toast.error("Failed to load numerical features", { toastId: "numerical-features" });
       return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch numerical features" });
     }
     return (await response.json()) as NumericalFeaturesResponse;
   } catch {
+    toast.error("Failed to load numerical features", { toastId: "numerical-features" });
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch numerical features" });
   }
 });
@@ -70,10 +75,12 @@ export const getCategoricalFeaturesStatistics = createAsyncThunk<
       headers: defaultHeaders,
     });
     if (!response.ok) {
+      toast.error("Failed to load categorical features", { toastId: "categorical-features" });
       return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch categorical features" });
     }
     return (await response.json()) as CategoricalFeaturesResponse;
   } catch {
+    toast.error("Failed to load categorical features", { toastId: "categorical-features" });
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch categorical features" });
   }
 });
@@ -88,10 +95,12 @@ export const getAiAnalysis = createAsyncThunk<
       headers: defaultHeaders,
     });
     if (!response.ok) {
+      toast.error("Failed to generate AI analysis", { toastId: "ai-analysis" });
       return thunkAPI.rejectWithValue({ error: true, message: "Failed to generate AI analysis" });
     }
     return (await response.json()) as AiAnalysisResponse;
   } catch {
+    toast.error("Failed to generate AI analysis", { toastId: "ai-analysis" });
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to generate AI analysis" });
   }
 });
@@ -107,6 +116,7 @@ export const getClusterRuns = createAsyncThunk<
     });
 
     if (!response.ok) {
+      toast.error("Failed to load cluster data", { toastId: "cluster-data" });
       return thunkAPI.rejectWithValue({
         error: true,
         message: "Failed to fetch cluster data",
@@ -115,6 +125,7 @@ export const getClusterRuns = createAsyncThunk<
 
     return (await response.json()) as ClustersResponse;
   } catch {
+    toast.error("Failed to load cluster data", { toastId: "cluster-data" });
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch cluster data",

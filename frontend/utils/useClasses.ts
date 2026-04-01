@@ -44,10 +44,9 @@ const useClasses = (
 
     Object.entries(rawClassesMerged).forEach(([key, value = {}]) => {
       prepared[key] = css(
-        value,
-        process.env.NEXT_PUBLIC_SHOW_CLASSNAMES === 'true'
-          ? { label: (props?.name ? props.name + '-' : '') + key }
-          : undefined
+        process.env.NODE_ENV !== 'production'
+          ? { ...value, label: key }
+          : value
       );
     });
 

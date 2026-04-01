@@ -7,6 +7,8 @@ import StyledButton from "@/components/generic_components/StyledButton/StyledBut
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import Link from "next/link";
 import * as yup from "yup";
+import useClasses from "@/utils/useClasses";
+import { LoginPageStyles } from "./styles";
 
 const loginSchema = yup.object({
   email: yup
@@ -26,6 +28,7 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {},
   );
+  const classes = useClasses(LoginPageStyles, { name: "LoginPage" });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,66 +51,24 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: "400px",
-        padding: "40px",
-        backgroundColor: "#ffffff",
-        borderRadius: "12px",
-        boxShadow: "0px 12px 32px rgba(25, 28, 30, 0.06)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          marginBottom: "24px",
-        }}
-      >
-        <div
-          style={{
-            width: "56px",
-            height: "56px",
-            borderRadius: "14px",
-            backgroundColor: "#f2f4f6",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+    <div className={classes.card}>
+      <div className={classes.iconRow}>
+        <div className={classes.iconBox}>
           <LockOutlinedIcon sx={{ color: "#0891B2", fontSize: "28px" }} />
         </div>
       </div>
 
-      <h1
-        style={{
-          fontFamily: '"Manrope", sans-serif',
-          fontSize: "1.5rem",
-          fontWeight: 700,
-          color: "#191c1e",
-          textAlign: "center",
-          marginBottom: "8px",
-        }}
-      >
+      <h1 className={classes.title}>
         Welcome back
       </h1>
-      <p
-        style={{
-          fontFamily: '"Inter", sans-serif',
-          fontSize: "0.875rem",
-          color: "#6b7280",
-          textAlign: "center",
-          marginBottom: "32px",
-        }}
-      >
+      <p className={classes.subtitle}>
         Sign in to your HospitAI account
       </p>
 
       <form
         onSubmit={handleLogin}
         noValidate
-        style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+        className={classes.form}
       >
         <StyledInput
           label="Email Address"
@@ -130,17 +91,8 @@ export default function LoginPage() {
           helperText={errors.password}
         />
 
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <Link
-            href="/forgot-password"
-            style={{
-              fontFamily: '"Inter", sans-serif',
-              fontSize: "0.8rem",
-              color: "#0891B2",
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
-          >
+        <div className={classes.forgotRow}>
+          <Link href="/forgot-password" className={classes.forgotLink}>
             Forgot password?
           </Link>
         </div>
@@ -164,15 +116,7 @@ export default function LoginPage() {
         </StyledButton>
       </form>
 
-      <p
-        style={{
-          fontFamily: '"Inter", sans-serif',
-          fontSize: "0.875rem",
-          color: "#6b7280",
-          textAlign: "center",
-          marginTop: "24px",
-        }}
-      ></p>
+      <p className={classes.footer}></p>
     </div>
   );
 }

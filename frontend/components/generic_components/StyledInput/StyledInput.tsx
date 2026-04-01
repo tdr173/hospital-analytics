@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import React from "react";
 import TextField, { TextFieldProps } from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import IconButton from "@mui/material/IconButton";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import ClearIcon from "@mui/icons-material/Clear";
 
 interface StyledInputProps extends Omit<
   TextFieldProps,
@@ -17,6 +19,10 @@ interface StyledInputProps extends Omit<
   helperText?: string;
   disabled?: boolean;
   required?: boolean;
+  startIcon?: React.ReactNode;
+  clearIcon?: boolean;
+  height?: string | number;
+  onClear?: () => void;
 }
 
 export default function StyledInput({
@@ -26,6 +32,10 @@ export default function StyledInput({
   helperText,
   disabled = false,
   required = false,
+  startIcon,
+  clearIcon,
+  onClear,
+  height,
   sx,
   ...props
 }: StyledInputProps) {
@@ -35,6 +45,37 @@ export default function StyledInput({
   const inputType = isPassword && showPassword ? "text" : type;
 
   const displayLabel = required ? `${label} *` : label;
+
+  const endAdornment = isPassword ? (
+    <InputAdornment position="end">
+      <IconButton
+        onClick={() => setShowPassword(!showPassword)}
+        edge="end"
+        size="small"
+        sx={{ color: "#6b7280" }}
+      >
+        {showPassword ? (
+          <VisibilityOff fontSize="small" />
+        ) : (
+          <Visibility fontSize="small" />
+        )}
+      </IconButton>
+    </InputAdornment>
+  ) : clearIcon && props.value ? (
+    <InputAdornment position="end">
+      <IconButton
+        onClick={onClear}
+        size="small"
+        sx={{
+          padding: "2px",
+          color: "#6b7280",
+          "&:hover": { color: "#191c1e" },
+        }}
+      >
+        <ClearIcon sx={{ fontSize: "0.95rem" }} />
+      </IconButton>
+    </InputAdornment>
+  ) : undefined;
 
   return (
     <TextField
@@ -48,22 +89,12 @@ export default function StyledInput({
       slotProps={{
         input: {
           disableUnderline: true,
-          endAdornment: isPassword ? (
-            <InputAdornment position="end">
-              <IconButton
-                onClick={() => setShowPassword(!showPassword)}
-                edge="end"
-                size="small"
-                sx={{ color: "#6b7280" }}
-              >
-                {showPassword ? (
-                  <VisibilityOff fontSize="small" />
-                ) : (
-                  <Visibility fontSize="small" />
-                )}
-              </IconButton>
+          startAdornment: startIcon ? (
+            <InputAdornment position="start" sx={{ mr: "8px" }}>
+              {startIcon}
             </InputAdornment>
           ) : undefined,
+          endAdornment,
         },
         inputLabel: {
           shrink: true,
@@ -91,6 +122,7 @@ export default function StyledInput({
           backgroundColor: "#f2f4f6",
           borderRadius: "6px",
           padding: "10px 14px",
+          ...(height !== undefined && { height, boxSizing: "border-box" as const }),
           transition: "box-shadow 0.15s ease",
           "&:hover": {
             backgroundColor: "#edf0f2",

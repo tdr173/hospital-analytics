@@ -6,6 +6,8 @@ import { RootState, AppDispatch } from "@/store";
 import { getNumericalFeaturesStatistics } from "@/store/slices/clusters/thunks";
 import StyledTabs from "@/components/generic_components/StyledTabs/StyledTabs";
 import ClusterFeatureChart from "@/components/generic_components/ClusterFeatureChart/ClusterFeatureChart";
+import useClasses from "@/utils/useClasses";
+import { ClusterFeaturesPageStyles } from "./styles";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
@@ -20,34 +22,31 @@ export default function ClusterFeaturesPage() {
     (state: RootState) => state.numericalFeatures,
   );
   const dispatch = useAppDispatch();
+  const classes = useClasses(ClusterFeaturesPageStyles, { name: "ClusterFeaturesPage" });
 
   useEffect(() => {
     dispatch(getNumericalFeaturesStatistics());
   }, [dispatch]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", fontFamily: "Inter, sans-serif", minWidth: 0 }}>
-      <div style={{ padding: "0 16px", overflow: "hidden", minWidth: 0 }}>
+    <div className={classes.container}>
+      <div className={classes.tabsWrapper}>
         <StyledTabs items={clusterTabs} />
       </div>
 
-      <div style={{ flex: 1, overflow: "auto", padding: "24px 16px" }}>
+      <div className={classes.content}>
         {loading && (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", color: "#6b7280" }}>
+          <div className={classes.loading}>
             Loading feature statistics...
           </div>
         )}
         {error && (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", color: "#EF4444" }}>
+          <div className={classes.error}>
             {error}
           </div>
         )}
         {data && (
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: "24px",
-          }}>
+          <div className={classes.grid}>
             {data.features.map((f) => (
               <ClusterFeatureChart key={f.feature} feature={f.feature} data={f.data} />
             ))}

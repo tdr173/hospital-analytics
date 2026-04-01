@@ -17,6 +17,7 @@ import pcaScatterReducer from "./slices/clusters/pca-scatter-slice";
 import numericalFeaturesReducer from "./slices/clusters/numerical-features-slice";
 import categoricalFeaturesReducer from "./slices/clusters/categorical-features-slice";
 import aiAnalysisReducer from "./slices/clusters/ai-analysis-slice";
+import patientsReducer from "./slices/patients/patients-slice";
 
 export const store = configureStore({
   reducer: {
@@ -37,6 +38,7 @@ export const store = configureStore({
     providersStatistics: providersStatisticsReducer,
     organizationsStatistics: organizationsStatisticsReducer,
     sqlAgent: sqlAgentReducer,
+    patients: patientsReducer,
   },
 });
 

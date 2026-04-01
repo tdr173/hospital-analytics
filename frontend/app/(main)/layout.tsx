@@ -4,10 +4,13 @@ import Header from "@/components/generic_components/Header/Header";
 import Sidebar from "@/components/generic_components/Sidebar/Sidebar";
 import ChatPanel from "@/components/ChatPanel/ChatPanel";
 import ShowChatButton from "@/components/ShowChatButton/ShowChatButton";
-import theme from "@/utils/theme";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 import { toggleChat } from "@/store/slices/ui-slice";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import useClasses from "@/utils/useClasses";
+import { MainLayoutStyles } from "./styles";
 
 export default function MainLayout({
   children,
@@ -16,35 +19,29 @@ export default function MainLayout({
 }>) {
   const chatOpen = useSelector((state: RootState) => state.ui.chatOpen);
   const dispatch = useDispatch();
+  const classes = useClasses(MainLayoutStyles, { name: "MainLayout" });
 
   return (
-    <div style={{ display: "flex", height: "100vh", backgroundColor: theme.layout.pageColor }}>
+    <div className={classes.root}>
       <Sidebar />
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          minWidth: 0,
-          overflow: "hidden",
-          position: "relative",
-          marginLeft: theme.layout.sidebarWidth,
-        }}
-      >
+      <div className={classes.main}>
         <Header />
-        <div style={{ flex: 1, overflow: "auto", backgroundColor: theme.layout.pageColor }}>{children}</div>
-        <ShowChatButton isOpen={chatOpen} onClick={() => dispatch(toggleChat())} />
+        <div className={classes.content}>
+          {children}
+        </div>
+        <ShowChatButton
+          isOpen={chatOpen}
+          onClick={() => dispatch(toggleChat())}
+        />
       </div>
+      <ToastContainer
+        position="bottom-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        theme="light"
+      />
       {chatOpen && (
-        <div
-          style={{
-            width: "25%",
-            minWidth: "300px",
-            height: "100vh",
-            flexShrink: 0,
-            borderLeft: `1px solid ${theme.colors.border.light}`,
-          }}
-        >
+        <div className={classes.chatPanel}>
           <ChatPanel />
         </div>
       )}

@@ -10,6 +10,7 @@ const headerStyles = (theme: Theme) => ({
     justifyContent: "space-between",
     padding: "0px 24px",
     boxShadow: theme.shadows.sm,
+    borderBottom: `1px solid #E8EAED`,
   },
   pageTitle: {
     fontSize: "1.1rem",
