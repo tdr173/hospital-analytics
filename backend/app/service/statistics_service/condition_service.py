@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 
-from app.repository.statistics_repository.condition_repository import ConditionRepository
-from app.domain.schemas.statistics_schema.patient_schema import ChartEntry
-from app.domain.schemas.statistics_schema.condition_schema import (
+from repository.statistics_repository.condition_repository import ConditionRepository
+from domain.schemas.statistics_schemas.patient_schema import ChartEntry
+from domain.schemas.statistics_schemas.condition_schema import (
     PerPatientStats,
     ConditionStatisticsResponse,
 )

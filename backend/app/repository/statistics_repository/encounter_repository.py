@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
-from app.domain.models.encounter_model import EncounterModel
+from domain.models.encounter_model import EncounterModel
 
 
 class EncounterRepository:

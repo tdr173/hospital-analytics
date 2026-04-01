@@ -25,6 +25,7 @@ export default function MainLayout({
           display: "flex",
           flexDirection: "column",
           flex: 1,
+          minWidth: 0,
           overflow: "hidden",
           position: "relative",
           marginLeft: theme.layout.sidebarWidth,

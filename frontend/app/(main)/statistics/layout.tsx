@@ -21,8 +21,8 @@ export default function StatisticsLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ padding: "0 16px" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minWidth: 0 }}>
+      <div style={{ padding: "0 16px", overflow: "hidden", minWidth: 0 }}>
         <StyledTabs items={statisticsTabs} />
       </div>
       <div style={{ flex: 1, overflow: "auto", padding: "0 16px" }}>

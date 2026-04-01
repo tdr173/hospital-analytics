@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
 
-from app.repository.statistics_repository.procedure_repository import ProcedureRepository
-from app.domain.schemas.statistics_schema.patient_schema import ChartEntry
-from app.domain.schemas.statistics_schema.condition_schema import PerPatientStats
-from app.domain.schemas.statistics_schema.procedure_schema import ProcedureStatisticsResponse
+from repository.statistics_repository.procedure_repository import ProcedureRepository
+from domain.schemas.statistics_schemas.patient_schema import ChartEntry
+from domain.schemas.statistics_schemas.condition_schema import PerPatientStats
+from domain.schemas.statistics_schemas.procedure_schema import ProcedureStatisticsResponse
 
 
 class ProcedureService:

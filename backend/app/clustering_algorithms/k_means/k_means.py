@@ -144,7 +144,7 @@ def plot_elbow(X, title, filename, location):
     plt.plot(range(2, 12), inertias, marker='o', linewidth=2)
     plt.xlabel("Number of Clusters (k)")
     plt.ylabel("Inertia")
-    plt.title(f"Elbow Method — {title}")
+    plt.title(f"Elbow Method - {title}")
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.savefig(location / filename, dpi=150)

@@ -1,10 +1,10 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from app.db.db import get_db
-from app.api.statistics.statistics_router import statistics_router
-from app.service.statistics_service.condition_service import ConditionService
-from app.domain.schemas.statistics_schema.condition_schema import ConditionStatisticsResponse
+from db.db_connector import get_db
+from .statistics_router import statistics_router
+from service.statistics_service.condition_service import ConditionService
+from domain.schemas.statistics_schemas.condition_schema import ConditionStatisticsResponse
 
 
 @statistics_router.get("/conditions", response_model=ConditionStatisticsResponse)

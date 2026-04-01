@@ -2,13 +2,14 @@
 
 import useClasses from "@/utils/useClasses";
 import headerStyles from "./HeaderStyles";
-import StyledButton from "../StyledButton/StyledButton";
-import LogoutIcon from "@mui/icons-material/Logout";
+import UserTypeTag from "../../UserTypeTag/UserTypeTag";
 import { usePathname } from "next/navigation";
 
-const HeaderMap: Record<string, string> = {
-  home: "Home",
-  statistics: "Dataset Statistics",
+const ROUTE_TITLES: Record<string, string> = {
+  "/statistics": "Dataset Statistics",
+  "/clusters/summaries": "Clusters - Summaries",
+  "/clusters/statistics": "Clusters - Statistics",
+  "/clusters": "Clusters",
 };
 
 function capitalize(str: string) {
@@ -18,31 +19,19 @@ function capitalize(str: string) {
 export default function Header() {
   const classes = useClasses(headerStyles, { name: "HeaderStyles" });
   const pathname = usePathname();
-  const parts = pathname.split("/").filter((part) => part !== "");
 
-  const title = parts
-    .map((part) => HeaderMap[part] || capitalize(part))
-    .join(" — ");
+  const matchedKey = Object.keys(ROUTE_TITLES)
+    .sort((a, b) => b.length - a.length)
+    .find((key) => pathname.startsWith(key));
+
+  const title = matchedKey
+    ? ROUTE_TITLES[matchedKey]
+    : pathname.split("/").filter(Boolean).map(capitalize).join(" - ");
 
   return (
     <div className={classes.headerContainer}>
       <span className={classes.pageTitle}>{title}</span>
-      <StyledButton
-        variant="ghost"
-        startIcon={<LogoutIcon sx={{ fontSize: "18px !important" }} />}
-        sx={{
-          color: "#EF4444",
-          fontSize: "0.8rem",
-          padding: "6px 14px",
-          "&:hover": {
-            backgroundColor: "rgba(239, 68, 68, 0.06)",
-            border: "1px solid rgba(239, 68, 68, 0.2)",
-            color: "#DC2626",
-          },
-        }}
-      >
-        Logout
-      </StyledButton>
+      <UserTypeTag userType="admin" />
     </div>
   );
 }

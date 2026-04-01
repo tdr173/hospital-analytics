@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
-from app.domain.models.observation_model import ObservationModel
-from app.domain.models.patient_model import PatientModel
+from domain.models.observation_model import ObservationModel
+from domain.models.patient_model import PatientModel
 
 
 class ObservationRepository:

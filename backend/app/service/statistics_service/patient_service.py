@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
-from app.repository.statistics_repository.patient_repository import PatientRepository
-from app.domain.schemas.statistics_schema.patient_schema import (
+from repository.statistics_repository.patient_repository import PatientRepository
+from domain.schemas.statistics_schemas.patient_schema import (
     ChartEntry,
     PatientStatisticsResponse,
 )

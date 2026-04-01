@@ -1,10 +1,10 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from app.db.db import get_db
-from app.api.statistics.statistics_router import statistics_router
-from app.service.statistics_service.medication_service import MedicationService
-from app.domain.schemas.statistics_schema.medication_schema import MedicationStatisticsResponse
+from db.db_connector import get_db
+from .statistics_router import statistics_router
+from service.statistics_service.medication_service import MedicationService
+from domain.schemas.statistics_schemas.medication_schema import MedicationStatisticsResponse
 
 
 @statistics_router.get("/medications", response_model=MedicationStatisticsResponse)

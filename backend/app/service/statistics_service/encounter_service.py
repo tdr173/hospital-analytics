@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 
-from app.repository.statistics_repository.encounter_repository import EncounterRepository
-from app.domain.schemas.statistics_schema.patient_schema import ChartEntry
-from app.domain.schemas.statistics_schema.encounter_schema import (
+from repository.statistics_repository.encounter_repository import EncounterRepository
+from domain.schemas.statistics_schemas.patient_schema import ChartEntry
+from domain.schemas.statistics_schemas.encounter_schema import (
     DurationStatsEntry,
     EncounterStatisticsResponse,
 )

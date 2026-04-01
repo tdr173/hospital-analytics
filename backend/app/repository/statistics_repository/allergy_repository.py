@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, cast, Numeric
 
-from app.domain.models.allergy_model import AllergyModel
+from domain.models.allergy_model import AllergyModel
 
 
 class AllergyRepository:

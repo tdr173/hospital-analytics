@@ -1,2 +1,2 @@
 from .statistics import *
-from .dashboard import *
+from .clusters import *

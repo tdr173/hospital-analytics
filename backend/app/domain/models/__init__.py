@@ -7,3 +7,6 @@ from .procedure_model import ProcedureModel
 from .medication_model import MedicationModel
 from .immunization_model import ImmunizationModel
 from .condition_model import ConditionModel
+from .cluster_run_model import ClusterRunModel
+from .cluster_patient_model import ClusterPatientModel
+from .cluster_model import ClusterModel

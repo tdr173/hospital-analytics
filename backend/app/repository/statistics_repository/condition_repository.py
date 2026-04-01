@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, cast, Numeric
 
-from app.domain.models.condition_model import ConditionModel
+from domain.models.condition_model import ConditionModel
 
 
 class ConditionRepository:

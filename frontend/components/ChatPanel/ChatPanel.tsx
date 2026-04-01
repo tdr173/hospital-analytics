@@ -3,21 +3,21 @@
 import { useState, useRef, useEffect } from "react";
 import useClasses from "@/utils/useClasses";
 import chatPanelStyles from "./ChatPanelStyles";
-
-interface Message {
-  id: string;
-  role: "user" | "ai";
-  content: string;
-  timestamp: Date;
-}
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/store";
+import { addQuestion } from "@/store/slices/statistics/sql-agent-slice";
+import { getSqlAgentResponse } from "@/store/slices/statistics/thunks";
 
 export default function ChatPanel() {
   const classes = useClasses(chatPanelStyles, { name: "ChatPanel" });
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const { questions, results, loading } = useSelector(
+    (state: RootState) => state.sqlAgent,
+  );
+  const dispatch = useDispatch<AppDispatch>();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -25,38 +25,33 @@ export default function ChatPanel() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isLoading]);
+  }, [questions, results, loading]);
+
+  const buildHistory = () => {
+    const history: { role: string; content: string }[] = [];
+    const start = Math.max(0, questions.length - 3);
+    for (let i = start; i < questions.length; i++) {
+      history.push({ role: "user", content: questions[i] });
+      if (results[i] !== undefined) {
+        history.push({ role: "ai", content: results[i] });
+      }
+    }
+    return history;
+  };
 
   const handleSend = () => {
     const trimmed = input.trim();
-    if (!trimmed || isLoading) return;
+    if (!trimmed || loading) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: trimmed,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    const history = buildHistory();
+    dispatch(addQuestion(trimmed));
     setInput("");
-    setIsLoading(true);
 
     if (textareaRef.current) {
       textareaRef.current.style.height = "38px";
     }
 
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "ai",
-        content:
-          "This is a placeholder response. Connect the backend to enable real AI responses.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiMessage]);
-      setIsLoading(false);
-    }, 1200);
+    dispatch(getSqlAgentResponse({ question: trimmed, history }));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -73,6 +68,8 @@ export default function ChatPanel() {
     textarea.style.height = Math.min(textarea.scrollHeight, 100) + "px";
   };
 
+  const isEmpty = questions.length === 0;
+
   return (
     <div className={classes.container}>
       <div className={classes.header}>
@@ -83,38 +80,36 @@ export default function ChatPanel() {
       </div>
 
       <div className={classes.messages}>
-        {messages.length === 0 && !isLoading && (
+        {isEmpty && !loading && (
           <div className={classes.emptyState}>
             <div className={classes.emptyIcon}>AI</div>
             <div>Ask me anything about the data.</div>
           </div>
         )}
 
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`${classes.messageRow} ${
-              msg.role === "user"
-                ? classes.messageRowUser
-                : classes.messageRowAi
-            }`}
-          >
-            <span className={classes.messageSender}>
-              {msg.role === "user" ? "You" : "AI"}
-            </span>
+        {questions.map((question, index) => (
+          <div key={index}>
             <div
-              className={
-                msg.role === "user"
-                  ? classes.messageBubbleUser
-                  : classes.messageBubbleAi
-              }
+              className={`${classes.messageRow} ${classes.messageRowUser}`}
             >
-              {msg.content}
+              <span className={classes.messageSender}>You</span>
+              <div className={classes.messageBubbleUser}>{question}</div>
             </div>
+
+            {results[index] !== undefined && (
+              <div
+                className={`${classes.messageRow} ${classes.messageRowAi}`}
+              >
+                <span className={classes.messageSender}>AI</span>
+                <div className={classes.messageBubbleAi}>
+                  {results[index]}
+                </div>
+              </div>
+            )}
           </div>
         ))}
 
-        {isLoading && (
+        {loading && (
           <div className={`${classes.messageRow} ${classes.messageRowAi}`}>
             <span className={classes.messageSender}>AI</span>
             <div className={classes.typingIndicator}>
@@ -149,12 +144,12 @@ export default function ChatPanel() {
         />
         <button
           className={
-            !input.trim() || isLoading
+            !input.trim() || loading
               ? classes.sendButtonDisabled
               : classes.sendButton
           }
           onClick={handleSend}
-          disabled={!input.trim() || isLoading}
+          disabled={!input.trim() || loading}
         >
           Send
         </button>

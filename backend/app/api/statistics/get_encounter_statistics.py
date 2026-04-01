@@ -1,10 +1,10 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from app.db.db import get_db
-from app.api.statistics.statistics_router import statistics_router
-from app.service.statistics_service.encounter_service import EncounterService
-from app.domain.schemas.statistics_schema.encounter_schema import EncounterStatisticsResponse
+from db.db_connector import get_db
+from .statistics_router import statistics_router
+from service.statistics_service.encounter_service import EncounterService
+from domain.schemas.statistics_schemas.encounter_schema import EncounterStatisticsResponse
 
 
 @statistics_router.get("/encounters", response_model=EncounterStatisticsResponse)

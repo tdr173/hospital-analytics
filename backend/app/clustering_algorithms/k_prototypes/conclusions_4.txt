@@ -2,26 +2,7 @@ Huang + robust + gamma=auto + 4 clusters + seed=42
 ==================================================
 Cluster Evaluation Report
 
-Silhouette Score:        0.4644  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
-Gower Silhouette Score:  0.1831  (numerical + categorical, same scale as above)
-Calinski-Harabasz:       690.21  (range 0 to inf, higher is better)
-Davies-Bouldin:          0.9358  (range 0 to inf, lower is better, <1 good, >2 poor)
-
-Numerical features (epsilon squared, range 0 to 1, higher is better, >=0.14 large, >=0.06 medium, >=0.01 small):
-  outpatient_count          eps2=0.4215  p=5.12e-105  (large)
-  total_procedures          eps2=0.4001  p=1.02e-99  (large)
-  has_hypertension          eps2=0.3557  p=1.10e-88  (large)
-  ambulatory_count          eps2=0.3549  p=1.74e-88  (large)
-  wellness_count            eps2=0.3524  p=7.33e-88  (large)
-  emergency_count           eps2=0.2121  p=4.60e-53  (large)
-  qaly                      eps2=0.0933  p=1.13e-23  (medium)
-  gender                    eps2=0.0819  p=7.40e-21  (medium)
-  has_diabetes              eps2=0.0721  p=1.85e-18  (medium)
-  marital                   eps2=0.0655  p=8.15e-17  (medium)
-
-Categorical features (Cramer's V, range 0 to 1, higher is better, thresholds depend on df):
-  dominant_encounter_class  V=0.5013  p=7.34e-178  (large)
-  medication_intensity      V=0.4401  p=4.98e-138  (large)
-  age_group                 V=0.3170  p=7.15e-67  (large)
-  condition_burden          V=0.2966  p=4.68e-60  (large)
-  bmi_category              V=0.2102  p=2.70e-28  (medium)
+Silhouette Score:        0.5104  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
+Gower Silhouette Score:  0.1910  (numerical + categorical, same scale as above)
+Calinski-Harabasz:       632.20  (range 0 to inf, higher is better)
+Davies-Bouldin:          0.9767  (range 0 to inf, lower is better, <1 good, >2 poor)

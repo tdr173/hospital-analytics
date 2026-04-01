@@ -224,7 +224,8 @@ def load_allergies(engine):
         name="allergy",
         con=engine,
         if_exists="replace",
-        index=False,
+        index=True,
+        index_label="id",
     )
     print(f"Loaded {len(allergies_df)} allergy records.")
 
@@ -256,7 +257,8 @@ def load_procedures(engine):
         name="procedure",
         con=engine,
         if_exists="replace",
-        index=False,
+        index=True,
+        index_label="id",
     )
     print(f"Loaded {len(procedures_df)} procedures.")
 
@@ -291,7 +293,8 @@ def load_medications(engine):
         name="medication",
         con=engine,
         if_exists="replace",
-        index=False,
+        index=True,
+        index_label="id",
     )
     print(f"Loaded {len(medications_df)} medications.")
 
@@ -321,7 +324,8 @@ def load_immunizations(engine):
         name="immunization",
         con=engine,
         if_exists="replace",
-        index=False,
+        index=True,
+        index_label="id",
     )
     print(f"Loaded {len(immunizations_df)} immunizations.")
 
@@ -347,7 +351,7 @@ def load_conditions(engine):
 
     clear_existing_cleaned_csv("cleaned_conditions.csv")
     conditions_df.to_csv(dataset_path / "cleaned" / "cleaned_conditions.csv", index=False)
-    conditions_df.to_sql(name="condition", con=engine, if_exists="replace", index=False)
+    conditions_df.to_sql(name="condition", con=engine, if_exists="replace", index=True, index_label="id")
     print(f"Loaded {len(conditions_df)} conditions.")
 
 
@@ -371,7 +375,7 @@ def load_observations(engine):
     clear_existing_cleaned_csv("cleaned_observations.csv")
     obs_df.to_csv(dataset_path / "cleaned" / "cleaned_observations.csv", index=False)
 
-    obs_df.to_sql(name="observation", con=engine, if_exists="replace", index=False)
+    obs_df.to_sql(name="observation", con=engine, if_exists="replace", index=True, index_label="id")
     print(f"Loaded {len(obs_df)} observations.")
 
 

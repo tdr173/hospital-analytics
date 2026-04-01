@@ -7,13 +7,16 @@ import IconButton from "@mui/material/IconButton";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
-interface StyledInputProps
-  extends Omit<TextFieldProps, "variant" | "label" | "type"> {
+interface StyledInputProps extends Omit<
+  TextFieldProps,
+  "variant" | "label" | "type" | "required"
+> {
   label: string;
   type?: "text" | "password" | "email" | "number";
   error?: boolean;
   helperText?: string;
   disabled?: boolean;
+  required?: boolean;
 }
 
 export default function StyledInput({
@@ -22,6 +25,7 @@ export default function StyledInput({
   error = false,
   helperText,
   disabled = false,
+  required = false,
   sx,
   ...props
 }: StyledInputProps) {
@@ -30,11 +34,13 @@ export default function StyledInput({
   const isPassword = type === "password";
   const inputType = isPassword && showPassword ? "text" : type;
 
+  const displayLabel = required ? `${label} *` : label;
+
   return (
     <TextField
       fullWidth
       variant="standard"
-      label={label}
+      label={displayLabel}
       type={inputType}
       error={error}
       helperText={helperText}
@@ -50,7 +56,11 @@ export default function StyledInput({
                 size="small"
                 sx={{ color: "#6b7280" }}
               >
-                {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                {showPassword ? (
+                  <VisibilityOff fontSize="small" />
+                ) : (
+                  <Visibility fontSize="small" />
+                )}
               </IconButton>
             </InputAdornment>
           ) : undefined,
@@ -71,6 +81,9 @@ export default function StyledInput({
         },
       }}
       sx={{
+        "& .MuiInputLabel-root + .MuiInput-root": {
+          marginTop: "0px",
+        },
         "& .MuiInput-root": {
           fontFamily: '"Inter", sans-serif',
           fontSize: "0.875rem",

@@ -1,10 +1,10 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from app.db.db import get_db
-from app.api.statistics.statistics_router import statistics_router
-from app.service.statistics_service.provider_service import ProviderService
-from app.domain.schemas.statistics_schema.provider_schema import ProviderStatisticsResponse
+from db.db_connector import get_db
+from .statistics_router import statistics_router
+from service.statistics_service.provider_service import ProviderService
+from domain.schemas.statistics_schemas.provider_schema import ProviderStatisticsResponse
 
 
 @statistics_router.get("/providers", response_model=ProviderStatisticsResponse)

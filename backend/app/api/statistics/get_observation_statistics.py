@@ -1,10 +1,10 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from app.db.db import get_db
-from app.api.statistics.statistics_router import statistics_router
-from app.service.statistics_service.observation_service import ObservationService
-from app.domain.schemas.statistics_schema.observation_schema import ObservationStatisticsResponse
+from db.db_connector import get_db
+from .statistics_router import statistics_router
+from service.statistics_service.observation_service import ObservationService
+from domain.schemas.statistics_schemas.observation_schema import ObservationStatisticsResponse
 
 
 @statistics_router.get("/observations", response_model=ObservationStatisticsResponse)

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
-from app.domain.models.procedure_model import ProcedureModel
+from domain.models.procedure_model import ProcedureModel
 
 
 class ProcedureRepository:

@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
 
-from app.repository.statistics_repository.organization_repository import OrganizationRepository
-from app.domain.schemas.statistics_schema.patient_schema import ChartEntry
-from app.domain.schemas.statistics_schema.provider_schema import UtilizationStats
-from app.domain.schemas.statistics_schema.organization_schema import OrganizationStatisticsResponse
+from repository.statistics_repository.organization_repository import OrganizationRepository
+from domain.schemas.statistics_schemas.patient_schema import ChartEntry
+from domain.schemas.statistics_schemas.provider_schema import UtilizationStats
+from domain.schemas.statistics_schemas.organization_schema import OrganizationStatisticsResponse
 
 
 class OrganizationService:

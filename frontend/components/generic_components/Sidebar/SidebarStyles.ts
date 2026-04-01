@@ -77,6 +77,12 @@ const sidebarStyles = (theme: Theme) => ({
       color: "#ffffff",
     },
   },
+  sidebarFooter: {
+    padding: "16px 10px",
+    display: "flex",
+    justifyContent: "center",
+    width: "100%",
+  },
 });
 
 export default sidebarStyles;

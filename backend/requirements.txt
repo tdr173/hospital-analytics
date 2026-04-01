@@ -4,3 +4,11 @@ pandas
 sqlmodel
 numpy
 google-genai
+langgraph
+openai
+scipy
+matplotlib
+seaborn
+scikit-learn
+kmodes
+protobuf

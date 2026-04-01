@@ -1,11 +1,11 @@
-# Statistics — SQL Queries & Endpoint Results
+# Statistics - SQL Queries & Endpoint Results
 
 All queries are written as plain SQL equivalent of the SQLAlchemy ORM calls in
 `app/repository/statistics_repository/`.
 
 ---
 
-## 1. Patients — `GET /statistics/patients`
+## 1. Patients - `GET /statistics/patients`
 
 ### SQL Queries
 
@@ -117,7 +117,7 @@ ORDER BY COUNT(patient_id) DESC;
 
 ---
 
-## 2. Encounters — `GET /statistics/encounters`
+## 2. Encounters - `GET /statistics/encounters`
 
 ### SQL Queries
 
@@ -208,7 +208,7 @@ LIMIT 10;
 
 ---
 
-## 3. Conditions — `GET /statistics/conditions`
+## 3. Conditions - `GET /statistics/conditions`
 
 ### SQL Queries
 
@@ -283,7 +283,7 @@ FROM (
 
 ---
 
-## 4. Observations — `GET /statistics/observations`
+## 4. Observations - `GET /statistics/observations`
 
 ### SQL Queries
 
@@ -384,7 +384,7 @@ FROM (
 
 ---
 
-## 5. Procedures — `GET /statistics/procedures`
+## 5. Procedures - `GET /statistics/procedures`
 
 ### SQL Queries
 
@@ -448,7 +448,7 @@ FROM (
 
 ---
 
-## 6. Immunizations — `GET /statistics/immunizations`
+## 6. Immunizations - `GET /statistics/immunizations`
 
 ### SQL Queries
 
@@ -507,7 +507,7 @@ FROM (
 
 ---
 
-## 7. Medications — `GET /statistics/medications`
+## 7. Medications - `GET /statistics/medications`
 
 ### SQL Queries
 
@@ -596,7 +596,7 @@ FROM (
 
 ---
 
-## 8. Allergies — `GET /statistics/allergies`
+## 8. Allergies - `GET /statistics/allergies`
 
 ### SQL Queries
 
@@ -666,7 +666,7 @@ FROM (
 
 ---
 
-## 9. Providers — `GET /statistics/providers`
+## 9. Providers - `GET /statistics/providers`
 
 ### SQL Queries
 
@@ -751,7 +751,7 @@ FROM providers;
 
 ---
 
-## 10. Organizations — `GET /statistics/organizations`
+## 10. Organizations - `GET /statistics/organizations`
 
 ### SQL Queries
 

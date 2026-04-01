@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy import stats
 from sqlalchemy import text
 from sklearn.preprocessing import StandardScaler, RobustScaler, PowerTransformer
 from sklearn.decomposition import PCA
@@ -20,6 +21,7 @@ from cluster_evaluation import (
     compute_general_validation,
     compute_gower_silhouette,
 )
+from service.lllm_sql_agent_service import ask_ai
 
 current_folder = Path(__file__).parent
 
@@ -352,7 +354,7 @@ def plot_cluster_heatmap(df, feature_cols, title, filename, location):
     plt.title(f"Cluster (normalized) - {title}")
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
-    plt.savefig(location / filename, dpi=150)
+    plt.savefig(location / filename, dpi=150, bbox_inches='tight')
     plt.close()
     print("saved heatmap")
 
@@ -486,65 +488,75 @@ def run_kprototypes(
 
 
 def remove_outliers_zscore(df, threshold=4):
-    from scipy import stats
-
+    # Calculate absolute Z-scores
     z_scores = np.abs(stats.zscore(df[NUMERICAL_FEATURES].values))
+
+    # Create a mask where ALL numerical features have a z-score below the threshold
     mask = (z_scores < threshold).all(axis=1)
 
-    print(f"removed {(~mask).sum()} outliers out of {len(df)} patients")
-    return df[mask].reset_index(drop=True)
+    print(f"Removed {(~mask).sum()} outliers out of {len(df)} patients")
+
+    # Split the dataframe into cleaned data and the actual outliers
+    df_cleaned = df[mask].reset_index(drop=True)
+    df_outliers = df[~mask].reset_index(drop=True)
+
+    # Return both dataframes
+    return df_cleaned, df_outliers
 
 
-def interpret_clusters(df_clustered, engine, evaluation_report=""):
+def get_clusters_summary(df_clustered, df_outliers, engine, evaluation_report=""):
+    # 1. Combine clustered data and outliers (assigned to cluster -1) for metric calculation
+    df_outliers_temp = df_outliers.copy()
+    df_outliers_temp['cluster'] = -1
+    df_all = pd.concat([df_clustered, df_outliers_temp], ignore_index=True)
+
+    # 2. Use df_all so the SQL queries calculate top items for the -1 cluster as well
     conditions = pd.read_sql(text("SELECT patient_id, description FROM condition"), con=engine)
-    conditions = conditions.merge(df_clustered[["patient_id", "cluster"]], on="patient_id")
+    conditions = conditions.merge(df_all[["patient_id", "cluster"]], on="patient_id")
     top_conditions = conditions.groupby(["cluster", "description"]).size().reset_index(name="count").sort_values(
         ["cluster", "count"], ascending=[True, False])
 
     medications = pd.read_sql(text("SELECT patient_id, description FROM medication"), con=engine)
-    medications = medications.merge(df_clustered[["patient_id", "cluster"]], on="patient_id")
+    medications = medications.merge(df_all[["patient_id", "cluster"]], on="patient_id")
     top_medications = medications.groupby(["cluster", "description"]).size().reset_index(name="count").sort_values(
         ["cluster", "count"], ascending=[True, False])
 
     procedures = pd.read_sql(text('SELECT patient_id, description FROM "procedure"'), con=engine)
-    procedures = procedures.merge(df_clustered[["patient_id", "cluster"]], on="patient_id")
+    procedures = procedures.merge(df_all[["patient_id", "cluster"]], on="patient_id")
     top_procedures = procedures.groupby(["cluster", "description"]).size().reset_index(name="count").sort_values(
         ["cluster", "count"], ascending=[True, False])
 
-    total_patients = len(df_clustered)
-    clusters = sorted(df_clustered["cluster"].unique())
+    total_patients = len(df_all)
+    clusters = sorted(df_all["cluster"].unique()) # This will now include -1
 
-    prompt = f"""We clustered {total_patients} patients into {len(clusters)} groups using K-Prototypes. 
-I have summarized the data for EACH cluster below.
+    # 3. Restrict the prompt to force the exact summary pipeline format
+    prompt = f"""We clustered {len(df_clustered)} patients into groups, plus {len(df_outliers)} outlier patients.
+I have summarized the data for EACH cluster below. The outliers are labeled as Cluster -1.
 
-Your task is to write a business/medical interpretation for EACH cluster strictly in order (from 0 to {len(clusters) - 1}).
-Do NOT mix up the cluster IDs. Base your persona descriptions ONLY on the data provided under that specific cluster's heading.
+Your task is to write extremely brief text to fit inside small frontend UI cards.
+Do NOT include any extra text, introductions, markdown formatting, or bullet points.
+Do NOT use em dashes (—) anywhere in your response. Use commas or plain sentence structure instead.
 
-Structure your response EXACTLY like this:
+Structure your response EXACTLY as a list, using the pipe character (|) to separate the fields:
+[Cluster ID] | [#HexColor] | [Short Title] | [1-2 sentences Description] | [1 short sentence Insight] | [1 short sentence Recommendation]
 
-## Overview
-[2-3 sentences summarizing the major patient types that emerged.]
+Title rules: 2-4 words, plain everyday language that anyone can understand, no medical jargon (e.g. "Older Adults with Chronic Conditions", "Young and Healthy", "High-Need Patients").
+Description rules: 1-2 short sentences in plain language, understandable by a non-medical reader, no jargon.
 
-## Cluster 0 — [Your Short Label]
-- **Who they are**: [Age, gender, how often they come in, how sick they are. 2-3 sentences, natural tone.]
-- **What stands out**: [The metrics that make this group unique compared to the average.]
-- **Conditions & treatments**: [What diseases do they have? What meds and procedures show up most?]
-- **What to do about it**: [One practical recommendation.]
+Choose a suggestive hex color for each cluster that reflects its clinical profile (e.g. red tones for high-risk, green for healthy, blue for elderly chronic, orange for moderate).
+Use distinct, saturated colors. The outlier cluster (-1) should always be gray (#9CA3AF).
 
-[... Repeat the above block for Cluster 1, Cluster 2, etc ...]
-
-## How the clusters relate
-[Short paragraph comparing them. Which are healthy/sick? Which are cheap/expensive?]
-
-## Caveats
-[1-2 sentences mentioning this is synthetic Synthea data.]
+Example output:
+[0] | #DC2626 | Older Adults with Many Conditions | Elderly patients who visit the hospital often and take many medications. | 85% have high blood pressure and take 12 medications on average. | Coordinate care proactively to reduce emergency visits.
+[1] | #16A34A | Young and Healthy | Younger people who rarely need medical care. | No emergency visits and mostly routine checkups. | Keep them engaged with preventive care programs.
+[-1] | #9CA3AF | Unusual Cases | Patients who stand out significantly from the rest of the population. | Very high variation in procedures and resource use. | Review each case individually.
 
 =========================================
 CLUSTER DATA SUMMARIES:
 =========================================
 """
     for c in clusters:
-        c_df = df_clustered[df_clustered['cluster'] == c]
+        c_df = df_all[df_all['cluster'] == c]
         c_size = len(c_df)
         c_pct = (c_size / total_patients) * 100
 
@@ -552,11 +564,12 @@ CLUSTER DATA SUMMARIES:
                         'active_conditions_count']].mean().round(1).to_dict()
 
         c_cats = {
-            'dominant_gender': c_df['gender'].mode()[0],
-            'diabetes_rate': f"{(c_df['has_diabetes'] == 1).mean() * 100:.0f}%",
-            'hypertension_rate': f"{(c_df['has_hypertension'] == 1).mean() * 100:.0f}%",
-            'heart_disease_rate': f"{(c_df['has_heart_disease'] == 1).mean() * 100:.0f}%",
-            'main_encounter_type': c_df['dominant_encounter_class'].mode()[0]
+            'dominant_gender': c_df['gender'].mode()[0] if not c_df['gender'].empty else 'N/A',
+            # Note: Checking for 'Yes' because your preprocessing maps 1/0 to 'Yes'/'No'
+            'diabetes_rate': f"{(c_df['has_diabetes'] == 'Yes').mean() * 100:.0f}%",
+            'hypertension_rate': f"{(c_df['has_hypertension'] == 'Yes').mean() * 100:.0f}%",
+            'heart_disease_rate': f"{(c_df['has_heart_disease'] == 'Yes').mean() * 100:.0f}%",
+            'main_encounter_type': c_df['dominant_encounter_class'].mode()[0] if not c_df['dominant_encounter_class'].empty else 'N/A'
         }
 
         c_cond = top_conditions[top_conditions['cluster'] == c]['description'].head(4).tolist()
@@ -570,33 +583,116 @@ CLUSTER DATA SUMMARIES:
         prompt += f"- Top Medications: {c_meds}\n"
         prompt += f"- Top Procedures: {c_proc}\n"
 
-    prompt += f"\n=========================================\n"
-    prompt += f"Overall Clustering Quality Metrics:\n{evaluation_report}\n"
+    # client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    # response = client.models.generate_content(model="gemini-2.5-pro", contents=prompt)
 
-    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-    response = client.models.generate_content(model="gemini-2.5-pro", contents=prompt)
+    # print(response.text)
+    #
+    # with open(current_folder / "gemini_response.txt", "w", encoding="utf-8") as f:
+    #     f.write(response.text)
 
-    print(response.text)
+    # return response.text
 
-    with open(current_folder / "gemini_response.txt", "w") as f:
-        f.write(response.text)
-
-    return response.text
-
+    return ask_ai(prompt)
 
 if __name__ == "__main__":
     load_dotenv()
 
     from db import engine as db_engine
+    from db.db_connector import SessionLocal
+    from save_results import save_cluster_results
+    from sqlalchemy import text
+
+    # ensure cluster tables exist
+    with db_engine.connect() as conn:
+        conn.execute(text("""
+                          CREATE TABLE IF NOT EXISTS cluster_run
+                          (
+                              id
+                              SERIAL
+                              PRIMARY
+                              KEY,
+                              created_at
+                              TIMESTAMP
+                              NOT
+                              NULL,
+                              algorithm
+                              VARCHAR
+                              NOT
+                              NULL,
+                              n_clusters
+                              INTEGER
+                              NOT
+                              NULL,
+                              n_patients
+                              INTEGER
+                              NOT
+                              NULL,
+                              n_outliers
+                              INTEGER
+                              NOT
+                              NULL
+                              DEFAULT
+                              0,
+                              numerical_features
+                              JSONB,
+                              categorical_features
+                              JSONB,
+                              params
+                              JSONB,
+                              metrics
+                              JSONB
+                          )
+                          """))
+        conn.execute(text("""
+                          CREATE TABLE IF NOT EXISTS cluster_patient
+                          (
+                              id
+                              SERIAL
+                              PRIMARY
+                              KEY,
+                              run_id
+                              INTEGER
+                              NOT
+                              NULL
+                              REFERENCES
+                              cluster_run
+                          (
+                              id
+                          ),
+                              patient_id VARCHAR NOT NULL,
+                              cluster_label INTEGER NOT NULL,
+                              is_outlier BOOLEAN NOT NULL DEFAULT FALSE,
+                              pca_x FLOAT,
+                              pca_y FLOAT,
+                              features JSONB
+                              )
+                          """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_cluster_patient_run_id ON cluster_patient(run_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_cluster_patient_patient_id ON cluster_patient(patient_id)"))
+        conn.execute(text("""
+                          CREATE TABLE IF NOT EXISTS cluster
+                          (
+                              id            SERIAL PRIMARY KEY,
+                              run_id        INTEGER NOT NULL REFERENCES cluster_run(id),
+                              cluster_label INTEGER NOT NULL,
+                              title         VARCHAR NOT NULL,
+                              description   VARCHAR NOT NULL,
+                              insight       VARCHAR NOT NULL,
+                              recommendation VARCHAR NOT NULL
+                          )
+                          """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_cluster_run_id ON cluster(run_id)"))
+        conn.commit()
 
     df = build_patient_features(db_engine)
-    df_cleaned = remove_outliers_zscore(df, threshold=3.75)
-    # df_cleaned = df
+    df_cleaned, df_outliers = remove_outliers_zscore(df, threshold=3.75)
 
-    print(f"{len(df_cleaned)} patients left after outlier removal")
+    print(f"{len(df_cleaned)} patients left after outlier removal ({len(df_outliers)} outliers)")
 
     # n_clusters = [3, 4, 5]
-    n_clusters = [3,4,5,6]
+    # n_clusters = [3,4,5,6]
+    n_clusters = [4]
 
     # scalers = {
     #     "standard": StandardScaler(),
@@ -615,7 +711,8 @@ if __name__ == "__main__":
     # random_states = [0, 7, 42, 99, 123]
     random_states = [42]
 
-    output_base = current_folder / "outputs" / "kproto"
+    output_base = current_folder / "outputs"
+    output_base.mkdir(parents=True, exist_ok=True)
 
     all_reports = []
     excel_rows = []
@@ -626,8 +723,7 @@ if __name__ == "__main__":
                 for rs in random_states:
                     gamma_label = "auto" if gamma is None else str(gamma)
                     version_name = f"Huang + {scaler_name} + gamma={gamma_label} + {n} clusters + seed={rs}"
-                    folder_name = f"huang-{scaler_name}-gamma{gamma_label}-{n}clusters-seed{rs}"
-                    location = output_base / folder_name
+                    location = output_base
 
                     print(f"\n{'=' * 40}")
                     print(f"{version_name}")
@@ -670,7 +766,51 @@ if __name__ == "__main__":
                     }
 
                     excel_rows.append(row)
-                    # interpret_clusters(df_result, db_engine, evaluation_report=report)
+
+                    lmm_summary = get_clusters_summary(df_result, df_outliers, db_engine, evaluation_report=report)
+
+                    # read heatmap PNG bytes
+                    tag = version_name.lower().replace(" ", "_").replace("(", "").replace(")", "")
+                    heatmap_path = location / f"heatmap_{tag}.png"
+                    heatmap_bytes = heatmap_path.read_bytes() if heatmap_path.exists() else None
+
+                    # compute PCA coords for clustered + outlier patients
+                    pca = PCA(n_components=2)
+                    pca_coords_clustered = pca.fit_transform(X_num_scaled)
+                    X_outliers_scaled = scaler.transform(df_outliers[NUMERICAL_FEATURES].values)
+                    pca_coords_outliers = pca.transform(X_outliers_scaled)
+
+                    # save to database
+                    db_session = SessionLocal()
+                    try:
+                        save_cluster_results(
+                            db=db_session,
+                            df_clustered=df_result,
+                            df_outliers=df_outliers,
+                            pca_coords_clustered=pca_coords_clustered,
+                            pca_coords_outliers=pca_coords_outliers,
+                            numerical_features=NUMERICAL_FEATURES,
+                            categorical_features=CATEGORICAL_FEATURES,
+                            n_clusters=n,
+                            algorithm="k_prototypes",
+                            params={
+                                "scaler": scaler_name,
+                                "gamma": gamma_label,
+                                "init": "Huang",
+                                "random_state": rs,
+                                "outlier_threshold": 3.75,
+                            },
+                            metrics={
+                                "silhouette": gen["silhouette_score"],
+                                "gower_silhouette": gower_sil,
+                                "calinski_harabasz": gen["calinski_harabasz_score"],
+                                "davies_bouldin": gen["davies_bouldin_score"],
+                            },
+                            cluster_summaries=lmm_summary,
+                            heatmap_bytes=heatmap_bytes,
+                        )
+                    finally:
+                        db_session.close()
 
     clusters_label = "_".join(str(n) for n in n_clusters)
 

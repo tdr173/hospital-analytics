@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, cast, Numeric
 
-from app.domain.models.medication_model import MedicationModel
+from domain.models.medication_model import MedicationModel
 
 
 class MedicationRepository:

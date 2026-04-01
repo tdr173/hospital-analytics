@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
-from app.domain.models.organization_model import OrganizationModel
+from domain.models.organization_model import OrganizationModel
 
 
 class OrganizationRepository:

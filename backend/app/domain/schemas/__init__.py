@@ -1,1 +1,2 @@
-from .statistics_schema import *
+from .statistics_schemas import *
+from .cluster_schemas import *

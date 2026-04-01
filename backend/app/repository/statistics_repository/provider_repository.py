@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
-from app.domain.models.provider_model import ProviderModel
+from domain.models.provider_model import ProviderModel
 
 
 class ProviderRepository:

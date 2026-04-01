@@ -1,10 +1,10 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from app.db.db import get_db
-from app.api.statistics.statistics_router import statistics_router
-from app.service.statistics_service.procedure_service import ProcedureService
-from app.domain.schemas.statistics_schema.procedure_schema import ProcedureStatisticsResponse
+from db.db_connector import get_db
+from .statistics_router import statistics_router
+from service.statistics_service.procedure_service import ProcedureService
+from domain.schemas.statistics_schemas.procedure_schema import ProcedureStatisticsResponse
 
 
 @statistics_router.get("/procedures", response_model=ProcedureStatisticsResponse)

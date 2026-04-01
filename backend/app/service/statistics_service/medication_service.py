@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
 
-from app.repository.statistics_repository.medication_repository import MedicationRepository
-from app.domain.schemas.statistics_schema.patient_schema import ChartEntry
-from app.domain.schemas.statistics_schema.condition_schema import PerPatientStats
-from app.domain.schemas.statistics_schema.medication_schema import (
+from repository.statistics_repository.medication_repository import MedicationRepository
+from domain.schemas.statistics_schemas.patient_schema import ChartEntry
+from domain.schemas.statistics_schemas.condition_schema import PerPatientStats
+from domain.schemas.statistics_schemas.medication_schema import (
     MedicationDurationStats,
     MedicationStatisticsResponse,
 )

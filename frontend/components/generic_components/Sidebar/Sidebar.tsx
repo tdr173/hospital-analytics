@@ -2,10 +2,12 @@
 
 import useClasses from "@/utils/useClasses";
 import sidebarStyles from "./SidebarStyles";
-import UserTypeTag from "../../UserTypeTag/UserTypeTag";
 import AddIcon from "@mui/icons-material/Add";
+import LogoutIcon from "@mui/icons-material/Logout";
+import StyledButton from "../StyledButton/StyledButton";
 
 import AnalyticsIcon from "@mui/icons-material/Analytics";
+import GroupIcon from "@mui/icons-material/Group";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 
 import React from "react";
@@ -19,6 +21,7 @@ const sidebarElements = [
     icon: AnalyticsIcon,
     forward: "/statistics",
   },
+  { name: "Clusters", icon: GroupIcon, forward: "/clusters" },
 ];
 
 export default function Sidebar() {
@@ -28,7 +31,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   const isRouteActive = (path: string) => {
-    return pathname.includes(path);
+    return pathname.startsWith(path);
   };
 
   const sidebarElement = (
@@ -73,15 +76,32 @@ export default function Sidebar() {
             />
             <span className={classes.appName}>HospitAI</span>
           </div>
-          <div className={classes.appNameRow} style={{ marginTop: 4 }}>
-            <UserTypeTag userType="admin" />
-          </div>
         </div>
       </div>
       <div className={classes.sidebarContent}>
         {sidebarElements.map((element, index) =>
           sidebarElement(index, element.icon, element.name, element.forward),
         )}
+      </div>
+      <div className={classes.sidebarFooter}>
+        <StyledButton
+          variant="ghost"
+          startIcon={<LogoutIcon sx={{ fontSize: "18px !important" }} />}
+          sx={{
+            color: "rgba(255, 255, 255, 0.75)",
+            fontSize: "0.8rem",
+            padding: "6px 14px",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
+            "&:hover": {
+              backgroundColor: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+              color: "#EF4444",
+            },
+          }}
+          onClick={() => router.push("/login")}
+        >
+          Logout
+        </StyledButton>
       </div>
     </div>
   );

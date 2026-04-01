@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
-from app.domain.models.immunization_model import ImmunizationModel
+from domain.models.immunization_model import ImmunizationModel
 
 
 class ImmunizationRepository:

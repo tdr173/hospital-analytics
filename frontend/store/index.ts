@@ -11,10 +11,21 @@ import allergiesStatisticsReducer from "./slices/statistics/allergy-statistics-s
 import providersStatisticsReducer from "./slices/statistics/provider-statistics-slice";
 import organizationsStatisticsReducer from "./slices/statistics/organization-statistics-slice";
 import uiReducer from "./slices/ui-slice";
+import sqlAgentReducer from "./slices/statistics/sql-agent-slice";
+import clustersReducer from "./slices/clusters/clusters-slice";
+import pcaScatterReducer from "./slices/clusters/pca-scatter-slice";
+import numericalFeaturesReducer from "./slices/clusters/numerical-features-slice";
+import categoricalFeaturesReducer from "./slices/clusters/categorical-features-slice";
+import aiAnalysisReducer from "./slices/clusters/ai-analysis-slice";
 
 export const store = configureStore({
   reducer: {
     ui: uiReducer,
+    clusters: clustersReducer,
+    pcaScatter: pcaScatterReducer,
+    numericalFeatures: numericalFeaturesReducer,
+    categoricalFeatures: categoricalFeaturesReducer,
+    aiAnalysis: aiAnalysisReducer,
     patientsStatistics: patientsStatisticsReducer,
     encountersStatistics: encountersStatisticsReducer,
     conditionsStatistics: conditionsStatisticsReducer,
@@ -25,6 +36,7 @@ export const store = configureStore({
     allergiesStatistics: allergiesStatisticsReducer,
     providersStatistics: providersStatisticsReducer,
     organizationsStatistics: organizationsStatisticsReducer,
+    sqlAgent: sqlAgentReducer,
   },
 });
 

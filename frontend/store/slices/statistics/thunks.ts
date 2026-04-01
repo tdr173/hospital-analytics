@@ -15,13 +15,19 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 
 const API_BASE = "http://localhost:8000";
 
+const defaultHeaders: Record<string, string> = {
+  "ngrok-skip-browser-warning": "true",
+};
+
 export const getPatientsStatistics = createAsyncThunk<
   PatientStatisticsResponse,
   void,
   { rejectValue: ErrorResponse }
 >("getPatientsStatistics", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/patients`);
+    const response = await fetch(`${API_BASE}/statistics/patients`, {
+      headers: defaultHeaders,
+    });
 
     if (!response.ok) {
       return thunkAPI.rejectWithValue({
@@ -45,7 +51,9 @@ export const getEncountersStatistics = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("getEncountersStatistics", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/encounters`);
+    const response = await fetch(`${API_BASE}/statistics/encounters`, {
+      headers: defaultHeaders,
+    });
 
     if (!response.ok) {
       return thunkAPI.rejectWithValue({
@@ -69,7 +77,9 @@ export const getConditionsStatistics = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("getConditionsStatistics", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/conditions`);
+    const response = await fetch(`${API_BASE}/statistics/conditions`, {
+      headers: defaultHeaders,
+    });
 
     if (!response.ok) {
       return thunkAPI.rejectWithValue({
@@ -93,7 +103,9 @@ export const getOrganizationsStatistics = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("getOrganizationsStatistics", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/organizations`);
+    const response = await fetch(`${API_BASE}/statistics/organizations`, {
+      headers: defaultHeaders,
+    });
 
     if (!response.ok) {
       return thunkAPI.rejectWithValue({
@@ -117,7 +129,9 @@ export const getProvidersStatistics = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("getProvidersStatistics", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/providers`);
+    const response = await fetch(`${API_BASE}/statistics/providers`, {
+      headers: defaultHeaders,
+    });
 
     if (!response.ok) {
       return thunkAPI.rejectWithValue({
@@ -141,7 +155,9 @@ export const getAllergiesStatistics = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("getAllergiesStatistics", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/allergies`);
+    const response = await fetch(`${API_BASE}/statistics/allergies`, {
+      headers: defaultHeaders,
+    });
 
     if (!response.ok) {
       return thunkAPI.rejectWithValue({
@@ -165,7 +181,9 @@ export const getMedicationsStatistics = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("getMedicationsStatistics", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/medications`);
+    const response = await fetch(`${API_BASE}/statistics/medications`, {
+      headers: defaultHeaders,
+    });
 
     if (!response.ok) {
       return thunkAPI.rejectWithValue({
@@ -189,7 +207,9 @@ export const getProceduresStatistics = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("getProceduresStatistics", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/procedures`);
+    const response = await fetch(`${API_BASE}/statistics/procedures`, {
+      headers: defaultHeaders,
+    });
 
     if (!response.ok) {
       return thunkAPI.rejectWithValue({
@@ -213,7 +233,9 @@ export const getImmunizationsStatistics = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("getImmunizationsStatistics", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/immunizations`);
+    const response = await fetch(`${API_BASE}/statistics/immunizations`, {
+      headers: defaultHeaders,
+    });
 
     if (!response.ok) {
       return thunkAPI.rejectWithValue({
@@ -237,7 +259,9 @@ export const getObservationsStatistics = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("getObservationsStatistics", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/observations`);
+    const response = await fetch(`${API_BASE}/statistics/observations`, {
+      headers: defaultHeaders,
+    });
 
     if (!response.ok) {
       return thunkAPI.rejectWithValue({
@@ -251,6 +275,38 @@ export const getObservationsStatistics = createAsyncThunk<
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch observations statistics",
+    });
+  }
+});
+
+export const getSqlAgentResponse = createAsyncThunk<
+  string,
+  { question: string; history: { role: string; content: string }[] },
+  { rejectValue: ErrorResponse }
+>("getSqlAgentResponse", async ({ question, history }, thunkAPI) => {
+  try {
+    const response = await fetch(`${API_BASE}/statistics/sql-agent`, {
+      method: "POST",
+      headers: {
+        ...defaultHeaders,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ question, history }),
+    });
+
+    if (!response.ok) {
+      return thunkAPI.rejectWithValue({
+        error: true,
+        message: "Failed to get SQL agent response",
+      });
+    }
+
+    const data = await response.json();
+    return data.response as string;
+  } catch (error) {
+    return thunkAPI.rejectWithValue({
+      error: true,
+      message: "Failed to get SQL agent response",
     });
   }
 });

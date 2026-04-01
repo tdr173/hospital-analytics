@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
 
-from app.repository.statistics_repository.immunization_repository import ImmunizationRepository
-from app.domain.schemas.statistics_schema.patient_schema import ChartEntry
-from app.domain.schemas.statistics_schema.condition_schema import PerPatientStats
-from app.domain.schemas.statistics_schema.immunization_schema import ImmunizationStatisticsResponse
+from repository.statistics_repository.immunization_repository import ImmunizationRepository
+from domain.schemas.statistics_schemas.patient_schema import ChartEntry
+from domain.schemas.statistics_schemas.condition_schema import PerPatientStats
+from domain.schemas.statistics_schemas.immunization_schema import ImmunizationStatisticsResponse
 
 
 class ImmunizationService:
