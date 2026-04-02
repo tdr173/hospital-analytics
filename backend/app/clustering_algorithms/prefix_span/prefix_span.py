@@ -42,6 +42,34 @@ SEQUENCE_QUERIES = {
             ORDER BY patient_id, start_date
         """,
     },
+    "procedures": {
+        "query": """
+            SELECT patient_id, description AS item, date AS event_date
+            FROM procedure
+            ORDER BY patient_id, date
+        """,
+    },
+    "immunizations": {
+        "query": """
+            SELECT patient_id, description AS item, date AS event_date
+            FROM immunization
+            ORDER BY patient_id, date
+        """,
+    },
+    "allergies": {
+        "query": """
+            SELECT patient_id, description AS item, start_date AS event_date
+            FROM allergy
+            ORDER BY patient_id, start_date
+        """,
+    },
+    "observations": {
+        "query": """
+            SELECT patient_id, description AS item, date AS event_date
+            FROM observation
+            ORDER BY patient_id, date
+        """,
+    },
     "multi_event": {
         "query": """
             SELECT patient_id, 'C:' || description AS item, start_date AS event_date
@@ -52,6 +80,15 @@ SEQUENCE_QUERIES = {
             UNION ALL
             SELECT patient_id, 'M:' || description AS item, start_date AS event_date
             FROM medication
+            UNION ALL
+            SELECT patient_id, 'P:' || description AS item, date AS event_date
+            FROM procedure
+            UNION ALL
+            SELECT patient_id, 'I:' || description AS item, date AS event_date
+            FROM immunization
+            UNION ALL
+            SELECT patient_id, 'A:' || description AS item, start_date AS event_date
+            FROM allergy
             ORDER BY patient_id, event_date
         """,
     },
@@ -258,7 +295,7 @@ if __name__ == "__main__":
     from db.db_connector import SessionLocal
     from save_results import save_sequence_results
 
-    for seq_type in ["conditions", "encounters", "medications"]:
+    for seq_type in ["conditions", "encounters", "medications", "procedures", "immunizations", "allergies", "observations"]:
         print(f"\n{'=' * 60}")
         print(f"  SEQUENCE MINING: {seq_type.upper()}")
         print(f"{'=' * 60}")
