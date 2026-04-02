@@ -18,6 +18,7 @@ import numericalFeaturesReducer from "./slices/clusters/numerical-features-slice
 import categoricalFeaturesReducer from "./slices/clusters/categorical-features-slice";
 import aiAnalysisReducer from "./slices/clusters/ai-analysis-slice";
 import patientsReducer from "./slices/patients/patients-slice";
+import currentPatientReducer from "./slices/patients/current-patient-slice";
 
 export const store = configureStore({
   reducer: {
@@ -39,6 +40,7 @@ export const store = configureStore({
     organizationsStatistics: organizationsStatisticsReducer,
     sqlAgent: sqlAgentReducer,
     patients: patientsReducer,
+    currentPatient: currentPatientReducer,
   },
 });
 

@@ -2,31 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import IdentityCard from "@/components/PatientComponents/PatientIdentityCard/PatientIdentityCard";
-import TableCell from "@mui/material/TableCell";
+import { useDispatch, useSelector } from "react-redux";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 
+import { RootState, AppDispatch } from "@/store";
 import {
-  PatientDetail,
-  PatientSummary,
-  ConditionItem,
-  MedicationItem,
-  ProcedureItem,
-  ImmunizationItem,
-  AllergyItem,
-  EncounterItem,
-} from "@/models/generic/patients";
-import { API_BASE } from "@/store/slices/clusters/thunks";
-import StyledTable, {
-  StyledTableRow,
-  bodyCellSx,
-} from "@/components/generic_components/StyledTable/StyledTable";
-import useClasses from "@/utils/useClasses";
-import { PatientDetailPageStyles } from "./styles";
-import { formatDate } from "@/utils/functions";
-import theme from "@/utils/theme";
+  fetchPatientDetail,
+  fetchPatientSummary,
+  fetchPatientConditions,
+  fetchPatientMedications,
+  fetchPatientProcedures,
+  fetchPatientImmunizations,
+  fetchPatientAllergies,
+  fetchPatientEncounters,
+} from "@/store/slices/patients/thunks";
+import { resetCurrentPatient } from "@/store/slices/patients/current-patient-slice";
+import { PatientSummary } from "@/models/generic/patients";
 
+import IdentityCard from "@/components/PatientComponents/PatientIdentityCard/PatientIdentityCard";
 import ConditionsTab from "@/components/PatientComponents/ConditionsTab/ConditionsTab";
 import MedicationsTab from "@/components/PatientComponents/MedicationsTab/MedicationsTab";
 import ProceduresTab from "@/components/PatientComponents/ProceduresTab/ProceduresTab";
@@ -34,21 +28,11 @@ import ImmunizationsTab from "@/components/PatientComponents/ImmunizationsTab/Im
 import AllergiesTab from "@/components/PatientComponents/AllergiesTab/AllergiesTab";
 import EncountersTab from "@/components/PatientComponents/EncountersTab/EncountersTab";
 
-const defaultHeaders = { "ngrok-skip-browser-warning": "true" };
+import useClasses from "@/utils/useClasses";
+import { PatientDetailPageStyles } from "./styles";
+import theme from "@/utils/theme";
 
-async function apiFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { headers: defaultHeaders });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
-}
-
-const ENCOUNTER_CLASS_LABELS: Record<string, string> = {
-  inpatient: "Inpatient",
-  ambulatory: "Ambulatory",
-  wellness: "Wellness",
-  emergency: "Emergency",
-  urgentcare: "Urgent Care",
-};
+const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
 // ─── Zone 2: Metrics row ──────────────────────────────────────────────────────
 function MetricBox({
@@ -125,81 +109,55 @@ const TAB_LABELS = [
   "Encounters",
 ];
 
+const TAB_FETCHERS: Record<number, (id: string) => any> = {
+  1: fetchPatientMedications,
+  2: fetchPatientProcedures,
+  3: fetchPatientImmunizations,
+  4: fetchPatientAllergies,
+  5: fetchPatientEncounters,
+};
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const dispatch = useAppDispatch();
   const classes = useClasses(PatientDetailPageStyles, {
     name: "PatientDetailPage",
   });
 
-  const [patient, setPatient] = useState<PatientDetail | null>(null);
-  const [summary, setSummary] = useState<PatientSummary | null>(null);
+  const {
+    patient,
+    summary,
+    conditions,
+    medications,
+    procedures,
+    immunizations,
+    allergies,
+    encounters,
+    loading,
+    error,
+    loadedTabs,
+  } = useSelector((state: RootState) => state.currentPatient);
+
   const [tab, setTab] = useState(0);
 
-  const [conditions, setConditions] = useState<ConditionItem[]>([]);
-  const [medications, setMedications] = useState<MedicationItem[]>([]);
-  const [procedures, setProcedures] = useState<ProcedureItem[]>([]);
-  const [immunizations, setImmunizations] = useState<ImmunizationItem[]>([]);
-  const [allergies, setAllergies] = useState<AllergyItem[]>([]);
-  const [encounters, setEncounters] = useState<EncounterItem[]>([]);
-
-  const [loadedTabs, setLoadedTabs] = useState<Set<number>>(new Set());
-  const [tabLoading, setTabLoading] = useState(false);
-  const [pageLoading, setPageLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch header + summary on mount
+  // Fetch patient detail + summary + first tab on mount
   useEffect(() => {
     if (!id) return;
-    setPageLoading(true);
-    Promise.all([
-      apiFetch<PatientDetail>(`/patients/${id}`),
-      apiFetch<PatientSummary>(`/patients/${id}/summary`),
-    ])
-      .then(([p, s]) => {
-        setPatient(p);
-        setSummary(s);
-      })
-      .catch(() => setError("Failed to load patient data."))
-      .finally(() => setPageLoading(false));
-  }, [id]);
+    dispatch(resetCurrentPatient());
+    dispatch(fetchPatientDetail(id));
+    dispatch(fetchPatientSummary(id));
+    dispatch(fetchPatientConditions(id));
+  }, [id, dispatch]);
 
-  // Lazy-load each tab on first visit
+  // Load tab data on first visit (tabs 1-5)
   useEffect(() => {
-    if (!id || loadedTabs.has(tab)) return;
-    setTabLoading(true);
+    if (!id || tab === 0 || loadedTabs.includes(tab)) return;
+    const fetcher = TAB_FETCHERS[tab];
+    if (fetcher) dispatch(fetcher(id));
+  }, [tab, id, dispatch, loadedTabs]);
 
-    const fetchers: Record<number, () => Promise<void>> = {
-      0: () =>
-        apiFetch<ConditionItem[]>(`/patients/${id}/conditions`).then(
-          setConditions,
-        ),
-      1: () =>
-        apiFetch<MedicationItem[]>(`/patients/${id}/medications`).then(
-          setMedications,
-        ),
-      2: () =>
-        apiFetch<ProcedureItem[]>(`/patients/${id}/procedures`).then(
-          setProcedures,
-        ),
-      3: () =>
-        apiFetch<ImmunizationItem[]>(`/patients/${id}/immunizations`).then(
-          setImmunizations,
-        ),
-      4: () =>
-        apiFetch<AllergyItem[]>(`/patients/${id}/allergies`).then(setAllergies),
-      5: () =>
-        apiFetch<EncounterItem[]>(`/patients/${id}/encounters`).then(
-          setEncounters,
-        ),
-    };
-
-    fetchers[tab]?.()
-      .then(() => setLoadedTabs((prev) => new Set(prev).add(tab)))
-      .finally(() => setTabLoading(false));
-  }, [tab, id, loadedTabs]);
-
-  if (pageLoading) {
+  if (loading) {
     return <div className={classes.pageLoading}>Loading patient data...</div>;
   }
 
@@ -258,7 +216,7 @@ export default function PatientDetailPage() {
         </Tabs>
 
         <div className={classes.tabContentPadding}>
-          {tabLoading ? (
+          {!loadedTabs.includes(tab) ? (
             <div className={classes.tabLoading}>Loading...</div>
           ) : (
             tabContent[tab]

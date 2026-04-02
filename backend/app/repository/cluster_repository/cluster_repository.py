@@ -1,10 +1,27 @@
 import json
 import re
 import base64
-from sqlalchemy import func, text
+from sqlalchemy import func, case, cast, Numeric
 from sqlalchemy.orm import Session
 from domain import ClusterModel, ClusterDetails, GetClustersDetails, ClusterPatientModel, ClusterRunModel, PcaPoint, GetClusterStatistics, ChartEntry, FeatureChartData, GetNumericalFeaturesStatistics, CategoricalClusterEntry, CategoricalFeatureChartData, GetCategoricalFeaturesStatistics, AiAnalysisResponse
 from service.lllm_sql_agent_service.llm_models import ask_ai
+
+
+def _avg_feat(feature, decimals=1):
+    return func.round(
+        func.avg(cast(ClusterPatientModel.features[feature].astext, Numeric)),
+        decimals,
+    )
+
+
+def _flag_pct(feature, value):
+    return func.round(
+        100.0 * func.sum(case(
+            (ClusterPatientModel.features[feature].astext == value, 1),
+            else_=0,
+        )) / func.nullif(func.count(), 0),
+        1,
+    )
 
 
 PROMPT_AI_ANALYSIS = """You are a senior clinical data analyst reviewing a specific patient group identified through K-Prototypes population segmentation in a hospital analytics system.
@@ -87,30 +104,31 @@ class ClusterRepository:
         ).all()
 
         # Compute stats per cluster in one query
-        stats_query = self.db.execute(text("""
-            SELECT
-                cluster_label,
-                ROUND(AVG((features->>'age')::numeric), 1) AS avg_age,
-                ROUND(AVG((features->>'qaly')::numeric), 1) AS avg_qaly,
-                ROUND(AVG((features->>'total_medications')::numeric), 1) AS avg_meds,
-                ROUND(
-                    100.0 * COUNT(*) FILTER (
-                        WHERE features->>'condition_burden' IN ('moderate', 'high', 'very_high')
-                    ) / NULLIF(COUNT(*), 0),
-                    1
-                ) AS chronic_illness_pct
-            FROM cluster_patient
-            WHERE run_id = :run_id
-            GROUP BY cluster_label
-        """), {"run_id": latest_run_id})
+        stats_rows = (
+            self.db.query(
+                ClusterPatientModel.cluster_label,
+                func.round(func.avg(cast(ClusterPatientModel.features["age"].astext, Numeric)), 1).label("avg_age"),
+                func.round(func.avg(cast(ClusterPatientModel.features["qaly"].astext, Numeric)), 1).label("avg_qaly"),
+                func.round(func.avg(cast(ClusterPatientModel.features["total_medications"].astext, Numeric)), 1).label("avg_meds"),
+                func.round(
+                    100.0 * func.count(case(
+                        (ClusterPatientModel.features["condition_burden"].astext.in_(["moderate", "high", "very_high"]), 1)
+                    )) / func.nullif(func.count(), 0),
+                    1,
+                ).label("chronic_illness_pct"),
+            )
+            .filter(ClusterPatientModel.run_id == latest_run_id)
+            .group_by(ClusterPatientModel.cluster_label)
+            .all()
+        )
 
         stats_map = {}
-        for row in stats_query.mappings():
-            stats_map[row["cluster_label"]] = {
-                "avg_age": float(row["avg_age"] or 0),
-                "avg_qaly": float(row["avg_qaly"] or 0),
-                "avg_meds": float(row["avg_meds"] or 0),
-                "chronic_illness_pct": float(row["chronic_illness_pct"] or 0),
+        for row in stats_rows:
+            stats_map[row.cluster_label] = {
+                "avg_age": float(row.avg_age or 0),
+                "avg_qaly": float(row.avg_qaly or 0),
+                "avg_meds": float(row.avg_meds or 0),
+                "chronic_illness_pct": float(row.chronic_illness_pct or 0),
             }
 
         parsed_clusters = []
@@ -147,16 +165,23 @@ class ClusterRepository:
         if not latest_run_id:
             return GetClusterStatistics(points=[])
 
-        rows = self.db.execute(text("""
-            SELECT pca_x, pca_y, cluster_label, is_outlier
-            FROM cluster_patient
-            WHERE run_id = :run_id
-              AND pca_x IS NOT NULL
-              AND pca_y IS NOT NULL
-        """), {"run_id": latest_run_id}).mappings().all()
+        rows = (
+            self.db.query(
+                ClusterPatientModel.pca_x,
+                ClusterPatientModel.pca_y,
+                ClusterPatientModel.cluster_label,
+                ClusterPatientModel.is_outlier,
+            )
+            .filter(
+                ClusterPatientModel.run_id == latest_run_id,
+                ClusterPatientModel.pca_x.isnot(None),
+                ClusterPatientModel.pca_y.isnot(None),
+            )
+            .all()
+        )
 
         points = [
-            PcaPoint(x=row["pca_x"], y=row["pca_y"], cluster=row["cluster_label"], is_outlier=row["is_outlier"])
+            PcaPoint(x=row.pca_x, y=row.pca_y, cluster=row.cluster_label, is_outlier=row.is_outlier)
             for row in rows
         ]
 
@@ -178,27 +203,32 @@ class ClusterRepository:
 
         numerical_features = run[0]
 
-        select_parts = ", ".join(
-            f"AVG((features->>'{f}')::numeric) AS {f}_mean, "
-            f"PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (features->>'{f}')::numeric) AS {f}_median"
-            for f in numerical_features
-        )
+        select_exprs = []
+        for f in numerical_features:
+            col = cast(ClusterPatientModel.features[f].astext, Numeric)
+            select_exprs.append(func.avg(col).label(f"{f}_mean"))
+            select_exprs.append(
+                func.percentile_cont(0.5).within_group(col).label(f"{f}_median")
+            )
 
-        rows = self.db.execute(text(f"""
-            SELECT cluster_label, {select_parts}
-            FROM cluster_patient
-            WHERE run_id = :run_id AND NOT is_outlier
-            GROUP BY cluster_label
-            ORDER BY cluster_label
-        """), {"run_id": latest_run_id}).mappings().all()
+        rows = (
+            self.db.query(ClusterPatientModel.cluster_label, *select_exprs)
+            .filter(
+                ClusterPatientModel.run_id == latest_run_id,
+                ClusterPatientModel.is_outlier == False,
+            )
+            .group_by(ClusterPatientModel.cluster_label)
+            .order_by(ClusterPatientModel.cluster_label)
+            .all()
+        )
 
         result = []
         for feature in numerical_features:
             data = []
             for row in rows:
-                mean_val = round(float(row[f"{feature}_mean"] or 0), 2)
-                median_val = round(float(row[f"{feature}_median"] or 0), 2)
-                label = row["cluster_label"]
+                mean_val = round(float(getattr(row, f"{feature}_mean") or 0), 2)
+                median_val = round(float(getattr(row, f"{feature}_median") or 0), 2)
+                label = row.cluster_label
                 data.append(ChartEntry(
                     name=f"Cluster {label}",
                     value=mean_val,
@@ -223,25 +253,35 @@ class ClusterRepository:
         result = []
 
         for feature in categorical_features:
-            rows = self.db.execute(text(f"""
-                SELECT cluster_label, features->>'{feature}' AS cat_val, COUNT(*) AS cnt
-                FROM cluster_patient
-                WHERE run_id = :run_id AND NOT is_outlier
-                GROUP BY cluster_label, features->>'{feature}'
-                ORDER BY cluster_label
-            """), {"run_id": latest_run_id}).mappings().all()
+            rows = (
+                self.db.query(
+                    ClusterPatientModel.cluster_label,
+                    ClusterPatientModel.features[feature].astext.label("cat_val"),
+                    func.count().label("cnt"),
+                )
+                .filter(
+                    ClusterPatientModel.run_id == latest_run_id,
+                    ClusterPatientModel.is_outlier == False,
+                )
+                .group_by(
+                    ClusterPatientModel.cluster_label,
+                    ClusterPatientModel.features[feature].astext,
+                )
+                .order_by(ClusterPatientModel.cluster_label)
+                .all()
+            )
 
             # compute proportions per cluster
             totals: dict[int, int] = {}
             counts: dict[int, dict[str, int]] = {}
             for row in rows:
-                cl = row["cluster_label"]
-                cat = row["cat_val"] or "unknown"
-                cnt = int(row["cnt"])
+                cl = row.cluster_label
+                cat = row.cat_val or "unknown"
+                cnt = int(row.cnt)
                 totals[cl] = totals.get(cl, 0) + cnt
                 counts.setdefault(cl, {})[cat] = cnt
 
-            all_categories = sorted({row["cat_val"] or "unknown" for row in rows})
+            all_categories = sorted({row.cat_val or "unknown" for row in rows})
 
             data = []
             for cl in sorted(totals.keys()):
@@ -283,73 +323,86 @@ class ClusterRepository:
 
         is_outlier_cluster = cluster_id == -1
         cluster_type = "outlier group" if is_outlier_cluster else "regular cluster"
-        # For outlier cluster use is_outlier = TRUE, for regular clusters use the specific cluster_label
+
         if is_outlier_cluster:
-            cluster_filter = "is_outlier = TRUE"
+            cluster_filters = [ClusterPatientModel.is_outlier == True]
         else:
-            cluster_filter = f"cluster_label = {cluster_id} AND NOT is_outlier"
+            cluster_filters = [
+                ClusterPatientModel.cluster_label == cluster_id,
+                ClusterPatientModel.is_outlier == False,
+            ]
 
         # Per-cluster stats (single cluster)
-        stats_row = self.db.execute(text(f"""
-            SELECT
-                COUNT(*) AS patient_count,
-                ROUND(AVG((features->>'age')::numeric), 1) AS avg_age,
-                ROUND(AVG((features->>'qaly')::numeric), 2) AS avg_qaly,
-                ROUND(AVG((features->>'total_medications')::numeric), 1) AS avg_meds,
-                ROUND(AVG((features->>'total_procedures')::numeric), 1) AS avg_procedures,
-                ROUND(AVG((features->>'emergency_count')::numeric), 1) AS avg_emergency,
-                ROUND(AVG((features->>'wellness_count')::numeric), 1) AS avg_wellness,
-                ROUND(AVG((features->>'ambulatory_count')::numeric), 1) AS avg_ambulatory,
-                ROUND(AVG((features->>'outpatient_count')::numeric), 1) AS avg_outpatient,
-                ROUND(AVG((features->>'active_conditions_count')::numeric), 1) AS avg_conditions,
-                ROUND(100.0 * SUM(CASE WHEN features->>'has_diabetes' = 'Yes' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS diabetes_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'has_hypertension' = 'Yes' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS hypertension_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'has_heart_disease' = 'Yes' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS heart_disease_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'has_obesity' = 'Yes' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS obesity_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'smoking_status' = 'current' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS current_smoker_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'gender' = 'F' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS female_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'gender' = 'M' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS male_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'age_group' = 'child' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS age_child_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'age_group' = 'young_adult' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS age_young_adult_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'age_group' = 'middle_aged' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS age_middle_aged_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'age_group' = 'senior' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS age_senior_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'age_group' = 'elderly' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS age_elderly_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'bmi_category' = 'Normal' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS bmi_normal_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'bmi_category' = 'Overweight' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS bmi_overweight_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'bmi_category' = 'Obese' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS bmi_obese_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'bmi_category' = 'Underweight' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS bmi_underweight_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'condition_burden' = 'low' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS burden_low_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'condition_burden' = 'moderate' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS burden_moderate_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'condition_burden' = 'high' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS burden_high_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'condition_burden' = 'very_high' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS burden_very_high_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'medication_intensity' = 'low' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS med_low_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'medication_intensity' = 'moderate' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS med_moderate_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'medication_intensity' = 'high' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS med_high_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'medication_intensity' = 'very_high' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS med_very_high_pct,
-                MODE() WITHIN GROUP (ORDER BY features->>'dominant_encounter_class') AS dominant_encounter
-            FROM cluster_patient
-            WHERE run_id = :run_id AND {cluster_filter}
-        """), {"run_id": latest_run_id}).mappings().first()
+        stats_row = (
+            self.db.query(
+                func.count().label("patient_count"),
+                _avg_feat("age").label("avg_age"),
+                _avg_feat("qaly", 2).label("avg_qaly"),
+                _avg_feat("total_medications").label("avg_meds"),
+                _avg_feat("total_procedures").label("avg_procedures"),
+                _avg_feat("emergency_count").label("avg_emergency"),
+                _avg_feat("wellness_count").label("avg_wellness"),
+                _avg_feat("ambulatory_count").label("avg_ambulatory"),
+                _avg_feat("outpatient_count").label("avg_outpatient"),
+                _avg_feat("active_conditions_count").label("avg_conditions"),
+                _flag_pct("has_diabetes", "Yes").label("diabetes_pct"),
+                _flag_pct("has_hypertension", "Yes").label("hypertension_pct"),
+                _flag_pct("has_heart_disease", "Yes").label("heart_disease_pct"),
+                _flag_pct("has_obesity", "Yes").label("obesity_pct"),
+                _flag_pct("smoking_status", "current").label("current_smoker_pct"),
+                _flag_pct("gender", "F").label("female_pct"),
+                _flag_pct("gender", "M").label("male_pct"),
+                _flag_pct("age_group", "child").label("age_child_pct"),
+                _flag_pct("age_group", "young_adult").label("age_young_adult_pct"),
+                _flag_pct("age_group", "middle_aged").label("age_middle_aged_pct"),
+                _flag_pct("age_group", "senior").label("age_senior_pct"),
+                _flag_pct("age_group", "elderly").label("age_elderly_pct"),
+                _flag_pct("bmi_category", "Normal").label("bmi_normal_pct"),
+                _flag_pct("bmi_category", "Overweight").label("bmi_overweight_pct"),
+                _flag_pct("bmi_category", "Obese").label("bmi_obese_pct"),
+                _flag_pct("bmi_category", "Underweight").label("bmi_underweight_pct"),
+                _flag_pct("condition_burden", "low").label("burden_low_pct"),
+                _flag_pct("condition_burden", "moderate").label("burden_moderate_pct"),
+                _flag_pct("condition_burden", "high").label("burden_high_pct"),
+                _flag_pct("condition_burden", "very_high").label("burden_very_high_pct"),
+                _flag_pct("medication_intensity", "low").label("med_low_pct"),
+                _flag_pct("medication_intensity", "moderate").label("med_moderate_pct"),
+                _flag_pct("medication_intensity", "high").label("med_high_pct"),
+                _flag_pct("medication_intensity", "very_high").label("med_very_high_pct"),
+                func.mode().within_group(
+                    ClusterPatientModel.features["dominant_encounter_class"].astext
+                ).label("dominant_encounter"),
+            )
+            .filter(
+                ClusterPatientModel.run_id == latest_run_id,
+                *cluster_filters,
+            )
+            .first()
+        )
 
-        s = dict(stats_row) if stats_row else {}
+        s = stats_row._asdict() if stats_row else {}
 
         # Population averages (across all non-outlier patients)
-        pop_row = self.db.execute(text("""
-            SELECT
-                ROUND(AVG((features->>'age')::numeric), 1) AS pop_avg_age,
-                ROUND(AVG((features->>'qaly')::numeric), 2) AS pop_avg_qaly,
-                ROUND(AVG((features->>'total_medications')::numeric), 1) AS pop_avg_meds,
-                ROUND(AVG((features->>'total_procedures')::numeric), 1) AS pop_avg_procedures,
-                ROUND(AVG((features->>'emergency_count')::numeric), 1) AS pop_avg_emergency,
-                ROUND(AVG((features->>'wellness_count')::numeric), 1) AS pop_avg_wellness,
-                ROUND(AVG((features->>'ambulatory_count')::numeric), 1) AS pop_avg_ambulatory,
-                ROUND(AVG((features->>'outpatient_count')::numeric), 1) AS pop_avg_outpatient,
-                ROUND(100.0 * SUM(CASE WHEN features->>'has_diabetes' = 'Yes' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS pop_diabetes_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'has_hypertension' = 'Yes' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS pop_hypertension_pct,
-                ROUND(100.0 * SUM(CASE WHEN features->>'has_obesity' = 'Yes' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS pop_obesity_pct
-            FROM cluster_patient
-            WHERE run_id = :run_id AND NOT is_outlier
-        """), {"run_id": latest_run_id}).mappings().first()
+        pop_row = (
+            self.db.query(
+                _avg_feat("age").label("pop_avg_age"),
+                _avg_feat("qaly", 2).label("pop_avg_qaly"),
+                _avg_feat("total_medications").label("pop_avg_meds"),
+                _avg_feat("total_procedures").label("pop_avg_procedures"),
+                _avg_feat("emergency_count").label("pop_avg_emergency"),
+                _avg_feat("wellness_count").label("pop_avg_wellness"),
+                _avg_feat("ambulatory_count").label("pop_avg_ambulatory"),
+                _avg_feat("outpatient_count").label("pop_avg_outpatient"),
+                _flag_pct("has_diabetes", "Yes").label("pop_diabetes_pct"),
+                _flag_pct("has_hypertension", "Yes").label("pop_hypertension_pct"),
+                _flag_pct("has_obesity", "Yes").label("pop_obesity_pct"),
+            )
+            .filter(
+                ClusterPatientModel.run_id == latest_run_id,
+                ClusterPatientModel.is_outlier == False,
+            )
+            .first()
+        )
 
         count = s.get("patient_count", 0)
         ref_population = total_patients if not is_outlier_cluster else (
@@ -360,8 +413,10 @@ class ClusterRepository:
         pct = round(count / ref_population * 100, 1) if ref_population > 0 else 0
         metrics = run.metrics or {}
 
+        pop = pop_row._asdict() if pop_row else None
+
         def p(key):
-            return pop_row[key] if pop_row else "N/A"
+            return pop[key] if pop else "N/A"
 
         prompt = PROMPT_AI_ANALYSIS.format(
             n_patients=total_patients,
@@ -424,9 +479,8 @@ class ClusterRepository:
         analysis = _parse_ai_json(raw_response)
 
         # Cache in cluster row
-        self.db.execute(
-            text("UPDATE cluster SET ai_analysis = :data WHERE id = :id"),
-            {"data": json.dumps(analysis), "id": cluster.id}
+        self.db.query(ClusterModel).filter(ClusterModel.id == cluster.id).update(
+            {"ai_analysis": analysis}, synchronize_session="fetch"
         )
         self.db.commit()
 
