@@ -28,72 +28,24 @@ import ImmunizationsTab from "@/components/PatientComponents/ImmunizationsTab/Im
 import AllergiesTab from "@/components/PatientComponents/AllergiesTab/AllergiesTab";
 import EncountersTab from "@/components/PatientComponents/EncountersTab/EncountersTab";
 
+import MetricComponent from "@/components/PatientComponents/MetricComponent/MetricComponent";
+
 import useClasses from "@/utils/useClasses";
 import { PatientDetailPageStyles } from "./styles";
 import theme from "@/utils/theme";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
-function MetricBox({
-  label,
-  value,
-  unit,
-  classes,
-}: {
-  label: string;
-  value: React.ReactNode;
-  unit?: string;
-  classes: any;
-}) {
-  return (
-    <div className={classes.metricBox}>
-      <p className={classes.metricLabel}>{label}</p>
-      <p className={classes.metricValue}>
-        {value ?? "-"}
-        {unit && value !== null && (
-          <span className={classes.metricUnit}>{unit}</span>
-        )}
-      </p>
-    </div>
-  );
-}
-
 function MetricsRow({ s, classes }: { s: PatientSummary; classes: any }) {
   return (
     <div className={classes.metricsRow}>
-      <MetricBox label="QALY" value={s.qaly} classes={classes} />
-      <MetricBox
-        label="Avg BMI"
-        value={s.avgBmi}
-        unit="kg/m²"
-        classes={classes}
-      />
-      <MetricBox
-        label="Active Conditions"
-        value={s.activeConditions}
-        classes={classes}
-      />
-      <MetricBox
-        label="Total Medications"
-        value={s.totalMedications}
-        classes={classes}
-      />
-      <MetricBox
-        label="Total Procedures"
-        value={s.totalProcedures}
-        classes={classes}
-      />
-      <MetricBox
-        label="Emergency Visits"
-        value={s.emergencyVisits}
-        classes={classes}
-      />
-      <MetricBox
-        label="Days Since Last Visit"
-        value={s.daysSinceLastEncounter}
-        unit="days"
-        classes={classes}
-      />
+      <MetricComponent label="QALY" value={s.qaly} />
+      <MetricComponent label="Avg BMI" value={s.avgBmi} unit="kg/m²" />
+      <MetricComponent label="Active Conditions" value={s.activeConditions} />
+      <MetricComponent label="Total Medications" value={s.totalMedications} />
+      <MetricComponent label="Total Procedures" value={s.totalProcedures} />
+      <MetricComponent label="Emergency Visits" value={s.emergencyVisits} />
+      <MetricComponent label="Days Since Last Visit" value={s.daysSinceLastEncounter} unit="days" />
     </div>
   );
 }

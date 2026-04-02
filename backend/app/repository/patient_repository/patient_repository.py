@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, or_, cast, Numeric, literal
+from sqlalchemy import func, and_, or_, cast, case, Numeric, literal
 
 from domain import (
     PatientModel, ClusterPatientModel, ClusterModel, ClusterRunModel,
@@ -229,7 +229,7 @@ class PatientRepository:
     def get_patient_summary(self, patient_id: str) -> PatientSummaryResponse:
         latest_run_id = self._latest_run_id()
 
-        # Try pre-computed features from clustering
+        f = {}
         if latest_run_id:
             cp = (
                 self.db.query(ClusterPatientModel)
@@ -239,81 +239,85 @@ class PatientRepository:
                 )
                 .first()
             )
-
             if cp and cp.features:
                 f = cp.features
-                return PatientSummaryResponse(
-                    qaly=round(float(f["qaly"]), 2) if f.get("qaly") is not None else None,
-                    avg_bmi=round(float(f["avg_bmi"]), 1) if f.get("avg_bmi") is not None else None,
-                    active_conditions=int(f.get("active_conditions_count") or 0),
-                    total_medications=int(f.get("total_medications") or 0),
-                    total_procedures=int(f.get("total_procedures") or 0),
-                    emergency_visits=int(f.get("emergency_count") or 0),
-                    days_since_last_encounter=int(f.get("days_since_last_encounter") or 0),
+
+        # Use pre-computed values when available, otherwise query DB
+        qaly = f.get("qaly")
+        if qaly is None:
+            qaly = (
+                self.db.query(ObservationModel.value_numeric)
+                .filter(
+                    ObservationModel.patient_id == patient_id,
+                    ObservationModel.description == 'QALY',
                 )
-
-        # Fallback: compute directly from tables
-        qaly = (
-            self.db.query(ObservationModel.value_numeric)
-            .filter(
-                ObservationModel.patient_id == patient_id,
-                ObservationModel.description == 'QALY',
+                .order_by(ObservationModel.date.desc())
+                .limit(1)
+                .scalar()
             )
-            .order_by(ObservationModel.date.desc())
-            .limit(1)
-            .scalar()
-        )
 
-        bmi_subq = (
-            self.db.query(ObservationModel.value_numeric)
-            .filter(
-                ObservationModel.patient_id == patient_id,
-                ObservationModel.description == 'Body Mass Index',
-                ObservationModel.value_numeric.isnot(None),
+        avg_bmi = f.get("avg_bmi")
+        if avg_bmi is None:
+            bmi_subq = (
+                self.db.query(ObservationModel.value_numeric)
+                .filter(
+                    ObservationModel.patient_id == patient_id,
+                    ObservationModel.description == 'Body Mass Index',
+                    ObservationModel.value_numeric.isnot(None),
+                )
+                .order_by(ObservationModel.date.desc())
+                .limit(5)
+                .subquery()
             )
-            .order_by(ObservationModel.date.desc())
-            .limit(5)
-            .subquery()
-        )
-        avg_bmi = self.db.query(
-            func.round(cast(func.avg(bmi_subq.c.value_numeric), Numeric), 1)
-        ).scalar()
+            avg_bmi = self.db.query(
+                func.round(cast(func.avg(bmi_subq.c.value_numeric), Numeric), 1)
+            ).scalar()
 
-        active_conditions = (
-            self.db.query(func.count(ConditionModel.id))
-            .filter(
-                ConditionModel.patient_id == patient_id,
-                ConditionModel.end_date.is_(None),
+        active_conditions = f.get("active_conditions_count")
+        if active_conditions is None:
+            active_conditions = (
+                self.db.query(func.count(ConditionModel.id))
+                .filter(
+                    ConditionModel.patient_id == patient_id,
+                    ConditionModel.end_date.is_(None),
+                )
+                .scalar()
             )
-            .scalar()
-        )
 
-        total_medications = (
-            self.db.query(func.count(MedicationModel.id))
-            .filter(MedicationModel.patient_id == patient_id)
-            .scalar()
-        )
-
-        total_procedures = (
-            self.db.query(func.count(ProcedureModel.id))
-            .filter(ProcedureModel.patient_id == patient_id)
-            .scalar()
-        )
-
-        emergency_visits = (
-            self.db.query(func.count(EncounterModel.encounter_id))
-            .filter(
-                EncounterModel.patient_id == patient_id,
-                EncounterModel.encounter_class == 'emergency',
+        total_medications = f.get("total_medications")
+        if total_medications is None:
+            total_medications = (
+                self.db.query(func.count(MedicationModel.id))
+                .filter(MedicationModel.patient_id == patient_id)
+                .scalar()
             )
-            .scalar()
-        )
 
-        days_since_last_encounter = self.db.query(
-            func.extract('day', func.now() - func.max(EncounterModel.start_date))
-        ).filter(
-            EncounterModel.patient_id == patient_id
-        ).scalar()
+        total_procedures = f.get("total_procedures")
+        if total_procedures is None:
+            total_procedures = (
+                self.db.query(func.count(ProcedureModel.id))
+                .filter(ProcedureModel.patient_id == patient_id)
+                .scalar()
+            )
+
+        emergency_visits = f.get("emergency_count")
+        if emergency_visits is None:
+            emergency_visits = (
+                self.db.query(func.count(EncounterModel.encounter_id))
+                .filter(
+                    EncounterModel.patient_id == patient_id,
+                    EncounterModel.encounter_class == 'emergency',
+                )
+                .scalar()
+            )
+
+        days_since_last_encounter = f.get("days_since_last_encounter")
+        if days_since_last_encounter is None:
+            days_since_last_encounter = self.db.query(
+                func.extract('day', func.now() - func.max(EncounterModel.start_date))
+            ).filter(
+                EncounterModel.patient_id == patient_id
+            ).scalar()
 
         return PatientSummaryResponse(
             qaly=round(float(qaly), 2) if qaly is not None else None,
@@ -336,7 +340,7 @@ class PatientRepository:
             ConditionItem(
                 id=r.id,
                 description=r.description,
-                condition_code=r.condition_code,
+                condition_code=str(r.condition_code),
                 start_date=r.start_date,
                 end_date=r.end_date,
             )
@@ -354,7 +358,7 @@ class PatientRepository:
             MedicationItem(
                 id=r.id,
                 description=r.description,
-                medication_code=r.medication_code,
+                medication_code=str(r.medication_code),
                 start_date=r.start_date,
                 end_date=r.end_date,
                 duration_days=r.duration_days,
@@ -374,7 +378,7 @@ class PatientRepository:
             ProcedureItem(
                 id=r.id,
                 description=r.description,
-                procedure_code=r.procedure_code,
+                procedure_code=str(r.procedure_code),
                 date=r.date,
                 reason_description=r.reason_description,
             )
@@ -392,7 +396,7 @@ class PatientRepository:
             ImmunizationItem(
                 id=r.id,
                 description=r.description,
-                immunization_code=r.immunization_code,
+                immunization_code=str(r.immunization_code),
                 date=r.date,
             )
             for r in rows
@@ -409,7 +413,7 @@ class PatientRepository:
             AllergyItem(
                 id=r.id,
                 description=r.description,
-                allergy_code=r.allergy_code,
+                allergy_code=str(r.allergy_code),
                 start_date=r.start_date,
                 end_date=r.end_date,
             )
@@ -459,10 +463,14 @@ class PatientRepository:
                 EncounterModel.encounter_class,
                 EncounterModel.description,
                 EncounterModel.reason_description,
-                (
-                    func.regexp_replace(ProviderModel.first_name, '[0-9]', '', 'g')
-                    + ' '
-                    + func.regexp_replace(ProviderModel.last_name, '[0-9]', '', 'g')
+                case(
+                    (ProviderModel.first_name == ProviderModel.last_name,
+                     func.regexp_replace(ProviderModel.first_name, '[0-9]', '', 'g')),
+                    else_=(
+                        func.regexp_replace(ProviderModel.first_name, '[0-9]', '', 'g')
+                        + ' '
+                        + func.regexp_replace(ProviderModel.last_name, '[0-9]', '', 'g')
+                    )
                 ).label("provider_name"),
                 OrganizationModel.name.label("organization_name"),
             )
