@@ -1,3 +1,5 @@
+"use client";
+
 import useClasses from "@/utils/useClasses";
 import userTypeTagStyles from "./UserTypeTagStyles";
 import { hexToHexa } from "@/utils/functions";

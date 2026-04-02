@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -7,16 +7,13 @@ from sqlalchemy import text
 
 def save_sequence_results(db: Session, result: dict) -> int:
     """
-    Saves a PrefixSpan sequence mining run to the database.
+    Save a PrefixSpan run to the database.
 
-    Tables used:
-        sequence_run       — one row per execution (metadata + params)
-        frequent_sequence  — one row per discovered frequent pattern
-
+    Tables: sequence_run (one row per run), frequent_sequence (one row per pattern).
     Returns the run_id.
     """
 
-    # 1. ensure tables exist
+    # ensure tables exist
     db.execute(text("""
         CREATE TABLE IF NOT EXISTS sequence_run (
             id              SERIAL PRIMARY KEY,
@@ -44,7 +41,7 @@ def save_sequence_results(db: Session, result: dict) -> int:
         "CREATE INDEX IF NOT EXISTS ix_frequent_sequence_run_id ON frequent_sequence(run_id)"
     ))
 
-    # 2. insert run
+    # insert run
     row = db.execute(
         text("""
             INSERT INTO sequence_run
@@ -56,7 +53,7 @@ def save_sequence_results(db: Session, result: dict) -> int:
             RETURNING id
         """),
         {
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
             "sequence_type": result["sequence_type"],
             "n_patients": result["n_patients"],
             "min_support": result["min_support"],
@@ -68,7 +65,7 @@ def save_sequence_results(db: Session, result: dict) -> int:
     )
     run_id = row.fetchone()[0]
 
-    # 3. insert frequent patterns
+    # insert patterns
     if result["patterns"]:
         db.execute(
             text("""

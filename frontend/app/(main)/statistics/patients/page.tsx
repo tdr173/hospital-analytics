@@ -39,13 +39,13 @@ export default function PatientsPage() {
       <div className={classes.totalCard}>
         <div className={classes.totalLabel}>Total Patients</div>
         <div className={classes.totalValue}>
-          {data.total_patients.toLocaleString()}
+          {data.totalPatients.toLocaleString()}
         </div>
       </div>
 
       <div className={classes.grid}>
         <BarChartComponent
-          data={data.age_groups}
+          data={data.ageGroups}
           title="Age Groups"
           color="#006780"
         />
@@ -61,12 +61,12 @@ export default function PatientsPage() {
           colors={["#006780", "#028fb0", "#6cd3f7"]}
         />
         <PieChartComponent
-          data={data.marital_status}
+          data={data.maritalStatus}
           title="Marital Status"
           colors={["#006780", "#028fb0", "#6cd3f7", "#515f74"]}
         />
         <PieChartComponent
-          data={data.vital_status}
+          data={data.vitalStatus}
           title="Vital Status"
           colors={["#028fb0", "#515f74"]}
         />
@@ -74,7 +74,7 @@ export default function PatientsPage() {
 
       <div className={classes.fullWidthChart}>
         <BarChartComponent
-          data={data.top_cities}
+          data={data.topCities}
           title="Top Cities"
           color="#515f74"
           showLabel

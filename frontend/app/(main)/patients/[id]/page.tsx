@@ -34,7 +34,6 @@ import theme from "@/utils/theme";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
-// ─── Zone 2: Metrics row ──────────────────────────────────────────────────────
 function MetricBox({
   label,
   value,
@@ -65,33 +64,33 @@ function MetricsRow({ s, classes }: { s: PatientSummary; classes: any }) {
       <MetricBox label="QALY" value={s.qaly} classes={classes} />
       <MetricBox
         label="Avg BMI"
-        value={s.avg_bmi}
+        value={s.avgBmi}
         unit="kg/m²"
         classes={classes}
       />
       <MetricBox
         label="Active Conditions"
-        value={s.active_conditions}
+        value={s.activeConditions}
         classes={classes}
       />
       <MetricBox
         label="Total Medications"
-        value={s.total_medications}
+        value={s.totalMedications}
         classes={classes}
       />
       <MetricBox
         label="Total Procedures"
-        value={s.total_procedures}
+        value={s.totalProcedures}
         classes={classes}
       />
       <MetricBox
         label="Emergency Visits"
-        value={s.emergency_visits}
+        value={s.emergencyVisits}
         classes={classes}
       />
       <MetricBox
         label="Days Since Last Visit"
-        value={s.days_since_last_encounter}
+        value={s.daysSinceLastEncounter}
         unit="days"
         classes={classes}
       />
@@ -99,7 +98,6 @@ function MetricsRow({ s, classes }: { s: PatientSummary; classes: any }) {
   );
 }
 
-// ─── Zone 3: Medical history tabs ─────────────────────────────────────────────
 const TAB_LABELS = [
   "Conditions",
   "Medications",
@@ -117,7 +115,6 @@ const TAB_FETCHERS: Record<number, (id: string) => any> = {
   5: fetchPatientEncounters,
 };
 
-// ─── Main page ────────────────────────────────────────────────────────────────
 export default function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const dispatch = useAppDispatch();
@@ -180,10 +177,8 @@ export default function PatientDetailPage() {
     <div className={classes.pageContainer}>
       <IdentityCard patient={patient} classes={classes} />
 
-      {/* Zone 2 */}
       {summary && <MetricsRow s={summary} classes={classes} />}
 
-      {/* Zone 3 */}
       <div className={classes.tabsPanel}>
         <Tabs
           value={tab}

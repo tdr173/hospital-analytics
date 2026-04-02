@@ -1,15 +1,16 @@
 from pydantic import BaseModel
+from domain.schemas.camel_model import CamelModel
 from domain.schemas.statistics_schemas.patient_schema import ChartEntry
 
 
-class UtilizationStats(BaseModel):
+class UtilizationStats(CamelModel):
     min: int
     max: int
     avg: float
     median: float
 
 
-class ProviderStatisticsResponse(BaseModel):
+class ProviderStatisticsResponse(CamelModel):
     total_providers: int
     unique_specialities: int
     utilization: UtilizationStats

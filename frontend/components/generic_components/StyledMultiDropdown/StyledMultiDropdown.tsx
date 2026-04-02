@@ -8,6 +8,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import theme from "@/utils/theme";
 import { DropdownOption } from "@/components/generic_components/StyledDropdown/StyledDropdown";
+import useClasses from "@/utils/useClasses";
+import { StyledMultiDropdownStyles } from "./StyledMultiDropdownStyles";
 
 interface StyledMultiDropdownProps {
   label: string;
@@ -23,18 +25,6 @@ interface StyledMultiDropdownProps {
   width?: string | number;
   onClear?: () => void;
 }
-
-const labelSx = {
-  fontFamily: theme.typography.fontFamily,
-  fontSize: "0.75rem",
-  fontWeight: theme.typography.fontWeight.bold,
-  color: theme.colors.text.secondary,
-  textTransform: "uppercase" as const,
-  letterSpacing: "0.5px",
-  margin: 0,
-  marginBottom: "6px",
-  display: "block",
-};
 
 const selectSx = {
   fontFamily: theme.typography.fontFamily,
@@ -110,6 +100,8 @@ export default function StyledMultiDropdown({
   width,
   onClear,
 }: StyledMultiDropdownProps) {
+  const classes = useClasses(StyledMultiDropdownStyles, { name: "StyledMultiDropdown" });
+
   const handleChange = (e: SelectChangeEvent<(string | number)[]>) => {
     const val = e.target.value;
     onChange(typeof val === "string" ? val.split(",") : val);
@@ -117,24 +109,18 @@ export default function StyledMultiDropdown({
 
   const renderValue = (selected: (string | number)[]) => {
     if (selected.length === 0) {
-      return <span style={{ color: theme.colors.text.secondary }}>{placeholder}</span>;
+      return <span className={classes.placeholderText}>{placeholder}</span>;
     }
     if (selected.length === 1) {
       const opt = options.find((o) => o.value === selected[0]);
       return <span>{opt?.label ?? selected[0]}</span>;
     }
-    return <span style={{ color: theme.colors.text.secondary }}>+{selected.length}</span>;
+    return <span className={classes.countText}>+{selected.length}</span>;
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        width: width ?? (fullWidth ? "100%" : undefined),
-      }}
-    >
-      <span style={labelSx}>{required ? `${label} *` : label}</span>
+    <div className={classes.wrapper} style={{ width: width ?? (fullWidth ? "100%" : undefined) }}>
+      <span className={classes.label}>{required ? `${label} *` : label}</span>
 
       <Select
         multiple
@@ -180,13 +166,8 @@ export default function StyledMultiDropdown({
 
       {helperText && (
         <span
-          style={{
-            fontFamily: theme.typography.fontFamily,
-            fontSize: "0.75rem",
-            margin: 0,
-            marginTop: "4px",
-            color: error ? theme.colors.status.error : theme.colors.text.secondary,
-          }}
+          className={classes.helperText}
+          style={{ color: error ? theme.colors.status.error : theme.colors.text.secondary }}
         >
           {helperText}
         </span>

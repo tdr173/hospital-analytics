@@ -183,9 +183,15 @@ export const ClustersPageStyles = (theme: Theme) => ({
     textAlign: "center" as const,
     textDecoration: "none",
     transition: "opacity 0.15s",
+    flex: 1,
+    margin: 0,
     "&:hover": {
       opacity: 0.85,
     },
+  },
+  analyseButtonIcon: {
+    width: 15,
+    height: 15,
   },
 
   // Card action buttons row
@@ -234,9 +240,10 @@ export const ClustersPageStyles = (theme: Theme) => ({
     display: "flex",
     flexDirection: "column" as const,
     overflow: "hidden",
+    borderTop: "4px solid transparent",
   },
 
-  // Header - white, left border in cluster color (matching the cards)
+  // Modal header
   modalHeader: {
     display: "flex",
     alignItems: "flex-start",
@@ -289,6 +296,13 @@ export const ClustersPageStyles = (theme: Theme) => ({
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
   },
+  riskBadgeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: "50%",
+    display: "inline-block",
+    flexShrink: 0,
+  },
   modalCloseBtn: {
     background: theme.colors.surface.containerLow,
     border: `1px solid ${theme.colors.border.light}`,
@@ -325,6 +339,14 @@ export const ClustersPageStyles = (theme: Theme) => ({
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.sm,
   },
+  modalLoadingText: {
+    color: theme.colors.text.secondary,
+  },
+  modalError: {
+    color: "#dc2626",
+    fontSize: "0.875rem",
+    margin: 0,
+  },
   spinner: {
     width: "36px",
     height: "36px",
@@ -348,6 +370,12 @@ export const ClustersPageStyles = (theme: Theme) => ({
     flexDirection: "column" as const,
     gap: theme.spacing.sm,
     height: "100%",
+  },
+  sectionAuto: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: theme.spacing.sm,
+    height: "auto",
   },
   sectionTitle: {
     fontSize: "0.7rem",

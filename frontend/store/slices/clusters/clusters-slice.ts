@@ -27,8 +27,8 @@ const clustersSlice = createSlice({
       .addCase(getClusterRuns.fulfilled, (state, action) => {
         state.loading = false;
         const payload = action.payload;
-        const regular = payload.clusters.filter((c) => c.cluster_id !== -1);
-        const outliers = payload.clusters.filter((c) => c.cluster_id === -1);
+        const regular = payload.clusters.filter((c) => c.clusterId !== -1);
+        const outliers = payload.clusters.filter((c) => c.clusterId === -1);
         state.data = {
           ...payload,
           clusters: [...regular, ...outliers],

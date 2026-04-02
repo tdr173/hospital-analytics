@@ -44,20 +44,20 @@ export default function IdentityCard({
     <div
       className={classes.identityCard}
       style={{
-        borderLeft: `4px solid ${patient.cluster_color ?? theme.colors.primary.main}`,
+        borderLeft: `4px solid ${patient.clusterColor ?? theme.colors.primary.main}`,
       }}
     >
-      <div className={classes.imageBlock} style={{ marginRight: "16px" }}>
+      <div className={classes.imageBlock}>
         <img
           src={patient.gender === "M" ? manImage.src : womanImage.src}
           alt={patient.gender === "M" ? "Man Icon" : "Woman Icon"}
-          style={{ width: "78px", height: "78px" }}
+          className={classes.avatarImage}
         />
       </div>
       <div className={classes.nameBlock}>
         <p className={classes.profileLabel}>Patient Profile</p>
         <h1 className={classes.patientFullName}>
-          {clearName(patient.first_name, patient.last_name) || "Unknown Name"}
+          {clearName(patient.firstName, patient.lastName) || "Unknown Name"}
         </h1>
         <div className={classes.badgesRow}>
           <span
@@ -67,19 +67,19 @@ export default function IdentityCard({
           >
             {alive ? "Alive" : `Deceased · ${formatDate(patient.deathdate)}`}
           </span>
-          {patient.cluster_color && patient.cluster_title && (
+          {patient.clusterColor && patient.clusterTitle && (
             <span
               className={classes.idClusterBadge}
               style={{
-                color: patient.cluster_color,
-                backgroundColor: `${patient.cluster_color}18`,
+                color: patient.clusterColor,
+                backgroundColor: `${patient.clusterColor}18`,
               }}
             >
               <span
                 className={classes.idClusterBadgeDot}
-                style={{ backgroundColor: patient.cluster_color }}
+                style={{ backgroundColor: patient.clusterColor }}
               />
-              {patient.cluster_title}
+              {patient.clusterTitle}
             </span>
           )}
         </div>

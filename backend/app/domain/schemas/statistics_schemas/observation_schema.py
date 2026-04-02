@@ -1,9 +1,10 @@
 from pydantic import BaseModel
+from domain.schemas.camel_model import CamelModel
 from domain.schemas.statistics_schemas.patient_schema import ChartEntry
 from domain.schemas.statistics_schemas.condition_schema import PerPatientStats
 
 
-class NumericStatsEntry(BaseModel):
+class NumericStatsEntry(CamelModel):
     name: str
     count: int
     patient_count: int
@@ -15,7 +16,7 @@ class NumericStatsEntry(BaseModel):
     tooltip: str
 
 
-class CategoricalStatsEntry(BaseModel):
+class CategoricalStatsEntry(CamelModel):
     name: str
     count: int
     patient_count: int
@@ -24,7 +25,7 @@ class CategoricalStatsEntry(BaseModel):
     tooltip: str
 
 
-class ObservationStatisticsResponse(BaseModel):
+class ObservationStatisticsResponse(CamelModel):
     total_observations: int
     unique_observation_types: int
     per_patient: PerPatientStats

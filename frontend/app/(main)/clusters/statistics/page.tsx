@@ -38,7 +38,7 @@ export default function ClusterStatisticsPage() {
           <ScatterPlotComponent
             points={data.points}
             title="Patient Clusters: PCA Projection"
-            clusterColors={data.cluster_colors}
+            clusterColors={data.clusterColors}
           />
 
           <div className={classes.heatmapCard}>

@@ -44,18 +44,18 @@ export default function MedicationsPage() {
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Total Medications</div>
           <div className={classes.summaryValue}>
-            {data.total_medications.toLocaleString()}
+            {data.totalMedications.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Unique Medications</div>
           <div className={classes.summaryValue}>
-            {data.unique_medications.toLocaleString()}
+            {data.uniqueMedications.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Avg per Patient</div>
-          <div className={classes.summaryValue}>{data.per_patient.avg}</div>
+          <div className={classes.summaryValue}>{data.perPatient.avg}</div>
         </div>
       </div>
 
@@ -65,19 +65,19 @@ export default function MedicationsPage() {
           <div>
             <div className={classes.perPatientStatLabel}>Min</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.min}
+              {data.perPatient.min}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Avg</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.avg}
+              {data.perPatient.avg}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Max</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.max}
+              {data.perPatient.max}
             </div>
           </div>
         </div>
@@ -89,25 +89,25 @@ export default function MedicationsPage() {
           <div>
             <div className={classes.perPatientStatLabel}>Min</div>
             <div className={classes.perPatientStatValue}>
-              {data.duration_stats.min_duration}
+              {data.durationStats.minDuration}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Avg</div>
             <div className={classes.perPatientStatValue}>
-              {data.duration_stats.avg_duration}
+              {data.durationStats.avgDuration}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Median</div>
             <div className={classes.perPatientStatValue}>
-              {data.duration_stats.median_duration}
+              {data.durationStats.medianDuration}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Max</div>
             <div className={classes.perPatientStatValue}>
-              {data.duration_stats.max_duration}
+              {data.durationStats.maxDuration}
             </div>
           </div>
         </div>
@@ -115,12 +115,12 @@ export default function MedicationsPage() {
 
       <div className={classes.grid}>
         <PieChartComponent
-          data={data.active_vs_ended}
+          data={data.activeVsEnded}
           title="Active vs Ended"
           colors={["#3a4555", "#028fb0"]}
         />
         <BarChartComponent
-          data={data.top_medications.slice(0, 15)}
+          data={data.topMedications.slice(0, 15)}
           title="Top 15 Medications"
           color="#006780"
           bottomBorder={-20}

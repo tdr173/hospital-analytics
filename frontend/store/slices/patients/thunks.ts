@@ -50,15 +50,15 @@ export const fetchPatients = createAsyncThunk<
     const q = new URLSearchParams();
     if (args.search) q.set("search", args.search);
     if (args.gender?.length) q.set("gender", args.gender.join(","));
-    if (args.age_group?.length) q.set("age_group", args.age_group.join(","));
+    if (args.ageGroup?.length) q.set("ageGroup", args.ageGroup.join(","));
     if (args.status?.length) q.set("status", args.status.join(","));
     if (args.race?.length) q.set("race", args.race.join(","));
     if (args.marital?.length) q.set("marital", args.marital.join(","));
     if (args.city) q.set("city", args.city);
     q.set("page", args.page.toString());
     q.set("rows", args.rows.toString());
-    q.set("sort_by", args.sort_by);
-    q.set("sort_type", args.sort_type);
+    q.set("sortBy", args.sortBy);
+    q.set("sortType", args.sortType);
     return await get<PatientListResponse>(`${API_BASE}/patients?${q}`, "patients");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patients" });

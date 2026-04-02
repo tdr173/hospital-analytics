@@ -40,18 +40,18 @@ export default function AllergiesPage() {
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Total Allergies</div>
           <div className={classes.summaryValue}>
-            {data.total_allergies.toLocaleString()}
+            {data.totalAllergies.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Unique Allergies</div>
           <div className={classes.summaryValue}>
-            {data.unique_allergies.toLocaleString()}
+            {data.uniqueAllergies.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Avg per Patient</div>
-          <div className={classes.summaryValue}>{data.per_patient.avg}</div>
+          <div className={classes.summaryValue}>{data.perPatient.avg}</div>
         </div>
       </div>
 
@@ -61,19 +61,19 @@ export default function AllergiesPage() {
           <div>
             <div className={classes.perPatientStatLabel}>Min</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.min}
+              {data.perPatient.min}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Avg</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.avg}
+              {data.perPatient.avg}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Max</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.max}
+              {data.perPatient.max}
             </div>
           </div>
         </div>
@@ -81,12 +81,12 @@ export default function AllergiesPage() {
 
       <div className={classes.grid}>
         <PieChartComponent
-          data={data.active_vs_resolved}
+          data={data.activeVsResolved}
           title="Active vs Resolved"
           colors={["#3a4555", "#028fb0"]}
         />
         <BarChartComponent
-          data={data.top_allergies}
+          data={data.topAllergies}
           title="Top 15 Allergies"
           color="#006780"
           bottomBorder={-20}

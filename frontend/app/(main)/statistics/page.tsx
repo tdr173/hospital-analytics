@@ -8,7 +8,7 @@ export default function StatisticsPage() {
 
   useEffect(() => {
     router.push("/statistics/patients");
-  }, []);
+  }, [router]);
 
   return <div></div>;
 }

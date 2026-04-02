@@ -31,7 +31,6 @@ def save_cluster_results(
     Returns the run_id of the saved run.
     """
 
-    # 1. Insert cluster_run
     result = db.execute(
         text("""
             INSERT INTO cluster_run
@@ -43,7 +42,7 @@ def save_cluster_results(
             RETURNING id
         """),
         {
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(),
             "algorithm": algorithm,
             "n_clusters": n_clusters,
             "n_patients": len(df_clustered),
@@ -57,7 +56,6 @@ def save_cluster_results(
     )
     run_id = result.fetchone()[0]
 
-    # 2. Insert cluster_patient rows
     all_features = numerical_features + categorical_features
 
     def build_rows(
@@ -96,7 +94,6 @@ def save_cluster_results(
     if outlier_rows:
         db.execute(insert_patient_sql, outlier_rows)
 
-    # 3. Parse and insert cluster summaries
     parsed = _parse_cluster_summaries(cluster_summaries)
     if parsed:
         db.execute(

@@ -58,7 +58,7 @@ export const headerCellSx = {
   borderBottom: `1px solid ${theme.colors.border.main}`,
   whiteSpace: "nowrap" as const,
   userSelect: "none" as const,
-  zIndex: 2, // ADDED: Ensures header stays above the scrolling body rows
+  zIndex: 2,
 };
 
 export const bodyCellSx = {
@@ -117,7 +117,7 @@ export default function StyledTable<T = any>({
   onSort,
   loading = false,
   emptyMessage = "No data available.",
-  stickyHeader = true, // CHANGED: Defaulted to true
+  stickyHeader = true,
 }: StyledTableProps<T>) {
   const handleSort = (key: string) => {
     if (!onSort) return;
@@ -138,7 +138,6 @@ export default function StyledTable<T = any>({
         height: "100%",
       }}
     >
-      {/* TableContainer height is already set correctly to allow for scrolling */}
       <TableContainer sx={{ overflowX: "auto", height: "calc(100% - 52px)" }}>
         <Table
           stickyHeader={stickyHeader}

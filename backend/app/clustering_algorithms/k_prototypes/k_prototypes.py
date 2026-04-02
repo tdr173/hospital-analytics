@@ -505,12 +505,12 @@ def remove_outliers_zscore(df, threshold=4):
 
 
 def get_clusters_summary(df_clustered, df_outliers, engine, evaluation_report=""):
-    # 1. Combine clustered data and outliers (assigned to cluster -1) for metric calculation
+    # Combine clustered data and outliers for metric calculation
     df_outliers_temp = df_outliers.copy()
     df_outliers_temp['cluster'] = -1
     df_all = pd.concat([df_clustered, df_outliers_temp], ignore_index=True)
 
-    # 2. Use df_all so the SQL queries calculate top items for the -1 cluster as well
+    # Pull top conditions/meds/encounters per cluster for the LLM prompt
     conditions = pd.read_sql(text("SELECT patient_id, description FROM condition"), con=engine)
     conditions = conditions.merge(df_all[["patient_id", "cluster"]], on="patient_id")
     top_conditions = conditions.groupby(["cluster", "description"]).size().reset_index(name="count").sort_values(
@@ -529,7 +529,7 @@ def get_clusters_summary(df_clustered, df_outliers, engine, evaluation_report=""
     total_patients = len(df_all)
     clusters = sorted(df_all["cluster"].unique()) # This will now include -1
 
-    # 3. Restrict the prompt to force the exact summary pipeline format
+    # Build the LLM prompt with the expected output format
     prompt = f"""We clustered {len(df_clustered)} patients into groups, plus {len(df_outliers)} outlier patients.
 I have summarized the data for EACH cluster below. The outliers are labeled as Cluster -1.
 

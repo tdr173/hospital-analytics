@@ -5,7 +5,6 @@ const conditionsTabStyles = (theme: Theme) => ({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    // CHANGE THIS:
     height: "100%",
     width: "100%",
     color: theme.colors.text.secondary,
@@ -26,8 +25,6 @@ const conditionsTabStyles = (theme: Theme) => ({
     height: "100%",
     border: `1px solid ${theme.colors.border.main}`,
 
-    // REMOVED padding: "12px" so the scrollbar goes to the edge
-    // and the text doesn't scroll "above" the sticky header!
   },
   gridRow: {
     display: "grid",

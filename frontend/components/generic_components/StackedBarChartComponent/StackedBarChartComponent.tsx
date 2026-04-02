@@ -48,7 +48,7 @@ export default function StackedBarChartComponent({ featureData }: StackedBarChar
   const classes = useClasses(StackedBarChartComponentStyles, { name: "StackedBarChartComponent" });
 
   const chartData = data.map((entry) => ({
-    name: `Cluster ${entry.cluster_id}`,
+    name: `Cluster ${entry.clusterId}`,
     ...entry.proportions,
   }));
 

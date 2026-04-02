@@ -42,13 +42,13 @@ export default function ProvidersPage() {
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Total Providers</div>
           <div className={classes.summaryValue}>
-            {data.total_providers.toLocaleString()}
+            {data.totalProviders.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Unique Specialities</div>
           <div className={classes.summaryValue}>
-            {data.unique_specialities.toLocaleString()}
+            {data.uniqueSpecialities.toLocaleString()}
           </div>
         </div>
       </div>
@@ -86,7 +86,7 @@ export default function ProvidersPage() {
       <div className={classes.grid}>
         <PieChartComponent data={data.gender} title="Gender Distribution" />
         <BarChartComponent
-          data={data.top_cities}
+          data={data.topCities}
           title="Top 10 Cities"
           color="#006780"
           bottomBorder={-20}
@@ -95,7 +95,7 @@ export default function ProvidersPage() {
 
       <div className={classes.chartContainer}>
         <BarChartComponent
-          data={data.top_specialities}
+          data={data.topSpecialities}
           title="Top 15 Specialities"
           color="#006780"
           showLabel

@@ -38,17 +38,17 @@ export default function ConditionsTab({ data }: { data: ConditionItem[] }) {
               {<TruncatedText text={r.description} />}
 
               {/* Column 2: Centered Code */}
-              <div className={classes.snomedCode}>{r.condition_code}</div>
+              <div className={classes.snomedCode}>{r.conditionCode}</div>
 
               {/* Column 3: Centered Start Date */}
               <div className={classes.centeredCell}>
-                {formatDate(r.start_date)}
+                {formatDate(r.startDate)}
               </div>
 
               {/* Column 4: Centered End Date/Badge */}
               <div className={classes.centeredCell}>
-                {r.end_date ? (
-                  formatDate(r.end_date)
+                {r.endDate ? (
+                  formatDate(r.endDate)
                 ) : (
                   <span className={classes.ongoingBadge}>Ongoing</span>
                 )}

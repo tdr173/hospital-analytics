@@ -41,13 +41,13 @@ export default function EncountersPage() {
       <div className={classes.totalCard}>
         <div className={classes.totalLabel}>Total Encounters</div>
         <div className={classes.totalValue}>
-          {data.total_encounters.toLocaleString()}
+          {data.totalEncounters.toLocaleString()}
         </div>
       </div>
 
       <div className={classes.grid}>
         <PieChartComponent
-          data={data.encounter_class}
+          data={data.encounterClass}
           title="Encounter Class Distribution"
           colors={[
             "#006780",
@@ -59,7 +59,7 @@ export default function EncountersPage() {
           ]}
         />
         <BarChartComponent
-          data={data.top_descriptions}
+          data={data.topDescriptions}
           title="Top Descriptions"
           color="#006780"
           bottomBorder={-20}
@@ -80,13 +80,13 @@ export default function EncountersPage() {
               </tr>
             </thead>
             <tbody>
-              {data.duration_stats.map((row) => (
+              {data.durationStats.map((row) => (
                 <tr key={row.name}>
                   <td className={classes.td}>{row.name}</td>
                   <td className={classes.td}>{row.count.toLocaleString()}</td>
-                  <td className={classes.td}>{row.min_duration}</td>
-                  <td className={classes.td}>{row.max_duration}</td>
-                  <td className={classes.td}>{row.avg_duration}</td>
+                  <td className={classes.td}>{row.minDuration}</td>
+                  <td className={classes.td}>{row.maxDuration}</td>
+                  <td className={classes.td}>{row.avgDuration}</td>
                 </tr>
               ))}
             </tbody>
@@ -96,7 +96,7 @@ export default function EncountersPage() {
 
       <div className={classes.fullWidthChart}>
         <BarChartComponent
-          data={data.top_reason_descriptions}
+          data={data.topReasonDescriptions}
           title="Top Reason Descriptions"
           color="#028fb0"
           showLabel

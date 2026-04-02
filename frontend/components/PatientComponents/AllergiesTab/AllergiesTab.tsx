@@ -38,14 +38,14 @@ export default function AllergiesTab({ data }: { data: AllergyItem[] }) {
 
               {/* Column 2: Centered Recorded Date */}
               <div className={classes.centeredCell}>
-                {formatDate(r.start_date)}
+                {formatDate(r.startDate)}
               </div>
 
               {/* Column 3: Centered Status */}
               <div className={classes.centeredCell}>
-                {r.end_date ? (
+                {r.endDate ? (
                   <span className={classes.allergyResolved}>
-                    Resolved {formatDate(r.end_date)}
+                    Resolved {formatDate(r.endDate)}
                   </span>
                 ) : (
                   <span className={classes.allergyActive}>Active</span>

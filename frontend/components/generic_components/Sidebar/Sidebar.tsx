@@ -14,8 +14,6 @@ import React from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 const sidebarElements = [
-  // { name: "Home", icon: DashboardIcon, forward: "/home" },
-  // { name: "Dashboard", icon: DashboardIcon, forward: "/dashboard" },
   {
     name: "Dataset Statistics",
     icon: AnalyticsIcon,

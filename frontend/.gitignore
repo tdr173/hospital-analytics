@@ -1,3 +1,19 @@
+# ── Claude ──────────────────────────────────────
+.claude/
+CLAUDE.md
+
+# ── IDEs / Editors ─────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── OS ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Dependencies ───────────────────────────────
 /node_modules
 /.pnp
 .pnp.*
@@ -7,30 +23,24 @@
 !.yarn/releases
 !.yarn/versions
 
-/coverage
-
-/.next/
-/out/
-
-/build
-
-.DS_Store
+# ── Environment / Secrets ──────────────────────
+.env*
+!.env.example
 *.pem
 
-# debug
+# ── Next.js / Build ───────────────────────────
+/.next/
+/out/
+/build
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# ── Test / Coverage ────────────────────────────
+/coverage
+
+# ── Logs ───────────────────────────────────────
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-
-.env*
-
-.vercel
-
-*.tsbuildinfo
-next-env.d.ts
-
-.idea
-.vscode
-
-.claude

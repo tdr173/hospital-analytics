@@ -119,7 +119,7 @@ def load_providers(engine):
     providers_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
 
     providers_df["first_name"] = providers_df["name"].str.split(" ").str[0]
-    providers_df["last_name"] = providers_df["name"].str.split(" ").str[0]
+    providers_df["last_name"] = providers_df["name"].str.split(" ").str[-1]
     providers_df = providers_df.drop(columns=["name"])
 
     categorical_cols = ["gender", "speciality"]

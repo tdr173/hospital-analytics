@@ -1,14 +1,15 @@
 from typing import List, Optional
 from datetime import date, datetime
 from pydantic import BaseModel
+from domain.schemas.camel_model import CamelModel
 
 
-class FilterOption(BaseModel):
+class FilterOption(CamelModel):
     value: str
     label: str
 
 
-class PatientResourcesResponse(BaseModel):
+class PatientResourcesResponse(CamelModel):
     genders: List[FilterOption]
     age_groups: List[FilterOption]
     statuses: List[FilterOption]
@@ -16,7 +17,7 @@ class PatientResourcesResponse(BaseModel):
     marital_statuses: List[FilterOption]
 
 
-class PatientListItem(BaseModel):
+class PatientListItem(CamelModel):
     patient_id: str
     first_name: str
     last_name: str
@@ -33,12 +34,12 @@ class PatientListItem(BaseModel):
     cluster_color: Optional[str] = None
 
 
-class PatientListResponse(BaseModel):
+class PatientListResponse(CamelModel):
     items: List[PatientListItem]
     total: int
 
 
-class PatientDetailResponse(BaseModel):
+class PatientDetailResponse(CamelModel):
     patient_id: str
     first_name: str
     last_name: str
@@ -57,7 +58,7 @@ class PatientDetailResponse(BaseModel):
     cluster_color: Optional[str] = None
 
 
-class PatientSummaryResponse(BaseModel):
+class PatientSummaryResponse(CamelModel):
     qaly: Optional[float] = None
     avg_bmi: Optional[float] = None
     active_conditions: Optional[int] = None
@@ -67,7 +68,7 @@ class PatientSummaryResponse(BaseModel):
     days_since_last_encounter: Optional[int] = None
 
 
-class ConditionItem(BaseModel):
+class ConditionItem(CamelModel):
     id: int
     description: str
     condition_code: str
@@ -75,7 +76,7 @@ class ConditionItem(BaseModel):
     end_date: Optional[datetime] = None
 
 
-class MedicationItem(BaseModel):
+class MedicationItem(CamelModel):
     id: int
     description: str
     medication_code: str
@@ -85,7 +86,7 @@ class MedicationItem(BaseModel):
     reason_description: Optional[str] = None
 
 
-class ProcedureItem(BaseModel):
+class ProcedureItem(CamelModel):
     id: int
     description: str
     procedure_code: str
@@ -93,14 +94,14 @@ class ProcedureItem(BaseModel):
     reason_description: Optional[str] = None
 
 
-class ImmunizationItem(BaseModel):
+class ImmunizationItem(CamelModel):
     id: int
     description: str
     immunization_code: str
     date: datetime
 
 
-class AllergyItem(BaseModel):
+class AllergyItem(CamelModel):
     id: int
     description: str
     allergy_code: str
@@ -108,7 +109,7 @@ class AllergyItem(BaseModel):
     end_date: Optional[date] = None
 
 
-class EncounterItem(BaseModel):
+class EncounterItem(CamelModel):
     encounter_id: str
     start_date: datetime
     end_date: datetime

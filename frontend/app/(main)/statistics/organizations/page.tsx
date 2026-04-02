@@ -42,7 +42,7 @@ export default function OrganizationsPage() {
       <div className={classes.summaryCard}>
         <div className={classes.summaryLabel}>Total Organizations</div>
         <div className={classes.summaryValue}>
-          {data.total_organizations.toLocaleString()}
+          {data.totalOrganizations.toLocaleString()}
         </div>
       </div>
 
@@ -78,7 +78,7 @@ export default function OrganizationsPage() {
 
       <div className={classes.chartContainer}>
         <BarChartComponent
-          data={data.top_cities}
+          data={data.topCities}
           title="Top 10 Cities"
           color="#006780"
           showLabel

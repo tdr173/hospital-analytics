@@ -7,19 +7,19 @@ export interface ChartEntry {
 export interface DurationStatsEntry {
   name: string;
   count: number;
-  min_duration: number;
-  max_duration: number;
-  avg_duration: number;
-  median_duration: number;
+  minDuration: number;
+  maxDuration: number;
+  avgDuration: number;
+  medianDuration: number;
   tooltip: string;
 }
 
 export interface EncounterStatisticsResponse {
-  total_encounters: number;
-  encounter_class: ChartEntry[];
-  duration_stats: DurationStatsEntry[];
-  top_descriptions: ChartEntry[];
-  top_reason_descriptions: ChartEntry[];
+  totalEncounters: number;
+  encounterClass: ChartEntry[];
+  durationStats: DurationStatsEntry[];
+  topDescriptions: ChartEntry[];
+  topReasonDescriptions: ChartEntry[];
 }
 
 export interface PerPatientStats {
@@ -29,21 +29,21 @@ export interface PerPatientStats {
 }
 
 export interface ConditionStatisticsResponse {
-  total_conditions: number;
-  unique_conditions: number;
-  per_patient: PerPatientStats;
-  active_vs_resolved: ChartEntry[];
-  top_conditions: ChartEntry[];
+  totalConditions: number;
+  uniqueConditions: number;
+  perPatient: PerPatientStats;
+  activeVsResolved: ChartEntry[];
+  topConditions: ChartEntry[];
 }
 
 export interface NumericStatsEntry {
   name: string;
   count: number;
-  patient_count: number;
+  patientCount: number;
   percentage: number;
-  min_value: number;
-  max_value: number;
-  avg_value: number;
+  minValue: number;
+  maxValue: number;
+  avgValue: number;
   units: string;
   tooltip: string;
 }
@@ -51,40 +51,40 @@ export interface NumericStatsEntry {
 export interface CategoricalStatsEntry {
   name: string;
   count: number;
-  patient_count: number;
+  patientCount: number;
   percentage: number;
-  distinct_values: number;
+  distinctValues: number;
   tooltip: string;
 }
 
 export interface ObservationStatisticsResponse {
-  total_observations: number;
-  unique_observation_types: number;
-  per_patient: PerPatientStats;
-  top_observation_types: ChartEntry[];
-  numeric_stats: NumericStatsEntry[];
-  categorical_stats: CategoricalStatsEntry[];
+  totalObservations: number;
+  uniqueObservationTypes: number;
+  perPatient: PerPatientStats;
+  topObservationTypes: ChartEntry[];
+  numericStats: NumericStatsEntry[];
+  categoricalStats: CategoricalStatsEntry[];
 }
 
 export interface ProcedureStatisticsResponse {
-  total_procedures: number;
-  unique_procedures: number;
-  per_patient: PerPatientStats;
-  top_procedures: ChartEntry[];
+  totalProcedures: number;
+  uniqueProcedures: number;
+  perPatient: PerPatientStats;
+  topProcedures: ChartEntry[];
 }
 
 export interface ImmunizationStatisticsResponse {
-  total_immunizations: number;
-  unique_immunizations: number;
-  per_patient: PerPatientStats;
-  top_immunizations: ChartEntry[];
+  totalImmunizations: number;
+  uniqueImmunizations: number;
+  perPatient: PerPatientStats;
+  topImmunizations: ChartEntry[];
 }
 
 export interface MedicationDurationStats {
-  min_duration: number;
-  max_duration: number;
-  avg_duration: number;
-  median_duration: number;
+  minDuration: number;
+  maxDuration: number;
+  avgDuration: number;
+  medianDuration: number;
 }
 
 export interface UtilizationStats {
@@ -95,44 +95,44 @@ export interface UtilizationStats {
 }
 
 export interface OrganizationStatisticsResponse {
-  total_organizations: number;
+  totalOrganizations: number;
   utilization: UtilizationStats;
-  top_cities: ChartEntry[];
+  topCities: ChartEntry[];
 }
 
 export interface ProviderStatisticsResponse {
-  total_providers: number;
-  unique_specialities: number;
+  totalProviders: number;
+  uniqueSpecialities: number;
   utilization: UtilizationStats;
   gender: ChartEntry[];
-  top_specialities: ChartEntry[];
-  top_cities: ChartEntry[];
+  topSpecialities: ChartEntry[];
+  topCities: ChartEntry[];
 }
 
 export interface AllergyStatisticsResponse {
-  total_allergies: number;
-  unique_allergies: number;
-  per_patient: PerPatientStats;
-  active_vs_resolved: ChartEntry[];
-  top_allergies: ChartEntry[];
+  totalAllergies: number;
+  uniqueAllergies: number;
+  perPatient: PerPatientStats;
+  activeVsResolved: ChartEntry[];
+  topAllergies: ChartEntry[];
 }
 
 export interface MedicationStatisticsResponse {
-  total_medications: number;
-  unique_medications: number;
-  per_patient: PerPatientStats;
-  duration_stats: MedicationDurationStats;
-  active_vs_ended: ChartEntry[];
-  top_medications: ChartEntry[];
+  totalMedications: number;
+  uniqueMedications: number;
+  perPatient: PerPatientStats;
+  durationStats: MedicationDurationStats;
+  activeVsEnded: ChartEntry[];
+  topMedications: ChartEntry[];
 }
 
 export interface PatientStatisticsResponse {
-  total_patients: number;
-  age_groups: ChartEntry[];
+  totalPatients: number;
+  ageGroups: ChartEntry[];
   gender: ChartEntry[];
   race: ChartEntry[];
   ethnicity: ChartEntry[];
-  marital_status: ChartEntry[];
-  vital_status: ChartEntry[];
-  top_cities: ChartEntry[];
+  maritalStatus: ChartEntry[];
+  vitalStatus: ChartEntry[];
+  topCities: ChartEntry[];
 }

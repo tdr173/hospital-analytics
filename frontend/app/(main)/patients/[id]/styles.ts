@@ -1,12 +1,12 @@
 import { Theme } from "@/utils/theme";
 
 export const PatientDetailPageStyles = (theme: Theme) => ({
-  // ─── Layout ───────────────────────────────────────────────────────────────
+  // Layout
   pageContainer: {
     display: "flex",
     flexDirection: "column" as const,
     height: "100%",
-    overflow: "hidden", // CHANGED: Prevents the whole outer page from scrolling
+    overflow: "hidden",
     gap: theme.spacing.lg,
     padding: theme.spacing.lg,
     fontFamily: theme.typography.fontFamily,
@@ -26,7 +26,7 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     color: theme.colors.status.error,
   },
 
-  // ─── Identity card ────────────────────────────────────────────────────────
+  // Identity card
   identityCard: {
     backgroundColor: theme.colors.surface.containerLowest,
     borderRadius: theme.borderRadius.lg,
@@ -36,6 +36,13 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     flexWrap: "wrap" as const,
     gap: theme.spacing.lg,
     alignItems: "flex-start",
+  },
+  imageBlock: {
+    marginRight: "16px",
+  },
+  avatarImage: {
+    width: "78px",
+    height: "78px",
   },
   nameBlock: {
     flex: "1 1 280px",
@@ -116,7 +123,7 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     margin: 0,
   },
 
-  // ─── Metric box ───────────────────────────────────────────────────────────
+  // Metrics
   metricsRow: {
     backgroundColor: theme.colors.surface.containerLowest,
     borderRadius: theme.borderRadius.lg,
@@ -155,7 +162,7 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     marginLeft: "3px",
   },
 
-  // ─── Tabs panel ───────────────────────────────────────────────────────────
+  // Tabs
   tabsPanel: {
     backgroundColor: theme.colors.surface.containerLowest,
     borderRadius: theme.borderRadius.lg,
@@ -185,7 +192,7 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     height: "100%",
   },
 
-  // ─── Tab cell variants ────────────────────────────────────────────────────
+  // Tab cell variants
   ongoingBadge: {
     color: "#166534",
     fontSize: "0.75rem",

@@ -41,8 +41,8 @@ export default function ProceduresTab({ data }: { data: ProcedureItem[] }) {
 
               {/* Column 3: Centered Reason (Secondary Color) */}
               <div className={classes.secondaryText}>
-                {r.reason_description ? (
-                  <TruncatedText text={r.reason_description} />
+                {r.reasonDescription ? (
+                  <TruncatedText text={r.reasonDescription} />
                 ) : (
                   "—"
                 )}

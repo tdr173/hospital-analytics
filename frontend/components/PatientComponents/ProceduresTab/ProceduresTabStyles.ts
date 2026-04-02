@@ -5,7 +5,6 @@ const proceduresTabStyles = (theme: Theme) => ({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    // CHANGE THIS:
     height: "100%",
     width: "100%",
     color: theme.colors.text.secondary,

@@ -1,5 +1,5 @@
 export interface ClusterSummary {
-  cluster_id: number;
+  clusterId: number;
   color: string;
   title: string;
   description: string;
@@ -7,14 +7,14 @@ export interface ClusterSummary {
   recommendation: string;
   count: number;
   percentage: number;
-  avg_age: number;
-  avg_qaly: number;
-  chronic_illness_pct: number;
-  avg_meds: number;
+  avgAge: number;
+  avgQaly: number;
+  chronicIllnessPct: number;
+  avgMeds: number;
 }
 
 export interface ClustersResponse {
-  total_patients: number;
+  totalPatients: number;
   clusters: ClusterSummary[];
 }
 
@@ -31,11 +31,11 @@ export interface FeatureChartData {
 
 export interface NumericalFeaturesResponse {
   features: FeatureChartData[];
-  cluster_colors: Record<number, string>;
+  clusterColors: Record<number, string>;
 }
 
 export interface CategoricalClusterEntry {
-  cluster_id: number;
+  clusterId: number;
   proportions: Record<string, number>;
 }
 
@@ -47,27 +47,27 @@ export interface CategoricalFeatureChartData {
 
 export interface CategoricalFeaturesResponse {
   features: CategoricalFeatureChartData[];
-  cluster_colors: Record<number, string>;
+  clusterColors: Record<number, string>;
 }
 
 export interface PcaPoint {
   x: number;
   y: number;
   cluster: number;
-  is_outlier: boolean;
+  isOutlier: boolean;
 }
 
 export interface PcaScatterResponse {
   points: PcaPoint[];
   heatmap: string | null;
-  cluster_colors: Record<number, string>;
+  clusterColors: Record<number, string>;
 }
 
 export interface AiAnalysisResponse {
-  risk_level: "high" | "moderate" | "low";
-  medical_interpretation: string;
-  layperson_summary: string;
-  key_characteristics: string[];
-  priority_interventions: string[];
-  care_recommendations: string[];
+  riskLevel: "high" | "moderate" | "low";
+  medicalInterpretation: string;
+  laypersonSummary: string;
+  keyCharacteristics: string[];
+  priorityInterventions: string[];
+  careRecommendations: string[];
 }

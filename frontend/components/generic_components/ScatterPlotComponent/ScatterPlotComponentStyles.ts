@@ -14,4 +14,7 @@ export const ScatterPlotComponentStyles = (theme: Theme) => ({
     color: theme.colors.text.primary,
     margin: "0 0 8px 0",
   },
+  chart: {
+    height: 480,
+  },
 });

@@ -39,16 +39,16 @@ export default function EncountersTab({ data }: { data: EncounterItem[] }) {
               const rowColorClass =
                 index % 2 === 0 ? classes.rowEven : classes.rowOdd;
               const typeLabel =
-                ENCOUNTER_CLASS_LABELS[r.encounter_class] ?? r.encounter_class;
+                ENCOUNTER_CLASS_LABELS[r.encounterClass] ?? r.encounterClass;
 
               return (
                 <div
-                  key={r.encounter_id}
+                  key={r.encounterId}
                   className={`${classes.gridRow} ${classes.dataRow} ${rowColorClass}`}
                 >
                   {/* Col 1: Centered Date */}
                   <div className={classes.centeredCell}>
-                    {formatDate(r.start_date)}
+                    {formatDate(r.startDate)}
                   </div>
 
                   {/* Col 2: Centered Type Badge */}
@@ -65,12 +65,12 @@ export default function EncountersTab({ data }: { data: EncounterItem[] }) {
 
                   {/* Col 4: Provider (Truncated) */}
                   <div className={classes.secondaryText}>
-                    <TruncatedText text={r.provider_name ?? "—"} />
+                    <TruncatedText text={r.providerName ?? "—"} />
                   </div>
 
                   {/* Col 5: Organization (Truncated) */}
                   <div className={classes.secondaryText}>
-                    <TruncatedText text={r.organization_name ?? "—"} />
+                    <TruncatedText text={r.organizationName ?? "—"} />
                   </div>
 
                   {/* Col 6: Centered Duration */}

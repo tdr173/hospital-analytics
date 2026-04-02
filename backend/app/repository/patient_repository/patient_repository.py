@@ -39,9 +39,6 @@ class PatientRepository:
     def _latest_run_id(self) -> Optional[int]:
         return self.db.query(func.max(ClusterRunModel.id)).scalar()
 
-    # ------------------------------------------------------------------
-    # GET /patients
-    # ------------------------------------------------------------------
     def get_patients(
         self,
         search: Optional[str],
@@ -172,9 +169,6 @@ class PatientRepository:
         items = [PatientListItem(**row._asdict()) for row in rows_data]
         return PatientListResponse(items=items, total=total)
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}
-    # ------------------------------------------------------------------
     def get_patient(self, patient_id: str) -> PatientDetailResponse:
         latest_run_id = self._latest_run_id()
 
@@ -232,9 +226,6 @@ class PatientRepository:
 
         return PatientDetailResponse(**row._asdict())
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/summary
-    # ------------------------------------------------------------------
     def get_patient_summary(self, patient_id: str) -> PatientSummaryResponse:
         latest_run_id = self._latest_run_id()
 
@@ -334,9 +325,6 @@ class PatientRepository:
             days_since_last_encounter=int(days_since_last_encounter or 0) if days_since_last_encounter is not None else None,
         )
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/conditions
-    # ------------------------------------------------------------------
     def get_patient_conditions(self, patient_id: str) -> list[ConditionItem]:
         rows = (
             self.db.query(ConditionModel)
@@ -355,9 +343,6 @@ class PatientRepository:
             for r in rows
         ]
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/medications
-    # ------------------------------------------------------------------
     def get_patient_medications(self, patient_id: str) -> list[MedicationItem]:
         rows = (
             self.db.query(MedicationModel)
@@ -378,9 +363,6 @@ class PatientRepository:
             for r in rows
         ]
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/procedures
-    # ------------------------------------------------------------------
     def get_patient_procedures(self, patient_id: str) -> list[ProcedureItem]:
         rows = (
             self.db.query(ProcedureModel)
@@ -399,9 +381,6 @@ class PatientRepository:
             for r in rows
         ]
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/immunizations
-    # ------------------------------------------------------------------
     def get_patient_immunizations(self, patient_id: str) -> list[ImmunizationItem]:
         rows = (
             self.db.query(ImmunizationModel)
@@ -419,9 +398,6 @@ class PatientRepository:
             for r in rows
         ]
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/allergies
-    # ------------------------------------------------------------------
     def get_patient_allergies(self, patient_id: str) -> list[AllergyItem]:
         rows = (
             self.db.query(AllergyModel)
@@ -440,9 +416,6 @@ class PatientRepository:
             for r in rows
         ]
 
-    # ------------------------------------------------------------------
-    # GET /patients/resources
-    # ------------------------------------------------------------------
     def get_patient_resources(self) -> PatientResourcesResponse:
         return PatientResourcesResponse(
             genders=[
@@ -476,9 +449,6 @@ class PatientRepository:
             ],
         )
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/encounters
-    # ------------------------------------------------------------------
     def get_patient_encounters(self, patient_id: str) -> list[EncounterItem]:
         rows = (
             self.db.query(

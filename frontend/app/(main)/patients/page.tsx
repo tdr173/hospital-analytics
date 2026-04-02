@@ -29,7 +29,7 @@ import { clearName } from "@/utils/functions";
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
 const COLUMNS = [
-  { key: "last_name", label: "Name", sortable: true, width: 210 },
+  { key: "lastName", label: "Name", sortable: true, width: 210 },
   {
     key: "age",
     label: "Age",
@@ -116,36 +116,34 @@ function PatientsPageContent() {
     if (!resources) dispatch(fetchPatientResources());
   }, []);
 
-  // --- URL params (table controls only) ---
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const rows = parseInt(searchParams.get("rows") ?? "25", 10);
-  const sort_by = searchParams.get("sort_by") ?? "last_name";
-  const sort_type = (searchParams.get("sort_type") ?? "asc") as "asc" | "desc";
+  const sortBy = searchParams.get("sortBy") ?? "lastName";
+  const sortType = (searchParams.get("sortType") ?? "asc") as "asc" | "desc";
 
   useEffect(() => {
     dispatch(
       fetchPatients({
         search: searchParams.get("search") || undefined,
         gender: searchParams.get("gender")?.split(",").filter(Boolean),
-        age_group: searchParams.get("age_group")?.split(",").filter(Boolean),
+        ageGroup: searchParams.get("ageGroup")?.split(",").filter(Boolean),
         status: searchParams.get("status")?.split(",").filter(Boolean),
         race: searchParams.get("race")?.split(",").filter(Boolean),
         marital: searchParams.get("marital")?.split(",").filter(Boolean),
         page,
         rows,
-        sort_by,
-        sort_type,
+        sortBy,
+        sortType,
       }),
     );
-  }, [searchParams, page, rows, sort_by, sort_type]);
+  }, [searchParams, page, rows, sortBy, sortType]);
 
-  // --- local filter state ---
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [gender, setGender] = useState<string[]>(
     searchParams.get("gender")?.split(",").filter(Boolean) ?? [],
   );
-  const [age_group, setAgeGroup] = useState<string[]>(
-    searchParams.get("age_group")?.split(",").filter(Boolean) ?? [],
+  const [ageGroup, setAgeGroup] = useState<string[]>(
+    searchParams.get("ageGroup")?.split(",").filter(Boolean) ?? [],
   );
   const [status, setStatus] = useState<string[]>(
     searchParams.get("status")?.split(",").filter(Boolean) ?? [],
@@ -157,7 +155,6 @@ function PatientsPageContent() {
     searchParams.get("marital")?.split(",").filter(Boolean) ?? [],
   );
 
-  // --- URL helpers (table controls only) ---
   const setParam = (
     updates: Record<string, string | null>,
     resetPage = true,
@@ -172,7 +169,7 @@ function PatientsPageContent() {
   };
 
   const handleSort = (key: string, dir: "asc" | "desc") =>
-    setParam({ sort_by: key, sort_type: dir });
+    setParam({ sortBy: key, sortType: dir });
 
   const handlePageChange = (newPage: number) =>
     setParam({ page: (newPage + 1).toString() }, false);
@@ -180,12 +177,11 @@ function PatientsPageContent() {
   const handleRowsPerPageChange = (newRows: number) =>
     setParam({ rows: newRows.toString(), page: "1" }, false);
 
-  // --- row renderer ---
   const renderRow = (p: PatientListItem, i: number) => (
     <StyledTableRow
-      key={p.patient_id}
+      key={p.patientId}
       index={i}
-      onClick={() => router.push(`/patients/${p.patient_id}`)}
+      onClick={() => router.push(`/patients/${p.patientId}`)}
     >
       <TableCell
         sx={{
@@ -194,7 +190,7 @@ function PatientsPageContent() {
           color: theme.colors.primary.main,
         }}
       >
-        <TruncatedText text={clearName(p.first_name, p.last_name)} />
+        <TruncatedText text={clearName(p.firstName, p.lastName)} />
       </TableCell>
       <TableCell sx={bodyCellSx} align="right">
         {p.age}
@@ -214,7 +210,7 @@ function PatientsPageContent() {
       </TableCell>
       <TableCell sx={bodyCellSx}>
         {p.marital
-          ? (resources?.marital_statuses.find((o) => o.value === p.marital)
+          ? (resources?.maritalStatuses.find((o) => o.value === p.marital)
               ?.label ?? p.marital)
           : "-"}
       </TableCell>
@@ -223,8 +219,8 @@ function PatientsPageContent() {
       </TableCell>
       <TableCell sx={bodyCellSx}>
         <ClusterBadge
-          color={p.cluster_color}
-          title={p.cluster_title}
+          color={p.clusterColor}
+          title={p.clusterTitle}
           classes={classes}
         />
       </TableCell>
@@ -236,7 +232,7 @@ function PatientsPageContent() {
     const strFilters: Record<string, string> = { search };
     const arrFilters: Record<string, string[]> = {
       gender,
-      age_group,
+      ageGroup,
       status,
       race,
       marital,
@@ -262,7 +258,6 @@ function PatientsPageContent() {
 
   return (
     <div className={classes.pageContainer}>
-      {/* Filter bar */}
       <div className={classes.filterBar}>
         <StyledInput
           label="Search"
@@ -289,10 +284,10 @@ function PatientsPageContent() {
 
         <StyledMultiDropdown
           label="Age Group"
-          value={age_group}
+          value={ageGroup}
           onChange={(v) => setAgeGroup(v as string[])}
           onClear={() => setAgeGroup([])}
-          options={resources.age_groups}
+          options={resources.ageGroups}
           placeholder="All"
           width={"auto"}
         />
@@ -322,7 +317,7 @@ function PatientsPageContent() {
           value={marital}
           onChange={(v) => setMarital(v as string[])}
           onClear={() => setMarital([])}
-          options={resources.marital_statuses}
+          options={resources.maritalStatuses}
           placeholder="All"
           width={"auto"}
         />
@@ -353,7 +348,6 @@ function PatientsPageContent() {
         </StyledButton>
       </div>
 
-      {/* Table area */}
       <div className={classes.tableArea}>
         <StyledTable
           columns={COLUMNS}
@@ -365,8 +359,8 @@ function PatientsPageContent() {
           rowsPerPage={rows}
           onPageChange={handlePageChange}
           onRowsPerPageChange={handleRowsPerPageChange}
-          sortBy={sort_by}
-          sortType={sort_type}
+          sortBy={sortBy}
+          sortType={sortType}
           onSort={handleSort}
           emptyMessage="No patients found matching the selected filters."
         />

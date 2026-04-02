@@ -52,14 +52,14 @@ function AiAnalysisModal({
     (state: RootState) => state.aiAnalysis,
   );
 
-  const isOpen = currentClusterId === cluster.cluster_id;
-  const data: AiAnalysisResponse | undefined = cache[cluster.cluster_id];
+  const isOpen = currentClusterId === cluster.clusterId;
+  const data: AiAnalysisResponse | undefined = cache[cluster.clusterId];
   const color = cluster.color;
 
   if (!isOpen) return null;
 
   const riskStyle = data
-    ? (RISK_STYLE[data.risk_level] ?? RISK_STYLE.moderate)
+    ? (RISK_STYLE[data.riskLevel] ?? RISK_STYLE.moderate)
     : null;
 
   return (
@@ -69,14 +69,13 @@ function AiAnalysisModal({
     >
       <div
         className={classes.modal}
-        style={{ borderTop: `4px solid ${color}` }}
+        style={{ borderTopColor: color }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header - matches card design: white bg, colored top border */}
         <div className={classes.modalHeader}>
           <div className={classes.modalTitleArea}>
             <p className={classes.modalLabel} style={{ color }}>
-              AI Analysis · Cluster {cluster.cluster_id}
+              AI Analysis · Cluster {cluster.clusterId}
             </p>
             <h2 className={classes.modalTitle}>{cluster.title}</h2>
             <div className={classes.modalMeta}>
@@ -93,14 +92,8 @@ function AiAnalysisModal({
                   }}
                 >
                   <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      backgroundColor: riskStyle.dot,
-                      display: "inline-block",
-                      flexShrink: 0,
-                    }}
+                    className={classes.riskBadgeDot}
+                    style={{ backgroundColor: riskStyle.dot }}
                   />
                   {riskStyle.label}
                 </span>
@@ -115,19 +108,18 @@ function AiAnalysisModal({
           </button>
         </div>
 
-        {/* Body */}
         <div className={classes.modalBody}>
           {loading && (
             <div className={classes.modalLoading} style={{ color }}>
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
               <div className={classes.spinner} />
-              <span style={{ color: "var(--text-secondary, #64748b)" }}>
+              <span className={classes.modalLoadingText}>
                 Generating analysis - this may take a moment...
               </span>
             </div>
           )}
           {error && (
-            <p style={{ color: "#dc2626", fontSize: "0.875rem", margin: 0 }}>
+            <p className={classes.modalError}>
               {error}
             </p>
           )}
@@ -154,7 +146,6 @@ function AnalysisContent({
 
   return (
     <>
-      {/* Clinical Interpretation + Plain Language - equal height */}
       <div className={classes.twoCol}>
         <div className={classes.section}>
           <p className={classes.sectionTitle}>Clinical Interpretation</p>
@@ -162,7 +153,7 @@ function AnalysisContent({
             className={classes.sectionDivider}
             style={{ backgroundColor: color }}
           />
-          <p className={classes.sectionText}>{data.medical_interpretation}</p>
+          <p className={classes.sectionText}>{data.medicalInterpretation}</p>
         </div>
         <div className={classes.section}>
           <p className={classes.sectionTitle}>In Plain Language</p>
@@ -170,19 +161,18 @@ function AnalysisContent({
             className={classes.sectionDivider}
             style={{ backgroundColor: color }}
           />
-          <p className={classes.sectionText}>{data.layperson_summary}</p>
+          <p className={classes.sectionText}>{data.laypersonSummary}</p>
         </div>
       </div>
 
-      {/* Key Characteristics - 2×2 compact grid */}
-      <div className={classes.section} style={{ height: "auto" }}>
+      <div className={classes.sectionAuto}>
         <p className={classes.sectionTitle}>Key Characteristics</p>
         <div
           className={classes.sectionDivider}
           style={{ backgroundColor: color }}
         />
         <div className={classes.characteristicsGrid}>
-          {data.key_characteristics.map((c, i) => (
+          {data.keyCharacteristics.map((c, i) => (
             <div key={i} className={classes.characteristicTag}>
               <span
                 className={classes.characteristicDot}
@@ -194,15 +184,14 @@ function AnalysisContent({
         </div>
       </div>
 
-      {/* Priority Interventions - full width, numbered */}
-      <div className={classes.section} style={{ height: "auto" }}>
+      <div className={classes.sectionAuto}>
         <p className={classes.sectionTitle}>Priority Interventions</p>
         <div
           className={classes.sectionDivider}
           style={{ backgroundColor: color }}
         />
         <div className={classes.actionList}>
-          {data.priority_interventions.map((iv, i) => (
+          {data.priorityInterventions.map((iv, i) => (
             <div key={i} className={classes.actionItem}>
               <span
                 className={classes.actionNumber}
@@ -216,15 +205,14 @@ function AnalysisContent({
         </div>
       </div>
 
-      {/* Care Recommendations - full width, numbered */}
-      <div className={classes.section} style={{ height: "auto" }}>
+      <div className={classes.sectionAuto}>
         <p className={classes.sectionTitle}>Care Recommendations</p>
         <div
           className={classes.sectionDivider}
           style={{ backgroundColor: color }}
         />
         <div className={classes.actionList}>
-          {data.care_recommendations.map((r, i) => (
+          {data.careRecommendations.map((r, i) => (
             <div key={i} className={classes.actionItem}>
               <span
                 className={classes.actionNumber}
@@ -252,13 +240,13 @@ function ClusterCard({
   const dispatch = useAppDispatch();
   const { cache } = useSelector((state: RootState) => state.aiAnalysis);
   const color = cluster.color;
-  const isOutlier = cluster.cluster_id === -1;
-  const label = isOutlier ? "Outliers" : `Cluster ${cluster.cluster_id}`;
+  const isOutlier = cluster.clusterId === -1;
+  const label = isOutlier ? "Outliers" : `Cluster ${cluster.clusterId}`;
 
   const handleAnalyse = () => {
-    dispatch(openAnalysis(cluster.cluster_id));
-    if (!cache[cluster.cluster_id]) {
-      dispatch(getAiAnalysis(cluster.cluster_id));
+    dispatch(openAnalysis(cluster.clusterId));
+    if (!cache[cluster.clusterId]) {
+      dispatch(getAiAnalysis(cluster.clusterId));
     }
   };
 
@@ -291,24 +279,24 @@ function ClusterCard({
         <div className={classes.statBox}>
           <div className={classes.statLabel}>Avg Age</div>
           <div className={classes.statValue}>
-            {cluster.avg_age}
+            {cluster.avgAge}
             <span className={classes.statUnit}>years</span>
           </div>
         </div>
         <div className={classes.statBox}>
           <div className={classes.statLabel}>Avg QALY</div>
-          <div className={classes.statValue}>{cluster.avg_qaly}</div>
+          <div className={classes.statValue}>{cluster.avgQaly}</div>
         </div>
         <div className={classes.statBox}>
           <div className={classes.statLabel}>Chronic Illness</div>
           <div className={classes.statValue}>
-            {cluster.chronic_illness_pct}
+            {cluster.chronicIllnessPct}
             <span className={classes.statUnit}>%</span>
           </div>
         </div>
         <div className={classes.statBox}>
           <div className={classes.statLabel}>Avg Meds</div>
-          <div className={classes.statValue}>{cluster.avg_meds}</div>
+          <div className={classes.statValue}>{cluster.avgMeds}</div>
         </div>
       </div>
 
@@ -341,13 +329,13 @@ function ClusterCard({
           style={{ color, borderColor: color }}
           onClick={handleAnalyse}
         >
-          <AutoAwesomeIcon style={{ width: 15, height: 15 }} />
+          <AutoAwesomeIcon className={classes.analyseButtonIcon} />
           Analyse with AI
         </button>
         <button
           className={classes.viewButton}
-          style={{ backgroundColor: color, flex: 1, margin: 0 }}
-          onClick={() => router.push(`/clusters/${cluster.cluster_id}`)}
+          style={{ backgroundColor: color }}
+          onClick={() => router.push(`/clusters/${cluster.clusterId}`)}
         >
           View Details
         </button>
@@ -380,7 +368,7 @@ export default function ClusterSummariesPage() {
       <div className={classes.grid}>
         {data.clusters.map((cluster) => (
           <ClusterCard
-            key={cluster.cluster_id}
+            key={cluster.clusterId}
             cluster={cluster}
             classes={classes}
           />

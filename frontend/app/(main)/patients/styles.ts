@@ -1,7 +1,7 @@
 import { Theme } from "@/utils/theme";
 
 export const PatientsPageStyles = (theme: Theme) => ({
-  // ─── Layout ───────────────────────────────────────────────────────────────
+  // Layout
   pageContainer: {
     display: "flex",
     flexDirection: "column" as const,
@@ -32,7 +32,7 @@ export const PatientsPageStyles = (theme: Theme) => ({
     fontFamily: theme.typography.fontFamily,
   },
 
-  // ─── Gender badge ─────────────────────────────────────────────────────────
+  // Gender badge
   genderBadgeEmpty: {
     color: theme.colors.text.disabled,
   },
@@ -59,7 +59,7 @@ export const PatientsPageStyles = (theme: Theme) => ({
     padding: "2px 9px",
   },
 
-  // ─── Status badge ─────────────────────────────────────────────────────────
+  // Status badge
   statusBadgeAlive: {
     display: "inline-flex",
     alignItems: "center",
@@ -87,7 +87,7 @@ export const PatientsPageStyles = (theme: Theme) => ({
     padding: "2px 9px",
   },
 
-  // ─── Cluster badge ────────────────────────────────────────────────────────
+  // Cluster badge
   clusterBadgeEmpty: {
     color: theme.colors.text.disabled,
   },

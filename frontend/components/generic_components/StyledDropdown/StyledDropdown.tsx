@@ -3,6 +3,8 @@
 import Select, { SelectChangeEvent } from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import theme from "@/utils/theme";
+import useClasses from "@/utils/useClasses";
+import { StyledDropdownStyles } from "./StyledDropdownStyles";
 
 export interface DropdownOption {
   value: string | number;
@@ -22,25 +24,6 @@ interface StyledDropdownProps {
   fullWidth?: boolean;
   width?: string | number;
 }
-
-const labelSx = {
-  fontFamily: theme.typography.fontFamily,
-  fontSize: "0.75rem",
-  fontWeight: theme.typography.fontWeight.bold,
-  color: theme.colors.text.secondary,
-  textTransform: "uppercase" as const,
-  letterSpacing: "0.5px",
-  margin: 0,
-  marginBottom: "6px",
-  display: "block",
-};
-
-const helperTextSx = {
-  fontFamily: theme.typography.fontFamily,
-  fontSize: "0.75rem",
-  margin: 0,
-  marginTop: "4px",
-};
 
 const selectSx = {
   fontFamily: theme.typography.fontFamily,
@@ -117,13 +100,15 @@ export default function StyledDropdown({
   fullWidth = false,
   width,
 }: StyledDropdownProps) {
+  const classes = useClasses(StyledDropdownStyles, { name: "StyledDropdown" });
+
   const handleChange = (e: SelectChangeEvent<string | number | "">) => {
     onChange(e.target.value as string | number | "");
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", width: width ?? (fullWidth ? "100%" : undefined) }}>
-      <span style={labelSx}>{required ? `${label} *` : label}</span>
+    <div className={classes.wrapper} style={{ width: width ?? (fullWidth ? "100%" : undefined) }}>
+      <span className={classes.label}>{required ? `${label} *` : label}</span>
 
       <Select
         value={value}
@@ -150,10 +135,8 @@ export default function StyledDropdown({
 
       {helperText && (
         <span
-          style={{
-            ...helperTextSx,
-            color: error ? theme.colors.status.error : theme.colors.text.secondary,
-          }}
+          className={classes.helperText}
+          style={{ color: error ? theme.colors.status.error : theme.colors.text.secondary }}
         >
           {helperText}
         </span>

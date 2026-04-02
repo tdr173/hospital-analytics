@@ -42,18 +42,18 @@ export default function ConditionsPage() {
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Total Conditions</div>
           <div className={classes.summaryValue}>
-            {data.total_conditions.toLocaleString()}
+            {data.totalConditions.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Unique Conditions</div>
           <div className={classes.summaryValue}>
-            {data.unique_conditions.toLocaleString()}
+            {data.uniqueConditions.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Avg per Patient</div>
-          <div className={classes.summaryValue}>{data.per_patient.avg}</div>
+          <div className={classes.summaryValue}>{data.perPatient.avg}</div>
         </div>
       </div>
 
@@ -63,19 +63,19 @@ export default function ConditionsPage() {
           <div>
             <div className={classes.perPatientStatLabel}>Min</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.min}
+              {data.perPatient.min}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Avg</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.avg}
+              {data.perPatient.avg}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Max</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.max}
+              {data.perPatient.max}
             </div>
           </div>
         </div>
@@ -83,12 +83,12 @@ export default function ConditionsPage() {
 
       <div className={classes.grid}>
         <PieChartComponent
-          data={data.active_vs_resolved}
+          data={data.activeVsResolved}
           title="Active vs Resolved"
           colors={["#3a4555", "#028fb0"]}
         />
         <BarChartComponent
-          data={data.top_conditions}
+          data={data.topConditions}
           title="Top 20 Conditions"
           color="#006780"
           bottomBorder={-20}

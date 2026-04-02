@@ -13,8 +13,7 @@ import {
 } from "@/models/generic/statistics";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
-
-const API_BASE = "http://localhost:8000";
+import { API_BASE } from "@/store/slices/clusters/thunks";
 
 const defaultHeaders: Record<string, string> = {
   "ngrok-skip-browser-warning": "true",
