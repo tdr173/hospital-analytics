@@ -6,14 +6,19 @@ import AddIcon from "@mui/icons-material/Add";
 import LogoutIcon from "@mui/icons-material/Logout";
 import StyledButton from "../StyledButton/StyledButton";
 
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import AnalyticsIcon from "@mui/icons-material/Analytics";
 import Groups3Icon from "@mui/icons-material/Groups3";
 import GroupIcon from "@mui/icons-material/Group";
+import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
+import EventNoteOutlinedIcon from "@mui/icons-material/EventNoteOutlined";
+import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
 
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 const sidebarElements = [
+  { name: "Home", icon: HomeOutlinedIcon, forward: "/home" },
   {
     name: "Dataset Statistics",
     icon: AnalyticsIcon,
@@ -21,6 +26,9 @@ const sidebarElements = [
   },
   { name: "Clusters", icon: Groups3Icon, forward: "/clusters" },
   { name: "Patients", icon: GroupIcon, forward: "/patients" },
+  { name: "Encounters", icon: EventNoteOutlinedIcon, forward: "/encounters" },
+  { name: "Providers", icon: BadgeOutlinedIcon, forward: "/providers" },
+  { name: "Organizations", icon: AccountBalanceOutlinedIcon, forward: "/organizations" },
 ];
 
 export default function Sidebar() {

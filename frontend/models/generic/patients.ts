@@ -71,7 +71,8 @@ export interface ProcedureItem {
   id: number;
   description: string;
   procedureCode: string;
-  date: string;
+  startDate: string;
+  endDate: string | null;
   reasonDescription: string | null;
 }
 
@@ -100,6 +101,16 @@ export interface EncounterItem {
   reasonDescription: string | null;
   providerName: string | null;
   organizationName: string | null;
+}
+
+export interface CarePlanItem {
+  id: number;
+  description: string;
+  careplanCode: string;
+  startDate: string;
+  endDate: string | null;
+  durationDays: number | null;
+  reasonDescription: string | null;
 }
 
 export interface FilterOption {

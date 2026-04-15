@@ -11,13 +11,14 @@ class OrganizationService:
         self.repo = OrganizationRepository(db)
 
     def get_organization_summary(self) -> OrganizationStatisticsResponse:
+        total = self.repo.get_total_organizations()
         utilization = self.repo.get_utilization_stats()
 
         return OrganizationStatisticsResponse(
-            total_organizations=self.repo.get_total_organizations(),
+            total_organizations=total,
             utilization=UtilizationStats(**utilization),
             top_cities=self._to_chart_entries(
-                self.repo.get_top_cities(), "city"
+                self.repo.get_top_cities(total=total), "city"
             ),
         )
 

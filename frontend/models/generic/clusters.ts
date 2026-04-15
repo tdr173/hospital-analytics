@@ -11,6 +11,7 @@ export interface ClusterSummary {
   avgQaly: number;
   chronicIllnessPct: number;
   avgMeds: number;
+  avgActiveConditions: number;
 }
 
 export interface ClustersResponse {
@@ -43,6 +44,7 @@ export interface CategoricalFeatureChartData {
   feature: string;
   categories: string[];
   data: CategoricalClusterEntry[];
+  height: number | null;
 }
 
 export interface CategoricalFeaturesResponse {

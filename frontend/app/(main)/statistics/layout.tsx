@@ -13,6 +13,7 @@ const statisticsTabs = [
   { name: "PROCEDURES", forward: "/statistics/procedures" },
   { name: "IMMUNIZATIONS", forward: "/statistics/immunizations" },
   { name: "ALLERGIES", forward: "/statistics/allergies" },
+  { name: "CARE PLANS", forward: "/statistics/careplans" },
   { name: "ORGANIZATIONS", forward: "/statistics/organizations" },
   { name: "PROVIDERS", forward: "/statistics/providers" },
 ];

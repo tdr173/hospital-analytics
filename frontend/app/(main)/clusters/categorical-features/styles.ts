@@ -22,7 +22,8 @@ export const CategoricalFeaturesPageStyles = (theme: Theme) => ({
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
+    gridTemplateColumns: "repeat(1, 1fr)",
     gap: "24px",
+    height: "1500px",
   },
 });

@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, cast, Numeric
 
@@ -14,8 +15,9 @@ class AllergyRepository:
     def get_unique_allergies(self) -> int:
         return self.db.query(func.count(func.distinct(AllergyModel.allergy_code))).scalar()
 
-    def get_top_allergies(self, limit: int = 15):
-        total = self.get_total_allergies()
+    def get_top_allergies(self, limit: int = 15, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_allergies()
 
         rows = (
             self.db.query(
@@ -29,8 +31,9 @@ class AllergyRepository:
         )
         return self._with_percentage(rows, total)
 
-    def get_active_vs_resolved(self):
-        total = self.get_total_allergies()
+    def get_active_vs_resolved(self, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_allergies()
 
         status_label = case(
             (AllergyModel.end_date.is_(None), "Active"),

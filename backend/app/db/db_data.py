@@ -6,7 +6,7 @@ OVERVIEW:
 - The central entity is Patient. Organizations and Providers form the infrastructure.
 - Encounters link Patients to Providers and Organizations (many-to-one).
 - All clinical events (Allergy, Condition, Immunization, Medication, Observation, Procedure) are linked to a Patient and usually to the specific Encounter where they were recorded.
-- The 3 clustering tables (cluster_run, cluster, cluster_patient) store results from K-Prototypes patient segmentation runs. Do NOT use these tables unless the user explicitly asks about clusters or patient segmentation.
+- The 3 clustering tables (cluster_meta, cluster, cluster_patient) store the current K-Prototypes patient segmentation. Do NOT use these tables unless the user explicitly asks about clusters or patient segmentation.
 
 --- TABLES ---
 
@@ -53,9 +53,14 @@ TABLE: encounter
   - encounter_class (str) — Type of visit. Values:
       'inpatient'   = hospital admission/hospitalization (internare)
       'ambulatory'  = outpatient clinic visit (consultatie ambulatorie)
+      'outpatient'  = outpatient visit (similar to ambulatory)
       'wellness'    = routine checkup (control de rutina)
       'emergency'   = emergency room visit (urgenta)
       'urgentcare'  = urgent care visit
+      'home'        = home visit
+      'virtual'     = telemedicine/virtual visit
+      'snf'         = skilled nursing facility
+      'hospice'     = hospice/palliative care
   - description (str) — Reason for the visit (e.g. 'General examination of patient').
   - reason_description (str, nullable) — Additional clinical context.
 
@@ -122,8 +127,9 @@ TABLE: allergy
   - allergy_code (str) — SNOMED-CT code.
   - description (str) — Allergen name (e.g. 'Peanuts', 'Penicillin', 'Bee stings', 'Latex'). Use ILIKE.
 
-TABLE: cluster_run
-  PURPOSE: Metadata for a K-Prototypes patient clustering run. One row per execution.
+TABLE: cluster_meta
+  PURPOSE: Singleton — exactly one row storing the metadata for the current clustering run.
+           Fully replaced (DELETE + INSERT) every time k_prototypes is re-executed.
   - id (int, PK, serial).
   - created_at (timestamp) — When the clustering was executed.
   - algorithm (str) — Always 'k_prototypes' currently.
@@ -136,12 +142,11 @@ TABLE: cluster_run
   - metrics (JSONB) — Quality scores: silhouette, gower_silhouette, calinski_harabasz, davies_bouldin.
   - heatmap (bytes, nullable) — PNG image of cluster heatmap (binary, not useful for SQL queries).
   - ai_analysis (JSONB, nullable) — Cached AI-generated population analysis (not useful for SQL queries).
-  NOTE: To get the most recent run use: SELECT MAX(id) FROM cluster_run.
 
 TABLE: cluster
-  PURPOSE: One row per cluster in a clustering run. Stores the AI-generated summary for each patient group.
+  PURPOSE: One row per cluster. Stores the AI-generated summary for each patient group.
+           Fully replaced on every clustering run.
   - id (int, PK, serial).
-  - run_id (int, FK → cluster_run).
   - cluster_label (int) — Cluster index: 0, 1, 2, ... or -1 for the outlier group.
   - color (str) — Hex color code for UI display (e.g. '#DC2626').
   - title (str) — Short AI-generated cluster name (e.g. 'Metabolic Strain').
@@ -149,25 +154,25 @@ TABLE: cluster
   - insight (str) — Key clinical finding for this cluster.
   - recommendation (str) — Suggested clinical action for this cluster.
   - ai_analysis (JSONB, nullable) — Cached detailed per-cluster AI analysis.
-  INDEXES: ix_cluster_run_id on (run_id).
 
 TABLE: cluster_patient
-  PURPOSE: Maps each patient to their assigned cluster for a given run. One row per patient per run.
+  PURPOSE: Maps each patient to their assigned cluster. One row per patient.
+           Fully replaced on every clustering run.
   - id (int, PK, serial).
-  - run_id (int, FK → cluster_run).
   - patient_id (str, FK → patient).
   - cluster_label (int) — Which cluster this patient belongs to (-1 = outlier).
   - is_outlier (bool) — TRUE if the patient was excluded as a statistical outlier.
   - pca_x (float, nullable) — X coordinate from PCA 2D projection (for scatter plot).
   - pca_y (float, nullable) — Y coordinate from PCA 2D projection (for scatter plot).
-  - features (JSONB) — All engineered features for this patient at clustering time. Keys include:
-      Numerical: age, qaly, total_procedures, total_medications, inpatient_count, outpatient_count,
-                 emergency_count, wellness_count, ambulatory_count, urgentcare_count,
-                 active_conditions_count, avg_bmi, days_since_last_encounter, total_immunizations.
-      Categorical: gender, marital, dominant_encounter_class, has_diabetes, has_hypertension,
-                   has_heart_disease, has_obesity, smoking_status, age_group, bmi_category,
-                   condition_burden, medication_intensity.
-  INDEXES: ix_cluster_patient_run_id on (run_id), ix_cluster_patient_patient_id on (patient_id).
+  - features (JSONB) — All engineered features for this patient at clustering time. Keys:
+      Numerical: age, avg_bmi, qaly, daly, avg_systolic_bp, avg_glucose, total_procedures,
+                 total_medications, active_conditions_count, days_since_last_encounter.
+      Categorical: gender, marital, dominant_encounter_class, dominant_careplan,
+                   has_diabetes, has_hypertension, has_heart_disease, has_cancer,
+                   is_polypharmacy, smoking_status.
+      Yes/No fields are stored as string 'Yes'/'No'. smoking_status values: 'never', 'former', 'current'.
+      dominant_careplan values: 'Cardiac', 'Respiratory', 'Metabolic', 'Maternal', 'Musculoskeletal', 'Psychiatric', 'Other', 'none'.
+  INDEXES: ix_cluster_patient_patient_id on (patient_id).
   USAGE: To query feature values use JSONB operators, e.g.: features->>'age', (features->>'age')::numeric.
 
 --- KEY RELATIONSHIPS ---
@@ -176,23 +181,22 @@ patient (1) → (N) encounter → (1) organization
 patient (1) → (N) encounter → (1) provider
 encounter (1) → (N) observation, condition, medication, procedure, immunization, allergy
 provider (N) → (1) organization
-cluster_run (1) → (N) cluster          [one run has multiple cluster summaries]
-cluster_run (1) → (N) cluster_patient  [one run has one row per patient]
-patient (1) → (N) cluster_patient      [a patient can appear in multiple runs]
+cluster_meta (1) — singleton run metadata
+cluster (N) — one row per cluster label
+patient (1) → (0..1) cluster_patient — current cluster assignment
 
 To find which hospital a patient visited: JOIN encounter ON patient_id, then JOIN organization ON organization_id.
 To find which doctor treated a patient: JOIN encounter ON patient_id, then JOIN provider ON provider_id.
-To find which cluster a patient belongs to: JOIN cluster_patient ON patient_id WHERE run_id = (SELECT MAX(id) FROM cluster_run).
-To get all patients in a specific cluster: SELECT patient_id FROM cluster_patient WHERE run_id = (SELECT MAX(id) FROM cluster_run) AND cluster_label = <N> AND NOT is_outlier.
+To find which cluster a patient belongs to: JOIN cluster_patient ON patient_id.
+To get all patients in a specific cluster: SELECT patient_id FROM cluster_patient WHERE cluster_label = <N> AND NOT is_outlier.
 
 --- CLUSTERING SEMANTIC MAPPINGS ---
 
 "cluster" / "segment" / "grup de pacienti" → cluster table (summaries) + cluster_patient (membership)
-"clustering run" / "rulare clustering" → cluster_run table
 "outlier" / "exceptie" → cluster_patient WHERE is_outlier = TRUE (or cluster_label = -1)
-"which cluster is patient X in" → SELECT cluster_label FROM cluster_patient WHERE patient_id = 'X' AND run_id = (SELECT MAX(id) FROM cluster_run)
-"patients in cluster N" → SELECT patient_id FROM cluster_patient WHERE cluster_label = N AND run_id = (SELECT MAX(id) FROM cluster_run) AND NOT is_outlier
-"cluster quality" / "calitatea clusteringului" → SELECT metrics FROM cluster_run WHERE id = (SELECT MAX(id) FROM cluster_run)
+"which cluster is patient X in" → SELECT cluster_label FROM cluster_patient WHERE patient_id = 'X'
+"patients in cluster N" → SELECT patient_id FROM cluster_patient WHERE cluster_label = N AND NOT is_outlier
+"cluster quality" / "calitatea clusteringului" → SELECT metrics FROM cluster_meta LIMIT 1
 "feature value for patient" → SELECT features->>'<feature_name>' FROM cluster_patient WHERE patient_id = '...'
 
 --- SEMANTIC MAPPINGS (multilingual) ---
@@ -239,17 +243,23 @@ Q: "List all medications prescribed for hypertension."
 SQL: SELECT DISTINCT m.description FROM medication m WHERE m.reason_description ILIKE '%hypertension%' ORDER BY m.description LIMIT 100;
 
 Q: "How many patients are in each cluster?"
-SQL: SELECT c.cluster_label, c.title, COUNT(cp.patient_id) AS patient_count FROM cluster c JOIN cluster_patient cp ON c.run_id = cp.run_id AND c.cluster_label = cp.cluster_label WHERE c.run_id = (SELECT MAX(id) FROM cluster_run) AND NOT cp.is_outlier GROUP BY c.cluster_label, c.title ORDER BY c.cluster_label;
+SQL: SELECT c.cluster_label, c.title, COUNT(cp.patient_id) AS patient_count FROM cluster c JOIN cluster_patient cp ON c.cluster_label = cp.cluster_label WHERE NOT cp.is_outlier GROUP BY c.cluster_label, c.title ORDER BY c.cluster_label;
 
 Q: "What is the average age of patients in cluster 0?"
-SQL: SELECT ROUND(AVG((features->>'age')::numeric), 1) AS avg_age FROM cluster_patient WHERE run_id = (SELECT MAX(id) FROM cluster_run) AND cluster_label = 0 AND NOT is_outlier;
+SQL: SELECT ROUND(AVG((features->>'age')::numeric), 1) AS avg_age FROM cluster_patient WHERE cluster_label = 0 AND NOT is_outlier;
 
 Q: "Which cluster does patient with id '...' belong to?"
-SQL: SELECT cp.cluster_label, c.title FROM cluster_patient cp JOIN cluster c ON cp.run_id = c.run_id AND cp.cluster_label = c.cluster_label WHERE cp.patient_id = '...' AND cp.run_id = (SELECT MAX(id) FROM cluster_run);
+SQL: SELECT cp.cluster_label, c.title FROM cluster_patient cp JOIN cluster c ON cp.cluster_label = c.cluster_label WHERE cp.patient_id = '...';
 
 Q: "What are the diabetes rates per cluster?"
-SQL: SELECT cluster_label, ROUND(100.0 * SUM(CASE WHEN features->>'has_diabetes' = 'Yes' THEN 1 ELSE 0 END) / COUNT(*), 1) AS diabetes_pct FROM cluster_patient WHERE run_id = (SELECT MAX(id) FROM cluster_run) AND NOT is_outlier GROUP BY cluster_label ORDER BY cluster_label;
+SQL: SELECT cluster_label, ROUND(100.0 * SUM(CASE WHEN features->>'has_diabetes' = 'Yes' THEN 1 ELSE 0 END) / COUNT(*), 1) AS diabetes_pct FROM cluster_patient WHERE NOT is_outlier GROUP BY cluster_label ORDER BY cluster_label;
+
+Q: "Which cluster is dominated by the cardiac careplan?"
+SQL: SELECT cluster_label, COUNT(*) AS patients FROM cluster_patient WHERE NOT is_outlier AND features->>'dominant_careplan' = 'Cardiac' GROUP BY cluster_label ORDER BY patients DESC LIMIT 1;
+
+Q: "Average systolic blood pressure per cluster?"
+SQL: SELECT cluster_label, ROUND(AVG((features->>'avg_systolic_bp')::numeric), 1) AS avg_sbp FROM cluster_patient WHERE NOT is_outlier GROUP BY cluster_label ORDER BY cluster_label;
 
 Q: "What is the clustering quality score?"
-SQL: SELECT metrics->>'silhouette' AS silhouette, metrics->>'davies_bouldin' AS davies_bouldin, metrics->>'calinski_harabasz' AS calinski_harabasz FROM cluster_run WHERE id = (SELECT MAX(id) FROM cluster_run);
+SQL: SELECT metrics->>'silhouette' AS silhouette, metrics->>'davies_bouldin' AS davies_bouldin, metrics->>'calinski_harabasz' AS calinski_harabasz FROM cluster_meta LIMIT 1;
 """

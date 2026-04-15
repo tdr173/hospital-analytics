@@ -1,5 +1,6 @@
+from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, cast, Numeric
+from sqlalchemy import func, cast, Numeric, text
 
 from domain.models.observation_model import ObservationModel
 from domain.models.patient_model import PatientModel
@@ -9,80 +10,87 @@ class ObservationRepository:
     def __init__(self, db: Session):
         self.db = db
 
+    # ------------------------------------------------------------------
+    # Scalar totals — read from the pre-aggregated view (instant)
+    # ------------------------------------------------------------------
+
     def get_total_observations(self) -> int:
-        return self.db.query(func.count(ObservationModel.observation_code)).scalar()
+        row = self.db.execute(text("SELECT total_observations FROM mv_obs_totals")).first()
+        return int(row.total_observations) if row else 0
 
     def get_unique_observation_types(self) -> int:
-        return self.db.query(func.count(func.distinct(ObservationModel.observation_code))).scalar()
+        row = self.db.execute(text("SELECT unique_types FROM mv_obs_totals")).first()
+        return int(row.unique_types) if row else 0
 
-    def get_top_observation_types(self, limit: int = 15):
-        total = self.get_total_observations()
+    def get_total_patients(self) -> int:
+        row = self.db.execute(text("SELECT total_patients FROM mv_obs_totals")).first()
+        return int(row.total_patients) if row else 0
 
-        rows = (
-            self.db.query(
-                ObservationModel.description.label("label"),
-                func.count(ObservationModel.observation_code).label("count"),
-            )
-            .group_by(ObservationModel.description)
-            .order_by(func.count(ObservationModel.observation_code).desc())
-            .limit(limit)
-            .all()
-        )
+    # ------------------------------------------------------------------
+    # Aggregations — query tiny materialized views, not millions of rows
+    # ------------------------------------------------------------------
+
+    def get_per_patient_stats(self):
+        row = self.db.execute(text(
+            "SELECT avg_cnt, min_cnt, max_cnt FROM mv_obs_per_patient"
+        )).first()
+        if not row:
+            return {"avg": 0, "min": 0, "max": 0}
+        return {
+            "avg": float(row.avg_cnt or 0),
+            "min": row.min_cnt or 0,
+            "max": row.max_cnt or 0,
+        }
+
+    def get_top_observation_types(self, limit: int = 15, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_observations()
+
+        rows = self.db.execute(text(
+            "SELECT description AS label, cnt AS count "
+            "FROM mv_obs_top_types "
+            "ORDER BY cnt DESC "
+            "LIMIT :limit"
+        ), {"limit": limit}).all()
+
         return self._with_percentage(rows, total)
 
-    def get_numeric_stats(self, limit: int = 25):
-        total_patients = self.db.query(func.count(PatientModel.patient_id)).scalar()
+    def get_numeric_stats(self, limit: int = 25, total_patients: Optional[int] = None):
+        if total_patients is None:
+            total_patients = self.get_total_patients()
 
-        rows = (
-            self.db.query(
-                ObservationModel.description.label("label"),
-                func.count(ObservationModel.observation_code).label("count"),
-                func.count(func.distinct(ObservationModel.patient_id)).label("patient_count"),
-                func.round(cast(func.min(ObservationModel.value_numeric), Numeric), 2).label("min_value"),
-                func.round(cast(func.max(ObservationModel.value_numeric), Numeric), 2).label("max_value"),
-                func.round(cast(func.avg(ObservationModel.value_numeric), Numeric), 2).label("avg_value"),
-                ObservationModel.units,
-            )
-            .filter(ObservationModel.value_numeric.isnot(None))
-            .group_by(ObservationModel.description, ObservationModel.units)
-            .order_by(func.count(func.distinct(ObservationModel.patient_id)).desc())
-            .limit(limit)
-            .all()
-        )
+        rows = self.db.execute(text(
+            "SELECT description AS label, cnt AS count, patient_count, "
+            "       min_val, max_val, avg_val, units "
+            "FROM mv_obs_numeric_stats "
+            "ORDER BY patient_count DESC "
+            "LIMIT :limit"
+        ), {"limit": limit}).all()
+
         return [
             {
                 "label": row.label,
                 "count": row.count,
                 "patient_count": row.patient_count,
                 "percentage": round(row.patient_count * 100.0 / total_patients, 2) if total_patients else 0,
-                "min_value": float(row.min_value or 0),
-                "max_value": float(row.max_value or 0),
-                "avg_value": float(row.avg_value or 0),
+                "min_value": float(row.min_val or 0),
+                "max_value": float(row.max_val or 0),
+                "avg_value": float(row.avg_val or 0),
                 "units": row.units or "",
             }
             for row in rows
         ]
 
-    def get_categorical_stats(self, limit: int = 15):
-        total_patients = self.db.query(func.count(PatientModel.patient_id)).scalar()
+    def get_categorical_stats(self, limit: int = 15, total_patients: Optional[int] = None):
+        if total_patients is None:
+            total_patients = self.get_total_patients()
 
-        rows = (
-            self.db.query(
-                ObservationModel.description.label("label"),
-                func.count(ObservationModel.observation_code).label("count"),
-                func.count(func.distinct(ObservationModel.patient_id)).label("patient_count"),
-                func.count(func.distinct(ObservationModel.value)).label("distinct_values"),
-            )
-            .filter(
-                ObservationModel.value_numeric.is_(None),
-                ObservationModel.value.isnot(None),
-                ObservationModel.value != "",
-            )
-            .group_by(ObservationModel.description)
-            .order_by(func.count(func.distinct(ObservationModel.patient_id)).desc())
-            .limit(limit)
-            .all()
-        )
+        rows = self.db.execute(text(
+            "SELECT description AS label, cnt AS count, patient_count, distinct_values "
+            "FROM mv_obs_categorical_stats "
+            "ORDER BY patient_count DESC "
+            "LIMIT :limit"
+        ), {"limit": limit}).all()
 
         return [
             {
@@ -94,28 +102,6 @@ class ObservationRepository:
             }
             for row in rows
         ]
-
-    def get_per_patient_stats(self):
-        subquery = (
-            self.db.query(
-                ObservationModel.patient_id,
-                func.count(ObservationModel.observation_code).label("cnt"),
-            )
-            .group_by(ObservationModel.patient_id)
-            .subquery()
-        )
-
-        result = self.db.query(
-            func.round(cast(func.avg(subquery.c.cnt), Numeric), 2).label("avg"),
-            func.min(subquery.c.cnt).label("min"),
-            func.max(subquery.c.cnt).label("max"),
-        ).one()
-
-        return {
-            "avg": float(result.avg or 0),
-            "min": result.min or 0,
-            "max": result.max or 0,
-        }
 
     @staticmethod
     def _with_percentage(rows, total):

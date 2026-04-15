@@ -15,17 +15,23 @@ class ObservationService:
         self.repo = ObservationRepository(db)
 
     def get_observation_summary(self) -> ObservationStatisticsResponse:
+        total_observations = self.repo.get_total_observations()
+        total_patients = self.repo.get_total_patients()
         per_patient = self.repo.get_per_patient_stats()
 
         return ObservationStatisticsResponse(
-            total_observations=self.repo.get_total_observations(),
+            total_observations=total_observations,
             unique_observation_types=self.repo.get_unique_observation_types(),
             per_patient=PerPatientStats(**per_patient),
             top_observation_types=self._to_chart_entries(
-                self.repo.get_top_observation_types(), "observation"
+                self.repo.get_top_observation_types(total=total_observations), "observation"
             ),
-            numeric_stats=self._to_numeric_entries(self.repo.get_numeric_stats()),
-            categorical_stats=self._to_categorical_entries(self.repo.get_categorical_stats()),
+            numeric_stats=self._to_numeric_entries(
+                self.repo.get_numeric_stats(total_patients=total_patients)
+            ),
+            categorical_stats=self._to_categorical_entries(
+                self.repo.get_categorical_stats(total_patients=total_patients)
+            ),
         )
 
     @staticmethod

@@ -10,7 +10,8 @@ class ProcedureModel(SQLModel, table=True):
     patient_id: str = Field(foreign_key="patient.patient_id", index=True)
     encounter_id: str = Field(foreign_key="encounter.encounter_id", index=True)
 
-    date: datetime
+    start_date: datetime
+    end_date: Optional[datetime] = None
 
     # Clinical fields (Used for K-Prototypes clustering)
     procedure_code: str = Field(index=True)

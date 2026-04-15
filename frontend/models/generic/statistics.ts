@@ -126,6 +126,14 @@ export interface MedicationStatisticsResponse {
   topMedications: ChartEntry[];
 }
 
+export interface CarePlanStatisticsResponse {
+  totalCareplans: number;
+  uniqueCareplans: number;
+  perPatient: PerPatientStats;
+  activeVsEnded: ChartEntry[];
+  topCareplans: ChartEntry[];
+}
+
 export interface PatientStatisticsResponse {
   totalPatients: number;
   ageGroups: ChartEntry[];

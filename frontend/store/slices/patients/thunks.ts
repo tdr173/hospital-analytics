@@ -9,6 +9,7 @@ import {
   ProcedureItem,
   ImmunizationItem,
   AllergyItem,
+  CarePlanItem,
   EncounterItem,
   FetchPatientsArgs,
   PatientResources,
@@ -146,6 +147,18 @@ export const fetchPatientAllergies = createAsyncThunk<
     return await get<AllergyItem[]>(`${API_BASE}/patients/${patientId}/allergies`, "allergies");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch allergies" });
+  }
+});
+
+export const fetchPatientCareplans = createAsyncThunk<
+  CarePlanItem[],
+  string,
+  { rejectValue: ErrorResponse }
+>("patients/fetchPatientCareplans", async (patientId, thunkAPI) => {
+  try {
+    return await get<CarePlanItem[]>(`${API_BASE}/patients/${patientId}/careplans`, "careplans");
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch careplans" });
   }
 });
 

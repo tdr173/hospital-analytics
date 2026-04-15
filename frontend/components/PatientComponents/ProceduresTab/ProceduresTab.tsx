@@ -37,7 +37,7 @@ export default function ProceduresTab({ data }: { data: ProcedureItem[] }) {
               <TruncatedText text={r.description} />
 
               {/* Column 2: Centered Date */}
-              <div className={classes.centeredCell}>{formatDate(r.date)}</div>
+              <div className={classes.centeredCell}>{formatDate(r.startDate)}</div>
 
               {/* Column 3: Centered Reason (Secondary Color) */}
               <div className={classes.secondaryText}>

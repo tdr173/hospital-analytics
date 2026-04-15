@@ -7,6 +7,7 @@ import {
   ProcedureItem,
   ImmunizationItem,
   AllergyItem,
+  CarePlanItem,
   EncounterItem,
 } from "@/models/generic/patients";
 import {
@@ -17,6 +18,7 @@ import {
   fetchPatientProcedures,
   fetchPatientImmunizations,
   fetchPatientAllergies,
+  fetchPatientCareplans,
   fetchPatientEncounters,
 } from "./thunks";
 
@@ -28,6 +30,7 @@ interface CurrentPatientState {
   procedures: ProcedureItem[];
   immunizations: ImmunizationItem[];
   allergies: AllergyItem[];
+  careplans: CarePlanItem[];
   encounters: EncounterItem[];
   loading: boolean;
   error: string | null;
@@ -42,6 +45,7 @@ const initialState: CurrentPatientState = {
   procedures: [],
   immunizations: [],
   allergies: [],
+  careplans: [],
   encounters: [],
   loading: false,
   error: null,
@@ -119,13 +123,21 @@ const currentPatientSlice = createSlice({
       .addCase(fetchPatientAllergies.rejected, (state) => {
         addTab(state, 4);
       })
-      // Encounters (tab 5)
-      .addCase(fetchPatientEncounters.fulfilled, (state, action) => {
-        state.encounters = action.payload;
+      // Careplans (tab 5)
+      .addCase(fetchPatientCareplans.fulfilled, (state, action) => {
+        state.careplans = action.payload;
         addTab(state, 5);
       })
-      .addCase(fetchPatientEncounters.rejected, (state) => {
+      .addCase(fetchPatientCareplans.rejected, (state) => {
         addTab(state, 5);
+      })
+      // Encounters (tab 6)
+      .addCase(fetchPatientEncounters.fulfilled, (state, action) => {
+        state.encounters = action.payload;
+        addTab(state, 6);
+      })
+      .addCase(fetchPatientEncounters.rejected, (state) => {
+        addTab(state, 6);
       });
   },
 });

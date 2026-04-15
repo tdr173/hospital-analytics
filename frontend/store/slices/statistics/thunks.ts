@@ -8,6 +8,7 @@ import {
   ImmunizationStatisticsResponse,
   MedicationStatisticsResponse,
   AllergyStatisticsResponse,
+  CarePlanStatisticsResponse,
   ProviderStatisticsResponse,
   OrganizationStatisticsResponse,
 } from "@/models/generic/statistics";
@@ -183,6 +184,34 @@ export const getAllergiesStatistics = createAsyncThunk<
     return thunkAPI.rejectWithValue({
       error: true,
       message: "Failed to fetch allergies statistics",
+    });
+  }
+});
+
+export const getCareplansStatistics = createAsyncThunk<
+  CarePlanStatisticsResponse,
+  void,
+  { rejectValue: ErrorResponse }
+>("getCareplansStatistics", async (_, thunkAPI) => {
+  try {
+    const response = await fetch(`${API_BASE}/statistics/careplans`, {
+      headers: defaultHeaders,
+    });
+
+    if (!response.ok) {
+      toast.error("Failed to load careplans statistics", { toastId: "stat-careplans" });
+      return thunkAPI.rejectWithValue({
+        error: true,
+        message: "Failed to fetch careplans statistics",
+      });
+    }
+
+    return (await response.json()) as CarePlanStatisticsResponse;
+  } catch (error) {
+    toast.error("Failed to load careplans statistics", { toastId: "stat-careplans" });
+    return thunkAPI.rejectWithValue({
+      error: true,
+      message: "Failed to fetch careplans statistics",
     });
   }
 });

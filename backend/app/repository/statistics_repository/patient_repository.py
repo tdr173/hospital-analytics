@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 
@@ -11,7 +12,10 @@ class PatientRepository:
     def get_total_patients(self) -> int:
         return self.db.query(func.count(PatientModel.patient_id)).scalar()
 
-    def get_age_groups(self):
+    def get_age_groups(self, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_patients()
+
         age_group = case(
             (PatientModel.age.between(0, 18), "0-18"),
             (PatientModel.age.between(19, 35), "19-35"),
@@ -19,8 +23,6 @@ class PatientRepository:
             (PatientModel.age.between(51, 65), "51-65"),
             else_="65+",
         ).label("label")
-
-        total = self.db.query(func.count(PatientModel.patient_id)).scalar()
 
         rows = (
             self.db.query(
@@ -33,25 +35,26 @@ class PatientRepository:
         )
         return self._with_percentage(rows, total)
 
-    def get_gender_distribution(self):
-        return self._get_categorical_distribution(PatientModel.gender)
+    def get_gender_distribution(self, total: Optional[int] = None):
+        return self._get_categorical_distribution(PatientModel.gender, total)
 
-    def get_race_distribution(self):
-        return self._get_categorical_distribution(PatientModel.race)
+    def get_race_distribution(self, total: Optional[int] = None):
+        return self._get_categorical_distribution(PatientModel.race, total)
 
-    def get_ethnicity_distribution(self):
-        return self._get_categorical_distribution(PatientModel.ethnicity)
+    def get_ethnicity_distribution(self, total: Optional[int] = None):
+        return self._get_categorical_distribution(PatientModel.ethnicity, total)
 
-    def get_marital_status_distribution(self):
-        return self._get_categorical_distribution(PatientModel.marital)
+    def get_marital_status_distribution(self, total: Optional[int] = None):
+        return self._get_categorical_distribution(PatientModel.marital, total)
 
-    def get_vital_status(self):
+    def get_vital_status(self, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_patients()
+
         vital_label = case(
             (PatientModel.deathdate.is_(None), "Alive"),
             else_="Deceased",
         ).label("label")
-
-        total = self.db.query(func.count(PatientModel.patient_id)).scalar()
 
         rows = (
             self.db.query(
@@ -63,8 +66,9 @@ class PatientRepository:
         )
         return self._with_percentage(rows, total)
 
-    def get_top_cities(self):
-        total = self.db.query(func.count(PatientModel.patient_id)).scalar()
+    def get_top_cities(self, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_patients()
 
         rows = (
             self.db.query(
@@ -89,8 +93,9 @@ class PatientRepository:
 
         return result
 
-    def _get_categorical_distribution(self, column):
-        total = self.db.query(func.count(PatientModel.patient_id)).scalar()
+    def _get_categorical_distribution(self, column, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_patients()
 
         rows = (
             self.db.query(

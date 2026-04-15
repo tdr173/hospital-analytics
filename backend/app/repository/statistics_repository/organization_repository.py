@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
@@ -11,8 +12,9 @@ class OrganizationRepository:
     def get_total_organizations(self) -> int:
         return self.db.query(func.count(OrganizationModel.organization_id)).scalar()
 
-    def get_top_cities(self, limit: int = 10):
-        total = self.get_total_organizations()
+    def get_top_cities(self, limit: int = 10, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_organizations()
 
         rows = (
             self.db.query(

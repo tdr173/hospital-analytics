@@ -298,6 +298,10 @@ function ClusterCard({
           <div className={classes.statLabel}>Avg Meds</div>
           <div className={classes.statValue}>{cluster.avgMeds}</div>
         </div>
+        <div className={classes.statBox}>
+          <div className={classes.statLabel}>Active Conditions</div>
+          <div className={classes.statValue}>{cluster.avgActiveConditions}</div>
+        </div>
       </div>
 
       <div className={classes.cardFooter}>

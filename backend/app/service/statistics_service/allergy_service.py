@@ -11,17 +11,18 @@ class AllergyService:
         self.repo = AllergyRepository(db)
 
     def get_allergy_summary(self) -> AllergyStatisticsResponse:
+        total = self.repo.get_total_allergies()
         per_patient = self.repo.get_per_patient_stats()
 
         return AllergyStatisticsResponse(
-            total_allergies=self.repo.get_total_allergies(),
+            total_allergies=total,
             unique_allergies=self.repo.get_unique_allergies(),
             per_patient=PerPatientStats(**per_patient),
             active_vs_resolved=self._to_chart_entries(
-                self.repo.get_active_vs_resolved(), "status"
+                self.repo.get_active_vs_resolved(total), "status"
             ),
             top_allergies=self._to_chart_entries(
-                self.repo.get_top_allergies(), "allergy"
+                self.repo.get_top_allergies(total=total), "allergy"
             ),
         )
 

@@ -27,6 +27,9 @@ class PatientService:
     def get_patient_immunizations(self, patient_id: str):
         return self.repo.get_patient_immunizations(patient_id)
 
+    def get_patient_careplans(self, patient_id: str):
+        return self.repo.get_patient_careplans(patient_id)
+
     def get_patient_allergies(self, patient_id: str):
         return self.repo.get_patient_allergies(patient_id)
 

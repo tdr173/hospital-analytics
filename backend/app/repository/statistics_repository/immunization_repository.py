@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
@@ -14,8 +15,9 @@ class ImmunizationRepository:
     def get_unique_immunizations(self) -> int:
         return self.db.query(func.count(func.distinct(ImmunizationModel.immunization_code))).scalar()
 
-    def get_top_immunizations(self, limit: int = 15):
-        total = self.get_total_immunizations()
+    def get_top_immunizations(self, limit: int = 15, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_immunizations()
 
         rows = (
             self.db.query(

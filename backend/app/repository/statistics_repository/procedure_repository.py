@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
@@ -14,8 +15,9 @@ class ProcedureRepository:
     def get_unique_procedures(self) -> int:
         return self.db.query(func.count(func.distinct(ProcedureModel.procedure_code))).scalar()
 
-    def get_top_procedures(self, limit: int = 20):
-        total = self.get_total_procedures()
+    def get_top_procedures(self, limit: int = 20, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_procedures()
 
         rows = (
             self.db.query(

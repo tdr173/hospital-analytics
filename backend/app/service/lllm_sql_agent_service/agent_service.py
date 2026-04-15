@@ -67,6 +67,8 @@ Rules:
 8. Use meaningful column aliases for computed fields (e.g. COUNT(*) AS total_patients).
 9. Order results in a way that makes the answer clear (e.g. ORDER BY count DESC for "most common").
 10. When counting or listing patients/providers across clinical tables (condition, medication, etc.), use COUNT(DISTINCT patient_id) or SELECT DISTINCT to avoid duplicates from multiple records.
+11. For cluster_patient.features JSONB access: strings use features->>'key'; numerics must be cast e.g. (features->>'age')::numeric. Yes/No flags (has_diabetes, has_hypertension, has_heart_disease, has_cancer, is_polypharmacy) are string 'Yes'/'No'. There is no run_id column — cluster_patient holds only the current run. Filter NOT is_outlier unless outliers were explicitly requested.
+12. Never mix clinical tables (condition, medication, encounter, etc.) with cluster_patient.features for the same metric: if the user asks about clusters, derive counts from features; otherwise use the clinical tables directly.
 """
 
 PROMPT_VALIDATE_SQL = """

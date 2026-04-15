@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, cast, Numeric
 
@@ -14,8 +15,9 @@ class MedicationRepository:
     def get_unique_medications(self) -> int:
         return self.db.query(func.count(func.distinct(MedicationModel.medication_code))).scalar()
 
-    def get_top_medications(self, limit: int = 20):
-        total = self.get_total_medications()
+    def get_top_medications(self, limit: int = 20, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_medications()
 
         rows = (
             self.db.query(
@@ -52,8 +54,9 @@ class MedicationRepository:
             "median_duration": float(result.median_duration or 0),
         }
 
-    def get_active_vs_ended(self):
-        total = self.get_total_medications()
+    def get_active_vs_ended(self, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_medications()
 
         status_label = case(
             (MedicationModel.end_date.is_(None), "Active"),

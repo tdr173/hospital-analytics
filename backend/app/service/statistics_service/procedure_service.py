@@ -11,14 +11,15 @@ class ProcedureService:
         self.repo = ProcedureRepository(db)
 
     def get_procedure_summary(self) -> ProcedureStatisticsResponse:
+        total = self.repo.get_total_procedures()
         per_patient = self.repo.get_per_patient_stats()
 
         return ProcedureStatisticsResponse(
-            total_procedures=self.repo.get_total_procedures(),
+            total_procedures=total,
             unique_procedures=self.repo.get_unique_procedures(),
             per_patient=PerPatientStats(**per_patient),
             top_procedures=self._to_chart_entries(
-                self.repo.get_top_procedures(), "procedure"
+                self.repo.get_top_procedures(total=total), "procedure"
             ),
         )
 

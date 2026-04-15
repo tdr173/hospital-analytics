@@ -3,13 +3,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, cast, case, Numeric, literal
 
 from domain import (
-    PatientModel, ClusterPatientModel, ClusterModel, ClusterRunModel,
+    PatientModel, ClusterPatientModel, ClusterModel,
     EncounterModel, ProviderModel, OrganizationModel,
     ConditionModel, MedicationModel, ProcedureModel, ImmunizationModel, AllergyModel,
-    ObservationModel,
+    ObservationModel, CarePlanModel,
     PatientListItem, PatientListResponse, PatientDetailResponse,
     PatientSummaryResponse, ConditionItem, MedicationItem,
-    ProcedureItem, ImmunizationItem, AllergyItem, EncounterItem,
+    ProcedureItem, ImmunizationItem, AllergyItem, CarePlanItem, EncounterItem,
     FilterOption, PatientResourcesResponse,
 )
 
@@ -36,8 +36,8 @@ class PatientRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def _latest_run_id(self) -> Optional[int]:
-        return self.db.query(func.max(ClusterRunModel.id)).scalar()
+    def _has_cluster_data(self) -> bool:
+        return self.db.query(ClusterPatientModel).count() > 0
 
     def get_patients(
         self,
@@ -107,9 +107,7 @@ class PatientRepository:
         # Total count (without cluster join)
         total = self.db.query(func.count(PatientModel.patient_id)).filter(*filters).scalar() or 0
 
-        # Cluster join (safe even when no run exists — outerjoin returns NULLs)
-        latest_run_id = self._latest_run_id()
-
+        # Cluster join (safe even when no clustering data exists — outerjoin returns NULLs)
         base_cols = [
             PatientModel.patient_id,
             PatientModel.first_name,
@@ -124,7 +122,7 @@ class PatientRepository:
             PatientModel.deathdate,
         ]
 
-        if latest_run_id:
+        if self._has_cluster_data():
             query = (
                 self.db.query(
                     *base_cols,
@@ -134,17 +132,11 @@ class PatientRepository:
                 )
                 .outerjoin(
                     ClusterPatientModel,
-                    and_(
-                        ClusterPatientModel.patient_id == PatientModel.patient_id,
-                        ClusterPatientModel.run_id == latest_run_id,
-                    ),
+                    ClusterPatientModel.patient_id == PatientModel.patient_id,
                 )
                 .outerjoin(
                     ClusterModel,
-                    and_(
-                        ClusterModel.run_id == latest_run_id,
-                        ClusterModel.cluster_label == ClusterPatientModel.cluster_label,
-                    ),
+                    ClusterModel.cluster_label == ClusterPatientModel.cluster_label,
                 )
             )
         else:
@@ -170,8 +162,6 @@ class PatientRepository:
         return PatientListResponse(items=items, total=total)
 
     def get_patient(self, patient_id: str) -> PatientDetailResponse:
-        latest_run_id = self._latest_run_id()
-
         base_cols = [
             PatientModel.patient_id,
             PatientModel.first_name,
@@ -188,7 +178,7 @@ class PatientRepository:
             PatientModel.longitude,
         ]
 
-        if latest_run_id:
+        if self._has_cluster_data():
             query = (
                 self.db.query(
                     *base_cols,
@@ -198,17 +188,11 @@ class PatientRepository:
                 )
                 .outerjoin(
                     ClusterPatientModel,
-                    and_(
-                        ClusterPatientModel.patient_id == PatientModel.patient_id,
-                        ClusterPatientModel.run_id == latest_run_id,
-                    ),
+                    ClusterPatientModel.patient_id == PatientModel.patient_id,
                 )
                 .outerjoin(
                     ClusterModel,
-                    and_(
-                        ClusterModel.run_id == latest_run_id,
-                        ClusterModel.cluster_label == ClusterPatientModel.cluster_label,
-                    ),
+                    ClusterModel.cluster_label == ClusterPatientModel.cluster_label,
                 )
             )
         else:
@@ -227,20 +211,14 @@ class PatientRepository:
         return PatientDetailResponse(**row._asdict())
 
     def get_patient_summary(self, patient_id: str) -> PatientSummaryResponse:
-        latest_run_id = self._latest_run_id()
-
         f = {}
-        if latest_run_id:
-            cp = (
-                self.db.query(ClusterPatientModel)
-                .filter(
-                    ClusterPatientModel.patient_id == patient_id,
-                    ClusterPatientModel.run_id == latest_run_id,
-                )
-                .first()
-            )
-            if cp and cp.features:
-                f = cp.features
+        cp = (
+            self.db.query(ClusterPatientModel)
+            .filter(ClusterPatientModel.patient_id == patient_id)
+            .first()
+        )
+        if cp and cp.features:
+            f = cp.features
 
         # Use pre-computed values when available, otherwise query DB
         qaly = f.get("qaly")
@@ -371,7 +349,7 @@ class PatientRepository:
         rows = (
             self.db.query(ProcedureModel)
             .filter(ProcedureModel.patient_id == patient_id)
-            .order_by(ProcedureModel.date.desc())
+            .order_by(ProcedureModel.start_date.desc())
             .all()
         )
         return [
@@ -379,7 +357,8 @@ class PatientRepository:
                 id=r.id,
                 description=r.description,
                 procedure_code=str(r.procedure_code),
-                date=r.date,
+                start_date=r.start_date,
+                end_date=r.end_date,
                 reason_description=r.reason_description,
             )
             for r in rows
@@ -398,6 +377,26 @@ class PatientRepository:
                 description=r.description,
                 immunization_code=str(r.immunization_code),
                 date=r.date,
+            )
+            for r in rows
+        ]
+
+    def get_patient_careplans(self, patient_id: str) -> list[CarePlanItem]:
+        rows = (
+            self.db.query(CarePlanModel)
+            .filter(CarePlanModel.patient_id == patient_id)
+            .order_by(CarePlanModel.start_date.desc())
+            .all()
+        )
+        return [
+            CarePlanItem(
+                id=r.id,
+                description=r.description,
+                careplan_code=str(r.careplan_code),
+                start_date=r.start_date,
+                end_date=r.end_date,
+                duration_days=r.duration_days,
+                reason_description=r.reason_description,
             )
             for r in rows
         ]

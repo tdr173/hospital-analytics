@@ -18,6 +18,7 @@ class ClusterDetails(CamelModel):
     avg_qaly: float
     chronic_illness_pct: float
     avg_meds: float
+    avg_active_conditions: float
 
 
 class GetClustersDetails(CamelModel):

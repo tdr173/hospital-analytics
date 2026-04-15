@@ -90,7 +90,18 @@ class ProcedureItem(CamelModel):
     id: int
     description: str
     procedure_code: str
-    date: datetime
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    reason_description: Optional[str] = None
+
+
+class CarePlanItem(CamelModel):
+    id: int
+    description: str
+    careplan_code: str
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    duration_days: Optional[float] = None
     reason_description: Optional[str] = None
 
 

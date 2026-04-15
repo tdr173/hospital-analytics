@@ -13,17 +13,18 @@ class ConditionService:
         self.repo = ConditionRepository(db)
 
     def get_condition_summary(self) -> ConditionStatisticsResponse:
+        total = self.repo.get_total_conditions()
         per_patient = self.repo.get_per_patient_stats()
 
         return ConditionStatisticsResponse(
-            total_conditions=self.repo.get_total_conditions(),
+            total_conditions=total,
             unique_conditions=self.repo.get_unique_conditions(),
             per_patient=PerPatientStats(**per_patient),
             active_vs_resolved=self._to_chart_entries(
-                self.repo.get_active_vs_resolved(), "status"
+                self.repo.get_active_vs_resolved(total), "status"
             ),
             top_conditions=self._to_chart_entries(
-                self.repo.get_top_conditions(), "condition"
+                self.repo.get_top_conditions(total=total), "condition"
             ),
         )
 

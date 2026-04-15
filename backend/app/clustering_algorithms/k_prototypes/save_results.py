@@ -21,25 +21,26 @@ def save_cluster_results(
     pca_coords_clustered: np.ndarray | None = None,
     pca_coords_outliers: np.ndarray | None = None,
     heatmap_bytes: bytes | None = None,
-) -> int:
+    extra_feature_cols: list[str] | None = None,
+) -> None:
     """
-    Saves a clustering run, patient results, and cluster summaries to the database.
-
-    df_clustered     - DataFrame with 'cluster' column and all features
-    df_outliers      - DataFrame of outlier patients (cluster_label = -1)
-    cluster_summaries - raw Gemini response string, pipe-separated per cluster
-    Returns the run_id of the saved run.
+    Overwrites all clustering data: cluster_meta, cluster, cluster_patient.
+    Previous run is fully replaced — no versioning.
     """
+    # truncate in dependency order (cluster_patient and cluster reference nothing,
+    # cluster_meta is standalone)
+    db.execute(text("DELETE FROM cluster_patient"))
+    db.execute(text("DELETE FROM cluster"))
+    db.execute(text("DELETE FROM cluster_meta"))
 
-    result = db.execute(
+    db.execute(
         text("""
-            INSERT INTO cluster_run
+            INSERT INTO cluster_meta
                 (created_at, algorithm, n_clusters, n_patients, n_outliers,
                  numerical_features, categorical_features, params, metrics, heatmap)
             VALUES
                 (:created_at, :algorithm, :n_clusters, :n_patients, :n_outliers,
                  :numerical_features, :categorical_features, :params, :metrics, :heatmap)
-            RETURNING id
         """),
         {
             "created_at": datetime.now(),
@@ -54,9 +55,8 @@ def save_cluster_results(
             "heatmap": heatmap_bytes,
         }
     )
-    run_id = result.fetchone()[0]
 
-    all_features = numerical_features + categorical_features
+    all_features = numerical_features + categorical_features + (extra_feature_cols or [])
 
     def build_rows(
         df: pd.DataFrame,
@@ -71,7 +71,6 @@ def save_cluster_results(
             pca_x = float(pca_coords[i, 0]) if pca_coords is not None else None
             pca_y = float(pca_coords[i, 1]) if pca_coords is not None else None
             rows.append({
-                "run_id": run_id,
                 "patient_id": str(row["patient_id"]),
                 "cluster_label": cluster_label,
                 "is_outlier": is_outlier,
@@ -82,8 +81,8 @@ def save_cluster_results(
         return rows
 
     insert_patient_sql = text("""
-        INSERT INTO cluster_patient (run_id, patient_id, cluster_label, is_outlier, pca_x, pca_y, features)
-        VALUES (:run_id, :patient_id, :cluster_label, :is_outlier, :pca_x, :pca_y, :features)
+        INSERT INTO cluster_patient (patient_id, cluster_label, is_outlier, pca_x, pca_y, features)
+        VALUES (:patient_id, :cluster_label, :is_outlier, :pca_x, :pca_y, :features)
     """)
 
     clustered_rows = build_rows(df_clustered, "cluster", is_outlier=False, pca_coords=pca_coords_clustered)
@@ -95,18 +94,26 @@ def save_cluster_results(
         db.execute(insert_patient_sql, outlier_rows)
 
     parsed = _parse_cluster_summaries(cluster_summaries)
+    # Deduplicate by cluster_label — keep first occurrence in case the LLM repeats a label
+    _seen_labels: set[int] = set()
+    _deduped = []
+    for row in parsed:
+        if row["cluster_label"] not in _seen_labels:
+            _seen_labels.add(row["cluster_label"])
+            _deduped.append(row)
+    parsed = _deduped
+
     if parsed:
         db.execute(
             text("""
-                INSERT INTO cluster (run_id, cluster_label, color, title, description, insight, recommendation)
-                VALUES (:run_id, :cluster_label, :color, :title, :description, :insight, :recommendation)
+                INSERT INTO cluster (cluster_label, color, title, description, insight, recommendation)
+                VALUES (:cluster_label, :color, :title, :description, :insight, :recommendation)
             """),
-            [{"run_id": run_id, **row} for row in parsed],
+            parsed,
         )
 
     db.commit()
-    print(f"Saved run_id={run_id}: {len(df_clustered)} patients + {len(df_outliers)} outliers + {len(parsed)} cluster summaries")
-    return run_id
+    print(f"Saved: {len(df_clustered)} patients + {len(df_outliers)} outliers + {len(parsed)} cluster summaries")
 
 
 def _parse_cluster_summaries(text_response: str) -> list[dict]:

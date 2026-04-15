@@ -15,6 +15,7 @@ import {
   fetchPatientProcedures,
   fetchPatientImmunizations,
   fetchPatientAllergies,
+  fetchPatientCareplans,
   fetchPatientEncounters,
 } from "@/store/slices/patients/thunks";
 import { resetCurrentPatient } from "@/store/slices/patients/current-patient-slice";
@@ -26,6 +27,7 @@ import MedicationsTab from "@/components/PatientComponents/MedicationsTab/Medica
 import ProceduresTab from "@/components/PatientComponents/ProceduresTab/ProceduresTab";
 import ImmunizationsTab from "@/components/PatientComponents/ImmunizationsTab/ImmunizationsTab";
 import AllergiesTab from "@/components/PatientComponents/AllergiesTab/AllergiesTab";
+import CarePlansTab from "@/components/PatientComponents/CarePlansTab/CarePlansTab";
 import EncountersTab from "@/components/PatientComponents/EncountersTab/EncountersTab";
 
 import MetricComponent from "@/components/PatientComponents/MetricComponent/MetricComponent";
@@ -56,6 +58,7 @@ const TAB_LABELS = [
   "Procedures",
   "Immunizations",
   "Allergies",
+  "Care Plans",
   "Encounters",
 ];
 
@@ -64,7 +67,8 @@ const TAB_FETCHERS: Record<number, (id: string) => any> = {
   2: fetchPatientProcedures,
   3: fetchPatientImmunizations,
   4: fetchPatientAllergies,
-  5: fetchPatientEncounters,
+  5: fetchPatientCareplans,
+  6: fetchPatientEncounters,
 };
 
 export default function PatientDetailPage() {
@@ -82,6 +86,7 @@ export default function PatientDetailPage() {
     procedures,
     immunizations,
     allergies,
+    careplans,
     encounters,
     loading,
     error,
@@ -122,7 +127,8 @@ export default function PatientDetailPage() {
     2: <ProceduresTab data={procedures} />,
     3: <ImmunizationsTab data={immunizations} />,
     4: <AllergiesTab data={allergies} />,
-    5: <EncountersTab data={encounters} />,
+    5: <CarePlansTab data={careplans} />,
+    6: <EncountersTab data={encounters} />,
   };
 
   return (

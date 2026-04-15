@@ -42,10 +42,14 @@ interface StackedBarChartComponentProps {
   featureData: CategoricalFeatureChartData;
 }
 
-export default function StackedBarChartComponent({ featureData }: StackedBarChartComponentProps) {
+export default function StackedBarChartComponent({
+  featureData,
+}: StackedBarChartComponentProps) {
   const { feature, categories, data } = featureData;
   const colors = getCategoryColors(categories.length);
-  const classes = useClasses(StackedBarChartComponentStyles, { name: "StackedBarChartComponent" });
+  const classes = useClasses(StackedBarChartComponentStyles, {
+    name: "StackedBarChartComponent",
+  });
 
   const chartData = data.map((entry) => ({
     name: `Cluster ${entry.clusterId}`,
@@ -54,15 +58,20 @@ export default function StackedBarChartComponent({ featureData }: StackedBarChar
 
   return (
     <div className={classes.card}>
-      <p className={classes.title}>
-        {toTitleCase(feature)}
-      </p>
-      <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
+      <p className={classes.title}>{toTitleCase(feature)}</p>
+      <ResponsiveContainer width="100%" height={"95%"}>
+        <BarChart
+          data={chartData}
+          margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
+        >
           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
           <XAxis
             dataKey="name"
-            tick={{ fontSize: 12, fontFamily: "Inter, sans-serif", textAnchor: "middle" }}
+            tick={{
+              fontSize: 12,
+              fontFamily: "Inter, sans-serif",
+              textAnchor: "middle",
+            }}
             stroke="#6B7280"
           />
           <YAxis
@@ -87,7 +96,12 @@ export default function StackedBarChartComponent({ featureData }: StackedBarChar
           <Legend
             align="center"
             formatter={(value) => toTitleCase(value)}
-            wrapperStyle={{ fontFamily: "Inter, sans-serif", fontSize: 12, textAlign: "center", width: "100%" }}
+            wrapperStyle={{
+              fontFamily: "Inter, sans-serif",
+              fontSize: 12,
+              textAlign: "center",
+              width: "100%",
+            }}
           />
           {categories.map((cat, i) => (
             <Bar key={cat} dataKey={cat} stackId="a" fill={colors[i]} />

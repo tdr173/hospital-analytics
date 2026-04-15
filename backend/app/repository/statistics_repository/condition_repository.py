@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, cast, Numeric
 
@@ -14,8 +15,9 @@ class ConditionRepository:
     def get_unique_conditions(self) -> int:
         return self.db.query(func.count(func.distinct(ConditionModel.condition_code))).scalar()
 
-    def get_active_vs_resolved(self):
-        total = self.get_total_conditions()
+    def get_active_vs_resolved(self, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_conditions()
 
         status_label = case(
             (ConditionModel.end_date.is_(None), "Active"),
@@ -32,8 +34,9 @@ class ConditionRepository:
         )
         return self._with_percentage(rows, total)
 
-    def get_top_conditions(self, limit: int = 20):
-        total = self.get_total_conditions()
+    def get_top_conditions(self, limit: int = 20, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_conditions()
 
         rows = (
             self.db.query(

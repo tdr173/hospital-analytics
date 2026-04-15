@@ -1,8 +1,0 @@
-Huang + robust + gamma=auto + 4 clusters + seed=42
-==================================================
-Cluster Evaluation Report
-
-Silhouette Score:        0.5104  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
-Gower Silhouette Score:  0.1910  (numerical + categorical, same scale as above)
-Calinski-Harabasz:       632.20  (range 0 to inf, higher is better)
-Davies-Bouldin:          0.9767  (range 0 to inf, lower is better, <1 good, >2 poor)

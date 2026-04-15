@@ -75,7 +75,7 @@ export default function ScatterPlotComponent({ points, title = "PCA Scatter Plot
   return (
     <div className={classes.card}>
       <p className={classes.title}>{title}</p>
-      <ReactECharts option={option} style={classes.chart} />
+      <ReactECharts option={option} style={{ height: 480 }} />
     </div>
   );
 }

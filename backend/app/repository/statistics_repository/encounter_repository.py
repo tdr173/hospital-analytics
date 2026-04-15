@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
@@ -11,8 +12,9 @@ class EncounterRepository:
     def get_total_encounters(self) -> int:
         return self.db.query(func.count(EncounterModel.encounter_id)).scalar()
 
-    def get_encounter_class_distribution(self):
-        total = self.get_total_encounters()
+    def get_encounter_class_distribution(self, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_encounters()
 
         rows = (
             self.db.query(
@@ -49,8 +51,9 @@ class EncounterRepository:
             for row in rows
         ]
 
-    def get_top_descriptions(self, limit: int = 10):
-        total = self.get_total_encounters()
+    def get_top_descriptions(self, limit: int = 10, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_encounters()
 
         rows = (
             self.db.query(

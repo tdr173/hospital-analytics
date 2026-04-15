@@ -8,6 +8,7 @@ import proceduresStatisticsReducer from "./slices/statistics/procedure-statistic
 import immunizationsStatisticsReducer from "./slices/statistics/immunization-statistics-slice";
 import medicationsStatisticsReducer from "./slices/statistics/medication-statistics-slice";
 import allergiesStatisticsReducer from "./slices/statistics/allergy-statistics-slice";
+import careplansStatisticsReducer from "./slices/statistics/careplan-statistics-slice";
 import providersStatisticsReducer from "./slices/statistics/provider-statistics-slice";
 import organizationsStatisticsReducer from "./slices/statistics/organization-statistics-slice";
 import uiReducer from "./slices/ui-slice";
@@ -19,6 +20,13 @@ import categoricalFeaturesReducer from "./slices/clusters/categorical-features-s
 import aiAnalysisReducer from "./slices/clusters/ai-analysis-slice";
 import patientsReducer from "./slices/patients/patients-slice";
 import currentPatientReducer from "./slices/patients/current-patient-slice";
+import providersReducer from "./slices/providers/providers-slice";
+import currentProviderReducer from "./slices/providers/current-provider-slice";
+import organizationsReducer from "./slices/organizations/organizations-slice";
+import currentOrganizationReducer from "./slices/organizations/current-organization-slice";
+import dashboardReducer from "./slices/dashboard/dashboard-slice";
+import encountersReducer from "./slices/encounters/encounters-slice";
+import currentEncounterReducer from "./slices/encounters/current-encounter-slice";
 
 export const store = configureStore({
   reducer: {
@@ -36,11 +44,19 @@ export const store = configureStore({
     immunizationsStatistics: immunizationsStatisticsReducer,
     medicationsStatistics: medicationsStatisticsReducer,
     allergiesStatistics: allergiesStatisticsReducer,
+    careplansStatistics: careplansStatisticsReducer,
     providersStatistics: providersStatisticsReducer,
     organizationsStatistics: organizationsStatisticsReducer,
     sqlAgent: sqlAgentReducer,
     patients: patientsReducer,
     currentPatient: currentPatientReducer,
+    providers: providersReducer,
+    currentProvider: currentProviderReducer,
+    organizations: organizationsReducer,
+    currentOrganization: currentOrganizationReducer,
+    dashboard: dashboardReducer,
+    encounters: encountersReducer,
+    currentEncounter: currentEncounterReducer,
   },
 });
 

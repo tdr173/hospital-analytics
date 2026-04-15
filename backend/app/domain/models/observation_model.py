@@ -12,8 +12,8 @@ class ObservationModel(SQLModel, table=True):
 
     date: datetime
     observation_code: str = Field(index=True)
-    description: str
+    description: str = Field(index=True)
 
     value: str
-    value_numeric: Optional[float] = None
+    value_numeric: Optional[float] = Field(default=None, index=True)
     units: Optional[str] = None
