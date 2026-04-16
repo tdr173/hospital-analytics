@@ -12,6 +12,7 @@ export const SequencesPageStyles = (theme: Theme) => ({
     flex: 1,
     overflow: "auto",
     padding: theme.spacing.lg,
+    paddingBottom: 0,
     display: "flex",
     flexDirection: "column" as const,
     gap: theme.spacing.md,
