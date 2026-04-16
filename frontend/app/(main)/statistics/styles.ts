@@ -14,7 +14,8 @@ export const StatisticsLayoutStyles = (_theme: Theme) => ({
   },
   content: {
     flex: 1,
-    overflow: "auto",
+    overflow: "hidden",
+    minHeight: 0,
     padding: "0 16px",
   },
 });

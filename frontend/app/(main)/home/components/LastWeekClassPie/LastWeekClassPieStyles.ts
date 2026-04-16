@@ -6,6 +6,9 @@ export const LastWeekClassPieStyles = (theme: Theme) => ({
     borderRadius: theme.borderRadius.lg,
     boxShadow: theme.shadows.sm,
     padding: theme.spacing.lg,
+    display: "flex",
+    flexDirection: "column" as const,
+    justifyContent: "flex-start",
   },
   title: {
     fontSize: "0.7rem",

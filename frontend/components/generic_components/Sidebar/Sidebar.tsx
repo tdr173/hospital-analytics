@@ -14,6 +14,7 @@ import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import EventNoteOutlinedIcon from "@mui/icons-material/EventNoteOutlined";
 import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
 import TimelineIcon from "@mui/icons-material/Timeline";
+import PersonAddOutlinedIcon from "@mui/icons-material/PersonAddOutlined";
 
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -31,6 +32,7 @@ const sidebarElements = [
   { name: "Encounters", icon: EventNoteOutlinedIcon, forward: "/encounters" },
   { name: "Providers", icon: BadgeOutlinedIcon, forward: "/providers" },
   { name: "Organizations", icon: AccountBalanceOutlinedIcon, forward: "/organizations" },
+  { name: "Register User", icon: PersonAddOutlinedIcon, forward: "/register-user" },
 ];
 
 export default function Sidebar() {

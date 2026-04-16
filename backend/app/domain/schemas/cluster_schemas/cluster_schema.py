@@ -36,6 +36,7 @@ class PcaPoint(CamelModel):
 class GetClusterStatistics(CamelModel):
     points: List[PcaPoint]
     heatmap: Optional[str] = None  # base64-encoded PNG
+    pca_image: Optional[str] = None  # base64-encoded PNG
     cluster_colors: Dict[int, str] = {}
 
 

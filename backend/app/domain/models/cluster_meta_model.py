@@ -25,4 +25,5 @@ class ClusterMetaModel(SQLModel, table=True):
     params: dict = Field(sa_column=Column(JSONB))
     metrics: dict = Field(sa_column=Column(JSONB))
     heatmap: Optional[bytes] = Field(default=None)
+    pca_image: Optional[bytes] = Field(default=None)
     ai_analysis: Optional[dict] = Field(default=None, sa_column=Column(JSONB))

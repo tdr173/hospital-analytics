@@ -14,8 +14,8 @@ class OrganizationService:
     def get_organization_providers(self, organization_id: str):
         return self.repo.get_organization_providers(organization_id)
 
-    def get_organization_encounters(self, organization_id: str, page: int, rows: int):
-        return self.repo.get_organization_encounters(organization_id, page, rows)
+    def get_organization_encounters(self, organization_id: str):
+        return self.repo.get_organization_encounters(organization_id)
 
     def get_organization_resources(self):
         return self.repo.get_organization_resources()

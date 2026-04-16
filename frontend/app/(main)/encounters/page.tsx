@@ -4,6 +4,8 @@ import { Suspense, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams, useRouter } from "next/navigation";
 import TableCell from "@mui/material/TableCell";
+import IconButton from "@mui/material/IconButton";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 
 import { RootState, AppDispatch } from "@/store";
 import { fetchEncounters, fetchEncounterResources } from "@/store/slices/encounters/thunks";
@@ -34,6 +36,7 @@ const COLUMNS = [
   { key: "organizationName", label: "Organization", width: 180 },
   { key: "description", label: "Description", width: 220 },
   { key: "duration", label: "Duration", sortable: true, width: 90, align: "right" as const },
+  { key: "actions", label: "Actions", width: 80, align: "center" as const },
 ];
 
 function EncountersPageContent() {
@@ -107,11 +110,7 @@ function EncountersPageContent() {
   };
 
   const renderRow = (e: EncounterListItem, i: number) => (
-    <StyledTableRow
-      key={e.encounterId}
-      index={i}
-      onClick={() => router.push(`/encounters/${e.encounterId}`)}
-    >
+    <StyledTableRow key={e.encounterId} index={i}>
       <TableCell sx={{ ...bodyCellSx, color: theme.colors.text.secondary }}>
         {formatDate(e.startDate)}
       </TableCell>
@@ -123,7 +122,6 @@ function EncountersPageContent() {
           ...bodyCellSx,
           fontWeight: theme.typography.fontWeight.semibold,
           color: theme.colors.primary.main,
-          cursor: "pointer",
         }}
       >
         <TruncatedText text={e.patientName} />
@@ -139,6 +137,20 @@ function EncountersPageContent() {
       </TableCell>
       <TableCell sx={bodyCellSx} align="right">
         {e.duration != null ? `${Math.round(e.duration)} min` : "—"}
+      </TableCell>
+      <TableCell sx={bodyCellSx} align="center">
+        <IconButton
+          size="small"
+          onClick={() => router.push(`/encounters/${e.encounterId}`)}
+          aria-label="View encounter"
+          sx={{
+            padding: "4px",
+            color: theme.colors.primary.main,
+            "&:hover": { backgroundColor: "rgba(0, 103, 128, 0.08)" },
+          }}
+        >
+          <VisibilityOutlinedIcon sx={{ fontSize: "1.05rem" }} />
+        </IconButton>
       </TableCell>
     </StyledTableRow>
   );
@@ -181,6 +193,7 @@ function EncountersPageContent() {
           value={dateFrom}
           onChange={setDateFrom}
           fullWidth
+          height={36}
         />
 
         <StyledDatePicker
@@ -188,6 +201,7 @@ function EncountersPageContent() {
           value={dateTo}
           onChange={setDateTo}
           fullWidth
+          height={36}
         />
 
         <StyledButton

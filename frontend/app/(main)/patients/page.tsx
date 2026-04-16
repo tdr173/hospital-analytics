@@ -4,6 +4,8 @@ import { Suspense, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams, useRouter } from "next/navigation";
 import TableCell from "@mui/material/TableCell";
+import IconButton from "@mui/material/IconButton";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 
 import { RootState, AppDispatch } from "@/store";
 import {
@@ -38,6 +40,7 @@ const COLUMNS = [
   { key: "marital", label: "Marital", width: 100 },
   { key: "status", label: "Status", width: 100 },
   { key: "cluster", label: "Cluster", width: 160 },
+  { key: "actions", label: "Actions", width: 80, align: "center" as const },
 ];
 
 function PatientsPageContent() {
@@ -135,11 +138,7 @@ function PatientsPageContent() {
   };
 
   const renderRow = (p: PatientListItem, i: number) => (
-    <StyledTableRow
-      key={p.patientId}
-      index={i}
-      onClick={() => router.push(`/patients/${p.patientId}`)}
-    >
+    <StyledTableRow key={p.patientId} index={i}>
       <TableCell
         sx={{
           ...bodyCellSx,
@@ -173,6 +172,20 @@ function PatientsPageContent() {
       </TableCell>
       <TableCell sx={bodyCellSx}>
         <ClusterBadge color={p.clusterColor} title={p.clusterTitle} />
+      </TableCell>
+      <TableCell sx={bodyCellSx} align="center">
+        <IconButton
+          size="small"
+          onClick={() => router.push(`/patients/${p.patientId}`)}
+          aria-label="View patient"
+          sx={{
+            padding: "4px",
+            color: theme.colors.primary.main,
+            "&:hover": { backgroundColor: "rgba(0, 103, 128, 0.08)" },
+          }}
+        >
+          <VisibilityOutlinedIcon sx={{ fontSize: "1.05rem" }} />
+        </IconButton>
       </TableCell>
     </StyledTableRow>
   );

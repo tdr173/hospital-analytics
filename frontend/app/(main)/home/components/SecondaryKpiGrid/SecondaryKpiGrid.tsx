@@ -4,6 +4,10 @@ import LocalHospitalOutlinedIcon from "@mui/icons-material/LocalHospitalOutlined
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import MedicalServicesOutlinedIcon from "@mui/icons-material/MedicalServicesOutlined";
 import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
+import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
+import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurnedInOutlined";
+import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined";
+import CakeOutlinedIcon from "@mui/icons-material/CakeOutlined";
 import useClasses from "@/utils/useClasses";
 import theme from "@/utils/theme";
 import { KpiCards } from "@/models/generic/dashboard";
@@ -17,10 +21,14 @@ export default function SecondaryKpiGrid({ kpis }: Props) {
   const classes = useClasses(SecondaryKpiGridStyles, { name: "SecondaryKpiGrid" });
 
   const items = [
-    { key: "totalConditions", label: "Total Conditions", value: kpis.totalConditions, Icon: LocalHospitalOutlinedIcon },
-    { key: "totalCareplans", label: "Total Careplans", value: kpis.totalCareplans, Icon: AssignmentOutlinedIcon },
-    { key: "totalProcedures", label: "Total Procedures", value: kpis.totalProcedures, Icon: MedicalServicesOutlinedIcon },
-    { key: "totalOrganizations", label: "Total Organizations", value: kpis.totalOrganizations, Icon: AccountBalanceOutlinedIcon },
+    { key: "totalConditions", label: "Total Conditions", value: kpis.totalConditions.toLocaleString(), Icon: LocalHospitalOutlinedIcon },
+    { key: "totalCareplans", label: "Total Careplans", value: kpis.totalCareplans.toLocaleString(), Icon: AssignmentOutlinedIcon },
+    { key: "totalProcedures", label: "Total Procedures", value: kpis.totalProcedures.toLocaleString(), Icon: MedicalServicesOutlinedIcon },
+    { key: "totalOrganizations", label: "Total Organizations", value: kpis.totalOrganizations.toLocaleString(), Icon: AccountBalanceOutlinedIcon },
+    { key: "avgEncountersPerPatient", label: "Avg Encounters / Patient", value: kpis.avgEncountersPerPatient.toFixed(2), Icon: TrendingUpOutlinedIcon },
+    { key: "activeCareplans", label: "Active Careplans", value: kpis.activeCareplans.toLocaleString(), Icon: AssignmentTurnedInOutlinedIcon },
+    { key: "newPatientsLast30Days", label: "New Patients (30d)", value: kpis.newPatientsLast30Days.toLocaleString(), Icon: PersonAddAlt1OutlinedIcon },
+    { key: "avgPatientAge", label: "Avg Patient Age", value: `${kpis.avgPatientAge.toFixed(1)} yrs`, Icon: CakeOutlinedIcon },
   ];
 
   return (
@@ -31,7 +39,7 @@ export default function SecondaryKpiGrid({ kpis }: Props) {
             <Icon sx={{ color: theme.colors.primary.main, fontSize: "1.15rem" }} />
             <p className={classes.label}>{label}</p>
           </div>
-          <p className={classes.value}>{value.toLocaleString()}</p>
+          <p className={classes.value}>{value}</p>
         </div>
       ))}
     </div>

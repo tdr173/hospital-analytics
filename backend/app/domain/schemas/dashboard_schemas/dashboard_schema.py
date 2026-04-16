@@ -12,6 +12,10 @@ class KpiCards(CamelModel):
     total_conditions: int
     total_careplans: int
     total_procedures: int
+    avg_encounters_per_patient: float
+    active_careplans: int
+    new_patients_last_30_days: int
+    avg_patient_age: float
 
 
 class EncounterClassItem(CamelModel):

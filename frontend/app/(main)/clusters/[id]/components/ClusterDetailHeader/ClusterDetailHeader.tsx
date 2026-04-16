@@ -40,11 +40,11 @@ export default function ClusterDetailHeader({ cluster }: Props) {
 
       <div className={classes.chipsRow}>
         <span className={classes.chip}>
-          <span className={classes.chipLabel}>Careplan:</span>
+          <span className={classes.chipLabel}>Dominant Care Plan:</span>
           <span className={classes.chipValue}>{cluster.dominantCareplan}</span>
         </span>
         <span className={classes.chip}>
-          <span className={classes.chipLabel}>Encounter Class:</span>
+          <span className={classes.chipLabel}>Dominant Encounter Class:</span>
           <span className={classes.chipValue}>{cluster.dominantEncounterClass}</span>
         </span>
       </div>

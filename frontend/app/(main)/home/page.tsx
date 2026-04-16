@@ -57,6 +57,7 @@ export default function HomePage() {
       <RecentEncountersTable
         data={data.recentEncounters}
         onPatientClick={(id) => router.push(`/patients/${id}`)}
+        onEncounterClick={(id) => router.push(`/encounters/${id}`)}
       />
 
       <TopConditionsBar data={data.topConditionsLastWeek} />

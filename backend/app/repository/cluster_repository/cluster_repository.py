@@ -119,9 +119,15 @@ class ClusterRepository:
 
         meta = self._get_meta()
         heatmap_b64 = base64.b64encode(meta.heatmap).decode() if meta and meta.heatmap else None
+        pca_image_b64 = base64.b64encode(meta.pca_image).decode() if meta and meta.pca_image else None
         cluster_colors = self._get_cluster_colors()
 
-        return GetClusterStatistics(points=points, heatmap=heatmap_b64, cluster_colors=cluster_colors)
+        return GetClusterStatistics(
+            points=points,
+            heatmap=heatmap_b64,
+            pca_image=pca_image_b64,
+            cluster_colors=cluster_colors,
+        )
 
     def get_numerical_features_statistics(self) -> GetNumericalFeaturesStatistics:
         meta = self._get_meta()

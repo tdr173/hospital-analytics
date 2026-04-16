@@ -5,6 +5,9 @@ export const ObservationsPageStyles = (theme: Theme) => ({
   container: {
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
+    height: "100%",
+    minHeight: 0,
+    overflowY: "auto" as const,
   },
   chartSection: {
     marginBottom: theme.spacing.lg,

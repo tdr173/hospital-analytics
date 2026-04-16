@@ -4,6 +4,8 @@ import { Suspense, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams, useRouter } from "next/navigation";
 import TableCell from "@mui/material/TableCell";
+import IconButton from "@mui/material/IconButton";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 
 import { RootState, AppDispatch } from "@/store";
 import { fetchProviders, fetchProviderResources } from "@/store/slices/providers/thunks";
@@ -32,6 +34,7 @@ const COLUMNS = [
   { key: "city", label: "City", sortable: true, width: 140 },
   { key: "organizationName", label: "Organization", width: 200 },
   { key: "encounters", label: "Encounters", sortable: true, width: 100, align: "right" as const },
+  { key: "actions", label: "Actions", width: 80, align: "center" as const },
 ];
 
 function GenderBadge({ gender, classes }: { gender: string | null; classes: any }) {
@@ -117,17 +120,12 @@ function ProvidersPageContent() {
   };
 
   const renderRow = (p: ProviderListItem, i: number) => (
-    <StyledTableRow
-      key={p.providerId}
-      index={i}
-      onClick={() => router.push(`/providers/${p.providerId}`)}
-    >
+    <StyledTableRow key={p.providerId} index={i}>
       <TableCell
         sx={{
           ...bodyCellSx,
           fontWeight: theme.typography.fontWeight.semibold,
           color: theme.colors.primary.main,
-          cursor: "pointer",
         }}
       >
         <TruncatedText text={clearName(p.firstName, p.lastName)} />
@@ -146,6 +144,20 @@ function ProvidersPageContent() {
       </TableCell>
       <TableCell sx={bodyCellSx} align="right">
         {p.encounters}
+      </TableCell>
+      <TableCell sx={bodyCellSx} align="center">
+        <IconButton
+          size="small"
+          onClick={() => router.push(`/providers/${p.providerId}`)}
+          aria-label="View provider"
+          sx={{
+            padding: "4px",
+            color: theme.colors.primary.main,
+            "&:hover": { backgroundColor: "rgba(0, 103, 128, 0.08)" },
+          }}
+        >
+          <VisibilityOutlinedIcon sx={{ fontSize: "1.05rem" }} />
+        </IconButton>
       </TableCell>
     </StyledTableRow>
   );

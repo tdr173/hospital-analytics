@@ -47,7 +47,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/statistics/patients");
+    router.push("/home");
   };
 
   return (

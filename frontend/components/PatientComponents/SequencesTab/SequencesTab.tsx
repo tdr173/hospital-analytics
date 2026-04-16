@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import IconButton from "@mui/material/IconButton";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { RootState, AppDispatch } from "@/store";
 import { SequenceListItem } from "@/models/generic/sequences";
 import {
@@ -25,12 +28,17 @@ export default function SequencesTab({ data }: Props) {
   const dispatch = useAppDispatch();
   const resources = useSelector((s: RootState) => s.sequenceResources.data);
   const aiCache = useSelector((s: RootState) => s.sequenceAi.cache);
+  const [currentIdx, setCurrentIdx] = useState(0);
 
   useEffect(() => {
     if (!resources) {
       dispatch(fetchSequenceResources());
     }
   }, [dispatch, resources]);
+
+  useEffect(() => {
+    setCurrentIdx(0);
+  }, [data]);
 
   const colors = resources?.colors ?? {};
 
@@ -55,21 +63,51 @@ export default function SequencesTab({ data }: Props) {
     );
   }
 
+  const safeIdx = Math.min(currentIdx, data.length - 1);
+  const current = data[safeIdx];
+  const isFirst = safeIdx === 0;
+  const isLast = safeIdx === data.length - 1;
+
   return (
     <div className={classes.container}>
       <div className={classes.countBar}>
         {data.length} pattern{data.length === 1 ? "" : "s"} found for this patient
       </div>
       <div className={classes.list}>
-        {data.map((seq) => (
-          <SequenceCard
-            key={seq.id}
-            sequence={seq}
-            colors={colors}
-            onAnalyse={handleAnalyse}
-          />
-        ))}
+        <SequenceCard
+          key={current.id}
+          sequence={current}
+          colors={colors}
+          onAnalyse={handleAnalyse}
+        />
       </div>
+      {data.length > 1 && (
+        <div className={classes.paginationBar}>
+          <IconButton
+            size="small"
+            disabled={isFirst}
+            onClick={() => setCurrentIdx((i) => Math.max(0, i - 1))}
+            aria-label="Previous pattern"
+            className={classes.navButton}
+          >
+            <ChevronLeftIcon />
+          </IconButton>
+          <span className={classes.position}>
+            Pattern {safeIdx + 1} of {data.length}
+          </span>
+          <IconButton
+            size="small"
+            disabled={isLast}
+            onClick={() =>
+              setCurrentIdx((i) => Math.min(data.length - 1, i + 1))
+            }
+            aria-label="Next pattern"
+            className={classes.navButton}
+          >
+            <ChevronRightIcon />
+          </IconButton>
+        </div>
+      )}
       <SequenceAiModal sequencesById={sequencesById} colors={colors} />
     </div>
   );

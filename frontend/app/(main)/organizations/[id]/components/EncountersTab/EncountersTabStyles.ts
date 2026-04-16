@@ -27,27 +27,4 @@ export const EncountersTabStyles = (theme: Theme) => ({
     borderRadius: theme.borderRadius.sm,
     padding: "2px 7px",
   },
-  paginationRow: {
-    display: "flex",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-    borderTop: `1px solid ${theme.colors.border.main}`,
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.secondary,
-  },
-  paginationBtn: {
-    background: "none",
-    border: `1px solid ${theme.colors.border.main}`,
-    borderRadius: theme.borderRadius.sm,
-    padding: "3px 10px",
-    cursor: "pointer",
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.primary,
-    "&:disabled": {
-      color: theme.colors.text.disabled,
-      cursor: "default",
-    },
-  },
 });

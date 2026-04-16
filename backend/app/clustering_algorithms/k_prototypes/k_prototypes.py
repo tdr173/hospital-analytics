@@ -1126,10 +1126,12 @@ if __name__ == "__main__":
 
                         lmm_summary = get_clusters_summary(df_combined, df_outliers, db_engine, evaluation_report=report)
 
-                        # read heatmap PNG bytes
+                        # read heatmap + PCA PNG bytes
                         tag = version_name.lower().replace(" ", "_").replace("(", "").replace(")", "")
                         heatmap_path = location / f"heatmap_{tag}.png"
                         heatmap_bytes = heatmap_path.read_bytes() if heatmap_path.exists() else None
+                        pca_path = location / f"pca_{tag}.png"
+                        pca_image_bytes = pca_path.read_bytes() if pca_path.exists() else None
 
                         # compute FAMD coords for full combined cohort + outlier patients
                         _famd = prince.FAMD(n_components=2, random_state=42)
@@ -1160,7 +1162,16 @@ if __name__ == "__main__":
                                 categorical_features=CATEGORICAL_FEATURES,
                                 n_clusters=n + len(rule_label_map),
                                 algorithm="k_prototypes_hybrid",
-                                extra_feature_cols=["qaly", "total_medications", "active_conditions_count", "condition_burden"],
+                                extra_feature_cols=[
+                                    "qaly", "total_medications", "active_conditions_count", "condition_burden",
+                                    "avg_bmi", "avg_systolic_bp", "avg_glucose", "daly",
+                                    "total_procedures", "days_since_last_encounter",
+                                    "marital", "smoking_status",
+                                    "has_diabetes", "has_hypertension", "has_heart_disease",
+                                    "has_cancer", "has_respiratory_disease", "has_mental_health",
+                                    "is_polypharmacy",
+                                    "dominant_encounter_class",
+                                ],
                                 params={
                                     "scaler": scaler_name,
                                     "gamma": gamma_label,
@@ -1178,6 +1189,7 @@ if __name__ == "__main__":
                                 },
                                 cluster_summaries=lmm_summary,
                                 heatmap_bytes=heatmap_bytes,
+                                pca_image_bytes=pca_image_bytes,
                             )
                         finally:
                             db_session.close()

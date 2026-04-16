@@ -37,6 +37,13 @@ export const OrganizationDetailPageStyles = (theme: Theme) => ({
     alignItems: "flex-start",
     borderLeft: `4px solid ${theme.colors.primary.main}`,
   },
+  imageBlock: {
+    marginRight: "16px",
+  },
+  avatarImage: {
+    width: "78px",
+    height: "78px",
+  },
   nameBlock: {
     flex: "1 1 280px",
   },
@@ -70,27 +77,6 @@ export const OrganizationDetailPageStyles = (theme: Theme) => ({
     backgroundColor: theme.colors.secondary.light,
     color: theme.colors.primary.main,
   },
-  detailsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-    gap: `${theme.spacing.sm} ${theme.spacing.lg}`,
-    flex: "2 1 400px",
-  },
-  detailLabel: {
-    fontSize: "0.65rem",
-    fontWeight: theme.typography.fontWeight.bold,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.06em",
-    color: theme.colors.text.secondary,
-    margin: "0 0 2px",
-  },
-  detailValue: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.medium,
-    color: theme.colors.text.primary,
-    margin: 0,
-  },
-
   // Tabs panel
   tabsPanel: {
     backgroundColor: theme.colors.surface.containerLowest,

@@ -62,6 +62,7 @@ export interface PcaPoint {
 export interface PcaScatterResponse {
   points: PcaPoint[];
   heatmap: string | null;
+  pcaImage: string | null;
   clusterColors: Record<number, string>;
 }
 

@@ -66,6 +66,12 @@ export interface Theme {
       secondaryHover: string;
       secondaryActive: string;
     };
+    gender: {
+      male: string;
+      maleBg: string;
+      female: string;
+      femaleBg: string;
+    };
   };
   spacing: {
     xs: string;
@@ -187,6 +193,12 @@ const theme: Theme = {
       secondary: "#f2f4f6",
       secondaryHover: "#e0e3e5",
       secondaryActive: "#c6c6cd",
+    },
+    gender: {
+      male: "#2563eb",
+      maleBg: "#dbeafe",
+      female: "#9333ea",
+      femaleBg: "#f3e8ff",
     },
   },
   spacing: {

@@ -8,6 +8,7 @@ import useClasses from "@/utils/useClasses";
 import { PatientsPageStyles } from "./PatientsPageStyles";
 import BarChartComponent from "@/components/generic_components/BarChartComponent/BarChartComponent";
 import PieChartComponent from "@/components/generic_components/PieChartComponent/PieChartComponent";
+import theme from "@/utils/theme";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
@@ -52,7 +53,13 @@ export default function PatientsPage() {
         <PieChartComponent
           data={data.gender}
           title="Gender Distribution"
-          colors={["#006780", "#b7eaff"]}
+          colors={data.gender.map((d) =>
+            d.name === "M"
+              ? theme.colors.gender.male
+              : d.name === "F"
+                ? theme.colors.gender.female
+                : theme.colors.primary.main,
+          )}
         />
         <PieChartComponent data={data.race} title="Race Distribution" />
         <PieChartComponent

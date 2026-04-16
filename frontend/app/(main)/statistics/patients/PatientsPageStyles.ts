@@ -4,6 +4,9 @@ export const PatientsPageStyles = (theme: Theme) => ({
   container: {
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
+    height: "100%",
+    minHeight: 0,
+    overflowY: "auto" as const,
   },
   header: {
     fontFamily: theme.typography.fontFamilyHeading,

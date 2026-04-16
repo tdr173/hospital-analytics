@@ -17,11 +17,26 @@ export const RecentEncountersTableStyles = (theme: Theme) => ({
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "1.5fr 1.2fr 1.2fr 90px 120px 1.5fr",
+    gridTemplateColumns: "1.5fr 1.2fr 1.2fr 90px 120px 1.5fr 56px",
     gap: theme.spacing.sm,
     alignItems: "center",
     padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
     fontSize: theme.typography.fontSize.sm,
+  },
+  actionsCell: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  actionsHeader: {
+    textAlign: "center" as const,
+  },
+  actionButton: {
+    padding: "4px",
+    color: theme.colors.primary.main,
+    "&:hover": {
+      backgroundColor: "rgba(0, 103, 128, 0.08)",
+    },
   },
   header: {
     fontWeight: theme.typography.fontWeight.semibold,

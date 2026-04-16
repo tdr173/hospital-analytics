@@ -1,5 +1,7 @@
 "use client";
 
+import IconButton from "@mui/material/IconButton";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import useClasses from "@/utils/useClasses";
 import { formatDate } from "@/utils/functions";
 import { RecentEncounterItem } from "@/models/generic/dashboard";
@@ -8,9 +10,14 @@ import { RecentEncountersTableStyles } from "./RecentEncountersTableStyles";
 interface Props {
   data: RecentEncounterItem[];
   onPatientClick: (id: string) => void;
+  onEncounterClick: (id: string) => void;
 }
 
-export default function RecentEncountersTable({ data, onPatientClick }: Props) {
+export default function RecentEncountersTable({
+  data,
+  onPatientClick,
+  onEncounterClick,
+}: Props) {
   const classes = useClasses(RecentEncountersTableStyles, {
     name: "RecentEncountersTable",
   });
@@ -25,6 +32,7 @@ export default function RecentEncountersTable({ data, onPatientClick }: Props) {
         <div>Date</div>
         <div>Class</div>
         <div>Description</div>
+        <div className={classes.actionsHeader}>Actions</div>
       </div>
       {data.map((r, i) => (
         <div
@@ -44,6 +52,16 @@ export default function RecentEncountersTable({ data, onPatientClick }: Props) {
             <span className={classes.classBadge}>{r.encounterClass}</span>
           </div>
           <div className={classes.secondary}>{r.description}</div>
+          <div className={classes.actionsCell}>
+            <IconButton
+              size="small"
+              className={classes.actionButton}
+              onClick={() => onEncounterClick(r.encounterId)}
+              aria-label="View encounter"
+            >
+              <VisibilityOutlinedIcon sx={{ fontSize: "1.05rem" }} />
+            </IconButton>
+          </div>
         </div>
       ))}
     </div>

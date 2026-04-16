@@ -92,16 +92,6 @@ export default function ProvidersPage() {
           bottomBorder={-20}
         />
       </div>
-
-      <div className={classes.chartContainer}>
-        <BarChartComponent
-          data={data.topSpecialities}
-          title="Top 15 Specialities"
-          color="#006780"
-          showLabel
-          bottomBorder={0}
-        />
-      </div>
     </div>
   );
 }

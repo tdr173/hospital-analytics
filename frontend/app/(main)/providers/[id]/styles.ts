@@ -37,6 +37,13 @@ export const ProviderDetailPageStyles = (theme: Theme) => ({
     alignItems: "flex-start",
     borderLeft: `4px solid ${theme.colors.primary.main}`,
   },
+  imageBlock: {
+    marginRight: "16px",
+  },
+  avatarImage: {
+    width: "78px",
+    height: "78px",
+  },
   nameBlock: {
     flex: "1 1 280px",
   },
@@ -148,11 +155,26 @@ export const ProviderDetailPageStyles = (theme: Theme) => ({
   // Encounter table rows (CSS grid)
   gridRow: {
     display: "grid",
-    gridTemplateColumns: "1.5fr 90px 110px 2fr 1.5fr 80px",
+    gridTemplateColumns: "1.5fr 90px 110px 2fr 1.5fr 80px 56px",
     gap: theme.spacing.sm,
     alignItems: "center",
     padding: `${theme.spacing.sm} ${theme.spacing.md}`,
     fontSize: theme.typography.fontSize.sm,
+  },
+  actionsCell: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  actionsHeader: {
+    textAlign: "center" as const,
+  },
+  actionButton: {
+    padding: "4px",
+    color: theme.colors.primary.main,
+    "&:hover": {
+      backgroundColor: "rgba(0, 103, 128, 0.08)",
+    },
   },
   headerRow: {
     fontWeight: theme.typography.fontWeight.semibold,

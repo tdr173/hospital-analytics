@@ -12,7 +12,7 @@ export interface RegisterUserPayload {
 }
 
 export async function registerUser(_payload: RegisterUserPayload): Promise<void> {
-  // await fetch(`${API_BASE}/register-user`, {
+  // await fetch(`${API_BASE}/create-user`, {
   //   method: "POST",
   //   headers: {
   //     "Content-Type": "application/json",

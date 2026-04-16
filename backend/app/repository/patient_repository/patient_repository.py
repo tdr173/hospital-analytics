@@ -208,7 +208,7 @@ class PatientRepository:
                 self.db.query(ObservationModel.value_numeric)
                 .filter(
                     ObservationModel.patient_id == patient_id,
-                    ObservationModel.description == 'Body Mass Index',
+                    ObservationModel.observation_code == '39156-5',
                     ObservationModel.value_numeric.isnot(None),
                 )
                 .order_by(ObservationModel.date.desc())

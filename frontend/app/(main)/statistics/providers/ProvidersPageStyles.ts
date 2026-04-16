@@ -4,6 +4,9 @@ export const ProvidersPageStyles = (theme: Theme) => ({
   container: {
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
+    height: "100%",
+    minHeight: 0,
+    overflow: "hidden" as const,
   },
   summaryRow: {
     display: "grid",
@@ -67,10 +70,6 @@ export const ProvidersPageStyles = (theme: Theme) => ({
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
     gap: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-  },
-  chartContainer: {
-    marginTop: theme.spacing.lg,
   },
   loading: {
     display: "flex",

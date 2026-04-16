@@ -12,10 +12,7 @@ import {
   fetchOrganizationProviders,
   fetchOrganizationEncounters,
 } from "@/store/slices/organizations/thunks";
-import {
-  resetCurrentOrganization,
-  setEncountersPage,
-} from "@/store/slices/organizations/current-organization-slice";
+import { resetCurrentOrganization } from "@/store/slices/organizations/current-organization-slice";
 
 import useClasses from "@/utils/useClasses";
 import { OrganizationDetailPageStyles } from "./styles";
@@ -23,9 +20,9 @@ import theme from "@/utils/theme";
 
 import ProvidersTab from "./components/ProvidersTab/ProvidersTab";
 import EncountersTab from "./components/EncountersTab/EncountersTab";
+import organizationImage from "@/public/organization_icon.svg";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
-const ENC_ROWS = 25;
 
 export default function OrganizationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,8 +36,6 @@ export default function OrganizationDetailPage() {
     organization,
     providers,
     encounters,
-    encountersTotal,
-    encountersPage,
     loading,
     providersLoading,
     encloading,
@@ -54,19 +49,8 @@ export default function OrganizationDetailPage() {
     dispatch(resetCurrentOrganization());
     dispatch(fetchOrganizationDetail(id));
     dispatch(fetchOrganizationProviders(id));
-    dispatch(fetchOrganizationEncounters({ organizationId: id, page: 1, rows: ENC_ROWS }));
+    dispatch(fetchOrganizationEncounters(id));
   }, [id, dispatch]);
-
-  useEffect(() => {
-    if (!id) return;
-    dispatch(
-      fetchOrganizationEncounters({ organizationId: id, page: encountersPage, rows: ENC_ROWS }),
-    );
-  }, [id, encountersPage, dispatch]);
-
-  const handleEncountersPageChange = (newPage: number) => {
-    dispatch(setEncountersPage(newPage));
-  };
 
   if (loading) {
     return <div className={classes.pageLoading}>Loading organization data...</div>;
@@ -77,29 +61,22 @@ export default function OrganizationDetailPage() {
     );
   }
 
-  const details = [
-    { label: "Phone", value: organization.phone },
-    { label: "Utilization", value: String(organization.utilization) },
-  ];
-
   return (
     <div className={classes.pageContainer}>
       <div className={classes.identityCard}>
+        <div className={classes.imageBlock}>
+          <img
+            src={organizationImage.src}
+            alt="Organization Icon"
+            className={classes.avatarImage}
+          />
+        </div>
         <div className={classes.nameBlock}>
           <p className={classes.profileLabel}>Organization Profile</p>
           <h1 className={classes.orgFullName}>{organization.name ?? "Unknown"}</h1>
           <div className={classes.badgesRow}>
             {organization.city && <span className={classes.badge}>{organization.city}</span>}
           </div>
-        </div>
-
-        <div className={classes.detailsGrid}>
-          {details.map(({ label, value }) => (
-            <div key={label}>
-              <p className={classes.detailLabel}>{label}</p>
-              <p className={classes.detailValue}>{value ?? "—"}</p>
-            </div>
-          ))}
         </div>
       </div>
 
@@ -143,13 +120,9 @@ export default function OrganizationDetailPage() {
           {tab === 1 && (
             <EncountersTab
               data={encounters}
-              total={encountersTotal}
-              page={encountersPage}
-              rows={ENC_ROWS}
               loading={encloading}
               onPatientClick={(pid) => router.push(`/patients/${pid}`)}
               onProviderClick={(pid) => router.push(`/providers/${pid}`)}
-              onPageChange={handleEncountersPageChange}
             />
           )}
         </div>

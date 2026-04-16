@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 import {
   OrganizationDetail,
   OrganizationProviderItem,
@@ -14,8 +14,6 @@ interface CurrentOrganizationState {
   organization: OrganizationDetail | null;
   providers: OrganizationProviderItem[];
   encounters: OrganizationEncounterItem[];
-  encountersTotal: number;
-  encountersPage: number;
   loading: boolean;
   providersLoading: boolean;
   encloading: boolean;
@@ -26,8 +24,6 @@ const initialState: CurrentOrganizationState = {
   organization: null,
   providers: [],
   encounters: [],
-  encountersTotal: 0,
-  encountersPage: 1,
   loading: false,
   providersLoading: false,
   encloading: false,
@@ -40,9 +36,6 @@ const currentOrganizationSlice = createSlice({
   reducers: {
     resetCurrentOrganization() {
       return { ...initialState, loading: true };
-    },
-    setEncountersPage(state, action: PayloadAction<number>) {
-      state.encountersPage = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -74,8 +67,7 @@ const currentOrganizationSlice = createSlice({
       })
       .addCase(fetchOrganizationEncounters.fulfilled, (state, action) => {
         state.encloading = false;
-        state.encounters = action.payload.items;
-        state.encountersTotal = action.payload.total;
+        state.encounters = action.payload;
       })
       .addCase(fetchOrganizationEncounters.rejected, (state) => {
         state.encloading = false;
@@ -83,5 +75,5 @@ const currentOrganizationSlice = createSlice({
   },
 });
 
-export const { resetCurrentOrganization, setEncountersPage } = currentOrganizationSlice.actions;
+export const { resetCurrentOrganization } = currentOrganizationSlice.actions;
 export default currentOrganizationSlice.reducer;

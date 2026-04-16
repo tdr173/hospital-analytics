@@ -5,10 +5,9 @@ import {
   OrganizationListResponse,
   OrganizationDetail,
   OrganizationProviderItem,
-  OrganizationEncounterResponse,
+  OrganizationEncounterItem,
   OrganizationResources,
   FetchOrganizationsArgs,
-  FetchOrganizationEncountersArgs,
 } from "@/models/generic/organizations";
 import { ErrorResponse } from "@/models/generic/generic";
 import { API_BASE } from "@/store/slices/clusters/thunks";
@@ -90,16 +89,13 @@ export const fetchOrganizationProviders = createAsyncThunk<
 });
 
 export const fetchOrganizationEncounters = createAsyncThunk<
-  OrganizationEncounterResponse,
-  FetchOrganizationEncountersArgs,
+  OrganizationEncounterItem[],
+  string,
   { rejectValue: ErrorResponse }
->("organizations/fetchOrganizationEncounters", async (args, thunkAPI) => {
+>("organizations/fetchOrganizationEncounters", async (organizationId, thunkAPI) => {
   try {
-    const q = new URLSearchParams();
-    q.set("page", args.page.toString());
-    q.set("rows", args.rows.toString());
-    return await get<OrganizationEncounterResponse>(
-      `${API_BASE}/organizations/${args.organizationId}/encounters?${q}`,
+    return await get<OrganizationEncounterItem[]>(
+      `${API_BASE}/organizations/${organizationId}/encounters`,
       "organization encounters"
     );
   } catch {

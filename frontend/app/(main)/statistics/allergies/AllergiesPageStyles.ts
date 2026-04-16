@@ -4,6 +4,9 @@ export const AllergiesPageStyles = (theme: Theme) => ({
   container: {
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
+    height: "100%",
+    minHeight: 0,
+    overflow: "hidden" as const,
   },
   summaryRow: {
     display: "grid",

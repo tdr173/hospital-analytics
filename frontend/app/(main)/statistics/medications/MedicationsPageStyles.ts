@@ -5,6 +5,9 @@ export const MedicationsPageStyles = (theme: Theme) => ({
     padding: theme.spacing.md,
     paddingTop: "24px",
     overflowX: "hidden" as const,
+    height: "100%",
+    minHeight: 0,
+    overflowY: "auto" as const,
   },
   summaryRow: {
     display: "grid",

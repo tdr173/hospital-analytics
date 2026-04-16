@@ -7,6 +7,10 @@ export interface KpiCards {
   totalConditions: number;
   totalCareplans: number;
   totalProcedures: number;
+  avgEncountersPerPatient: number;
+  activeCareplans: number;
+  newPatientsLast30Days: number;
+  avgPatientAge: number;
 }
 
 export interface EncounterClassItem {

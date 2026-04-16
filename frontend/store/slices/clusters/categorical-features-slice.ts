@@ -10,7 +10,7 @@ interface CategoricalFeaturesState {
 
 const initialState: CategoricalFeaturesState = {
   data: null,
-  loading: true,
+  loading: false,
   error: null,
 };
 

@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
+import IconButton from "@mui/material/IconButton";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 
 import { RootState, AppDispatch } from "@/store";
 import { fetchProviderDetail, fetchProviderEncounters } from "@/store/slices/providers/thunks";
@@ -12,6 +14,8 @@ import { ProviderEncounterItem } from "@/models/generic/providers";
 import useClasses from "@/utils/useClasses";
 import { ProviderDetailPageStyles } from "./styles";
 import { clearName, formatDate } from "@/utils/functions";
+import manImage from "@/public/man_icon.svg";
+import womanImage from "@/public/woman_icon.svg";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
@@ -33,11 +37,13 @@ function EncountersTable({
   encloading,
   classes,
   onPatientClick,
+  onEncounterClick,
 }: {
   data: ProviderEncounterItem[];
   encloading: boolean;
   classes: any;
   onPatientClick: (id: string) => void;
+  onEncounterClick: (id: string) => void;
 }) {
   if (encloading) {
     return <div className={classes.encountersLoading}>Loading encounters...</div>;
@@ -54,6 +60,7 @@ function EncountersTable({
         <div>Description</div>
         <div>Reason</div>
         <div>Duration</div>
+        <div className={classes.actionsHeader}>Actions</div>
       </div>
       {data.map((r, index) => (
         <div
@@ -76,6 +83,16 @@ function EncountersTable({
           <div className={classes.secondaryText}>{r.reasonDescription ?? "—"}</div>
           <div className={classes.secondaryText}>
             {r.duration != null ? `${Math.round(r.duration)} min` : "—"}
+          </div>
+          <div className={classes.actionsCell}>
+            <IconButton
+              size="small"
+              className={classes.actionButton}
+              onClick={() => onEncounterClick(r.encounterId)}
+              aria-label="View encounter"
+            >
+              <VisibilityOutlinedIcon sx={{ fontSize: "1.05rem" }} />
+            </IconButton>
           </div>
         </div>
       ))}
@@ -117,6 +134,13 @@ export default function ProviderDetailPage() {
   return (
     <div className={classes.pageContainer}>
       <div className={classes.identityCard}>
+        <div className={classes.imageBlock}>
+          <img
+            src={provider.gender === "M" ? manImage.src : womanImage.src}
+            alt={provider.gender === "M" ? "Man Icon" : "Woman Icon"}
+            className={classes.avatarImage}
+          />
+        </div>
         <div className={classes.nameBlock}>
           <p className={classes.profileLabel}>Provider Profile</p>
           <h1 className={classes.providerFullName}>
@@ -152,13 +176,14 @@ export default function ProviderDetailPage() {
       </div>
 
       <div className={classes.encountersPanel}>
-        <div className={classes.encountersPanelHeader}>Recent Patient Encounters</div>
+        <div className={classes.encountersPanelHeader}>Recent Provider Encounters</div>
         <div className={classes.encountersPanelBody}>
           <EncountersTable
             data={encounters}
             encloading={encloading}
             classes={classes}
             onPatientClick={(patientId) => router.push(`/patients/${patientId}`)}
+            onEncounterClick={(encounterId) => router.push(`/encounters/${encounterId}`)}
           />
         </div>
       </div>

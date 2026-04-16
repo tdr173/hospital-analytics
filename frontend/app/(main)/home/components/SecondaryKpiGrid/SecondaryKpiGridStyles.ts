@@ -4,8 +4,9 @@ export const SecondaryKpiGridStyles = (theme: Theme) => ({
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
-    gridTemplateRows: "repeat(2, 1fr)",
+    gridTemplateRows: "repeat(4, 1fr)",
     gap: theme.spacing.md,
+    alignSelf: "stretch",
   },
   card: {
     backgroundColor: theme.colors.surface.containerLowest,

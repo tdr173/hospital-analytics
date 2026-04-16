@@ -2,8 +2,7 @@ import { Theme } from "@/utils/theme";
 
 export const HomeLayoutStyles = (_theme: Theme) => ({
   layoutContainer: {
-    display: "flex",
-    height: "100vh",
+    width: "100%",
   },
 });
 
@@ -13,15 +12,14 @@ export const HomePageStyles = (theme: Theme) => ({
     display: "flex",
     flexDirection: "column" as const,
     gap: theme.spacing.lg,
-    height: "100%",
-    overflow: "auto",
     fontFamily: theme.typography.fontFamily,
   },
   loading: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    height: "100%",
+    width: "100%",
+    minHeight: "60vh",
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.md,
   },
@@ -29,7 +27,8 @@ export const HomePageStyles = (theme: Theme) => ({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    height: "100%",
+    width: "100%",
+    minHeight: "60vh",
     color: theme.colors.status.error,
   },
   splitRow: {

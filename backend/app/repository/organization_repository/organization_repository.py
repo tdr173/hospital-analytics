@@ -6,7 +6,7 @@ from domain import (
     OrganizationModel, ProviderModel, EncounterModel, PatientModel,
     OrganizationListItem, OrganizationListResponse,
     OrganizationDetailResponse, OrganizationProviderItem,
-    OrganizationEncounterItem, OrganizationEncounterResponse,
+    OrganizationEncounterItem,
     OrganizationResourcesResponse, FilterOption,
 )
 from repository._helpers import patient_name_col, provider_name_col, clamp_page_size
@@ -111,8 +111,6 @@ class OrganizationRepository:
             city=row.city,
             latitude=row.latitude,
             longitude=row.longitude,
-            phone=row.phone,
-            utilization=row.utilization,
         )
 
     def get_organization_providers(self, organization_id: str) -> list[OrganizationProviderItem]:
@@ -134,19 +132,7 @@ class OrganizationRepository:
             for r in rows
         ]
 
-    def get_organization_encounters(
-        self, organization_id: str, page: int, rows: int
-    ) -> OrganizationEncounterResponse:
-        filters = [EncounterModel.organization_id == organization_id]
-
-        total = (
-            self.db.query(func.count(EncounterModel.encounter_id))
-            .filter(*filters)
-            .scalar() or 0
-        )
-
-        rows = clamp_page_size(rows)
-        offset = (page - 1) * rows
+    def get_organization_encounters(self, organization_id: str) -> list[OrganizationEncounterItem]:
         rows_data = (
             self.db.query(
                 EncounterModel.encounter_id,
@@ -163,15 +149,12 @@ class OrganizationRepository:
             )
             .outerjoin(PatientModel, EncounterModel.patient_id == PatientModel.patient_id)
             .outerjoin(ProviderModel, EncounterModel.provider_id == ProviderModel.provider_id)
-            .filter(*filters)
+            .filter(EncounterModel.organization_id == organization_id)
             .order_by(EncounterModel.start_date.desc())
-            .limit(rows)
-            .offset(offset)
             .all()
         )
 
-        items = [OrganizationEncounterItem(**row._asdict()) for row in rows_data]
-        return OrganizationEncounterResponse(items=items, total=total)
+        return [OrganizationEncounterItem(**row._asdict()) for row in rows_data]
 
     def get_organization_resources(self) -> OrganizationResourcesResponse:
         city_rows = (

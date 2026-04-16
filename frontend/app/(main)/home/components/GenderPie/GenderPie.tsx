@@ -7,8 +7,8 @@ import { GenderDistributionItem } from "@/models/generic/dashboard";
 import { GenderPieStyles } from "./GenderPieStyles";
 
 const GENDER_COLORS: Record<string, string> = {
-  M: "#2563eb",
-  F: "#9333ea",
+  M: theme.colors.gender.male,
+  F: theme.colors.gender.female,
 };
 
 interface Props {

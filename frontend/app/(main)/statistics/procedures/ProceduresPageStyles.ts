@@ -4,7 +4,9 @@ export const ProceduresPageStyles = (theme: Theme) => ({
   container: {
     padding: theme.spacing.lg,
     paddingBottom: `${theme.spacing.lg} !important`,
-    overflowX: "hidden" as const,
+    height: "100%",
+    minHeight: 0,
+    overflow: "hidden" as const,
   },
   summaryRow: {
     display: "grid",

@@ -21,6 +21,7 @@ def save_cluster_results(
     pca_coords_clustered: np.ndarray | None = None,
     pca_coords_outliers: np.ndarray | None = None,
     heatmap_bytes: bytes | None = None,
+    pca_image_bytes: bytes | None = None,
     extra_feature_cols: list[str] | None = None,
 ) -> None:
     """
@@ -37,10 +38,10 @@ def save_cluster_results(
         text("""
             INSERT INTO cluster_meta
                 (created_at, algorithm, n_clusters, n_patients, n_outliers,
-                 numerical_features, categorical_features, params, metrics, heatmap)
+                 numerical_features, categorical_features, params, metrics, heatmap, pca_image)
             VALUES
                 (:created_at, :algorithm, :n_clusters, :n_patients, :n_outliers,
-                 :numerical_features, :categorical_features, :params, :metrics, :heatmap)
+                 :numerical_features, :categorical_features, :params, :metrics, :heatmap, :pca_image)
         """),
         {
             "created_at": datetime.now(),
@@ -53,6 +54,7 @@ def save_cluster_results(
             "params": json.dumps(params),
             "metrics": json.dumps({k: (float(v) if v is not None else None) for k, v in metrics.items()}),
             "heatmap": heatmap_bytes,
+            "pca_image": pca_image_bytes,
         }
     )
 

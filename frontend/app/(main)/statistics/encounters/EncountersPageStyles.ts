@@ -4,6 +4,9 @@ export const EncountersPageStyles = (theme: Theme) => ({
   container: {
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
+    height: "100%",
+    minHeight: 0,
+    overflowY: "auto" as const,
   },
   totalCard: {
     backgroundColor: theme.colors.surface.containerLowest,

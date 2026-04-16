@@ -4,6 +4,8 @@ import { Suspense, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams, useRouter } from "next/navigation";
 import TableCell from "@mui/material/TableCell";
+import IconButton from "@mui/material/IconButton";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 
 import { RootState, AppDispatch } from "@/store";
 import { fetchOrganizations, fetchOrganizationResources } from "@/store/slices/organizations/thunks";
@@ -30,6 +32,7 @@ const COLUMNS = [
   { key: "phone", label: "Phone", width: 140 },
   { key: "providerCount", label: "Providers", sortable: true, width: 100, align: "right" as const },
   { key: "utilization", label: "Utilization", sortable: true, width: 100, align: "right" as const },
+  { key: "actions", label: "Actions", width: 80, align: "center" as const },
 ];
 
 function OrganizationsPageContent() {
@@ -97,17 +100,12 @@ function OrganizationsPageContent() {
   };
 
   const renderRow = (o: OrganizationListItem, i: number) => (
-    <StyledTableRow
-      key={o.organizationId}
-      index={i}
-      onClick={() => router.push(`/organizations/${o.organizationId}`)}
-    >
+    <StyledTableRow key={o.organizationId} index={i}>
       <TableCell
         sx={{
           ...bodyCellSx,
           fontWeight: theme.typography.fontWeight.semibold,
           color: theme.colors.primary.main,
-          cursor: "pointer",
         }}
       >
         <TruncatedText text={o.name ?? "-"} />
@@ -123,6 +121,20 @@ function OrganizationsPageContent() {
       </TableCell>
       <TableCell sx={bodyCellSx} align="right">
         {o.utilization}
+      </TableCell>
+      <TableCell sx={bodyCellSx} align="center">
+        <IconButton
+          size="small"
+          onClick={() => router.push(`/organizations/${o.organizationId}`)}
+          aria-label="View organization"
+          sx={{
+            padding: "4px",
+            color: theme.colors.primary.main,
+            "&:hover": { backgroundColor: "rgba(0, 103, 128, 0.08)" },
+          }}
+        >
+          <VisibilityOutlinedIcon sx={{ fontSize: "1.05rem" }} />
+        </IconButton>
       </TableCell>
     </StyledTableRow>
   );

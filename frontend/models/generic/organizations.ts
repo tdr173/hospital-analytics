@@ -20,8 +20,6 @@ export interface OrganizationDetail {
   city: string | null;
   latitude: number;
   longitude: number;
-  phone: string | null;
-  utilization: number;
 }
 
 export interface OrganizationProviderItem {
@@ -47,11 +45,6 @@ export interface OrganizationEncounterItem {
   reasonDescription: string | null;
 }
 
-export interface OrganizationEncounterResponse {
-  items: OrganizationEncounterItem[];
-  total: number;
-}
-
 export interface OrganizationResources {
   cities: FilterOption[];
 }
@@ -63,10 +56,4 @@ export interface FetchOrganizationsArgs {
   rows: number;
   sortBy: string;
   sortType: "asc" | "desc";
-}
-
-export interface FetchOrganizationEncountersArgs {
-  organizationId: string;
-  page: number;
-  rows: number;
 }

@@ -13,9 +13,9 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import useClasses from "@/utils/useClasses";
+import theme from "@/utils/theme";
 import { ClusterDemographics } from "@/models/generic/clusters";
 import { ClusterDemographicsGridStyles } from "./ClusterDemographicsGridStyles";
-import { colorWithAlpha } from "../../utils/colorWithAlpha";
 
 interface Props {
   demographics: ClusterDemographics;
@@ -47,6 +47,8 @@ const BURDEN_ORDER = ["none", "low", "moderate", "high", "very_high"];
 const MARITAL_ORDER = ["M", "S", "D", "W"];
 const SMOKING_ORDER = ["current", "former", "never"];
 
+const BURDEN_COLORS = ["#16A34A", "#84CC16", "#EAB308", "#F97316", "#DC2626"];
+
 function mapDistribution(
   dist: Record<string, number>,
   labels: Record<string, string>,
@@ -65,18 +67,19 @@ export default function ClusterDemographicsGrid({ demographics, color }: Props) 
 
   const femalePct = demographics.gender.F ?? 0;
   const malePct = demographics.gender.M ?? 0;
-  const femaleColor = color;
-  const maleColor = colorWithAlpha(color, 0.45);
   const genderData = [
-    { name: "Female", value: femalePct, fill: femaleColor },
-    { name: "Male", value: malePct, fill: maleColor },
+    { name: "Female", value: femalePct, fill: theme.colors.gender.female },
+    { name: "Male", value: malePct, fill: theme.colors.gender.male },
   ];
 
   const maritalData = mapDistribution(demographics.marital, MARITAL_LABELS, MARITAL_ORDER);
   const smokingData = mapDistribution(demographics.smoking, SMOKING_LABELS, SMOKING_ORDER);
   const burdenData = mapDistribution(demographics.conditionBurden, BURDEN_LABELS, BURDEN_ORDER);
 
-  const renderBar = (data: { name: string; value: number }[]) => (
+  const renderBar = (
+    data: { name: string; value: number }[],
+    colors?: string[],
+  ) => (
     <div className={classes.chartWrapper}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 10, left: 0, bottom: 5 }}>
@@ -107,7 +110,10 @@ export default function ClusterDemographicsGrid({ demographics, color }: Props) 
               return null;
             }}
           />
-          <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
+          <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]}>
+            {colors &&
+              data.map((d, i) => <Cell key={d.name} fill={colors[i] ?? color} />)}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -183,7 +189,7 @@ export default function ClusterDemographicsGrid({ demographics, color }: Props) 
 
         <div className={classes.tile}>
           <p className={classes.tileTitle}>Condition Burden</p>
-          {renderBar(burdenData)}
+          {renderBar(burdenData, BURDEN_COLORS)}
         </div>
       </div>
     </div>

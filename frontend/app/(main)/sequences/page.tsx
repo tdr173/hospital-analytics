@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/store";
 import {
@@ -39,10 +39,15 @@ export default function SequencesPage() {
   const [sortBy, setSortBy] = useState("support");
   const [sortType, setSortType] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     dispatch(fetchSequenceResources());
   }, [dispatch]);
+
+  useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [page]);
 
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedSearch(search), SEARCH_DEBOUNCE_MS);
@@ -105,7 +110,7 @@ export default function SequencesPage() {
 
   return (
     <div className={classes.container}>
-      <div className={classes.content}>
+      <div className={classes.content} ref={contentRef}>
         <SequenceFilters
           search={search}
           minLength={effectiveMinLength}

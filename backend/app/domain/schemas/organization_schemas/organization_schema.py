@@ -28,8 +28,6 @@ class OrganizationDetailResponse(CamelModel):
     city: Optional[str] = None
     latitude: float
     longitude: float
-    phone: Optional[str] = None
-    utilization: int
 
 
 class OrganizationProviderItem(CamelModel):
@@ -53,8 +51,3 @@ class OrganizationEncounterItem(CamelModel):
     encounter_class: str
     description: str
     reason_description: Optional[str] = None
-
-
-class OrganizationEncounterResponse(CamelModel):
-    items: List[OrganizationEncounterItem]
-    total: int

@@ -37,8 +37,30 @@ class DashboardRepository:
                 (SELECT count(*) FROM encounter)                                               AS total_encounters,
                 (SELECT count(*) FROM condition)                                               AS total_conditions,
                 (SELECT count(*) FROM careplan)                                                AS total_careplans,
-                (SELECT count(*) FROM procedure)                                               AS total_procedures
+                (SELECT count(*) FROM procedure)                                               AS total_procedures,
+                (SELECT ROUND(CAST(COUNT(*) AS NUMERIC)
+                              / NULLIF((SELECT COUNT(*) FROM patient), 0), 2)
+                 FROM encounter)                                                               AS avg_encounters_per_patient,
+                (SELECT ROUND(AVG(age)::numeric, 1) FROM patient)                              AS avg_patient_age,
+                (SELECT COUNT(*) FROM careplan
+                 WHERE end_date IS NULL OR end_date > CURRENT_DATE)                            AS active_careplans
         """)).first()
+
+        # "last" = max date in data, not today
+        max_encounter_date = self.db.query(func.max(EncounterModel.start_date)).scalar()
+        max_condition_date = self.db.query(func.max(ConditionModel.start_date)).scalar()
+
+        new_patients_last_30_days = 0
+        if max_encounter_date is not None:
+            cutoff = max_encounter_date - timedelta(days=30)
+            new_patients_last_30_days = self.db.execute(text("""
+                SELECT COUNT(*) FROM (
+                    SELECT patient_id, MIN(start_date) AS first_seen
+                    FROM encounter
+                    GROUP BY patient_id
+                ) t
+                WHERE first_seen >= :cutoff
+            """), {"cutoff": cutoff}).scalar() or 0
 
         kpis = KpiCards(
             total_patients=kpi_row.total_patients or 0,
@@ -49,11 +71,11 @@ class DashboardRepository:
             total_conditions=kpi_row.total_conditions or 0,
             total_careplans=kpi_row.total_careplans or 0,
             total_procedures=kpi_row.total_procedures or 0,
+            avg_encounters_per_patient=float(kpi_row.avg_encounters_per_patient or 0),
+            active_careplans=kpi_row.active_careplans or 0,
+            new_patients_last_30_days=new_patients_last_30_days,
+            avg_patient_age=float(kpi_row.avg_patient_age or 0),
         )
-
-        # "last" = max date in data, not today
-        max_encounter_date = self.db.query(func.max(EncounterModel.start_date)).scalar()
-        max_condition_date = self.db.query(func.max(ConditionModel.start_date)).scalar()
 
         last_week_encounter_by_class: list[EncounterClassItem] = []
         if max_encounter_date is not None:
