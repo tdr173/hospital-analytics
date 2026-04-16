@@ -30,8 +30,7 @@ class DashboardRepository:
         kpi_row = self.db.execute(text("""
             SELECT
                 (SELECT count(*) FROM patient)                                                 AS total_patients,
-                (SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE deathdate IS NOT NULL)
-                              / NULLIF(COUNT(*), 0), 1) FROM patient)                          AS mortality_rate,
+                (SELECT count(*) FROM patient WHERE deathdate IS NULL)                         AS active_patients,
                 (SELECT count(*) FROM provider)                                                AS total_providers,
                 (SELECT count(*) FROM organization)                                            AS total_organizations,
                 (SELECT count(*) FROM encounter)                                               AS total_encounters,
@@ -64,7 +63,7 @@ class DashboardRepository:
 
         kpis = KpiCards(
             total_patients=kpi_row.total_patients or 0,
-            mortality_rate=float(kpi_row.mortality_rate or 0),
+            active_patients=kpi_row.active_patients or 0,
             total_providers=kpi_row.total_providers or 0,
             total_organizations=kpi_row.total_organizations or 0,
             total_encounters=kpi_row.total_encounters or 0,

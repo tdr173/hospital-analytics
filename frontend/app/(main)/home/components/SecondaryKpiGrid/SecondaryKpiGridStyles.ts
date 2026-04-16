@@ -15,6 +15,7 @@ export const SecondaryKpiGridStyles = (theme: Theme) => ({
     padding: theme.spacing.md,
     display: "flex",
     flexDirection: "column" as const,
+    justifyContent: "center",
     gap: theme.spacing.xs,
     borderLeft: `3px solid ${theme.colors.primary.main}`,
   },

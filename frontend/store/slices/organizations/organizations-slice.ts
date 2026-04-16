@@ -14,7 +14,7 @@ interface OrganizationsState {
 const initialState: OrganizationsState = {
   items: [],
   total: 0,
-  loading: false,
+  loading: true,
   error: null,
   resources: null,
   resourcesLoading: false,

@@ -3,11 +3,11 @@ import { Theme } from "@/utils/theme";
 export const KpiPrimaryRowStyles = (theme: Theme) => ({
   row: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
+    gridTemplateColumns: "repeat(3, 1fr)",
     gap: theme.spacing.md,
     flexShrink: 0,
     "@media (max-width: 1100px)": {
-      gridTemplateColumns: "repeat(2, 1fr)",
+      gridTemplateColumns: "repeat(1, 1fr)",
     },
   },
   card: {

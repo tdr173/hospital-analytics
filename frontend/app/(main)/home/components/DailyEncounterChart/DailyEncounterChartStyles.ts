@@ -20,6 +20,8 @@ export const DailyEncounterChartStyles = (theme: Theme) => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    height: "100%",
+    width: "100%",
     minHeight: 220,
     color: theme.colors.text.secondary,
     fontStyle: "italic" as const,

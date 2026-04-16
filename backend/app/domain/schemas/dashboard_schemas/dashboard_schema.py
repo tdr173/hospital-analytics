@@ -5,7 +5,7 @@ from domain.schemas.camel_model import CamelModel
 
 class KpiCards(CamelModel):
     total_patients: int
-    mortality_rate: float
+    active_patients: int
     total_providers: int
     total_organizations: int
     total_encounters: int

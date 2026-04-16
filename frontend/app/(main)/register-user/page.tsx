@@ -92,117 +92,123 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className={classes.card}>
-      <div className={classes.iconRow}>
-        <div className={classes.iconBox}>
-          <PersonAddOutlinedIcon sx={{ color: "#0891B2", fontSize: "28px" }} />
+    <div className={classes.pageWrapper}>
+      <div className={classes.card}>
+        <div className={classes.leftPanel}>
+          <div className={classes.iconBox}>
+            <PersonAddOutlinedIcon sx={{ color: "#0891B2", fontSize: "28px" }} />
+          </div>
+          <h1 className={classes.title}>Create new account</h1>
+          <p className={classes.subtitle}>
+            Fill in the details below to register a new HospitAI user.
+          </p>
+        </div>
+
+        <div className={classes.rightPanel}>
+          {submittedEmail ? (
+            <div className={classes.successContainer}>
+              <div className={classes.successIconBox}>
+                <CheckCircleOutlineIcon sx={{ color: "#10b981", fontSize: "32px" }} />
+              </div>
+              <div>
+                <p className={classes.successText}>
+                  An email with a temporary password has been sent to
+                </p>
+                <p className={classes.successEmail}>{submittedEmail}</p>
+              </div>
+              <StyledButton variant="secondary" onClick={handleReset} sx={BUTTON_SX}>
+                Register a new user
+              </StyledButton>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} noValidate className={classes.form}>
+              <StyledInput
+                label="First Name"
+                type="text"
+                required
+                placeholder="John"
+                value={values.firstName}
+                onChange={(e) =>
+                  setValues({ ...values, firstName: e.target.value })
+                }
+                error={!!errors.firstName}
+                helperText={errors.firstName}
+              />
+              <StyledInput
+                label="Last Name"
+                type="text"
+                required
+                placeholder="Doe"
+                value={values.lastName}
+                onChange={(e) => setValues({ ...values, lastName: e.target.value })}
+                error={!!errors.lastName}
+                helperText={errors.lastName}
+              />
+              <StyledInput
+                label="Email Address"
+                type="email"
+                required
+                placeholder="clinician@hospital.org"
+                value={values.email}
+                onChange={(e) => setValues({ ...values, email: e.target.value })}
+                error={!!errors.email}
+                helperText={errors.email}
+              />
+              <StyledInput
+                label="Phone Number"
+                type="text"
+                required
+                placeholder="+40 712 345 678"
+                value={values.phone}
+                onChange={(e) => setValues({ ...values, phone: e.target.value })}
+                error={!!errors.phone}
+                helperText={errors.phone}
+              />
+              <StyledInput
+                label="Job Title"
+                type="text"
+                required
+                placeholder="e.g. Cardiologist"
+                value={values.jobTitle}
+                onChange={(e) => setValues({ ...values, jobTitle: e.target.value })}
+                error={!!errors.jobTitle}
+                helperText={errors.jobTitle}
+              />
+
+              <div className={classes.fullRow}>
+                <p className={classes.roleLabel}>ROLE *</p>
+                <div className={classes.roleOptions}>
+                  {ROLES.map((r) => (
+                    <label
+                      key={r}
+                      className={`${classes.roleOption} ${
+                        values.role === r ? classes.roleOptionSelected : ""
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="role"
+                        value={r}
+                        checked={values.role === r}
+                        onChange={() => setValues({ ...values, role: r })}
+                        className={classes.roleHiddenInput}
+                      />
+                      <span className={classes.roleOptionLabel}>{r}</span>
+                    </label>
+                  ))}
+                </div>
+                {errors.role && <p className={classes.roleError}>{errors.role}</p>}
+              </div>
+
+              <div className={classes.fullRow}>
+                <StyledButton variant="secondary" type="submit" sx={BUTTON_SX}>
+                  Register User
+                </StyledButton>
+              </div>
+            </form>
+          )}
         </div>
       </div>
-      <h1 className={classes.title}>Create new account</h1>
-      <p className={classes.subtitle}>
-        Fill in the details below to register a new HospitAI user.
-      </p>
-
-      {submittedEmail ? (
-        <div className={classes.successContainer}>
-          <div className={classes.successIconBox}>
-            <CheckCircleOutlineIcon sx={{ color: "#10b981", fontSize: "32px" }} />
-          </div>
-          <div>
-            <p className={classes.successText}>
-              An email with a temporary password has been sent to
-            </p>
-            <p className={classes.successEmail}>{submittedEmail}</p>
-          </div>
-          <StyledButton variant="secondary" onClick={handleReset} sx={BUTTON_SX}>
-            Register a new user
-          </StyledButton>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} noValidate className={classes.form}>
-          <StyledInput
-            label="First Name"
-            type="text"
-            required
-            placeholder="John"
-            value={values.firstName}
-            onChange={(e) =>
-              setValues({ ...values, firstName: e.target.value })
-            }
-            error={!!errors.firstName}
-            helperText={errors.firstName}
-          />
-          <StyledInput
-            label="Last Name"
-            type="text"
-            required
-            placeholder="Doe"
-            value={values.lastName}
-            onChange={(e) => setValues({ ...values, lastName: e.target.value })}
-            error={!!errors.lastName}
-            helperText={errors.lastName}
-          />
-          <StyledInput
-            label="Email Address"
-            type="email"
-            required
-            placeholder="clinician@hospital.org"
-            value={values.email}
-            onChange={(e) => setValues({ ...values, email: e.target.value })}
-            error={!!errors.email}
-            helperText={errors.email}
-          />
-          <StyledInput
-            label="Phone Number"
-            type="text"
-            required
-            placeholder="+40 712 345 678"
-            value={values.phone}
-            onChange={(e) => setValues({ ...values, phone: e.target.value })}
-            error={!!errors.phone}
-            helperText={errors.phone}
-          />
-          <StyledInput
-            label="Job Title"
-            type="text"
-            required
-            placeholder="e.g. Cardiologist"
-            value={values.jobTitle}
-            onChange={(e) => setValues({ ...values, jobTitle: e.target.value })}
-            error={!!errors.jobTitle}
-            helperText={errors.jobTitle}
-          />
-
-          <div>
-            <p className={classes.roleLabel}>ROLE *</p>
-            <div className={classes.roleOptions}>
-              {ROLES.map((r) => (
-                <label
-                  key={r}
-                  className={`${classes.roleOption} ${
-                    values.role === r ? classes.roleOptionSelected : ""
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="role"
-                    value={r}
-                    checked={values.role === r}
-                    onChange={() => setValues({ ...values, role: r })}
-                    className={classes.roleHiddenInput}
-                  />
-                  <span className={classes.roleOptionLabel}>{r}</span>
-                </label>
-              ))}
-            </div>
-            {errors.role && <p className={classes.roleError}>{errors.role}</p>}
-          </div>
-
-          <StyledButton variant="secondary" type="submit" sx={BUTTON_SX}>
-            Register User
-          </StyledButton>
-        </form>
-      )}
     </div>
   );
 }

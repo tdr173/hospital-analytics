@@ -1,6 +1,6 @@
 export interface KpiCards {
   totalPatients: number;
-  mortalityRate: number;
+  activePatients: number;
   totalProviders: number;
   totalOrganizations: number;
   totalEncounters: number;

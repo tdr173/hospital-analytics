@@ -14,7 +14,7 @@ interface ProvidersState {
 const initialState: ProvidersState = {
   items: [],
   total: 0,
-  loading: false,
+  loading: true,
   error: null,
   resources: null,
   resourcesLoading: false,

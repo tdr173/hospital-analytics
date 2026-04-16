@@ -15,6 +15,7 @@ export const EncounterDetailPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     color: theme.colors.text.secondary,
   },
   pageError: {
@@ -22,6 +23,7 @@ export const EncounterDetailPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     color: theme.colors.status.error,
   },
 
@@ -155,7 +157,10 @@ export const EncounterDetailPageStyles = (theme: Theme) => ({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    height: "80px",
+    flex: 1,
+    height: "100%",
+    width: "100%",
+    minHeight: "200px",
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.sm,
   },
@@ -164,10 +169,12 @@ export const EncounterDetailPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     flex: 1,
+    height: "100%",
     width: "100%",
     minHeight: "200px",
     color: theme.colors.text.disabled,
     fontSize: theme.typography.fontSize.sm,
+    fontStyle: "italic" as const,
   },
 
   // Shared grid rows

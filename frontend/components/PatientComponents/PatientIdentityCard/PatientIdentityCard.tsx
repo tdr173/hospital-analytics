@@ -1,3 +1,4 @@
+import CakeOutlinedIcon from "@mui/icons-material/CakeOutlined";
 import { PatientDetail } from "@/models/generic/patients";
 import theme from "@/utils/theme";
 import { formatDate, clearName } from "@/utils/functions";
@@ -28,7 +29,6 @@ export default function IdentityCard({
   const alive = !patient.deathdate;
 
   const details = [
-    { label: "Age", value: patient?.age ? `${patient.age} years` : null },
     { label: "Gender", value: GENDER_LABELS[patient?.gender ?? ""] },
     { label: "Date of Birth", value: formatDate(patient?.birthdate) },
     { label: "Race", value: patient?.race },
@@ -67,6 +67,12 @@ export default function IdentityCard({
           >
             {alive ? "Alive" : `Deceased · ${formatDate(patient.deathdate)}`}
           </span>
+          {patient.age != null && (
+            <span className={classes.idAgeBadge}>
+              <CakeOutlinedIcon className={classes.idAgeBadgeIcon} />
+              {patient.age} years
+            </span>
+          )}
           {patient.clusterColor && patient.clusterTitle && (
             <span
               className={classes.idClusterBadge}

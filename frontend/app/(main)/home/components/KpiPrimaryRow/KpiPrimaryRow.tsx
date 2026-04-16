@@ -1,7 +1,6 @@
 "use client";
 
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
-import MonitorHeartOutlinedIcon from "@mui/icons-material/MonitorHeartOutlined";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import EventNoteOutlinedIcon from "@mui/icons-material/EventNoteOutlined";
 import useClasses from "@/utils/useClasses";
@@ -21,15 +20,8 @@ export default function KpiPrimaryRow({ kpis }: Props) {
       key: "totalPatients",
       label: "Total Patients",
       value: kpis.totalPatients.toLocaleString(),
-      sub: `${kpis.mortalityRate}% mortality`,
+      sub: `${kpis.activePatients.toLocaleString()} active patients`,
       Icon: PeopleOutlinedIcon,
-    },
-    {
-      key: "mortalityRate",
-      label: "Mortality Rate",
-      value: `${kpis.mortalityRate}%`,
-      sub: null,
-      Icon: MonitorHeartOutlinedIcon,
     },
     {
       key: "totalProviders",

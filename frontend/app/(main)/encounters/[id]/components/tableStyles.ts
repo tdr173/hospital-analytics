@@ -47,10 +47,12 @@ export const sharedTableStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     flex: 1,
+    height: "100%",
     width: "100%",
     minHeight: "200px",
     color: theme.colors.text.disabled,
     fontSize: theme.typography.fontSize.sm,
+    fontStyle: "italic" as const,
   },
   badgeActive: {
     display: "inline-block",

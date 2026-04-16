@@ -194,20 +194,16 @@ def get_smoking_distribution(db: Session, cluster_id: int) -> dict:
 def get_condition_burden_distribution(db: Session, cluster_id: int) -> dict:
     filters = _cluster_filters(cluster_id)
     row = db.query(
-        _flag_pct_expr("condition_burden", "none").label("none"),
         _flag_pct_expr("condition_burden", "low").label("low"),
-        _flag_pct_expr("condition_burden", "moderate").label("moderate"),
+        _flag_pct_expr("condition_burden", "medium").label("medium"),
         _flag_pct_expr("condition_burden", "high").label("high"),
-        _flag_pct_expr("condition_burden", "very_high").label("very_high"),
     ).filter(*filters).first()
     if not row:
-        return {"none": 0.0, "low": 0.0, "moderate": 0.0, "high": 0.0, "very_high": 0.0}
+        return {"low": 0.0, "medium": 0.0, "high": 0.0}
     return {
-        "none": _f(row, "none"),
         "low": _f(row, "low"),
-        "moderate": _f(row, "moderate"),
+        "medium": _f(row, "medium"),
         "high": _f(row, "high"),
-        "very_high": _f(row, "very_high"),
     }
 
 

@@ -6,10 +6,13 @@ const encountersTabStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     flex: 1,
+    height: "100%",
     width: "100%",
+    minHeight: "200px",
     color: theme.colors.text.secondary,
     fontFamily: theme.typography.fontFamily,
     fontSize: theme.typography.fontSize.sm,
+    fontStyle: "italic" as const,
   },
   tableContainer: {
     width: "100%",

@@ -36,18 +36,16 @@ const SMOKING_LABELS: Record<string, string> = {
 };
 
 const BURDEN_LABELS: Record<string, string> = {
-  none: "None",
   low: "Low",
-  moderate: "Moderate",
+  medium: "Medium",
   high: "High",
-  very_high: "Very High",
 };
 
-const BURDEN_ORDER = ["none", "low", "moderate", "high", "very_high"];
+const BURDEN_ORDER = ["low", "medium", "high"];
 const MARITAL_ORDER = ["M", "S", "D", "W"];
 const SMOKING_ORDER = ["current", "former", "never"];
 
-const BURDEN_COLORS = ["#16A34A", "#84CC16", "#EAB308", "#F97316", "#DC2626"];
+const BURDEN_COLORS = ["#84CC16", "#EAB308", "#DC2626"];
 
 function mapDistribution(
   dist: Record<string, number>,

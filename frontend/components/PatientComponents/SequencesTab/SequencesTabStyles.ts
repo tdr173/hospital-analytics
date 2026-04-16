@@ -43,11 +43,13 @@ const sequencesTabStyles = (theme: Theme) => ({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    padding: theme.spacing.xxl,
+    flex: 1,
+    height: "100%",
+    width: "100%",
+    minHeight: "200px",
     color: theme.colors.text.secondary,
     fontStyle: "italic" as const,
-    backgroundColor: theme.colors.surface.containerLowest,
-    borderRadius: theme.borderRadius.md,
+    fontSize: theme.typography.fontSize.sm,
   },
 });
 

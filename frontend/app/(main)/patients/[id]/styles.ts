@@ -16,6 +16,7 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     color: theme.colors.text.secondary,
   },
   pageError: {
@@ -23,6 +24,7 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     color: theme.colors.status.error,
   },
 
@@ -96,6 +98,21 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     borderRadius: theme.borderRadius.full,
     padding: "3px 10px",
   },
+  idAgeBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "5px",
+    fontSize: "0.7rem",
+    fontWeight: theme.typography.fontWeight.semibold,
+    letterSpacing: "0.03em",
+    color: "#92400e",
+    backgroundColor: "#fef3c7",
+    borderRadius: theme.borderRadius.full,
+    padding: "3px 10px",
+  },
+  idAgeBadgeIcon: {
+    fontSize: "0.9rem !important",
+  },
   idClusterBadgeDot: {
     width: "7px",
     height: "7px",
@@ -162,6 +179,7 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.sm,
     height: "100%",
+    width: "100%",
   },
 
   // Tab cell variants

@@ -15,6 +15,7 @@ export const OrganizationDetailPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     color: theme.colors.text.secondary,
   },
   pageError: {
@@ -22,6 +23,7 @@ export const OrganizationDetailPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     color: theme.colors.status.error,
   },
 
@@ -103,6 +105,7 @@ export const OrganizationDetailPageStyles = (theme: Theme) => ({
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.sm,
     height: "100%",
+    width: "100%",
   },
 
   // Gender badge (reused in providers sub-table)
@@ -189,9 +192,13 @@ export const OrganizationDetailPageStyles = (theme: Theme) => ({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    height: "100px",
+    flex: 1,
+    height: "100%",
+    width: "100%",
+    minHeight: "200px",
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.sm,
+    fontStyle: "italic" as const,
   },
 
   // Encounters pagination

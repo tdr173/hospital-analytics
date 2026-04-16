@@ -136,8 +136,25 @@ export default function StyledTable<T = any>({
         boxShadow: theme.shadows.sm,
         backgroundColor: theme.colors.surface.containerLowest,
         height: "100%",
+        position: "relative",
       }}
     >
+      {loading && (
+        <LinearProgress
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 2,
+            zIndex: 3,
+            backgroundColor: "transparent",
+            "& .MuiLinearProgress-bar": {
+              backgroundColor: theme.colors.primary.main,
+            },
+          }}
+        />
+      )}
       <TableContainer sx={{ overflowX: "auto", height: "calc(100% - 52px)" }}>
         <Table
           stickyHeader={stickyHeader}
@@ -184,7 +201,7 @@ export default function StyledTable<T = any>({
           )}
 
           <TableBody>
-            {data.length === 0 && !loading ? (
+            {data.length === 0 ? (
               <TableRow sx={{ height: "100% !important" }}>
                 <TableCell
                   colSpan={columns.length}
@@ -193,10 +210,11 @@ export default function StyledTable<T = any>({
                     textAlign: "center",
                     padding: "48px 16px",
                     color: theme.colors.text.secondary,
+                    fontStyle: "italic",
                     borderBottom: "none",
                   }}
                 >
-                  {emptyMessage}
+                  {loading ? "Loading..." : emptyMessage}
                 </TableCell>
               </TableRow>
             ) : (

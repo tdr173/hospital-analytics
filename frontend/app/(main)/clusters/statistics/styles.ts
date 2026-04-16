@@ -14,6 +14,7 @@ export const ClusterStatisticsPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     color: theme.colors.text.secondary,
   },
   error: {
@@ -21,6 +22,7 @@ export const ClusterStatisticsPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     color: theme.colors.status.error,
   },
   imageCard: {

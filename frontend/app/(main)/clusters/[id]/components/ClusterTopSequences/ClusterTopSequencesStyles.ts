@@ -86,10 +86,16 @@ export const ClusterTopSequencesStyles = (theme: Theme) => ({
     color: theme.colors.text.primary,
   },
   empty: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    flex: 1,
+    height: "100%",
+    width: "100%",
+    minHeight: "200px",
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.text.secondary,
     fontStyle: "italic" as const,
-    padding: theme.spacing.md,
     textAlign: "center" as const,
   },
 });

@@ -27,6 +27,7 @@ export const ProvidersPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     color: theme.colors.text.secondary,
     fontFamily: theme.typography.fontFamily,
   },
