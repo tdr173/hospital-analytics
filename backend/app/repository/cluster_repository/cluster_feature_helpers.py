@@ -1,15 +1,4 @@
-"""
-Cluster feature helper functions.
-
-Each function accepts (db, cluster_id) and runs a focused query against
-cluster_patient.features (JSONB).  They are designed to be called
-individually from the cluster detail endpoint, or composed together inside
-get_ai_analysis.
-
-Private helpers (_cluster_filters, _avg_expr, _flag_pct_expr, _mode_expr)
-build the reusable SQLAlchemy expressions so the query logic is defined
-exactly once.
-"""
+"""Grouped aggregation queries over cluster_patient.features (JSONB)."""
 
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, case, Numeric
@@ -17,12 +6,8 @@ from sqlalchemy import func, cast, case, Numeric
 from domain.models.cluster_patient_model import ClusterPatientModel
 
 
-# ---------------------------------------------------------------------------
-# Private expression builders
-# ---------------------------------------------------------------------------
-
 def _cluster_filters(cluster_id: int) -> list:
-    """WHERE clause for a given cluster_id (-1 = outlier group)."""
+    """Cluster -1 means the outlier group."""
     if cluster_id == -1:
         return [ClusterPatientModel.is_outlier == True]
     return [
@@ -32,7 +17,6 @@ def _cluster_filters(cluster_id: int) -> list:
 
 
 def _avg_expr(feature: str, decimals: int = 1):
-    """round(avg(features->>feature), decimals)"""
     return func.round(
         func.avg(cast(ClusterPatientModel.features[feature].astext, Numeric)),
         decimals,
@@ -40,7 +24,6 @@ def _avg_expr(feature: str, decimals: int = 1):
 
 
 def _flag_pct_expr(feature: str, value: str):
-    """Percentage of rows where features->>feature = value (0–100)."""
     return func.round(
         100.0 * func.sum(
             case((ClusterPatientModel.features[feature].astext == value, 1), else_=0)
@@ -50,23 +33,17 @@ def _flag_pct_expr(feature: str, value: str):
 
 
 def _mode_expr(feature: str):
-    """Most frequent value of features->>feature."""
     return func.mode().within_group(
         ClusterPatientModel.features[feature].astext
     )
 
 
-# ---------------------------------------------------------------------------
-# cluster_size  — count + percentage of main population
-# ---------------------------------------------------------------------------
+def _f(row, attr) -> float:
+    return float(getattr(row, attr) or 0)
+
 
 def cluster_size(db: Session, cluster_id: int) -> dict:
-    """
-    Returns {"count": int, "percentage": float}.
-
-    Percentage is relative to the non-outlier population for regular clusters,
-    and relative to ALL patients for the outlier cluster (-1).
-    """
+    """Outlier (-1) percentage is vs ALL patients; regular clusters are vs non-outliers."""
     filters = _cluster_filters(cluster_id)
     count = (
         db.query(func.count())
@@ -89,160 +66,86 @@ def cluster_size(db: Session, cluster_id: int) -> dict:
     return {"count": count, "percentage": pct}
 
 
-# ---------------------------------------------------------------------------
-# Vitals & quality of life
-# ---------------------------------------------------------------------------
-
-def get_avg_age(db: Session, cluster_id: int) -> float:
+def get_vitals(db: Session, cluster_id: int) -> dict:
     filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("age", 1)).filter(*filters).scalar() or 0)
+    row = db.query(
+        _avg_expr("age", 1).label("avg_age"),
+        _avg_expr("avg_bmi", 1).label("avg_bmi"),
+        _avg_expr("avg_systolic_bp", 1).label("avg_systolic_bp"),
+        _avg_expr("avg_glucose", 1).label("avg_glucose"),
+        _avg_expr("qaly", 2).label("avg_qaly"),
+        _avg_expr("daly", 2).label("avg_daly"),
+    ).filter(*filters).first()
+
+    keys = ["avg_age", "avg_bmi", "avg_systolic_bp", "avg_glucose", "avg_qaly", "avg_daly"]
+    if not row:
+        return {k: 0.0 for k in keys}
+    return {k: _f(row, k) for k in keys}
 
 
-def get_avg_bmi(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("avg_bmi", 1)).filter(*filters).scalar() or 0)
-
-
-def get_avg_systolic_bp(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("avg_systolic_bp", 1)).filter(*filters).scalar() or 0)
-
-
-def get_avg_glucose(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("avg_glucose", 1)).filter(*filters).scalar() or 0)
-
-
-def get_avg_qaly(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("qaly", 2)).filter(*filters).scalar() or 0)
-
-
-def get_avg_daly(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("daly", 2)).filter(*filters).scalar() or 0)
-
-
-# ---------------------------------------------------------------------------
-# Clinical burden & utilization
-# ---------------------------------------------------------------------------
-
-def get_avg_active_conditions(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("active_conditions_count", 1)).filter(*filters).scalar() or 0)
-
-
-def get_avg_medications(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("total_medications", 1)).filter(*filters).scalar() or 0)
-
-
-def get_avg_procedures(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("total_procedures", 1)).filter(*filters).scalar() or 0)
-
-
-def get_avg_days_since_encounter(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("days_since_last_encounter", 0)).filter(*filters).scalar() or 0)
-
-
-def get_avg_clinical_severity_score(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("clinical_severity_score", 2)).filter(*filters).scalar() or 0)
-
-
-def get_clinical_severity_components(db: Session, cluster_id: int) -> dict:
-    """
-    Returns the three raw inputs that feed the PCA-derived clinical_severity_score:
-    avg_active_conditions, avg_medications, avg_procedures.
-    """
+def get_utilization(db: Session, cluster_id: int) -> dict:
     filters = _cluster_filters(cluster_id)
     row = db.query(
         _avg_expr("active_conditions_count", 1).label("avg_active_conditions"),
         _avg_expr("total_medications", 1).label("avg_medications"),
         _avg_expr("total_procedures", 1).label("avg_procedures"),
+        _avg_expr("days_since_last_encounter", 0).label("avg_days_since_encounter"),
+        _avg_expr("clinical_severity_score", 2).label("avg_clinical_severity_score"),
+        _avg_expr("routine_care_count", 1).label("avg_routine_care"),
+        _avg_expr("acute_care_count", 1).label("avg_acute_care"),
+        _avg_expr("wellness_count", 1).label("avg_wellness_care"),
+        _avg_expr("severe_care_count", 1).label("avg_severe_care"),
+        _avg_expr("distinct_providers_seen", 1).label("avg_distinct_providers"),
     ).filter(*filters).first()
 
+    keys = [
+        "avg_active_conditions", "avg_medications", "avg_procedures",
+        "avg_days_since_encounter", "avg_clinical_severity_score",
+        "avg_routine_care", "avg_acute_care", "avg_wellness_care",
+        "avg_severe_care", "avg_distinct_providers",
+    ]
     if not row:
-        return {"avg_active_conditions": 0.0, "avg_medications": 0.0, "avg_procedures": 0.0}
-    return {
-        "avg_active_conditions": float(row.avg_active_conditions or 0),
-        "avg_medications": float(row.avg_medications or 0),
-        "avg_procedures": float(row.avg_procedures or 0),
-    }
+        return {k: 0.0 for k in keys}
+    return {k: _f(row, k) for k in keys}
 
 
-def get_avg_routine_care(db: Session, cluster_id: int) -> float:
+def get_disease_prevalence(db: Session, cluster_id: int) -> dict:
     filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("routine_care_count", 1)).filter(*filters).scalar() or 0)
+    row = db.query(
+        _flag_pct_expr("has_diabetes", "Yes").label("diabetes_pct"),
+        _flag_pct_expr("has_hypertension", "Yes").label("hypertension_pct"),
+        _flag_pct_expr("has_heart_disease", "Yes").label("heart_disease_pct"),
+        _flag_pct_expr("has_cancer", "Yes").label("cancer_pct"),
+        _flag_pct_expr("has_respiratory_disease", "Yes").label("respiratory_pct"),
+        _flag_pct_expr("has_mental_health", "Yes").label("mental_health_pct"),
+        _flag_pct_expr("is_polypharmacy", "Yes").label("polypharmacy_pct"),
+    ).filter(*filters).first()
+
+    keys = [
+        "diabetes_pct", "hypertension_pct", "heart_disease_pct", "cancer_pct",
+        "respiratory_pct", "mental_health_pct", "polypharmacy_pct",
+    ]
+    if not row:
+        return {k: 0.0 for k in keys}
+    return {k: _f(row, k) for k in keys}
 
 
-def get_avg_acute_care(db: Session, cluster_id: int) -> float:
+def get_dominant_categoricals(db: Session, cluster_id: int) -> dict:
     filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("acute_care_count", 1)).filter(*filters).scalar() or 0)
+    row = db.query(
+        _mode_expr("dominant_careplan").label("dominant_careplan"),
+        _mode_expr("dominant_encounter_class").label("dominant_encounter_class"),
+        _mode_expr("marital").label("dominant_marital"),
+    ).filter(*filters).first()
 
+    keys = ["dominant_careplan", "dominant_encounter_class", "dominant_marital"]
+    if not row:
+        return {k: "N/A" for k in keys}
+    return {k: (getattr(row, k) or "N/A") for k in keys}
 
-def get_avg_wellness_care(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("wellness_count", 1)).filter(*filters).scalar() or 0)
-
-
-def get_avg_severe_care(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("severe_care_count", 1)).filter(*filters).scalar() or 0)
-
-
-def get_avg_distinct_providers(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_avg_expr("distinct_providers_seen", 1)).filter(*filters).scalar() or 0)
-
-
-# ---------------------------------------------------------------------------
-# Disease prevalence flags  (all return 0–100 %)
-# ---------------------------------------------------------------------------
-
-def get_diabetes_pct(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_flag_pct_expr("has_diabetes", "Yes")).filter(*filters).scalar() or 0)
-
-
-def get_hypertension_pct(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_flag_pct_expr("has_hypertension", "Yes")).filter(*filters).scalar() or 0)
-
-
-def get_heart_disease_pct(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_flag_pct_expr("has_heart_disease", "Yes")).filter(*filters).scalar() or 0)
-
-
-def get_cancer_pct(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_flag_pct_expr("has_cancer", "Yes")).filter(*filters).scalar() or 0)
-
-
-def get_respiratory_pct(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_flag_pct_expr("has_respiratory_disease", "Yes")).filter(*filters).scalar() or 0)
-
-
-def get_mental_health_pct(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_flag_pct_expr("has_mental_health", "Yes")).filter(*filters).scalar() or 0)
-
-
-def get_polypharmacy_pct(db: Session, cluster_id: int) -> float:
-    filters = _cluster_filters(cluster_id)
-    return float(db.query(_flag_pct_expr("is_polypharmacy", "Yes")).filter(*filters).scalar() or 0)
-
-
-# ---------------------------------------------------------------------------
-# Demographics distributions  (grouped queries — one round-trip per group)
-# ---------------------------------------------------------------------------
 
 def get_gender_distribution(db: Session, cluster_id: int) -> dict:
-    """{"F": float, "M": float} — percentages."""
+    """{"F": float, "M": float} percentages."""
     filters = _cluster_filters(cluster_id)
     row = db.query(
         _flag_pct_expr("gender", "F").label("female_pct"),
@@ -250,11 +153,11 @@ def get_gender_distribution(db: Session, cluster_id: int) -> dict:
     ).filter(*filters).first()
     if not row:
         return {"F": 0.0, "M": 0.0}
-    return {"F": float(row.female_pct or 0), "M": float(row.male_pct or 0)}
+    return {"F": _f(row, "female_pct"), "M": _f(row, "male_pct")}
 
 
 def get_marital_distribution(db: Session, cluster_id: int) -> dict:
-    """{"M": float, "S": float, "D": float, "W": float} — percentages."""
+    """{"M": married, "S": single, "D": divorced, "W": widowed} percentages."""
     filters = _cluster_filters(cluster_id)
     row = db.query(
         _flag_pct_expr("marital", "M").label("married"),
@@ -265,15 +168,14 @@ def get_marital_distribution(db: Session, cluster_id: int) -> dict:
     if not row:
         return {"M": 0.0, "S": 0.0, "D": 0.0, "W": 0.0}
     return {
-        "M": float(row.married or 0),
-        "S": float(row.single or 0),
-        "D": float(row.divorced or 0),
-        "W": float(row.widowed or 0),
+        "M": _f(row, "married"),
+        "S": _f(row, "single"),
+        "D": _f(row, "divorced"),
+        "W": _f(row, "widowed"),
     }
 
 
 def get_smoking_distribution(db: Session, cluster_id: int) -> dict:
-    """{"current": float, "former": float, "never": float} — percentages."""
     filters = _cluster_filters(cluster_id)
     row = db.query(
         _flag_pct_expr("smoking_status", "current").label("current"),
@@ -283,14 +185,13 @@ def get_smoking_distribution(db: Session, cluster_id: int) -> dict:
     if not row:
         return {"current": 0.0, "former": 0.0, "never": 0.0}
     return {
-        "current": float(row.current or 0),
-        "former": float(row.former or 0),
-        "never": float(row.never or 0),
+        "current": _f(row, "current"),
+        "former": _f(row, "former"),
+        "never": _f(row, "never"),
     }
 
 
 def get_condition_burden_distribution(db: Session, cluster_id: int) -> dict:
-    """{"none": float, "low": float, "moderate": float, "high": float, "very_high": float} — percentages."""
     filters = _cluster_filters(cluster_id)
     row = db.query(
         _flag_pct_expr("condition_burden", "none").label("none"),
@@ -302,42 +203,16 @@ def get_condition_burden_distribution(db: Session, cluster_id: int) -> dict:
     if not row:
         return {"none": 0.0, "low": 0.0, "moderate": 0.0, "high": 0.0, "very_high": 0.0}
     return {
-        "none": float(row.none or 0),
-        "low": float(row.low or 0),
-        "moderate": float(row.moderate or 0),
-        "high": float(row.high or 0),
-        "very_high": float(row.very_high or 0),
+        "none": _f(row, "none"),
+        "low": _f(row, "low"),
+        "moderate": _f(row, "moderate"),
+        "high": _f(row, "high"),
+        "very_high": _f(row, "very_high"),
     }
 
 
-# ---------------------------------------------------------------------------
-# Dominant categorical values
-# ---------------------------------------------------------------------------
-
-def get_dominant_careplan(db: Session, cluster_id: int) -> str:
-    filters = _cluster_filters(cluster_id)
-    return db.query(_mode_expr("dominant_careplan")).filter(*filters).scalar() or "N/A"
-
-
-def get_dominant_encounter_class(db: Session, cluster_id: int) -> str:
-    filters = _cluster_filters(cluster_id)
-    return db.query(_mode_expr("dominant_encounter_class")).filter(*filters).scalar() or "N/A"
-
-
-def get_dominant_marital(db: Session, cluster_id: int) -> str:
-    filters = _cluster_filters(cluster_id)
-    return db.query(_mode_expr("marital")).filter(*filters).scalar() or "N/A"
-
-
-# ---------------------------------------------------------------------------
-# Population-wide averages  (used as reference values in the AI prompt)
-# ---------------------------------------------------------------------------
-
 def get_population_stats(db: Session) -> dict:
-    """
-    Single query returning population averages and disease rates across all
-    non-outlier patients.  Used by get_ai_analysis for the comparison baseline.
-    """
+    """Averages & disease rates across non-outlier patients — baseline for AI prompts."""
     row = db.query(
         _avg_expr("age", 1).label("avg_age"),
         _avg_expr("avg_bmi", 1).label("avg_bmi"),

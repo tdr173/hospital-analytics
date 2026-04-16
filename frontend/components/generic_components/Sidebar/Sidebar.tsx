@@ -13,6 +13,7 @@ import GroupIcon from "@mui/icons-material/Group";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import EventNoteOutlinedIcon from "@mui/icons-material/EventNoteOutlined";
 import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
+import TimelineIcon from "@mui/icons-material/Timeline";
 
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -25,6 +26,7 @@ const sidebarElements = [
     forward: "/statistics",
   },
   { name: "Clusters", icon: Groups3Icon, forward: "/clusters" },
+  { name: "Sequences", icon: TimelineIcon, forward: "/sequences" },
   { name: "Patients", icon: GroupIcon, forward: "/patients" },
   { name: "Encounters", icon: EventNoteOutlinedIcon, forward: "/encounters" },
   { name: "Providers", icon: BadgeOutlinedIcon, forward: "/providers" },

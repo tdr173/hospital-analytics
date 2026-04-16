@@ -10,6 +10,7 @@ import {
   CarePlanItem,
   EncounterItem,
 } from "@/models/generic/patients";
+import { SequenceListItem } from "@/models/generic/sequences";
 import {
   fetchPatientDetail,
   fetchPatientSummary,
@@ -20,6 +21,7 @@ import {
   fetchPatientAllergies,
   fetchPatientCareplans,
   fetchPatientEncounters,
+  fetchPatientSequences,
 } from "./thunks";
 
 interface CurrentPatientState {
@@ -32,6 +34,7 @@ interface CurrentPatientState {
   allergies: AllergyItem[];
   careplans: CarePlanItem[];
   encounters: EncounterItem[];
+  sequences: SequenceListItem[];
   loading: boolean;
   error: string | null;
   loadedTabs: number[];
@@ -47,6 +50,7 @@ const initialState: CurrentPatientState = {
   allergies: [],
   careplans: [],
   encounters: [],
+  sequences: [],
   loading: false,
   error: null,
   loadedTabs: [],
@@ -138,6 +142,14 @@ const currentPatientSlice = createSlice({
       })
       .addCase(fetchPatientEncounters.rejected, (state) => {
         addTab(state, 6);
+      })
+      // Sequences (tab 7)
+      .addCase(fetchPatientSequences.fulfilled, (state, action) => {
+        state.sequences = action.payload;
+        addTab(state, 7);
+      })
+      .addCase(fetchPatientSequences.rejected, (state) => {
+        addTab(state, 7);
       });
   },
 });

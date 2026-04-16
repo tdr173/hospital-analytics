@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 
 from domain.models.patient_model import PatientModel
+from repository.statistics_repository._common import with_percentage
 
 
 class PatientRepository:
@@ -33,19 +34,19 @@ class PatientRepository:
             .order_by(age_group)
             .all()
         )
-        return self._with_percentage(rows, total)
+        return with_percentage(rows, total)
 
     def get_gender_distribution(self, total: Optional[int] = None):
-        return self._get_categorical_distribution(PatientModel.gender, total)
+        return self._categorical_distribution(PatientModel.gender, total)
 
     def get_race_distribution(self, total: Optional[int] = None):
-        return self._get_categorical_distribution(PatientModel.race, total)
+        return self._categorical_distribution(PatientModel.race, total)
 
     def get_ethnicity_distribution(self, total: Optional[int] = None):
-        return self._get_categorical_distribution(PatientModel.ethnicity, total)
+        return self._categorical_distribution(PatientModel.ethnicity, total)
 
     def get_marital_status_distribution(self, total: Optional[int] = None):
-        return self._get_categorical_distribution(PatientModel.marital, total)
+        return self._categorical_distribution(PatientModel.marital, total)
 
     def get_vital_status(self, total: Optional[int] = None):
         if total is None:
@@ -64,7 +65,7 @@ class PatientRepository:
             .group_by(vital_label)
             .all()
         )
-        return self._with_percentage(rows, total)
+        return with_percentage(rows, total)
 
     def get_top_cities(self, total: Optional[int] = None):
         if total is None:
@@ -82,7 +83,7 @@ class PatientRepository:
 
         top_9 = rows[:9]
         others_count = sum(row.count for row in rows[9:])
-        result = self._with_percentage(top_9, total)
+        result = with_percentage(top_9, total)
 
         if others_count > 0:
             result.append({
@@ -93,7 +94,7 @@ class PatientRepository:
 
         return result
 
-    def _get_categorical_distribution(self, column, total: Optional[int] = None):
+    def _categorical_distribution(self, column, total: Optional[int] = None):
         if total is None:
             total = self.get_total_patients()
 
@@ -106,15 +107,4 @@ class PatientRepository:
             .order_by(func.count(PatientModel.patient_id).desc())
             .all()
         )
-        return self._with_percentage(rows, total)
-
-    @staticmethod
-    def _with_percentage(rows, total):
-        return [
-            {
-                "label": row.label,
-                "count": row.count,
-                "percentage": round(row.count * 100.0 / total, 2) if total else 0,
-            }
-            for row in rows
-        ]
+        return with_percentage(rows, total)

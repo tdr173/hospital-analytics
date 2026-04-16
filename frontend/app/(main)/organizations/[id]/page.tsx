@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
-import { useState } from "react";
 
 import { RootState, AppDispatch } from "@/store";
 import {
@@ -17,162 +16,24 @@ import {
   resetCurrentOrganization,
   setEncountersPage,
 } from "@/store/slices/organizations/current-organization-slice";
-import { OrganizationProviderItem, OrganizationEncounterItem } from "@/models/generic/organizations";
 
 import useClasses from "@/utils/useClasses";
 import { OrganizationDetailPageStyles } from "./styles";
-import { clearName, formatDate } from "@/utils/functions";
 import theme from "@/utils/theme";
 
+import ProvidersTab from "./components/ProvidersTab/ProvidersTab";
+import EncountersTab from "./components/EncountersTab/EncountersTab";
+
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
-
-const ENCOUNTER_CLASS_LABELS: Record<string, string> = {
-  inpatient: "Inpatient",
-  ambulatory: "Ambulatory",
-  wellness: "Wellness",
-  emergency: "Emergency",
-  urgentcare: "Urgent Care",
-};
-
 const ENC_ROWS = 25;
-
-function GenderBadge({ gender, classes }: { gender: string | null; classes: any }) {
-  if (!gender) return <span className={classes.genderBadgeEmpty}>-</span>;
-  const isFemale = gender === "F";
-  return (
-    <span className={isFemale ? classes.genderBadgeFemale : classes.genderBadgeMale}>
-      {isFemale ? "F" : "M"}
-    </span>
-  );
-}
-
-function ProvidersTab({
-  data,
-  loading,
-  classes,
-  onProviderClick,
-}: {
-  data: OrganizationProviderItem[];
-  loading: boolean;
-  classes: any;
-  onProviderClick: (id: string) => void;
-}) {
-  if (loading) return <div className={classes.tabLoading}>Loading providers...</div>;
-  if (!data.length) return <div className={classes.emptyState}>No providers found.</div>;
-
-  return (
-    <div style={{ overflow: "auto", flex: 1 }}>
-      <div className={`${classes.gridRow} ${classes.providersGridRow} ${classes.headerRow}`}>
-        <div>Name</div>
-        <div>Speciality</div>
-        <div>Gender</div>
-        <div style={{ textAlign: "right" }}>Utilization</div>
-      </div>
-      {data.map((p, i) => (
-        <div
-          key={p.providerId}
-          className={`${classes.gridRow} ${classes.providersGridRow} ${classes.dataRow} ${i % 2 === 0 ? classes.rowEven : classes.rowOdd}`}
-        >
-          <div className={classes.clickableCell} onClick={() => onProviderClick(p.providerId)}>
-            {clearName(p.firstName, p.lastName)}
-          </div>
-          <div className={classes.secondaryText}>{p.speciality ?? "—"}</div>
-          <div><GenderBadge gender={p.gender} classes={classes} /></div>
-          <div style={{ textAlign: "right", color: theme.colors.text.secondary }}>{p.utilization}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function EncountersTab({
-  data,
-  total,
-  page,
-  loading,
-  classes,
-  onPatientClick,
-  onProviderClick,
-  onPageChange,
-}: {
-  data: OrganizationEncounterItem[];
-  total: number;
-  page: number;
-  loading: boolean;
-  classes: any;
-  onPatientClick: (id: string) => void;
-  onProviderClick: (id: string) => void;
-  onPageChange: (page: number) => void;
-}) {
-  const totalPages = Math.ceil(total / ENC_ROWS);
-
-  if (loading) return <div className={classes.tabLoading}>Loading encounters...</div>;
-  if (!data.length) return <div className={classes.emptyState}>No encounters recorded.</div>;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden" }}>
-      <div style={{ overflow: "auto", flex: 1 }}>
-        <div className={`${classes.gridRow} ${classes.encountersGridRow} ${classes.headerRow}`}>
-          <div>Patient</div>
-          <div>Provider</div>
-          <div>Date</div>
-          <div>Class</div>
-          <div>Description</div>
-          <div>Duration</div>
-        </div>
-        {data.map((r, i) => (
-          <div
-            key={r.encounterId}
-            className={`${classes.gridRow} ${classes.encountersGridRow} ${classes.dataRow} ${i % 2 === 0 ? classes.rowEven : classes.rowOdd}`}
-          >
-            <div className={classes.clickableCell} onClick={() => onPatientClick(r.patientId)}>
-              {r.patientName}
-            </div>
-            <div className={classes.clickableCell} onClick={() => onProviderClick(r.providerId)}>
-              {r.providerName}
-            </div>
-            <div className={classes.secondaryText}>{formatDate(r.startDate)}</div>
-            <div>
-              <span className={classes.encounterTypeBadge}>
-                {ENCOUNTER_CLASS_LABELS[r.encounterClass] ?? r.encounterClass}
-              </span>
-            </div>
-            <div className={classes.secondaryText}>{r.description}</div>
-            <div className={classes.secondaryText}>
-              {r.duration != null ? `${Math.round(r.duration)} min` : "—"}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className={classes.encPaginationRow}>
-        <span>
-          {(page - 1) * ENC_ROWS + 1}–{Math.min(page * ENC_ROWS, total)} of {total}
-        </span>
-        <button
-          className={classes.encPaginationBtn}
-          onClick={() => onPageChange(page - 1)}
-          disabled={page <= 1}
-        >
-          Prev
-        </button>
-        <button
-          className={classes.encPaginationBtn}
-          onClick={() => onPageChange(page + 1)}
-          disabled={page >= totalPages}
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  );
-}
 
 export default function OrganizationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const classes = useClasses(OrganizationDetailPageStyles, { name: "OrganizationDetailPage" });
+  const classes = useClasses(OrganizationDetailPageStyles, {
+    name: "OrganizationDetailPage",
+  });
 
   const {
     organization,
@@ -198,8 +59,10 @@ export default function OrganizationDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    dispatch(fetchOrganizationEncounters({ organizationId: id, page: encountersPage, rows: ENC_ROWS }));
-  }, [encountersPage]);
+    dispatch(
+      fetchOrganizationEncounters({ organizationId: id, page: encountersPage, rows: ENC_ROWS }),
+    );
+  }, [id, encountersPage, dispatch]);
 
   const handleEncountersPageChange = (newPage: number) => {
     dispatch(setEncountersPage(newPage));
@@ -208,9 +71,10 @@ export default function OrganizationDetailPage() {
   if (loading) {
     return <div className={classes.pageLoading}>Loading organization data...</div>;
   }
-
   if (error || !organization) {
-    return <div className={classes.pageError}>{error ?? "Organization not found."}</div>;
+    return (
+      <div className={classes.pageError}>{error ?? "Organization not found."}</div>
+    );
   }
 
   const details = [
@@ -225,9 +89,7 @@ export default function OrganizationDetailPage() {
           <p className={classes.profileLabel}>Organization Profile</p>
           <h1 className={classes.orgFullName}>{organization.name ?? "Unknown"}</h1>
           <div className={classes.badgesRow}>
-            {organization.city && (
-              <span className={classes.badge}>{organization.city}</span>
-            )}
+            {organization.city && <span className={classes.badge}>{organization.city}</span>}
           </div>
         </div>
 
@@ -275,7 +137,6 @@ export default function OrganizationDetailPage() {
             <ProvidersTab
               data={providers}
               loading={providersLoading}
-              classes={classes}
               onProviderClick={(pid) => router.push(`/providers/${pid}`)}
             />
           )}
@@ -284,8 +145,8 @@ export default function OrganizationDetailPage() {
               data={encounters}
               total={encountersTotal}
               page={encountersPage}
+              rows={ENC_ROWS}
               loading={encloading}
-              classes={classes}
               onPatientClick={(pid) => router.push(`/patients/${pid}`)}
               onProviderClick={(pid) => router.push(`/providers/${pid}`)}
               onPageChange={handleEncountersPageChange}

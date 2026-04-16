@@ -1,0 +1,98 @@
+import { Theme } from "@/utils/theme";
+
+export const ClusterDetailHeaderStyles = (theme: Theme) => ({
+  card: {
+    backgroundColor: theme.colors.surface.containerLowest,
+    borderRadius: theme.borderRadius.lg,
+    boxShadow: theme.shadows.md,
+    borderLeft: "4px solid transparent",
+    padding: `${theme.spacing.lg} ${theme.spacing.xl}`,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: theme.spacing.md,
+  },
+  topRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: theme.spacing.md,
+  },
+  titleArea: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "4px",
+    minWidth: 0,
+  },
+  label: {
+    fontSize: "0.7rem",
+    fontWeight: theme.typography.fontWeight.semibold,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.08em",
+    margin: 0,
+  },
+  title: {
+    fontFamily: theme.typography.fontFamilyHeading,
+    fontWeight: theme.typography.fontWeight.bold,
+    fontSize: "1.5rem",
+    color: theme.colors.text.primary,
+    margin: 0,
+    lineHeight: theme.typography.lineHeight.tight,
+  },
+  description: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.primary,
+    lineHeight: theme.typography.lineHeight.relaxed,
+    margin: 0,
+  },
+  badge: {
+    flexShrink: 0,
+    borderRadius: theme.borderRadius.md,
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    textAlign: "center" as const,
+    minWidth: "80px",
+  },
+  badgePercentage: {
+    fontWeight: theme.typography.fontWeight.bold,
+    fontSize: theme.typography.fontSize.lg,
+    lineHeight: 1.1,
+  },
+  badgeLabel: {
+    fontSize: "0.6rem",
+    fontWeight: theme.typography.fontWeight.semibold,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.06em",
+    lineHeight: 1.4,
+    marginTop: "2px",
+  },
+  badgeCount: {
+    fontSize: "0.7rem",
+    color: theme.colors.text.secondary,
+    marginTop: "2px",
+  },
+  chipsRow: {
+    display: "flex",
+    flexWrap: "wrap" as const,
+    gap: theme.spacing.sm,
+  },
+  chip: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: `4px ${theme.spacing.sm}`,
+    backgroundColor: theme.colors.surface.containerLow,
+    border: `1px solid ${theme.colors.border.light}`,
+    borderRadius: theme.borderRadius.sm,
+    fontSize: "0.75rem",
+    color: theme.colors.text.primary,
+  },
+  chipLabel: {
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.secondary,
+    textTransform: "uppercase" as const,
+    fontSize: "0.65rem",
+    letterSpacing: "0.06em",
+  },
+  chipValue: {
+    fontWeight: theme.typography.fontWeight.semibold,
+  },
+});

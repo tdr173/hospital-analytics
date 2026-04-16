@@ -16,27 +16,22 @@ import StyledTable, {
   StyledTableRow,
   bodyCellSx,
 } from "@/components/generic_components/StyledTable/StyledTable";
-import StyledInput from "@/components/generic_components/StyledInput/StyledInput";
-import SearchIcon from "@mui/icons-material/Search";
-import StyledMultiDropdown from "@/components/generic_components/StyledMultiDropdown/StyledMultiDropdown";
 import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
-import StyledButton from "@/components/generic_components/StyledButton/StyledButton";
 import useClasses from "@/utils/useClasses";
 import { PatientsPageStyles } from "./styles";
 import theme from "@/utils/theme";
 import { clearName } from "@/utils/functions";
 
+import GenderBadge from "./components/GenderBadge/GenderBadge";
+import StatusBadge from "./components/StatusBadge/StatusBadge";
+import ClusterBadge from "./components/ClusterBadge/ClusterBadge";
+import PatientFilters from "./components/PatientFilters/PatientFilters";
+
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
 const COLUMNS = [
   { key: "lastName", label: "Name", sortable: true, width: 210 },
-  {
-    key: "age",
-    label: "Age",
-    sortable: true,
-    width: 60,
-    align: "right" as const,
-  },
+  { key: "age", label: "Age", sortable: true, width: 60, align: "right" as const },
   { key: "gender", label: "Gender", width: 80 },
   { key: "city", label: "City", sortable: true, width: 150 },
   { key: "race", label: "Race / Ethnicity", width: 190 },
@@ -44,63 +39,6 @@ const COLUMNS = [
   { key: "status", label: "Status", width: 100 },
   { key: "cluster", label: "Cluster", width: 160 },
 ];
-
-function GenderBadge({
-  gender,
-  classes,
-}: {
-  gender: string | null;
-  classes: any;
-}) {
-  if (!gender) return <span className={classes.genderBadgeEmpty}>-</span>;
-  const isFemale = gender === "F";
-  return (
-    <span
-      className={isFemale ? classes.genderBadgeFemale : classes.genderBadgeMale}
-    >
-      {isFemale ? "F" : "M"}
-    </span>
-  );
-}
-
-function StatusBadge({
-  deathdate,
-  classes,
-}: {
-  deathdate: string | null;
-  classes: any;
-}) {
-  const alive = !deathdate;
-  return (
-    <span
-      className={alive ? classes.statusBadgeAlive : classes.statusBadgeDeceased}
-    >
-      {alive ? "Alive" : "Deceased"}
-    </span>
-  );
-}
-
-function ClusterBadge({
-  color,
-  title,
-  classes,
-}: {
-  color: string | null;
-  title: string | null;
-  classes: any;
-}) {
-  if (!color || !title)
-    return <span className={classes.clusterBadgeEmpty}>-</span>;
-  return (
-    <span className={classes.clusterBadgeContainer}>
-      <span
-        className={classes.clusterBadgeDot}
-        style={{ backgroundColor: color }}
-      />
-      <TruncatedText text={title} />
-    </span>
-  );
-}
 
 function PatientsPageContent() {
   const searchParams = useSearchParams();
@@ -114,7 +52,7 @@ function PatientsPageContent() {
 
   useEffect(() => {
     if (!resources) dispatch(fetchPatientResources());
-  }, []);
+  }, [dispatch, resources]);
 
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const rows = parseInt(searchParams.get("rows") ?? "25", 10);
@@ -136,7 +74,7 @@ function PatientsPageContent() {
         sortType,
       }),
     );
-  }, [searchParams, page, rows, sortBy, sortType]);
+  }, [searchParams, page, rows, sortBy, sortType, dispatch]);
 
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [gender, setGender] = useState<string[]>(
@@ -155,10 +93,7 @@ function PatientsPageContent() {
     searchParams.get("marital")?.split(",").filter(Boolean) ?? [],
   );
 
-  const setParam = (
-    updates: Record<string, string | null>,
-    resetPage = true,
-  ) => {
+  const setParam = (updates: Record<string, string | null>, resetPage = true) => {
     const p = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([k, v]) => {
       if (v) p.set(k, v);
@@ -176,6 +111,28 @@ function PatientsPageContent() {
 
   const handleRowsPerPageChange = (newRows: number) =>
     setParam({ rows: newRows.toString(), page: "1" }, false);
+
+  const applyFilters = () => {
+    const p = new URLSearchParams(searchParams.toString());
+    const strFilters: Record<string, string> = { search };
+    const arrFilters: Record<string, string[]> = {
+      gender,
+      ageGroup,
+      status,
+      race,
+      marital,
+    };
+    Object.entries(strFilters).forEach(([k, v]) => {
+      if (v) p.set(k, v);
+      else p.delete(k);
+    });
+    Object.entries(arrFilters).forEach(([k, v]) => {
+      if (v.length) p.set(k, v.join(","));
+      else p.delete(k);
+    });
+    p.set("page", "1");
+    router.push(`/patients?${p.toString()}`);
+  };
 
   const renderRow = (p: PatientListItem, i: number) => (
     <StyledTableRow
@@ -196,61 +153,29 @@ function PatientsPageContent() {
         {p.age}
       </TableCell>
       <TableCell sx={bodyCellSx}>
-        <GenderBadge gender={p.gender} classes={classes} />
+        <GenderBadge gender={p.gender} />
       </TableCell>
       <TableCell sx={bodyCellSx}>
         <TruncatedText text={p.city ?? "-"} />
       </TableCell>
       <TableCell sx={bodyCellSx}>
         <TruncatedText
-          text={
-            p.race ? (p.ethnicity ? `${p.race} · ${p.ethnicity}` : p.race) : "-"
-          }
+          text={p.race ? (p.ethnicity ? `${p.race} · ${p.ethnicity}` : p.race) : "-"}
         />
       </TableCell>
       <TableCell sx={bodyCellSx}>
         {p.marital
-          ? (resources?.maritalStatuses.find((o) => o.value === p.marital)
-              ?.label ?? p.marital)
+          ? (resources?.maritalStatuses.find((o) => o.value === p.marital)?.label ?? p.marital)
           : "-"}
       </TableCell>
       <TableCell sx={bodyCellSx}>
-        <StatusBadge deathdate={p.deathdate} classes={classes} />
+        <StatusBadge deathdate={p.deathdate} />
       </TableCell>
       <TableCell sx={bodyCellSx}>
-        <ClusterBadge
-          color={p.clusterColor}
-          title={p.clusterTitle}
-          classes={classes}
-        />
+        <ClusterBadge color={p.clusterColor} title={p.clusterTitle} />
       </TableCell>
     </StyledTableRow>
   );
-
-  const handleSearch = () => {
-    const p = new URLSearchParams(searchParams.toString());
-    const strFilters: Record<string, string> = { search };
-    const arrFilters: Record<string, string[]> = {
-      gender,
-      ageGroup,
-      status,
-      race,
-      marital,
-    };
-
-    Object.entries(strFilters).forEach(([k, v]) => {
-      if (v) p.set(k, v);
-      else p.delete(k);
-    });
-
-    Object.entries(arrFilters).forEach(([k, v]) => {
-      if (v.length) p.set(k, v.join(","));
-      else p.delete(k);
-    });
-
-    p.set("page", "1");
-    router.push(`/patients?${p.toString()}`);
-  };
 
   if (resourcesLoading || !resources) {
     return <div className={classes.loading}>Loading...</div>;
@@ -258,95 +183,22 @@ function PatientsPageContent() {
 
   return (
     <div className={classes.pageContainer}>
-      <div className={classes.filterBar}>
-        <StyledInput
-          label="Search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search patients by name"
-          startIcon={
-            <SearchIcon sx={{ fontSize: "1.1rem", color: "#6b7280" }} />
-          }
-          clearIcon
-          onClear={() => setSearch("")}
-          height={36}
-        />
-
-        <StyledMultiDropdown
-          label="Gender"
-          value={gender}
-          onChange={(v) => setGender(v as string[])}
-          onClear={() => setGender([])}
-          options={resources.genders}
-          placeholder="All"
-          width={"auto"}
-        />
-
-        <StyledMultiDropdown
-          label="Age Group"
-          value={ageGroup}
-          onChange={(v) => setAgeGroup(v as string[])}
-          onClear={() => setAgeGroup([])}
-          options={resources.ageGroups}
-          placeholder="All"
-          width={"auto"}
-        />
-
-        <StyledMultiDropdown
-          label="Status"
-          value={status}
-          onChange={(v) => setStatus(v as string[])}
-          onClear={() => setStatus([])}
-          options={resources.statuses}
-          placeholder="All"
-          width={"auto"}
-        />
-
-        <StyledMultiDropdown
-          label="Race"
-          value={race}
-          onChange={(v) => setRace(v as string[])}
-          onClear={() => setRace([])}
-          options={resources.races}
-          placeholder="All"
-          width={"auto"}
-        />
-
-        <StyledMultiDropdown
-          label="Marital"
-          value={marital}
-          onChange={(v) => setMarital(v as string[])}
-          onClear={() => setMarital([])}
-          options={resources.maritalStatuses}
-          placeholder="All"
-          width={"auto"}
-        />
-
-        <StyledButton
-          onClick={() => handleSearch()}
-          sx={{
-            width: "100%",
-            alignSelf: "flex-end",
-            background: theme.colors.button.primary,
-            boxShadow: "none",
-            border: "none",
-            color: "#ffffff",
-            height: "36px !important",
-            "&:hover": {
-              background: theme.colors.button.primaryHover,
-              boxShadow: "none",
-              transform: "none",
-            },
-            "&:active": {
-              background: theme.colors.button.primaryActive,
-              boxShadow: "none",
-              transform: "none",
-            },
-          }}
-        >
-          Search
-        </StyledButton>
-      </div>
+      <PatientFilters
+        resources={resources}
+        search={search}
+        gender={gender}
+        ageGroup={ageGroup}
+        status={status}
+        race={race}
+        marital={marital}
+        onSearchChange={setSearch}
+        onGenderChange={setGender}
+        onAgeGroupChange={setAgeGroup}
+        onStatusChange={setStatus}
+        onRaceChange={setRace}
+        onMaritalChange={setMarital}
+        onApply={applyFilters}
+      />
 
       <div className={classes.tableArea}>
         <StyledTable

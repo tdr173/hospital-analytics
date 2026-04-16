@@ -29,12 +29,17 @@ def save_sequence_results(
     format_pattern,            # callable(pattern, id_to_item) → str
     overwrite: bool = True,
 ) -> None:
-    with engine.connect() as conn:
+    n_sequences = len(patient_ids)
+    total_junction_rows = 0
+
+    # engine.begin() opens a transaction and commits on successful exit,
+    # rolls back on any exception. All deletes and inserts run atomically:
+    # a failure mid-save leaves the tables exactly as they were before.
+    with engine.begin() as conn:
         if overwrite:
+            # junction must be cleared first — it references prefix_span_pattern(id).
             conn.execute(text("DELETE FROM prefix_span_patient_pattern"))
             conn.execute(text("DELETE FROM prefix_span_pattern"))
-
-        n_sequences = len(patient_ids)
 
         for rank, (sup, pat, seq_ids) in enumerate(patterns, start=1):
             pattern_str = format_pattern(pat, id_to_item)
@@ -59,9 +64,15 @@ def save_sequence_results(
             )
             pattern_id = result.fetchone()[0]
 
+            # Deduplicate seq_ids defensively so the junction never ends up
+            # with duplicate (pattern_id, patient_id) pairs when the same
+            # patient is mapped to multiple internal sequence ids (shouldn't
+            # happen in normal runs, but is cheap insurance).
+            unique_seq_ids = set(seq_ids)
             junction_rows = [
                 {"pattern_id": pattern_id, "patient_id": patient_ids[sid]}
-                for sid in seq_ids
+                for sid in unique_seq_ids
+                if patient_ids[sid] is not None
             ]
             if junction_rows:
                 conn.execute(
@@ -72,5 +83,9 @@ def save_sequence_results(
                     """),
                     junction_rows,
                 )
+                total_junction_rows += len(junction_rows)
 
-        conn.commit()
+    print(
+        f"saved {len(patterns)} patterns and {total_junction_rows} junction rows "
+        f"(overwrite={overwrite})"
+    )

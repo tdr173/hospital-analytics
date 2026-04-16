@@ -1,17 +1,19 @@
-from typing import Optional
+from typing import Callable, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, or_, cast, case, Numeric, literal
+from sqlalchemy import func, and_, or_, cast, Numeric, literal
 
 from domain import (
     PatientModel, ClusterPatientModel, ClusterModel,
     EncounterModel, ProviderModel, OrganizationModel,
     ConditionModel, MedicationModel, ProcedureModel, ImmunizationModel, AllergyModel,
     ObservationModel, CarePlanModel,
+    PrefixSpanPatternModel, PrefixSpanPatientPatternModel,
     PatientListItem, PatientListResponse, PatientDetailResponse,
     PatientSummaryResponse, ConditionItem, MedicationItem,
     ProcedureItem, ImmunizationItem, AllergyItem, CarePlanItem, EncounterItem,
-    FilterOption, PatientResourcesResponse,
+    FilterOption, PatientResourcesResponse, SequenceListItem,
 )
+from repository._helpers import provider_name_col, clamp_page_size
 
 SORT_COL_MAP = {
     "last_name": PatientModel.last_name,
@@ -31,6 +33,25 @@ AGE_GROUP_RANGES = {
     "elderly":      (70, 999),
 }
 
+_LIST_COLS = [
+    PatientModel.patient_id,
+    PatientModel.first_name,
+    PatientModel.last_name,
+    PatientModel.age,
+    PatientModel.gender,
+    PatientModel.city,
+    PatientModel.race,
+    PatientModel.ethnicity,
+    PatientModel.marital,
+    PatientModel.birthdate,
+    PatientModel.deathdate,
+]
+
+_DETAIL_COLS = _LIST_COLS + [
+    PatientModel.latitude,
+    PatientModel.longitude,
+]
+
 
 class PatientRepository:
     def __init__(self, db: Session):
@@ -38,6 +59,38 @@ class PatientRepository:
 
     def _has_cluster_data(self) -> bool:
         return self.db.query(ClusterPatientModel).count() > 0
+
+    def _patient_query_with_cluster(self, base_cols: list):
+        if self._has_cluster_data():
+            return (
+                self.db.query(
+                    *base_cols,
+                    ClusterPatientModel.cluster_label,
+                    ClusterModel.title.label("cluster_title"),
+                    ClusterModel.color.label("cluster_color"),
+                )
+                .outerjoin(
+                    ClusterPatientModel,
+                    ClusterPatientModel.patient_id == PatientModel.patient_id,
+                )
+                .outerjoin(
+                    ClusterModel,
+                    ClusterModel.cluster_label == ClusterPatientModel.cluster_label,
+                )
+            )
+        return self.db.query(
+            *base_cols,
+            literal(None).label("cluster_label"),
+            literal(None).label("cluster_title"),
+            literal(None).label("cluster_color"),
+        )
+
+    @staticmethod
+    def _cached_or_scalar(features: dict, key: str, query_fn: Callable):
+        cached = features.get(key)
+        if cached is not None:
+            return cached
+        return query_fn()
 
     def get_patients(
         self,
@@ -54,10 +107,11 @@ class PatientRepository:
         sort_type: str,
     ) -> PatientListResponse:
         sort_col = SORT_COL_MAP.get(sort_by, PatientModel.last_name)
-        if sort_type.lower() == "asc":
-            sort_expr = sort_col.asc().nulls_last()
-        else:
-            sort_expr = sort_col.desc().nulls_last()
+        sort_expr = (
+            sort_col.asc().nulls_last()
+            if sort_type.lower() == "asc"
+            else sort_col.desc().nulls_last()
+        )
 
         filters = []
 
@@ -104,53 +158,12 @@ class PatientRepository:
         if city:
             filters.append(PatientModel.city.ilike(f"%{city}%"))
 
-        # Total count (without cluster join)
         total = self.db.query(func.count(PatientModel.patient_id)).filter(*filters).scalar() or 0
 
-        # Cluster join (safe even when no clustering data exists — outerjoin returns NULLs)
-        base_cols = [
-            PatientModel.patient_id,
-            PatientModel.first_name,
-            PatientModel.last_name,
-            PatientModel.age,
-            PatientModel.gender,
-            PatientModel.city,
-            PatientModel.race,
-            PatientModel.ethnicity,
-            PatientModel.marital,
-            PatientModel.birthdate,
-            PatientModel.deathdate,
-        ]
-
-        if self._has_cluster_data():
-            query = (
-                self.db.query(
-                    *base_cols,
-                    ClusterPatientModel.cluster_label,
-                    ClusterModel.title.label("cluster_title"),
-                    ClusterModel.color.label("cluster_color"),
-                )
-                .outerjoin(
-                    ClusterPatientModel,
-                    ClusterPatientModel.patient_id == PatientModel.patient_id,
-                )
-                .outerjoin(
-                    ClusterModel,
-                    ClusterModel.cluster_label == ClusterPatientModel.cluster_label,
-                )
-            )
-        else:
-            query = self.db.query(
-                *base_cols,
-                literal(None).label("cluster_label"),
-                literal(None).label("cluster_title"),
-                literal(None).label("cluster_color"),
-            )
-
-        # Paginated data
+        rows = clamp_page_size(rows)
         offset = (page - 1) * rows
         rows_data = (
-            query
+            self._patient_query_with_cluster(_LIST_COLS)
             .filter(*filters)
             .order_by(sort_expr)
             .limit(rows)
@@ -162,80 +175,35 @@ class PatientRepository:
         return PatientListResponse(items=items, total=total)
 
     def get_patient(self, patient_id: str) -> PatientDetailResponse:
-        base_cols = [
-            PatientModel.patient_id,
-            PatientModel.first_name,
-            PatientModel.last_name,
-            PatientModel.age,
-            PatientModel.gender,
-            PatientModel.city,
-            PatientModel.race,
-            PatientModel.ethnicity,
-            PatientModel.marital,
-            PatientModel.birthdate,
-            PatientModel.deathdate,
-            PatientModel.latitude,
-            PatientModel.longitude,
-        ]
-
-        if self._has_cluster_data():
-            query = (
-                self.db.query(
-                    *base_cols,
-                    ClusterPatientModel.cluster_label,
-                    ClusterModel.title.label("cluster_title"),
-                    ClusterModel.color.label("cluster_color"),
-                )
-                .outerjoin(
-                    ClusterPatientModel,
-                    ClusterPatientModel.patient_id == PatientModel.patient_id,
-                )
-                .outerjoin(
-                    ClusterModel,
-                    ClusterModel.cluster_label == ClusterPatientModel.cluster_label,
-                )
-            )
-        else:
-            query = self.db.query(
-                *base_cols,
-                literal(None).label("cluster_label"),
-                literal(None).label("cluster_title"),
-                literal(None).label("cluster_color"),
-            )
-
-        row = query.filter(PatientModel.patient_id == patient_id).first()
-
+        row = (
+            self._patient_query_with_cluster(_DETAIL_COLS)
+            .filter(PatientModel.patient_id == patient_id)
+            .first()
+        )
         if not row:
             raise ValueError(f"Patient {patient_id} not found")
-
         return PatientDetailResponse(**row._asdict())
 
     def get_patient_summary(self, patient_id: str) -> PatientSummaryResponse:
-        f = {}
         cp = (
             self.db.query(ClusterPatientModel)
             .filter(ClusterPatientModel.patient_id == patient_id)
             .first()
         )
-        if cp and cp.features:
-            f = cp.features
+        f = cp.features if cp and cp.features else {}
 
-        # Use pre-computed values when available, otherwise query DB
-        qaly = f.get("qaly")
-        if qaly is None:
-            qaly = (
-                self.db.query(ObservationModel.value_numeric)
-                .filter(
-                    ObservationModel.patient_id == patient_id,
-                    ObservationModel.description == 'QALY',
-                )
-                .order_by(ObservationModel.date.desc())
-                .limit(1)
-                .scalar()
+        qaly = self._cached_or_scalar(f, "qaly", lambda: (
+            self.db.query(ObservationModel.value_numeric)
+            .filter(
+                ObservationModel.patient_id == patient_id,
+                ObservationModel.description == 'QALY',
             )
+            .order_by(ObservationModel.date.desc())
+            .limit(1)
+            .scalar()
+        ))
 
-        avg_bmi = f.get("avg_bmi")
-        if avg_bmi is None:
+        def _avg_bmi():
             bmi_subq = (
                 self.db.query(ObservationModel.value_numeric)
                 .filter(
@@ -247,55 +215,49 @@ class PatientRepository:
                 .limit(5)
                 .subquery()
             )
-            avg_bmi = self.db.query(
+            return self.db.query(
                 func.round(cast(func.avg(bmi_subq.c.value_numeric), Numeric), 1)
             ).scalar()
 
-        active_conditions = f.get("active_conditions_count")
-        if active_conditions is None:
-            active_conditions = (
-                self.db.query(func.count(ConditionModel.id))
-                .filter(
-                    ConditionModel.patient_id == patient_id,
-                    ConditionModel.end_date.is_(None),
-                )
-                .scalar()
-            )
+        avg_bmi = self._cached_or_scalar(f, "avg_bmi", _avg_bmi)
 
-        total_medications = f.get("total_medications")
-        if total_medications is None:
-            total_medications = (
-                self.db.query(func.count(MedicationModel.id))
-                .filter(MedicationModel.patient_id == patient_id)
-                .scalar()
+        active_conditions = self._cached_or_scalar(f, "active_conditions_count", lambda: (
+            self.db.query(func.count(ConditionModel.id))
+            .filter(
+                ConditionModel.patient_id == patient_id,
+                ConditionModel.end_date.is_(None),
             )
+            .scalar()
+        ))
 
-        total_procedures = f.get("total_procedures")
-        if total_procedures is None:
-            total_procedures = (
-                self.db.query(func.count(ProcedureModel.id))
-                .filter(ProcedureModel.patient_id == patient_id)
-                .scalar()
+        total_medications = self._cached_or_scalar(f, "total_medications", lambda: (
+            self.db.query(func.count(MedicationModel.id))
+            .filter(MedicationModel.patient_id == patient_id)
+            .scalar()
+        ))
+
+        total_procedures = self._cached_or_scalar(f, "total_procedures", lambda: (
+            self.db.query(func.count(ProcedureModel.id))
+            .filter(ProcedureModel.patient_id == patient_id)
+            .scalar()
+        ))
+
+        emergency_visits = self._cached_or_scalar(f, "emergency_count", lambda: (
+            self.db.query(func.count(EncounterModel.encounter_id))
+            .filter(
+                EncounterModel.patient_id == patient_id,
+                EncounterModel.encounter_class == 'emergency',
             )
+            .scalar()
+        ))
 
-        emergency_visits = f.get("emergency_count")
-        if emergency_visits is None:
-            emergency_visits = (
-                self.db.query(func.count(EncounterModel.encounter_id))
-                .filter(
-                    EncounterModel.patient_id == patient_id,
-                    EncounterModel.encounter_class == 'emergency',
-                )
-                .scalar()
-            )
-
-        days_since_last_encounter = f.get("days_since_last_encounter")
-        if days_since_last_encounter is None:
-            days_since_last_encounter = self.db.query(
+        days_since_last_encounter = self._cached_or_scalar(f, "days_since_last_encounter", lambda: (
+            self.db.query(
                 func.extract('day', func.now() - func.max(EncounterModel.start_date))
-            ).filter(
-                EncounterModel.patient_id == patient_id
-            ).scalar()
+            )
+            .filter(EncounterModel.patient_id == patient_id)
+            .scalar()
+        ))
 
         return PatientSummaryResponse(
             qaly=round(float(qaly), 2) if qaly is not None else None,
@@ -462,15 +424,7 @@ class PatientRepository:
                 EncounterModel.encounter_class,
                 EncounterModel.description,
                 EncounterModel.reason_description,
-                case(
-                    (ProviderModel.first_name == ProviderModel.last_name,
-                     func.regexp_replace(ProviderModel.first_name, '[0-9]', '', 'g')),
-                    else_=(
-                        func.regexp_replace(ProviderModel.first_name, '[0-9]', '', 'g')
-                        + ' '
-                        + func.regexp_replace(ProviderModel.last_name, '[0-9]', '', 'g')
-                    )
-                ).label("provider_name"),
+                provider_name_col(),
                 OrganizationModel.name.label("organization_name"),
             )
             .outerjoin(ProviderModel, EncounterModel.provider_id == ProviderModel.provider_id)
@@ -480,3 +434,30 @@ class PatientRepository:
             .all()
         )
         return [EncounterItem(**row._asdict()) for row in rows]
+
+    def get_patient_sequences(self, patient_id: str) -> list[SequenceListItem]:
+        rows = (
+            self.db.query(PrefixSpanPatternModel)
+            .join(
+                PrefixSpanPatientPatternModel,
+                PrefixSpanPatientPatternModel.pattern_id == PrefixSpanPatternModel.id,
+            )
+            .filter(PrefixSpanPatientPatternModel.patient_id == patient_id)
+            .order_by(
+                PrefixSpanPatternModel.support_count.desc(),
+                PrefixSpanPatternModel.rank.asc(),
+            )
+            .all()
+        )
+        return [
+            SequenceListItem(
+                id=r.id,
+                rank=r.rank,
+                pattern_str=r.pattern_str,
+                length=r.length,
+                support_count=r.support_count,
+                support_pct=r.support_pct,
+                has_ai_analysis=r.ai_analysis is not None,
+            )
+            for r in rows
+        ]

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
 from domain.models.provider_model import ProviderModel
+from repository.statistics_repository._common import with_percentage
 
 
 class ProviderRepository:
@@ -28,7 +29,7 @@ class ProviderRepository:
             .order_by(func.count(ProviderModel.provider_id).desc())
             .all()
         )
-        return self._with_percentage(rows, total)
+        return with_percentage(rows, total)
 
     def get_top_specialities(self, limit: int = 15, total: Optional[int] = None):
         if total is None:
@@ -44,7 +45,7 @@ class ProviderRepository:
             .limit(limit)
             .all()
         )
-        return self._with_percentage(rows, total)
+        return with_percentage(rows, total)
 
     def get_top_cities(self, limit: int = 10, total: Optional[int] = None):
         if total is None:
@@ -60,7 +61,7 @@ class ProviderRepository:
             .limit(limit)
             .all()
         )
-        return self._with_percentage(rows, total)
+        return with_percentage(rows, total)
 
     def get_utilization_stats(self):
         result = self.db.query(
@@ -82,14 +83,3 @@ class ProviderRepository:
             "avg": float(result.avg or 0),
             "median": float(result.median or 0),
         }
-
-    @staticmethod
-    def _with_percentage(rows, total):
-        return [
-            {
-                "label": row.label,
-                "count": row.count,
-                "percentage": round(row.count * 100.0 / total, 2) if total else 0,
-            }
-            for row in rows
-        ]

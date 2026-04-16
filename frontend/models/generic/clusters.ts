@@ -73,3 +73,82 @@ export interface AiAnalysisResponse {
   priorityInterventions: string[];
   careRecommendations: string[];
 }
+
+export interface ClusterSize {
+  count: number;
+  percentage: number;
+}
+
+export interface ClusterVitals {
+  avgAge: number;
+  avgBmi: number;
+  avgSystolicBp: number;
+  avgGlucose: number;
+  avgQaly: number;
+  avgDaly: number;
+}
+
+export interface SeverityComponents {
+  avgActiveConditions: number;
+  avgMedications: number;
+  avgProcedures: number;
+}
+
+export interface ClusterUtilization {
+  avgActiveConditions: number;
+  avgMedications: number;
+  avgProcedures: number;
+  avgDaysSinceEncounter: number;
+  avgClinicalSeverityScore: number;
+  severityComponents: SeverityComponents;
+  avgRoutineCare: number;
+  avgAcuteCare: number;
+  avgWellnessCare: number;
+  avgSevereCare: number;
+  avgDistinctProviders: number;
+}
+
+export interface DiseasePrevalence {
+  diabetesPct: number;
+  hypertensionPct: number;
+  heartDiseasePct: number;
+  cancerPct: number;
+  respiratoryPct: number;
+  mentalHealthPct: number;
+  polypharmacyPct: number;
+}
+
+export interface ClusterDemographics {
+  gender: Record<string, number>;
+  marital: Record<string, number>;
+  smoking: Record<string, number>;
+  conditionBurden: Record<string, number>;
+}
+
+export interface TopSequence {
+  rank: number;
+  patternStr: string;
+  length: number;
+  supportCount: number;
+  supportPct: number;
+  clusterSupportCount: number;
+}
+
+export interface ClusterDetailResponse {
+  clusterId: number;
+  clusterType: string;
+  title: string;
+  description: string;
+  insight: string;
+  recommendation: string;
+  color: string;
+  size: ClusterSize;
+  vitals: ClusterVitals;
+  utilization: ClusterUtilization;
+  diseasePrevalence: DiseasePrevalence;
+  demographics: ClusterDemographics;
+  dominantCareplan: string;
+  dominantEncounterClass: string;
+  dominantMarital: string;
+  topSequences: TopSequence[];
+}

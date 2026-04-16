@@ -1,9 +1,12 @@
 export interface KpiCards {
   totalPatients: number;
-  activePatients: number;
+  mortalityRate: number;
   totalProviders: number;
   totalOrganizations: number;
   totalEncounters: number;
+  totalConditions: number;
+  totalCareplans: number;
+  totalProcedures: number;
 }
 
 export interface EncounterClassItem {
@@ -21,9 +24,20 @@ export interface AgeGroupItem {
   count: number;
 }
 
-export interface MonthlyEncounterItem {
-  month: string;
+export interface DailyEncounterItem {
+  day: string;
   count: number;
+}
+
+export interface TopConditionItem {
+  description: string;
+  count: number;
+}
+
+export interface ClusterDistributionItem {
+  title: string;
+  count: number;
+  color: string;
 }
 
 export interface RecentEncounterItem {
@@ -39,9 +53,11 @@ export interface RecentEncounterItem {
 
 export interface DashboardData {
   kpis: KpiCards;
-  encounterByClass: EncounterClassItem[];
+  lastWeekEncounterByClass: EncounterClassItem[];
+  topConditionsLastWeek: TopConditionItem[];
+  clusterDistribution: ClusterDistributionItem[];
   genderDistribution: GenderDistributionItem[];
   ageGroups: AgeGroupItem[];
-  monthlyEncounters: MonthlyEncounterItem[];
+  lastMonthEncounters: DailyEncounterItem[];
   recentEncounters: RecentEncounterItem[];
 }

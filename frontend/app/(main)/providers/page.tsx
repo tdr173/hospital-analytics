@@ -56,7 +56,7 @@ function ProvidersPageContent() {
 
   useEffect(() => {
     if (!resources) dispatch(fetchProviderResources());
-  }, []);
+  }, [dispatch, resources]);
 
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const rows = parseInt(searchParams.get("rows") ?? "25", 10);
@@ -75,7 +75,7 @@ function ProvidersPageContent() {
         sortType,
       }),
     );
-  }, [searchParams, page, rows, sortBy, sortType]);
+  }, [dispatch, searchParams, page, rows, sortBy, sortType]);
 
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [gender, setGender] = useState<string[]>(

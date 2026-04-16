@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
 from domain.models.encounter_model import EncounterModel
+from repository.statistics_repository._common import with_percentage
 
 
 class EncounterRepository:
@@ -25,7 +26,7 @@ class EncounterRepository:
             .order_by(func.count(EncounterModel.encounter_id).desc())
             .all()
         )
-        return self._with_percentage(rows, total)
+        return with_percentage(rows, total)
 
     def get_duration_stats_per_class(self):
         rows = (
@@ -65,7 +66,7 @@ class EncounterRepository:
             .limit(limit)
             .all()
         )
-        return self._with_percentage(rows, total)
+        return with_percentage(rows, total)
 
     def get_top_reason_descriptions(self, limit: int = 10):
         total = (
@@ -85,15 +86,4 @@ class EncounterRepository:
             .limit(limit)
             .all()
         )
-        return self._with_percentage(rows, total)
-
-    @staticmethod
-    def _with_percentage(rows, total):
-        return [
-            {
-                "label": row.label,
-                "count": row.count,
-                "percentage": round(row.count * 100.0 / total, 2) if total else 0,
-            }
-            for row in rows
-        ]
+        return with_percentage(rows, total)

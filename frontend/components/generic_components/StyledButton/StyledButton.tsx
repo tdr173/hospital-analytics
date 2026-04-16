@@ -2,7 +2,7 @@
 
 import Button, { ButtonProps } from "@mui/material/Button";
 
-interface StyledButtonProps extends ButtonProps {
+interface StyledButtonProps extends Omit<ButtonProps, "variant"> {
   variant?: "primary" | "secondary" | "ghost";
 }
 

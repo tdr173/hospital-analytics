@@ -44,7 +44,6 @@ const conditionsTabStyles = (theme: Theme) => ({
     position: "sticky" as const,
     top: 0,
     zIndex: 1,
-    // Ensure header text aligns with data columns
     "& > div:not(:first-of-type)": {
       textAlign: "center" as const,
     },

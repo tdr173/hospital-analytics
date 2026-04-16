@@ -2,11 +2,13 @@ DB_SCHEMA = """
 === HOSPITAL ANALYTICS DATABASE SCHEMA ===
 
 OVERVIEW:
-- 13 tables total: 10 clinical tables + 3 clustering tables.
+- 15 tables total: 4 infrastructure (patient, organization, provider, encounter) + 7 clinical (observation, condition, medication, procedure, immunization, allergy, careplan) + 2 sequence-mining (prefix_span_pattern, prefix_span_patient_pattern) + 3 clustering (cluster_meta, cluster, cluster_patient). Observation also has five pre-aggregated mv_obs_* materialized views for fast stats.
 - The central entity is Patient. Organizations and Providers form the infrastructure.
 - Encounters link Patients to Providers and Organizations (many-to-one).
-- All clinical events (Allergy, Condition, Immunization, Medication, Observation, Procedure) are linked to a Patient and usually to the specific Encounter where they were recorded.
-- The 3 clustering tables (cluster_meta, cluster, cluster_patient) store the current K-Prototypes patient segmentation. Do NOT use these tables unless the user explicitly asks about clusters or patient segmentation.
+- All clinical events (allergy, condition, immunization, medication, observation, procedure, careplan) are linked to a Patient and usually to the specific Encounter where they were recorded.
+- The 3 clustering tables (cluster_meta, cluster, cluster_patient) store the current K-Prototypes patient segmentation.
+- The 2 sequence-mining tables (prefix_span_pattern, prefix_span_patient_pattern) store frequent care-trajectory patterns discovered by PrefixSpan.
+- Only use clustering or sequence tables when the user explicitly asks about clusters, patient segments, care trajectories, or sequences.
 
 --- TABLES ---
 
@@ -127,6 +129,35 @@ TABLE: allergy
   - allergy_code (str) — SNOMED-CT code.
   - description (str) — Allergen name (e.g. 'Peanuts', 'Penicillin', 'Bee stings', 'Latex'). Use ILIKE.
 
+TABLE: careplan
+  PURPOSE: Longitudinal care plans assigned to patients (e.g. 'Diabetes self management plan', 'Cardiac care plan').
+  - id (int, PK).
+  - patient_id (str, FK → patient).
+  - encounter_id (str, FK → encounter).
+  - start_date (datetime) — When the care plan started.
+  - end_date (datetime, nullable) — When concluded. NULL = still active.
+  - duration_days (float, nullable) — Pre-computed plan length in days.
+  - careplan_code (str) — SNOMED-CT code.
+  - description (str) — Care plan name (e.g. 'Asthma self management', 'Self-care interventions'). Use ILIKE.
+  - reason_code (str, nullable), reason_description (str, nullable) — Clinical reason for the plan.
+
+TABLE: prefix_span_pattern
+  PURPOSE: Frequent care-trajectory patterns discovered by PrefixSpan over patient event sequences.
+           A "pattern" is an ordered sequence of clinical events; '->' denotes temporal order, items in parentheses occurred on the same day. Event prefixes: C: = Condition, M: = Medication, P: = Procedure, CP: = CarePlan.
+  - id (int, PK, serial).
+  - rank (int) — Ordering index for display; lower = higher-ranked in the mining output.
+  - pattern_str (str) — Human-readable sequence (e.g. 'C:Hypertension -> M:Lisinopril'). Use ILIKE.
+  - length (int) — Number of events in the sequence.
+  - support_count (int) — How many distinct patients contain this pattern.
+  - support_pct (float) — support_count / total patients, as a percentage.
+  - ai_analysis (JSONB, nullable) — Cached AI-generated interpretation (not useful for SQL queries).
+
+TABLE: prefix_span_patient_pattern
+  PURPOSE: Junction table — which patients contain which mined sequence.
+  - pattern_id (int, PK, FK → prefix_span_pattern.id).
+  - patient_id (str, PK, FK → patient).
+  USAGE: JOIN to find patients who follow a pattern, or to count pattern frequency within a cluster.
+
 TABLE: cluster_meta
   PURPOSE: Singleton — exactly one row storing the metadata for the current clustering run.
            Fully replaced (DELETE + INSERT) every time k_prototypes is re-executed.
@@ -164,14 +195,20 @@ TABLE: cluster_patient
   - is_outlier (bool) — TRUE if the patient was excluded as a statistical outlier.
   - pca_x (float, nullable) — X coordinate from PCA 2D projection (for scatter plot).
   - pca_y (float, nullable) — Y coordinate from PCA 2D projection (for scatter plot).
-  - features (JSONB) — All engineered features for this patient at clustering time. Keys:
-      Numerical: age, avg_bmi, qaly, daly, avg_systolic_bp, avg_glucose, total_procedures,
-                 total_medications, active_conditions_count, days_since_last_encounter.
-      Categorical: gender, marital, dominant_encounter_class, dominant_careplan,
-                   has_diabetes, has_hypertension, has_heart_disease, has_cancer,
-                   is_polypharmacy, smoking_status.
-      Yes/No fields are stored as string 'Yes'/'No'. smoking_status values: 'never', 'former', 'current'.
-      dominant_careplan values: 'Cardiac', 'Respiratory', 'Metabolic', 'Maternal', 'Musculoskeletal', 'Psychiatric', 'Other', 'none'.
+  - features (JSONB) — All engineered features for this patient at clustering time. Keys include:
+      Numerical: age, qaly, total_medications, total_procedures, active_conditions_count,
+                 routine_care_count, acute_care_count, wellness_count, severe_care_count,
+                 clinical_severity_score, distinct_providers_seen.
+      Categorical: gender, dominant_careplan, condition_burden, bmi_type.
+      Historical runs may additionally persist: avg_bmi, avg_systolic_bp, avg_glucose, daly,
+      days_since_last_encounter, marital, smoking_status, dominant_encounter_class,
+      has_diabetes, has_hypertension, has_heart_disease, has_cancer, has_respiratory_disease,
+      has_mental_health, is_polypharmacy. If a key is absent the value is NULL.
+      Value notes:
+        - Yes/No flags are stored as string 'Yes'/'No'.
+        - smoking_status: 'never', 'former', 'current'.
+        - condition_burden: 'low', 'medium', 'high' (binned from active_conditions_count).
+        - dominant_careplan: 'Cardiac', 'Respiratory', 'Metabolic', 'Maternal', 'Musculoskeletal', 'Psychiatric', 'Other', 'none'.
   INDEXES: ix_cluster_patient_patient_id on (patient_id).
   USAGE: To query feature values use JSONB operators, e.g.: features->>'age', (features->>'age')::numeric.
 
@@ -179,16 +216,19 @@ TABLE: cluster_patient
 
 patient (1) → (N) encounter → (1) organization
 patient (1) → (N) encounter → (1) provider
-encounter (1) → (N) observation, condition, medication, procedure, immunization, allergy
+encounter (1) → (N) observation, condition, medication, procedure, immunization, allergy, careplan
 provider (N) → (1) organization
 cluster_meta (1) — singleton run metadata
 cluster (N) — one row per cluster label
 patient (1) → (0..1) cluster_patient — current cluster assignment
+prefix_span_pattern (1) → (N) prefix_span_patient_pattern → (1) patient
 
 To find which hospital a patient visited: JOIN encounter ON patient_id, then JOIN organization ON organization_id.
 To find which doctor treated a patient: JOIN encounter ON patient_id, then JOIN provider ON provider_id.
 To find which cluster a patient belongs to: JOIN cluster_patient ON patient_id.
 To get all patients in a specific cluster: SELECT patient_id FROM cluster_patient WHERE cluster_label = <N> AND NOT is_outlier.
+To find which patients follow a care-trajectory pattern: JOIN prefix_span_patient_pattern ON pattern_id.
+To count how many patients in a cluster share a sequence: JOIN prefix_span_patient_pattern pp ON pp.patient_id = cluster_patient.patient_id, then GROUP BY pp.pattern_id.
 
 --- CLUSTERING SEMANTIC MAPPINGS ---
 
@@ -216,9 +256,11 @@ These map common natural-language terms to the correct database concepts:
 "surgery" / "operatie" / "interventie" → procedure table
 "vaccine" / "vaccin" → immunization table
 "allergy" / "alergie" → allergy table
+"care plan" / "plan de ingrijire" / "plan de tratament" → careplan table
 "doctor" / "medic" → provider table
 "hospital" / "spital" / "clinica" → organization table
 "patient" / "pacient" → patient table
+"sequence" / "trajectory" / "pattern" / "traseu" / "secventa" → prefix_span_pattern table (mining results) + prefix_span_patient_pattern (membership)
 "blood pressure" / "tensiune" → observation WHERE description ILIKE '%blood pressure%'
 "temperature" / "temperatura" → observation WHERE description ILIKE '%body temperature%'
 "BMI" → observation WHERE observation_code = '39156-5'
@@ -262,4 +304,19 @@ SQL: SELECT cluster_label, ROUND(AVG((features->>'avg_systolic_bp')::numeric), 1
 
 Q: "What is the clustering quality score?"
 SQL: SELECT metrics->>'silhouette' AS silhouette, metrics->>'davies_bouldin' AS davies_bouldin, metrics->>'calinski_harabasz' AS calinski_harabasz FROM cluster_meta LIMIT 1;
+
+Q: "How many patients have an active care plan for diabetes?"
+SQL: SELECT COUNT(DISTINCT patient_id) AS total FROM careplan WHERE description ILIKE '%diabetes%' AND end_date IS NULL;
+
+Q: "Which care plans are most common?"
+SQL: SELECT description, COUNT(*) AS total FROM careplan GROUP BY description ORDER BY total DESC LIMIT 10;
+
+Q: "What are the top 5 most frequent care trajectories?"
+SQL: SELECT rank, pattern_str, support_count, support_pct FROM prefix_span_pattern ORDER BY support_count DESC LIMIT 5;
+
+Q: "Which sequences are most common in cluster 0?"
+SQL: SELECT p.pattern_str, COUNT(DISTINCT pp.patient_id) AS cluster_support FROM prefix_span_patient_pattern pp JOIN cluster_patient cp ON pp.patient_id = cp.patient_id JOIN prefix_span_pattern p ON pp.pattern_id = p.id WHERE cp.cluster_label = 0 AND NOT cp.is_outlier GROUP BY p.id, p.pattern_str ORDER BY cluster_support DESC LIMIT 5;
+
+Q: "How many patients follow any care trajectory containing hypertension?"
+SQL: SELECT COUNT(DISTINCT pp.patient_id) AS total FROM prefix_span_patient_pattern pp JOIN prefix_span_pattern p ON pp.pattern_id = p.id WHERE p.pattern_str ILIKE '%hypertension%';
 """

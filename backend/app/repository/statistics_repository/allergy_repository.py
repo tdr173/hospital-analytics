@@ -1,8 +1,9 @@
 from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, case, cast, Numeric
+from sqlalchemy import func, case
 
 from domain.models.allergy_model import AllergyModel
+from repository.statistics_repository._common import with_percentage, per_patient_stats
 
 
 class AllergyRepository:
@@ -29,7 +30,7 @@ class AllergyRepository:
             .limit(limit)
             .all()
         )
-        return self._with_percentage(rows, total)
+        return with_percentage(rows, total)
 
     def get_active_vs_resolved(self, total: Optional[int] = None):
         if total is None:
@@ -48,37 +49,7 @@ class AllergyRepository:
             .group_by(status_label)
             .all()
         )
-        return self._with_percentage(rows, total)
+        return with_percentage(rows, total)
 
     def get_per_patient_stats(self):
-        subquery = (
-            self.db.query(
-                AllergyModel.patient_id,
-                func.count(AllergyModel.allergy_code).label("cnt"),
-            )
-            .group_by(AllergyModel.patient_id)
-            .subquery()
-        )
-
-        result = self.db.query(
-            func.round(cast(func.avg(subquery.c.cnt), Numeric), 2).label("avg"),
-            func.min(subquery.c.cnt).label("min"),
-            func.max(subquery.c.cnt).label("max"),
-        ).one()
-
-        return {
-            "avg": float(result.avg or 0),
-            "min": result.min or 0,
-            "max": result.max or 0,
-        }
-
-    @staticmethod
-    def _with_percentage(rows, total):
-        return [
-            {
-                "label": row.label,
-                "count": row.count,
-                "percentage": round(row.count * 100.0 / total, 2) if total else 0,
-            }
-            for row in rows
-        ]
+        return per_patient_stats(self.db, AllergyModel, AllergyModel.allergy_code)

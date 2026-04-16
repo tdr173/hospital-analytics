@@ -81,9 +81,9 @@ export default function StackedBarChartComponent({
             stroke="#6B7280"
           />
           <Tooltip
-            formatter={(value: number, name: string) => [
-              `${(value * 100).toFixed(1)}%`,
-              toTitleCase(name),
+            formatter={(value, name) => [
+              `${(Number(value) * 100).toFixed(1)}%`,
+              toTitleCase(String(name)),
             ]}
             contentStyle={{
               fontFamily: "Inter, sans-serif",

@@ -1,79 +1,126 @@
-import json
-import re
-from sqlalchemy import func, case, cast, Numeric
+from typing import Optional
+from sqlalchemy import func, case, cast, Numeric, desc, asc
 from sqlalchemy.orm import Session
+
 from domain import (
     PrefixSpanPatternModel,
     PrefixSpanPatientPatternModel,
     ClusterPatientModel,
+    SequenceListItem,
+    SequenceListResponse,
+    SequenceResourcesResponse,
+    SequenceSortOption,
 )
-from service.lllm_sql_agent_service.llm_models import ask_ai
+from repository._helpers import clamp_page_size
 
 
-PROMPT_SEQUENCE_ANALYSIS = """You are a senior clinical data analyst reviewing a frequent care trajectory identified through sequential pattern mining on electronic health records.
+SEQUENCE_PREFIX_COLORS = {
+    "C": "#2563EB",   # Condition - blue
+    "M": "#16A34A",   # Medication - green
+    "P": "#EA580C",   # Procedure - orange
+    "CP": "#7C3AED",  # CarePlan - purple
+}
 
-A "care trajectory" is an ordered sequence of clinical events (conditions, procedures, medications, encounters) that appear together in a statistically significant proportion of patients. The arrow (->) denotes temporal ordering; items in parentheses occurred on the same day.
-
-IMPORTANT RULES:
-- Base every claim strictly on the numbers provided.
-- Interpret the sequence items by their prefixes: C: = Condition, P: = Procedure, M: = Medication, E: = Encounter type.
-- Focus on the clinical narrative: what is the likely disease progression or care pathway this sequence represents?
-- Gender: describe as "balanced" if 40-60%, "more female/male" if 60-70%, "predominantly female/male" only if >70%.
-- Translate vitals into plain risk language (BMI >=30 = obese, glucose >=126 = diabetic range).
-- Do NOT use em dashes (—). Use commas or plain sentence structure instead.
-
-SEQUENCE:
-  Pattern: {pattern_str}
-  Frequency: {support_count} patients ({support_pct}% of population)
-  Length: {length} clinical events
-
-PATIENTS WHO FOLLOW THIS TRAJECTORY ({support_count} patients):
-  Age: mean {avg_age} yrs
-  Gender: Female {female_pct}% / Male {male_pct}%
-  BMI: mean {avg_bmi}
-  Active conditions: mean {avg_conditions}
-  Active medications: mean {avg_meds}
-  Dominant careplan category: {dominant_careplan}
-
-DISEASE PREVALENCE IN THIS GROUP:
-  Diabetes:        {diabetes_pct}%
-  Hypertension:    {hypertension_pct}%
-  Heart disease:   {heart_disease_pct}%
-  Cancer:          {cancer_pct}%
-  Polypharmacy:    {polypharmacy_pct}%
-
----
-TASK: Explain this care trajectory for TWO audiences:
-
-1. CLINICIANS - 2-3 sentences: what clinical story does this sequence tell (likely diagnosis, workup, or management path)? What are the key risks or care gaps for patients following this trajectory? Reference specific items in the sequence and patient statistics.
-2. GENERAL PUBLIC - 1-2 sentences: describe this health journey in plain everyday language, no medical terms.
-
-Respond ONLY with valid JSON (no markdown, no extra text):
-{{
-  "clinical_interpretation": "...",
-  "layperson_summary": "...",
-  "risk_signals": ["specific risk or gap 1", "specific risk or gap 2", "specific risk or gap 3"],
-  "recommendations": ["actionable recommendation for this trajectory 1", "actionable recommendation 2", "actionable recommendation 3"]
-}}
-"""
+SEQUENCE_SORT_OPTIONS = [
+    {"value": "support", "label": "Highest Support"},
+    {"value": "length", "label": "Sequence Length"},
+]
 
 
 class SequenceRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_sequence_ai_analysis(self, pattern_id: int) -> dict:
+    def get_resources(self) -> SequenceResourcesResponse:
+        row = self.db.query(
+            func.min(PrefixSpanPatternModel.length).label("min_len"),
+            func.max(PrefixSpanPatternModel.length).label("max_len"),
+        ).first()
+        min_len = int(row.min_len) if row and row.min_len is not None else 1
+        max_len = int(row.max_len) if row and row.max_len is not None else 1
+        return SequenceResourcesResponse(
+            min_length=min_len,
+            max_length=max_len,
+            colors=SEQUENCE_PREFIX_COLORS,
+            sort_options=[SequenceSortOption(**o) for o in SEQUENCE_SORT_OPTIONS],
+        )
+
+    def get_sequences(
+        self,
+        search: Optional[str] = None,
+        min_length: int = 1,
+        sort_by: str = "support",
+        sort_type: str = "desc",
+        page: int = 1,
+        rows: int = 8,
+    ) -> SequenceListResponse:
+        q = self.db.query(PrefixSpanPatternModel).filter(
+            PrefixSpanPatternModel.length >= min_length,
+        )
+        if search:
+            q = q.filter(PrefixSpanPatternModel.pattern_str.ilike(f"%{search}%"))
+
+        total = q.count()
+
+        sort_col = (
+            PrefixSpanPatternModel.length
+            if sort_by == "length"
+            else PrefixSpanPatternModel.support_count
+        )
+        order = desc if sort_type == "desc" else asc
+        q = q.order_by(order(sort_col), PrefixSpanPatternModel.rank.asc())
+
+        page = max(1, page)
+        rows = clamp_page_size(rows)
+        patterns = q.offset((page - 1) * rows).limit(rows).all()
+
+        items = [
+            SequenceListItem(
+                id=p.id,
+                rank=p.rank,
+                pattern_str=p.pattern_str,
+                length=p.length,
+                support_count=p.support_count,
+                support_pct=p.support_pct,
+                has_ai_analysis=p.ai_analysis is not None,
+            )
+            for p in patterns
+        ]
+        return SequenceListResponse(total=total, items=items)
+
+    def get_pattern(self, pattern_id: int) -> PrefixSpanPatternModel:
         pattern = self.db.query(PrefixSpanPatternModel).filter(
             PrefixSpanPatternModel.id == pattern_id
         ).first()
         if not pattern:
             raise ValueError(f"Pattern {pattern_id} not found")
+        return pattern
 
-        if pattern.ai_analysis:
-            return pattern.ai_analysis
+    def get_pattern_ai_analysis(self, pattern_id: int) -> Optional[dict]:
+        pattern = self.get_pattern(pattern_id)
+        return pattern.ai_analysis
 
-        # Aggregate features over all patients who follow this trajectory,
-        # joining the pre-computed cluster_patient.features JSONB.
+    def lock_pattern_ai_analysis(self, pattern_id: int) -> Optional[dict]:
+        """Row-lock the pattern and return cached analysis if present.
+
+        Caller must commit/rollback to release the lock — save_pattern_ai_analysis commits.
+        """
+        pattern = self.db.query(PrefixSpanPatternModel).filter(
+            PrefixSpanPatternModel.id == pattern_id
+        ).with_for_update().first()
+        if not pattern:
+            raise ValueError(f"Pattern {pattern_id} not found")
+        return pattern.ai_analysis
+
+    def save_pattern_ai_analysis(self, pattern_id: int, analysis: dict) -> None:
+        self.db.query(PrefixSpanPatternModel).filter(
+            PrefixSpanPatternModel.id == pattern_id
+        ).update({"ai_analysis": analysis}, synchronize_session="fetch")
+        self.db.commit()
+
+    def get_pattern_ai_context(self, pattern_id: int) -> dict:
+        pattern = self.get_pattern(pattern_id)
+
         def avg_feat(feature, decimals=1):
             return func.round(
                 func.avg(cast(ClusterPatientModel.features[feature].astext, Numeric)),
@@ -119,42 +166,21 @@ class SequenceRepository:
             .first()
         )
 
-        s = stats._asdict() if stats else {}
+        raw = stats._asdict() if stats else {}
+        fields = [
+            "avg_age", "avg_bmi", "avg_meds", "avg_conditions",
+            "female_pct", "male_pct", "diabetes_pct", "hypertension_pct",
+            "heart_disease_pct", "cancer_pct", "polypharmacy_pct",
+            "dominant_careplan",
+        ]
+        patient_stats = {k: (raw.get(k) if raw.get(k) is not None else "N/A") for k in fields}
 
-        def v(key):
-            val = s.get(key)
-            return val if val is not None else "N/A"
-
-        prompt = PROMPT_SEQUENCE_ANALYSIS.format(
-            pattern_str=pattern.pattern_str,
-            support_count=pattern.support_count,
-            support_pct=pattern.support_pct,
-            length=pattern.length,
-            avg_age=v("avg_age"),
-            avg_bmi=v("avg_bmi"),
-            avg_meds=v("avg_meds"),
-            avg_conditions=v("avg_conditions"),
-            female_pct=v("female_pct"),
-            male_pct=v("male_pct"),
-            diabetes_pct=v("diabetes_pct"),
-            hypertension_pct=v("hypertension_pct"),
-            heart_disease_pct=v("heart_disease_pct"),
-            cancer_pct=v("cancer_pct"),
-            polypharmacy_pct=v("polypharmacy_pct"),
-            dominant_careplan=v("dominant_careplan"),
-        )
-
-        raw = ask_ai(prompt)
-        analysis = _parse_ai_json(raw)
-
-        self.db.query(PrefixSpanPatternModel).filter(
-            PrefixSpanPatternModel.id == pattern_id
-        ).update({"ai_analysis": analysis}, synchronize_session="fetch")
-        self.db.commit()
-
-        return analysis
-
-
-def _parse_ai_json(text: str) -> dict:
-    text = re.sub(r"```(?:json)?\s*(.*?)\s*```", r"\1", text, flags=re.DOTALL)
-    return json.loads(text.strip())
+        return {
+            "pattern": {
+                "pattern_str": pattern.pattern_str,
+                "support_count": pattern.support_count,
+                "support_pct": pattern.support_pct,
+                "length": pattern.length,
+            },
+            "patient_stats": patient_stats,
+        }

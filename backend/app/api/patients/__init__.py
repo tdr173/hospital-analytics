@@ -10,3 +10,4 @@ from .get_patient_immunizations import *
 from .get_patient_allergies import *
 from .get_patient_careplans import *
 from .get_patient_encounters import *
+from .get_patient_sequences import *

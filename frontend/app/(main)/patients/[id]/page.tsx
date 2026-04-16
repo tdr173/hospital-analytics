@@ -17,6 +17,7 @@ import {
   fetchPatientAllergies,
   fetchPatientCareplans,
   fetchPatientEncounters,
+  fetchPatientSequences,
 } from "@/store/slices/patients/thunks";
 import { resetCurrentPatient } from "@/store/slices/patients/current-patient-slice";
 import { PatientSummary } from "@/models/generic/patients";
@@ -29,6 +30,7 @@ import ImmunizationsTab from "@/components/PatientComponents/ImmunizationsTab/Im
 import AllergiesTab from "@/components/PatientComponents/AllergiesTab/AllergiesTab";
 import CarePlansTab from "@/components/PatientComponents/CarePlansTab/CarePlansTab";
 import EncountersTab from "@/components/PatientComponents/EncountersTab/EncountersTab";
+import SequencesTab from "@/components/PatientComponents/SequencesTab/SequencesTab";
 
 import MetricComponent from "@/components/PatientComponents/MetricComponent/MetricComponent";
 
@@ -60,6 +62,7 @@ const TAB_LABELS = [
   "Allergies",
   "Care Plans",
   "Encounters",
+  "Sequences",
 ];
 
 const TAB_FETCHERS: Record<number, (id: string) => any> = {
@@ -69,6 +72,7 @@ const TAB_FETCHERS: Record<number, (id: string) => any> = {
   4: fetchPatientAllergies,
   5: fetchPatientCareplans,
   6: fetchPatientEncounters,
+  7: fetchPatientSequences,
 };
 
 export default function PatientDetailPage() {
@@ -88,6 +92,7 @@ export default function PatientDetailPage() {
     allergies,
     careplans,
     encounters,
+    sequences,
     loading,
     error,
     loadedTabs,
@@ -95,7 +100,6 @@ export default function PatientDetailPage() {
 
   const [tab, setTab] = useState(0);
 
-  // Fetch patient detail + summary + first tab on mount
   useEffect(() => {
     if (!id) return;
     dispatch(resetCurrentPatient());
@@ -104,7 +108,6 @@ export default function PatientDetailPage() {
     dispatch(fetchPatientConditions(id));
   }, [id, dispatch]);
 
-  // Load tab data on first visit (tabs 1-5)
   useEffect(() => {
     if (!id || tab === 0 || loadedTabs.includes(tab)) return;
     const fetcher = TAB_FETCHERS[tab];
@@ -129,6 +132,7 @@ export default function PatientDetailPage() {
     4: <AllergiesTab data={allergies} />,
     5: <CarePlansTab data={careplans} />,
     6: <EncountersTab data={encounters} />,
+    7: <SequencesTab data={sequences} />,
   };
 
   return (

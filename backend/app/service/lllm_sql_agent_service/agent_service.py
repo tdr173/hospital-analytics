@@ -1,7 +1,8 @@
 import re
-from typing import TypedDict
+from typing import Any, TypedDict
 from langgraph.graph import StateGraph, START, END
 from dotenv import load_dotenv
+from sqlalchemy.orm import Session
 
 from .llm_models import ask_ai
 from db.db_connector import _db_retrieve
@@ -20,6 +21,7 @@ DANGEROUS_KEYWORDS = re.compile(
 
 
 class AgentState(TypedDict):
+    db: Any  # SQLAlchemy Session — passed through, never serialized
     user_prompt: str
     chat_history: str
     translated_prompt: str
@@ -32,76 +34,109 @@ class AgentState(TypedDict):
 
 
 PROMPT_TRANSLATE = """
-You are a technical translator for a hospital analytics system.
+You rewrite user questions into standalone English data-retrieval prompts for a hospital analytics database.
+
 User Prompt: "{initial_prompt}"
-Database Schema: {db_schema}
 
 {chat_context}
 
-Task:
-1. Use the conversation history (if any) to resolve references like "what about", "same but for", "and those", "how many of them", etc. The refined prompt must be a STANDALONE question that makes sense without the history.
-2. Translate the prompt to English if necessary.
-3. Refine it to be a precise technical request for a database retrieval.
-4. If the prompt is NOT a data retrieval request (e.g. greetings, opinions, commands to modify data), return exactly "NOT_RETRIEVAL".
+Schema reference (for term disambiguation only, do NOT copy it into the output):
+{db_schema}
 
-Output: ONLY the refined prompt string or "NOT_RETRIEVAL". No explanations.
+Rules:
+1. Resolve references to prior turns ("what about...", "same but for...", "and those", "how many of them") using the conversation history. The rewritten prompt MUST be standalone and understandable with zero history.
+2. Translate to English if the user wrote in another language.
+3. Keep it a single precise sentence describing what data to retrieve. Preserve specific entities (names, ids, numbers, date ranges) exactly.
+4. If the input is NOT a data-retrieval request (greetings, opinions, commands to modify data, small talk), return exactly: NOT_RETRIEVAL
+
+Output: the rewritten prompt OR the literal token NOT_RETRIEVAL. No quotes, no markdown, no explanations.
 """
 
 PROMPT_GENERATE_SQL = """
-You are a PostgreSQL expert for a hospital analytics database.
-Goal: Write a SELECT query for: "{prompt}"
+You are a PostgreSQL expert writing a SELECT query against a hospital analytics database.
+
+Question: "{prompt}"
 
 Schema:
 {db_schema}
 
 {retry_context}
 
-Rules:
-1. Return ONLY the raw SQL query. No markdown, no explanations.
-2. ONLY use SELECT (or WITH ... SELECT for CTEs). Never use INSERT, UPDATE, DELETE, DROP, ALTER, or any data-modifying statement.
-3. Select ONLY the columns needed to answer the question - never use SELECT *.
-4. Always add LIMIT {max_rows} unless the user explicitly asks for all results or the query uses aggregation (COUNT, SUM, AVG, etc.).
-5. Use ILIKE for searching descriptive/name fields (description, first_name, last_name, city, reason_description).
-6. Use = for categorical fields with fixed values: gender ('M'/'F'), encounter_class ('inpatient','ambulatory','wellness','emergency','urgentcare'), marital ('M','S','D','W'), race, ethnicity.
-7. Handle dates correctly: use EXTRACT(YEAR FROM date_column) for year filtering.
-8. Use meaningful column aliases for computed fields (e.g. COUNT(*) AS total_patients).
-9. Order results in a way that makes the answer clear (e.g. ORDER BY count DESC for "most common").
-10. When counting or listing patients/providers across clinical tables (condition, medication, etc.), use COUNT(DISTINCT patient_id) or SELECT DISTINCT to avoid duplicates from multiple records.
-11. For cluster_patient.features JSONB access: strings use features->>'key'; numerics must be cast e.g. (features->>'age')::numeric. Yes/No flags (has_diabetes, has_hypertension, has_heart_disease, has_cancer, is_polypharmacy) are string 'Yes'/'No'. There is no run_id column — cluster_patient holds only the current run. Filter NOT is_outlier unless outliers were explicitly requested.
-12. Never mix clinical tables (condition, medication, encounter, etc.) with cluster_patient.features for the same metric: if the user asks about clusters, derive counts from features; otherwise use the clinical tables directly.
+Output rules:
+1. Return ONLY the raw SQL. No markdown, no prose, no trailing semicolon required.
+2. ONLY SELECT, or WITH ... SELECT (CTEs). Never INSERT/UPDATE/DELETE/DROP/ALTER/TRUNCATE/GRANT/REVOKE/EXEC.
+3. Select only the columns needed; never SELECT *.
+4. Add LIMIT {max_rows} unless the user asks for "all" results or the query is purely aggregate (COUNT/SUM/AVG/MAX/MIN).
+5. Use meaningful aliases for computed columns (e.g. COUNT(*) AS total_patients).
+6. ORDER BY so the answer is obvious (e.g. ORDER BY count DESC for "most common", ORDER BY date DESC for "last").
+
+Filtering rules:
+7. Descriptive / free-text fields (description, first_name, last_name, city, reason_description, pattern_str) — use ILIKE with %...% wildcards.
+8. Categorical codes — use `=` with these exact values:
+   - gender: 'M', 'F' (never 'Male'/'Female')
+   - marital: 'M', 'S', 'D', 'W'
+   - encounter_class: 'inpatient', 'ambulatory', 'outpatient', 'wellness', 'emergency', 'urgentcare', 'home', 'virtual', 'snf', 'hospice'
+   - race: 'White', 'Black', 'Asian', 'Native', 'Other'
+   - ethnicity: 'Hispanic', 'Non-Hispanic'
+9. Alive vs deceased is encoded by deathdate: `deathdate IS NULL` (alive) / `deathdate IS NOT NULL` (deceased).
+10. Dates — use EXTRACT(YEAR FROM col) for year, DATE_TRUNC for month/week aggregation, BETWEEN or `>=`/`<` for explicit ranges.
+11. Active vs ended for timestamped tables (condition, medication, careplan, allergy) — `end_date IS NULL` means still active.
+
+Distinct-counting rules:
+12. Counting or listing patients/providers across clinical tables (condition, medication, procedure, encounter, careplan, etc.) — use COUNT(DISTINCT patient_id) / DISTINCT to avoid duplicates from multiple records per patient.
+
+Clustering rules (cluster_meta, cluster, cluster_patient):
+13. cluster_patient is singleton for the current run (no run_id column). Always filter `NOT is_outlier` unless the user explicitly asks about outliers. -1 is the outlier label.
+14. cluster_patient.features is JSONB. Access strings with `features->>'key'`; cast numerics with `(features->>'key')::numeric`. Yes/No flags (has_diabetes, has_hypertension, has_heart_disease, has_cancer, is_polypharmacy) are the string 'Yes'/'No'. A missing key returns NULL — do not assume every feature is present.
+15. If the user asks about clusters, derive per-cluster metrics from cluster_patient.features — do NOT join clinical tables. If the user asks about raw clinical facts (how many patients have X), use the clinical tables directly.
+
+Sequence-mining rules (prefix_span_pattern, prefix_span_patient_pattern):
+16. prefix_span_pattern holds the mined sequences (pattern_str, length, support_count, support_pct). prefix_span_patient_pattern is the (pattern_id, patient_id) junction.
+17. To find patients following a pattern → JOIN on pattern_id. To restrict a pattern's membership to a specific cluster → JOIN prefix_span_patient_pattern to cluster_patient on patient_id.
+18. Use support_count / support_pct for overall frequency. For cluster-specific frequency use COUNT(DISTINCT pp.patient_id) after joining with cluster_patient.
 """
 
 PROMPT_VALIDATE_SQL = """
-You are a SQL QA auditor for a hospital analytics database.
+You are a SQL QA auditor for a hospital analytics database. Decide if the generated SQL is safe AND correctly answers the user's request.
+
 User Request: "{prompt}"
-Generated SQL: "{sql_query}"
-Schema: {db_schema}
+Generated SQL: {sql_query}
 
-Task: Verify if the SQL is correct and safe for the given request.
+Schema:
+{db_schema}
 
-Validation checklist:
-1. The query must be a SELECT statement only (CTEs with WITH...SELECT are allowed). Any INSERT/UPDATE/DELETE/DROP = instant NO.
-2. All referenced tables and columns must exist in the schema.
-3. The query logic must match what the user asked (e.g. don't query 'patient' when user asks about 'providers').
-4. JOINs must use correct foreign key relationships as defined in the schema.
-5. Do NOT flag ILIKE vs = as an error. Both are valid.
-6. Do NOT flag stylistic preferences (aliasing, ordering, formatting).
+Validation checklist (reject if ANY item fails):
+1. Must be a single SELECT or WITH ... SELECT. Reject anything that writes data (INSERT/UPDATE/DELETE/DROP/ALTER/TRUNCATE/GRANT/REVOKE/EXEC).
+2. Every referenced table and column must exist in the schema above.
+3. JOIN conditions must use the documented foreign-key relationships.
+4. Query logic must answer THIS specific question (right table, right filter, right aggregation). Querying 'patient' when the user asked about 'providers' = NO.
+5. For cluster questions: reject if it forgot `NOT is_outlier` (unless the user asked about outliers) or mixed cluster_patient.features with raw clinical tables.
+6. For counts of patients/providers across clinical tables: reject if it uses COUNT(*) instead of COUNT(DISTINCT patient_id) when duplicates are likely.
 
-Output Format:
+Do NOT flag:
+- ILIKE vs = (both valid).
+- Stylistic preferences: aliasing, ordering, whitespace, column order.
+- Presence or absence of LIMIT on aggregate-only queries.
+
+Output format (strict):
 Line 1: YES or NO
-Line 2: (If NO) Brief explanation of the specific error found.
+Line 2 (only if NO): one-sentence explanation of the specific failure.
 """
 
 PROMPT_RESULT = """
-The user asked: "{initial_prompt}"
-The database returned: {result}
+Summarise database results for the user in natural language.
 
-Task:
-- Generate a clear, helpful response in the same language as the user's question.
-- If the result is empty or [], say that no matching records were found.
-- Present numbers and data clearly. Use bullet points or short lists for multiple items.
-- Keep the response concise - no more than 3-4 sentences for simple questions, or a short formatted list for multi-row results.
-- Do not mention SQL, queries, or technical database details.
+User question: "{initial_prompt}"
+Database result (list of row dicts): {result}
+
+Rules:
+- Reply in the SAME language the user wrote in (English, Romanian, etc.). Match their register.
+- Empty result ([] or nothing returned) → say plainly that no matching records were found.
+- Single-row single-value result → state it in one sentence with the number and unit where relevant.
+- Multi-row result → use a short bulleted or numbered list; truncate to the top ~10 items if longer.
+- Never mention SQL, queries, JOINs, tables, columns, or any technical internals. Speak as a data analyst, not a DBA.
+- Do not invent or extrapolate values beyond what the result contains.
+- Keep it concise: 1-4 sentences or a short list.
 """
 
 
@@ -209,7 +244,7 @@ def validate_query(state: AgentState):
 
 def execute_query(state: AgentState):
     try:
-        result = _db_retrieve(state['sql_query'])
+        result = _db_retrieve(state['db'], state['sql_query'])
         result_str = truncate_result(str(result))
         return {"query_result": result_str, "error_message": ""}
     except Exception as e:
@@ -303,8 +338,9 @@ def build_history_string(history: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def run_agent(prompt, history=None):
+def run_agent(db: Session, prompt: str, history=None):
     initial_state = {
+        "db": db,
         "user_prompt": prompt,
         "chat_history": build_history_string(history or []),
         "translated_prompt": "",
@@ -329,8 +365,6 @@ def run_agent(prompt, history=None):
             )
         )
         return {"response": response, "sql": final_state["sql_query"]}
-
-    graph.get_graph().draw_mermaid_png(output_file_path="diagram.png")
 
     if final_state["retry_count"] > MAX_RETRIES:
         return {"response": "I tried multiple times but couldn't build a valid query. Try simplifying your question."}

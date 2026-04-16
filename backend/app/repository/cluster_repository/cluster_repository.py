@@ -1,86 +1,28 @@
-import json
-import re
 import base64
-from sqlalchemy import func, case, cast, Numeric
+from sqlalchemy import func, case, cast, Numeric, text
 from sqlalchemy.orm import Session
-from domain import ClusterModel, ClusterDetails, GetClustersDetails, ClusterPatientModel, ClusterMetaModel, PcaPoint, GetClusterStatistics, ChartEntry, FeatureChartData, GetNumericalFeaturesStatistics, CategoricalClusterEntry, CategoricalFeatureChartData, GetCategoricalFeaturesStatistics, AiAnalysisResponse
-from service.lllm_sql_agent_service.llm_models import ask_ai
+
+from domain import (
+    ClusterModel, ClusterDetails, GetClustersDetails, ClusterPatientModel,
+    ClusterMetaModel, PcaPoint, GetClusterStatistics, ChartEntry,
+    FeatureChartData, GetNumericalFeaturesStatistics, CategoricalClusterEntry,
+    CategoricalFeatureChartData, GetCategoricalFeaturesStatistics,
+    AiAnalysisResponse, ClusterDetailResponse, ClusterSizeSchema,
+    ClusterVitalsSchema, SeverityComponentsSchema, ClusterUtilizationSchema,
+    DiseasePrevalenceSchema, DemographicsSchema, TopSequenceSchema,
+)
 from repository.cluster_repository.cluster_feature_helpers import (
     cluster_size,
-    get_avg_age, get_avg_bmi, get_avg_systolic_bp, get_avg_glucose,
-    get_avg_qaly, get_avg_daly,
-    get_avg_active_conditions, get_avg_medications, get_avg_procedures,
-    get_avg_days_since_encounter,
-    get_diabetes_pct, get_hypertension_pct, get_heart_disease_pct,
-    get_cancer_pct, get_polypharmacy_pct,
-    get_smoking_distribution, get_gender_distribution,
-    get_dominant_encounter_class, get_dominant_careplan, get_dominant_marital,
+    get_vitals,
+    get_utilization,
+    get_disease_prevalence,
+    get_dominant_categoricals,
+    get_gender_distribution,
+    get_marital_distribution,
+    get_smoking_distribution,
+    get_condition_burden_distribution,
     get_population_stats,
 )
-
-
-PROMPT_AI_ANALYSIS = """You are a senior clinical data analyst reviewing a specific patient group identified through K-Prototypes population segmentation in a hospital analytics system.
-
-IMPORTANT RULES:
-- Base every claim strictly on the numbers provided. Do not infer traits not supported by the data.
-- Gender: describe as "balanced" if 40-60%, "more female/male" if 60-70%, "predominantly female/male" only if >70%.
-- Comparisons: use the "vs population avg" deltas to say whether this cluster is above or below average on each metric.
-- Translate vitals into plain risk language (e.g. systolic BP >=140 = hypertensive range, glucose >=126 mg/dL = diabetic range, BMI >=30 = obese).
-- Let the dominant careplan category guide the clinical framing (Cardiac, Respiratory, Metabolic, Maternal, Musculoskeletal, Psychiatric, Other, none).
-- If a value is "N/A" or 0 with no clinical meaning, do not mention that metric.
-- Do NOT use em dashes (—) anywhere in your response. Use commas or plain sentence structure instead.
-
-POPULATION CONTEXT:
-- {n_patients} patients across {n_clusters} clusters | Silhouette: {silhouette} | Davies-Bouldin: {davies_bouldin}
-- Population averages: Age {pop_avg_age} yrs | BMI {pop_avg_bmi} | Systolic BP {pop_avg_systolic_bp} mmHg | Glucose {pop_avg_glucose} mg/dL | QALY {pop_avg_qaly} | DALY {pop_avg_daly} | Active conditions {pop_avg_conditions} | Meds {pop_avg_meds} | Procedures {pop_avg_procedures} | Days since last encounter {pop_avg_days_since}
-- Population disease rates: Diabetes {pop_diabetes_pct}% | Hypertension {pop_hypertension_pct}% | Heart disease {pop_heart_pct}% | Cancer {pop_cancer_pct}% | Polypharmacy {pop_polypharmacy_pct}%
-
-THIS CLUSTER - "{title}" ({cluster_type}, {count} patients, {pct}% of population):
-Pre-assigned description: {description}
-
-DEMOGRAPHICS:
-- Mean age: {avg_age} yrs (vs pop avg {pop_avg_age} yrs)
-- Gender: Female {female_pct}% / Male {male_pct}%
-- Marital mix (mode): {dominant_marital}
-
-VITALS & QUALITY OF LIFE (mean per patient):
-- BMI: {avg_bmi} (vs pop avg {pop_avg_bmi})
-- Systolic BP: {avg_systolic_bp} mmHg (vs pop avg {pop_avg_systolic_bp})
-- Glucose: {avg_glucose} mg/dL (vs pop avg {pop_avg_glucose})
-- QALY: {avg_qaly} (vs pop avg {pop_avg_qaly})
-- DALY: {avg_daly} (vs pop avg {pop_avg_daly})
-
-UTILIZATION & BURDEN (mean per patient):
-- Active conditions: {avg_conditions} (vs pop avg {pop_avg_conditions})
-- Medications: {avg_meds} (vs pop avg {pop_avg_meds})
-- Total procedures: {avg_procedures} (vs pop avg {pop_avg_procedures})
-- Days since last encounter: {avg_days_since} (vs pop avg {pop_avg_days_since})
-- Dominant encounter class: {dominant_encounter}
-- Dominant careplan category: {dominant_careplan}
-
-DISEASE PREVALENCE:
-- Diabetes: {diabetes_pct}% (vs pop {pop_diabetes_pct}%)
-- Hypertension: {hypertension_pct}% (vs pop {pop_hypertension_pct}%)
-- Heart disease: {heart_disease_pct}% (vs pop {pop_heart_pct}%)
-- Cancer: {cancer_pct}% (vs pop {pop_cancer_pct}%)
-- Polypharmacy (>=5 active meds): {polypharmacy_pct}% (vs pop {pop_polypharmacy_pct}%)
-- Current smokers: {current_smoker_pct}% | Former: {former_smoker_pct}% | Never: {never_smoker_pct}%
-
----
-TASK: Analyse this patient group for TWO audiences simultaneously:
-1. CLINICIANS - 2-3 sentences: what defines this group clinically (anchor on dominant careplan + top prevalence deltas), the main risks, and the most actionable care gaps. Reference specific numbers and deltas.
-2. GENERAL PUBLIC - 1-2 sentences: who are these patients in plain everyday language, no medical terms.
-
-Respond ONLY with valid JSON (no markdown, no extra text):
-{{
-  "risk_level": "high or moderate or low",
-  "medical_interpretation": "...",
-  "layperson_summary": "...",
-  "key_characteristics": ["data-grounded characteristic 1", "data-grounded characteristic 2", "data-grounded characteristic 3", "data-grounded characteristic 4"],
-  "priority_interventions": ["specific actionable clinical intervention 1", "specific actionable clinical intervention 2", "specific actionable clinical intervention 3"],
-  "care_recommendations": ["longer-term system-level recommendation 1", "longer-term system-level recommendation 2", "longer-term system-level recommendation 3"]
-}}
-"""
 
 
 class ClusterRepository:
@@ -102,6 +44,7 @@ class ClusterRepository:
         stats_rows = (
             self.db.query(
                 ClusterPatientModel.cluster_label,
+                func.count().label("cnt"),
                 func.round(func.avg(cast(ClusterPatientModel.features["age"].astext, Numeric)), 1).label("avg_age"),
                 func.round(func.avg(cast(ClusterPatientModel.features["qaly"].astext, Numeric)), 1).label("avg_qaly"),
                 func.round(func.avg(cast(ClusterPatientModel.features["total_medications"].astext, Numeric)), 1).label("avg_meds"),
@@ -117,36 +60,26 @@ class ClusterRepository:
             .all()
         )
 
-        stats_map = {}
-        for row in stats_rows:
-            stats_map[row.cluster_label] = {
+        stats_map = {
+            row.cluster_label: {
+                "count": row.cnt,
                 "avg_age": float(row.avg_age or 0),
                 "avg_qaly": float(row.avg_qaly or 0),
                 "avg_meds": float(row.avg_meds or 0),
                 "avg_active_conditions": float(row.avg_active_conditions or 0),
                 "chronic_illness_pct": float(row.chronic_illness_pct or 0),
             }
-
-        count_rows = (
-            self.db.query(
-                ClusterPatientModel.cluster_label,
-                func.count().label("cnt"),
-            )
-            .group_by(ClusterPatientModel.cluster_label)
-            .all()
-        )
-        count_map = {row.cluster_label: row.cnt for row in count_rows}
+            for row in stats_rows
+        }
 
         parsed_clusters = []
-
         for cluster in db_clusters:
-            c_count = count_map.get(cluster.cluster_label, 0)
+            stats = stats_map.get(cluster.cluster_label, {})
+            c_count = stats.get("count", 0)
 
             cluster_dict = cluster.model_dump()
             cluster_dict["count"] = c_count
             cluster_dict["percentage"] = round((c_count / total_patients) * 100, 2)
-
-            stats = stats_map.get(cluster.cluster_label, {})
             cluster_dict["avg_age"] = stats.get("avg_age", 0)
             cluster_dict["avg_qaly"] = stats.get("avg_qaly", 0)
             cluster_dict["avg_meds"] = stats.get("avg_meds", 0)
@@ -278,7 +211,125 @@ class ClusterRepository:
         cluster_colors = self._get_cluster_colors()
         return GetCategoricalFeaturesStatistics(features=result, cluster_colors=cluster_colors)
 
-    def get_ai_analysis(self, cluster_id: int) -> AiAnalysisResponse:
+    def get_cluster_detail(self, cluster_id: int) -> ClusterDetailResponse:
+        cluster = self.db.query(ClusterModel).filter(
+            ClusterModel.cluster_label == cluster_id,
+        ).first()
+        if not cluster:
+            raise ValueError(f"Cluster {cluster_id} not found")
+
+        size = cluster_size(self.db, cluster_id)
+        vitals = get_vitals(self.db, cluster_id)
+        utilization = get_utilization(self.db, cluster_id)
+        prevalence = get_disease_prevalence(self.db, cluster_id)
+        dominants = get_dominant_categoricals(self.db, cluster_id)
+
+        demographics = DemographicsSchema(
+            gender=get_gender_distribution(self.db, cluster_id),
+            marital=get_marital_distribution(self.db, cluster_id),
+            smoking=get_smoking_distribution(self.db, cluster_id),
+            condition_burden=get_condition_burden_distribution(self.db, cluster_id),
+        )
+
+        top_sequences = self._get_top_sequences(cluster_id)
+
+        severity_components = SeverityComponentsSchema(
+            avg_active_conditions=utilization["avg_active_conditions"],
+            avg_medications=utilization["avg_medications"],
+            avg_procedures=utilization["avg_procedures"],
+        )
+
+        return ClusterDetailResponse(
+            cluster_id=cluster_id,
+            cluster_type="outlier" if cluster_id == -1 else "regular",
+            title=cluster.title,
+            description=cluster.description,
+            insight=cluster.insight,
+            recommendation=cluster.recommendation,
+            color=cluster.color,
+            size=ClusterSizeSchema(**size),
+            vitals=ClusterVitalsSchema(**vitals),
+            utilization=ClusterUtilizationSchema(**utilization, severity_components=severity_components),
+            disease_prevalence=DiseasePrevalenceSchema(**prevalence),
+            demographics=demographics,
+            dominant_careplan=dominants["dominant_careplan"],
+            dominant_encounter_class=dominants["dominant_encounter_class"],
+            dominant_marital=dominants["dominant_marital"],
+            top_sequences=top_sequences,
+        )
+
+    def _get_top_sequences(self, cluster_id: int) -> list[TopSequenceSchema]:
+        if cluster_id == -1:
+            sql = text("""
+                SELECT p.rank, p.pattern_str, p.length, p.support_count, p.support_pct,
+                       COUNT(DISTINCT pp.patient_id) AS cluster_support_count
+                FROM prefix_span_patient_pattern pp
+                JOIN cluster_patient cp ON pp.patient_id = cp.patient_id
+                JOIN prefix_span_pattern p ON pp.pattern_id = p.id
+                WHERE cp.is_outlier = true
+                GROUP BY p.id, p.rank, p.pattern_str, p.length, p.support_count, p.support_pct
+                ORDER BY cluster_support_count DESC
+                LIMIT 5
+            """)
+            rows = self.db.execute(sql).mappings().all()
+        else:
+            sql = text("""
+                SELECT p.rank, p.pattern_str, p.length, p.support_count, p.support_pct,
+                       COUNT(DISTINCT pp.patient_id) AS cluster_support_count
+                FROM prefix_span_patient_pattern pp
+                JOIN cluster_patient cp ON pp.patient_id = cp.patient_id
+                JOIN prefix_span_pattern p ON pp.pattern_id = p.id
+                WHERE cp.cluster_label = :cluster_id AND cp.is_outlier = false
+                GROUP BY p.id, p.rank, p.pattern_str, p.length, p.support_count, p.support_pct
+                ORDER BY cluster_support_count DESC
+                LIMIT 5
+            """)
+            rows = self.db.execute(sql, {"cluster_id": cluster_id}).mappings().all()
+
+        return [
+            TopSequenceSchema(
+                rank=row["rank"],
+                pattern_str=row["pattern_str"],
+                length=row["length"],
+                support_count=row["support_count"],
+                support_pct=float(row["support_pct"]),
+                cluster_support_count=int(row["cluster_support_count"]),
+            )
+            for row in rows
+        ]
+
+    def get_cluster_ai_analysis(self, cluster_id: int) -> AiAnalysisResponse | None:
+        cluster = self.db.query(ClusterModel).filter(
+            ClusterModel.cluster_label == cluster_id,
+        ).first()
+        if not cluster:
+            raise ValueError(f"Cluster {cluster_id} not found")
+        if cluster.ai_analysis:
+            return AiAnalysisResponse(**cluster.ai_analysis)
+        return None
+
+    def lock_cluster_ai_analysis(self, cluster_id: int) -> AiAnalysisResponse | None:
+        """Acquire a row-level lock and return cached analysis if present.
+
+        Caller must commit/rollback to release the lock — the service layer
+        calls save_cluster_ai_analysis which commits.
+        """
+        cluster = self.db.query(ClusterModel).filter(
+            ClusterModel.cluster_label == cluster_id,
+        ).with_for_update().first()
+        if not cluster:
+            raise ValueError(f"Cluster {cluster_id} not found")
+        if cluster.ai_analysis:
+            return AiAnalysisResponse(**cluster.ai_analysis)
+        return None
+
+    def save_cluster_ai_analysis(self, cluster_id: int, analysis: dict) -> None:
+        self.db.query(ClusterModel).filter(
+            ClusterModel.cluster_label == cluster_id,
+        ).update({"ai_analysis": analysis}, synchronize_session="fetch")
+        self.db.commit()
+
+    def get_ai_context(self, cluster_id: int) -> dict:
         meta = self._get_meta()
         if not meta:
             raise ValueError("No clustering data found")
@@ -289,82 +340,32 @@ class ClusterRepository:
         if not cluster:
             raise ValueError(f"Cluster {cluster_id} not found")
 
-        if cluster.ai_analysis:
-            return AiAnalysisResponse(**cluster.ai_analysis)
-
-        is_outlier_cluster = cluster_id == -1
-        cluster_type = "outlier group" if is_outlier_cluster else "regular cluster"
-
         size = cluster_size(self.db, cluster_id)
-        count = size["count"]
-        pct = size["percentage"]
-
+        vitals = get_vitals(self.db, cluster_id)
+        utilization = get_utilization(self.db, cluster_id)
+        prevalence = get_disease_prevalence(self.db, cluster_id)
+        dominants = get_dominant_categoricals(self.db, cluster_id)
         gender = get_gender_distribution(self.db, cluster_id)
         smoking = get_smoking_distribution(self.db, cluster_id)
-        pop = get_population_stats(self.db)
-        metrics = meta.metrics or {}
+        population = get_population_stats(self.db)
 
-        prompt = PROMPT_AI_ANALYSIS.format(
-            n_patients=meta.n_patients,
-            n_clusters=meta.n_clusters,
-            silhouette=round(metrics.get("silhouette", 0), 3),
-            davies_bouldin=round(metrics.get("davies_bouldin", 0), 3),
-            pop_avg_age=pop.get("pop_avg_age", "N/A"),
-            pop_avg_bmi=pop.get("pop_avg_bmi", "N/A"),
-            pop_avg_systolic_bp=pop.get("pop_avg_systolic_bp", "N/A"),
-            pop_avg_glucose=pop.get("pop_avg_glucose", "N/A"),
-            pop_avg_qaly=pop.get("pop_avg_qaly", "N/A"),
-            pop_avg_daly=pop.get("pop_avg_daly", "N/A"),
-            pop_avg_meds=pop.get("pop_avg_meds", "N/A"),
-            pop_avg_procedures=pop.get("pop_avg_procedures", "N/A"),
-            pop_avg_conditions=pop.get("pop_avg_conditions", "N/A"),
-            pop_avg_days_since=pop.get("pop_avg_days_since", "N/A"),
-            pop_diabetes_pct=pop.get("pop_diabetes_pct", "N/A"),
-            pop_hypertension_pct=pop.get("pop_hypertension_pct", "N/A"),
-            pop_heart_pct=pop.get("pop_heart_pct", "N/A"),
-            pop_cancer_pct=pop.get("pop_cancer_pct", "N/A"),
-            pop_polypharmacy_pct=pop.get("pop_polypharmacy_pct", "N/A"),
-            title=cluster.title,
-            cluster_type=cluster_type,
-            count=count,
-            pct=pct,
-            description=cluster.description,
-            avg_age=get_avg_age(self.db, cluster_id),
-            avg_bmi=get_avg_bmi(self.db, cluster_id),
-            avg_systolic_bp=get_avg_systolic_bp(self.db, cluster_id),
-            avg_glucose=get_avg_glucose(self.db, cluster_id),
-            avg_qaly=get_avg_qaly(self.db, cluster_id),
-            avg_daly=get_avg_daly(self.db, cluster_id),
-            avg_meds=get_avg_medications(self.db, cluster_id),
-            avg_procedures=get_avg_procedures(self.db, cluster_id),
-            avg_conditions=get_avg_active_conditions(self.db, cluster_id),
-            avg_days_since=get_avg_days_since_encounter(self.db, cluster_id),
-            female_pct=gender["F"],
-            male_pct=gender["M"],
-            diabetes_pct=get_diabetes_pct(self.db, cluster_id),
-            hypertension_pct=get_hypertension_pct(self.db, cluster_id),
-            heart_disease_pct=get_heart_disease_pct(self.db, cluster_id),
-            cancer_pct=get_cancer_pct(self.db, cluster_id),
-            polypharmacy_pct=get_polypharmacy_pct(self.db, cluster_id),
-            current_smoker_pct=smoking["current"],
-            former_smoker_pct=smoking["former"],
-            never_smoker_pct=smoking["never"],
-            dominant_encounter=get_dominant_encounter_class(self.db, cluster_id),
-            dominant_careplan=get_dominant_careplan(self.db, cluster_id),
-            dominant_marital=get_dominant_marital(self.db, cluster_id),
-        )
-
-        raw_response = ask_ai(prompt)
-        analysis = _parse_ai_json(raw_response)
-
-        self.db.query(ClusterModel).filter(ClusterModel.id == cluster.id).update(
-            {"ai_analysis": analysis}, synchronize_session="fetch"
-        )
-        self.db.commit()
-
-        return AiAnalysisResponse(**analysis)
-
-
-def _parse_ai_json(text: str) -> dict:
-    text = re.sub(r"```(?:json)?\s*(.*?)\s*```", r"\1", text, flags=re.DOTALL)
-    return json.loads(text.strip())
+        return {
+            "meta": {
+                "n_patients": meta.n_patients,
+                "n_clusters": meta.n_clusters,
+                "metrics": meta.metrics or {},
+            },
+            "cluster": {
+                "title": cluster.title,
+                "description": cluster.description,
+                "cluster_id": cluster_id,
+            },
+            "size": size,
+            "vitals": vitals,
+            "utilization": utilization,
+            "prevalence": prevalence,
+            "dominants": dominants,
+            "gender": gender,
+            "smoking": smoking,
+            "population": population,
+        }

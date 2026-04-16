@@ -1,3 +1,5 @@
+import logging
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,6 +9,8 @@ from sqlalchemy import text
 from app import statistics_router, cluster_router, patient_router, provider_router, organization_router, dashboard_router, encounter_router, sequence_router
 from db.db_connector import engine
 import domain.models  # noqa: F401 - ensures all models are registered before create_all
+
+logger = logging.getLogger(__name__)
 
 routers = [
     statistics_router,
@@ -20,6 +24,13 @@ routers = [
 ]
 
 
+def _default_origins() -> list[str]:
+    raw = os.getenv("CORS_ORIGINS")
+    if raw:
+        return [o.strip() for o in raw.split(",") if o.strip()]
+    return ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
@@ -28,6 +39,22 @@ async def lifespan(app: FastAPI):
             conn.execute(text("ALTER TABLE cluster_meta ADD COLUMN IF NOT EXISTS ai_analysis JSONB"))
             conn.execute(text("ALTER TABLE cluster ADD COLUMN IF NOT EXISTS ai_analysis JSONB"))
             conn.execute(text("ALTER TABLE prefix_span_pattern ADD COLUMN IF NOT EXISTS ai_analysis JSONB"))
+            # NOT VALID skips the check on existing rows; new inserts are still validated.
+            conn.execute(text("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint
+                        WHERE conname = 'fk_cluster_patient_patient_id'
+                    ) THEN
+                        ALTER TABLE cluster_patient
+                        ADD CONSTRAINT fk_cluster_patient_patient_id
+                        FOREIGN KEY (patient_id) REFERENCES patient(patient_id)
+                        NOT VALID;
+                    END IF;
+                END;
+                $$;
+            """))
             # observation indexes
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_observation_description ON observation (description)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_observation_value_numeric ON observation (value_numeric)"))
@@ -55,7 +82,7 @@ async def lifespan(app: FastAPI):
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_provider_organization_id ON provider (organization_id)"))
             conn.commit()
     except Exception:
-        pass  # tables may not exist yet on first boot
+        logger.exception("Startup migrations failed — some ALTER/INDEX/CONSTRAINT statements did not run")
 
     # Observation materialized views — pre-aggregate millions of rows so the
     # statistics endpoint responds in milliseconds instead of ~30 seconds.
@@ -119,7 +146,7 @@ async def lifespan(app: FastAPI):
             """))
             conn.commit()
     except Exception:
-        pass  # view creation silently skipped if observation table not yet populated
+        logger.exception("Observation materialized view creation failed")
 
     yield
 
@@ -132,7 +159,7 @@ for router in routers:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_default_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

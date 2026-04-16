@@ -18,6 +18,10 @@ import pcaScatterReducer from "./slices/clusters/pca-scatter-slice";
 import numericalFeaturesReducer from "./slices/clusters/numerical-features-slice";
 import categoricalFeaturesReducer from "./slices/clusters/categorical-features-slice";
 import aiAnalysisReducer from "./slices/clusters/ai-analysis-slice";
+import clusterDetailReducer from "./slices/clusters/cluster-detail-slice";
+import sequenceListReducer from "./slices/sequences/sequence-list-slice";
+import sequenceResourcesReducer from "./slices/sequences/sequence-resources-slice";
+import sequenceAiReducer from "./slices/sequences/sequence-ai-slice";
 import patientsReducer from "./slices/patients/patients-slice";
 import currentPatientReducer from "./slices/patients/current-patient-slice";
 import providersReducer from "./slices/providers/providers-slice";
@@ -36,6 +40,10 @@ export const store = configureStore({
     numericalFeatures: numericalFeaturesReducer,
     categoricalFeatures: categoricalFeaturesReducer,
     aiAnalysis: aiAnalysisReducer,
+    clusterDetail: clusterDetailReducer,
+    sequenceList: sequenceListReducer,
+    sequenceResources: sequenceResourcesReducer,
+    sequenceAi: sequenceAiReducer,
     patientsStatistics: patientsStatisticsReducer,
     encountersStatistics: encountersStatisticsReducer,
     conditionsStatistics: conditionsStatisticsReducer,

@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
+import type { RootState } from "@/store";
 import {
   PatientListResponse,
   PatientDetail,
@@ -15,6 +16,7 @@ import {
   PatientResources,
 } from "@/models/generic/patients";
 import { ErrorResponse } from "@/models/generic/generic";
+import { SequenceListItem } from "@/models/generic/sequences";
 import { API_BASE } from "@/store/slices/clusters/thunks";
 
 const defaultHeaders: Record<string, string> = {
@@ -33,13 +35,18 @@ async function get<T>(url: string, label: string): Promise<T> {
 export const fetchPatientResources = createAsyncThunk<
   PatientResources,
   void,
-  { rejectValue: ErrorResponse }
+  { state: RootState; rejectValue: ErrorResponse }
 >("patients/fetchPatientResources", async (_, thunkAPI) => {
   try {
     return await get<PatientResources>(`${API_BASE}/patients/resources`, "patient resources");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patient resources" });
   }
+}, {
+  condition: (_, { getState }) => {
+    const s = getState().patients;
+    return !s.resourcesLoading && s.resources === null;
+  },
 });
 
 export const fetchPatients = createAsyncThunk<
@@ -171,5 +178,17 @@ export const fetchPatientEncounters = createAsyncThunk<
     return await get<EncounterItem[]>(`${API_BASE}/patients/${patientId}/encounters`, "encounters");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch encounters" });
+  }
+});
+
+export const fetchPatientSequences = createAsyncThunk<
+  SequenceListItem[],
+  string,
+  { rejectValue: ErrorResponse }
+>("patients/fetchPatientSequences", async (patientId, thunkAPI) => {
+  try {
+    return await get<SequenceListItem[]>(`${API_BASE}/patients/${patientId}/sequences`, "patient sequences");
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patient sequences" });
   }
 });

@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
+import type { RootState } from "@/store";
 import {
   EncounterListResponse,
   EncounterDetail,
@@ -32,13 +33,18 @@ async function get<T>(url: string, label: string): Promise<T> {
 export const fetchEncounterResources = createAsyncThunk<
   EncounterResources,
   void,
-  { rejectValue: ErrorResponse }
+  { state: RootState; rejectValue: ErrorResponse }
 >("encounters/fetchEncounterResources", async (_, thunkAPI) => {
   try {
     return await get<EncounterResources>(`${API_BASE}/encounters/resources`, "encounter resources");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch encounter resources" });
   }
+}, {
+  condition: (_, { getState }) => {
+    const s = getState().encounters;
+    return !s.resourcesLoading && s.resources === null;
+  },
 });
 
 export const fetchEncounters = createAsyncThunk<

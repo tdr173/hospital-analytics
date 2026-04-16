@@ -36,5 +36,8 @@ class PatientService:
     def get_patient_encounters(self, patient_id: str):
         return self.repo.get_patient_encounters(patient_id)
 
+    def get_patient_sequences(self, patient_id: str):
+        return self.repo.get_patient_sequences(patient_id)
+
     def get_patient_resources(self):
         return self.repo.get_patient_resources()

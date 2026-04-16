@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
+import type { RootState } from "@/store";
 import {
   OrganizationListResponse,
   OrganizationDetail,
@@ -28,13 +29,18 @@ async function get<T>(url: string, label: string): Promise<T> {
 export const fetchOrganizationResources = createAsyncThunk<
   OrganizationResources,
   void,
-  { rejectValue: ErrorResponse }
+  { state: RootState; rejectValue: ErrorResponse }
 >("organizations/fetchOrganizationResources", async (_, thunkAPI) => {
   try {
     return await get<OrganizationResources>(`${API_BASE}/organizations/resources`, "organization resources");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch organization resources" });
   }
+}, {
+  condition: (_, { getState }) => {
+    const s = getState().organizations;
+    return !s.resourcesLoading && s.resources === null;
+  },
 });
 
 export const fetchOrganizations = createAsyncThunk<

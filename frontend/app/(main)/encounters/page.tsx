@@ -48,7 +48,7 @@ function EncountersPageContent() {
 
   useEffect(() => {
     if (!resources) dispatch(fetchEncounterResources());
-  }, []);
+  }, [dispatch, resources]);
 
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const rows = parseInt(searchParams.get("rows") ?? "25", 10);
@@ -68,7 +68,7 @@ function EncountersPageContent() {
         sortType,
       }),
     );
-  }, [searchParams, page, rows, sortBy, sortType]);
+  }, [dispatch, searchParams, page, rows, sortBy, sortType]);
 
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [encounterClass, setEncounterClass] = useState<string[]>(

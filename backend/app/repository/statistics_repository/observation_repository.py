@@ -1,18 +1,15 @@
 from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, cast, Numeric, text
+from sqlalchemy import text
 
-from domain.models.observation_model import ObservationModel
-from domain.models.patient_model import PatientModel
+from repository.statistics_repository._common import with_percentage
 
 
 class ObservationRepository:
+    # Values come from mv_obs_* materialized views to avoid scanning millions of rows.
+
     def __init__(self, db: Session):
         self.db = db
-
-    # ------------------------------------------------------------------
-    # Scalar totals — read from the pre-aggregated view (instant)
-    # ------------------------------------------------------------------
 
     def get_total_observations(self) -> int:
         row = self.db.execute(text("SELECT total_observations FROM mv_obs_totals")).first()
@@ -25,10 +22,6 @@ class ObservationRepository:
     def get_total_patients(self) -> int:
         row = self.db.execute(text("SELECT total_patients FROM mv_obs_totals")).first()
         return int(row.total_patients) if row else 0
-
-    # ------------------------------------------------------------------
-    # Aggregations — query tiny materialized views, not millions of rows
-    # ------------------------------------------------------------------
 
     def get_per_patient_stats(self):
         row = self.db.execute(text(
@@ -53,7 +46,7 @@ class ObservationRepository:
             "LIMIT :limit"
         ), {"limit": limit}).all()
 
-        return self._with_percentage(rows, total)
+        return with_percentage(rows, total)
 
     def get_numeric_stats(self, limit: int = 25, total_patients: Optional[int] = None):
         if total_patients is None:
@@ -99,17 +92,6 @@ class ObservationRepository:
                 "patient_count": row.patient_count,
                 "percentage": round(row.patient_count * 100.0 / total_patients, 2) if total_patients else 0,
                 "distinct_values": row.distinct_values,
-            }
-            for row in rows
-        ]
-
-    @staticmethod
-    def _with_percentage(rows, total):
-        return [
-            {
-                "label": row.label,
-                "count": row.count,
-                "percentage": round(row.count * 100.0 / total, 2) if total else 0,
             }
             for row in rows
         ]

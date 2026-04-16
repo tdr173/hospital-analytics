@@ -44,7 +44,7 @@ function OrganizationsPageContent() {
 
   useEffect(() => {
     if (!resources) dispatch(fetchOrganizationResources());
-  }, []);
+  }, [dispatch, resources]);
 
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const rows = parseInt(searchParams.get("rows") ?? "25", 10);
@@ -62,7 +62,7 @@ function OrganizationsPageContent() {
         sortType,
       }),
     );
-  }, [searchParams, page, rows, sortBy, sortType]);
+  }, [dispatch, searchParams, page, rows, sortBy, sortType]);
 
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [city, setCity] = useState(searchParams.get("city") ?? "");

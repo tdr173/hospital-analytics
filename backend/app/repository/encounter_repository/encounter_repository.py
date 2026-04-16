@@ -1,7 +1,6 @@
 from typing import Optional
-from datetime import date
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, case
+from sqlalchemy import func, or_
 
 from domain import (
     PatientModel, ProviderModel, OrganizationModel, EncounterModel,
@@ -13,32 +12,13 @@ from domain import (
     EncounterCarePlanItem,
     EncounterResourcesResponse, FilterOption,
 )
+from repository._helpers import patient_name_col, provider_name_col, clamp_page_size
 
 SORT_COL_MAP = {
     "start_date": EncounterModel.start_date,
     "duration": EncounterModel.duration,
     "encounter_class": EncounterModel.encounter_class,
 }
-
-_patient_name_col = case(
-    (PatientModel.first_name == PatientModel.last_name,
-     func.regexp_replace(PatientModel.first_name, '[0-9]', '', 'g')),
-    else_=(
-        func.regexp_replace(PatientModel.first_name, '[0-9]', '', 'g')
-        + ' '
-        + func.regexp_replace(PatientModel.last_name, '[0-9]', '', 'g')
-    )
-).label("patient_name")
-
-_provider_name_col = case(
-    (ProviderModel.first_name == ProviderModel.last_name,
-     func.regexp_replace(ProviderModel.first_name, '[0-9]', '', 'g')),
-    else_=(
-        func.regexp_replace(ProviderModel.first_name, '[0-9]', '', 'g')
-        + ' '
-        + func.regexp_replace(ProviderModel.last_name, '[0-9]', '', 'g')
-    )
-).label("provider_name")
 
 
 class EncounterRepository:
@@ -83,7 +63,6 @@ class EncounterRepository:
         if date_to:
             enc_filters.append(EncounterModel.start_date <= date_to)
 
-        # Count — join patient only when searching by name
         count_q = self.db.query(func.count(EncounterModel.encounter_id)).filter(*enc_filters)
         if patient_filters:
             count_q = (
@@ -93,14 +72,14 @@ class EncounterRepository:
             )
         total = count_q.scalar() or 0
 
-        # Data query — always join all three for display
+        rows = clamp_page_size(rows)
         offset = (page - 1) * rows
         q = (
             self.db.query(
                 EncounterModel.encounter_id,
                 EncounterModel.patient_id,
-                _patient_name_col,
-                _provider_name_col,
+                patient_name_col(),
+                provider_name_col(),
                 OrganizationModel.name.label("organization_name"),
                 EncounterModel.start_date,
                 EncounterModel.duration,
@@ -125,9 +104,9 @@ class EncounterRepository:
             self.db.query(
                 EncounterModel.encounter_id,
                 EncounterModel.patient_id,
-                _patient_name_col,
+                patient_name_col(),
                 EncounterModel.provider_id,
-                _provider_name_col,
+                provider_name_col(),
                 EncounterModel.organization_id,
                 OrganizationModel.name.label("organization_name"),
                 EncounterModel.start_date,

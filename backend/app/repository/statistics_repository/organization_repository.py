@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
 from domain.models.organization_model import OrganizationModel
+from repository.statistics_repository._common import with_percentage
 
 
 class OrganizationRepository:
@@ -26,7 +27,7 @@ class OrganizationRepository:
             .limit(limit)
             .all()
         )
-        return self._with_percentage(rows, total)
+        return with_percentage(rows, total)
 
     def get_utilization_stats(self):
         result = self.db.query(
@@ -48,14 +49,3 @@ class OrganizationRepository:
             "avg": float(result.avg or 0),
             "median": float(result.median or 0),
         }
-
-    @staticmethod
-    def _with_percentage(rows, total):
-        return [
-            {
-                "label": row.label,
-                "count": row.count,
-                "percentage": round(row.count * 100.0 / total, 2) if total else 0,
-            }
-            for row in rows
-        ]

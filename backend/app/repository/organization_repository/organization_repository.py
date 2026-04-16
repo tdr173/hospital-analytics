@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, case
+from sqlalchemy import func, or_
 
 from domain import (
     OrganizationModel, ProviderModel, EncounterModel, PatientModel,
@@ -9,6 +9,7 @@ from domain import (
     OrganizationEncounterItem, OrganizationEncounterResponse,
     OrganizationResourcesResponse, FilterOption,
 )
+from repository._helpers import patient_name_col, provider_name_col, clamp_page_size
 
 SORT_COL_MAP = {
     "name": OrganizationModel.name,
@@ -74,6 +75,7 @@ class OrganizationRepository:
                 else sort_col.desc().nulls_last()
             )
 
+        rows = clamp_page_size(rows)
         offset = (page - 1) * rows
         rows_data = (
             self.db.query(
@@ -143,34 +145,15 @@ class OrganizationRepository:
             .scalar() or 0
         )
 
-        patient_name_col = case(
-            (PatientModel.first_name == PatientModel.last_name,
-             func.regexp_replace(PatientModel.first_name, '[0-9]', '', 'g')),
-            else_=(
-                func.regexp_replace(PatientModel.first_name, '[0-9]', '', 'g')
-                + ' '
-                + func.regexp_replace(PatientModel.last_name, '[0-9]', '', 'g')
-            )
-        ).label("patient_name")
-
-        provider_name_col = case(
-            (ProviderModel.first_name == ProviderModel.last_name,
-             func.regexp_replace(ProviderModel.first_name, '[0-9]', '', 'g')),
-            else_=(
-                func.regexp_replace(ProviderModel.first_name, '[0-9]', '', 'g')
-                + ' '
-                + func.regexp_replace(ProviderModel.last_name, '[0-9]', '', 'g')
-            )
-        ).label("provider_name")
-
+        rows = clamp_page_size(rows)
         offset = (page - 1) * rows
         rows_data = (
             self.db.query(
                 EncounterModel.encounter_id,
                 EncounterModel.patient_id,
-                patient_name_col,
+                patient_name_col(),
                 EncounterModel.provider_id,
-                provider_name_col,
+                provider_name_col(),
                 EncounterModel.start_date,
                 EncounterModel.end_date,
                 EncounterModel.duration,

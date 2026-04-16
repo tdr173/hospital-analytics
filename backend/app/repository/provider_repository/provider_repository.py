@@ -1,12 +1,13 @@
 from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, case
+from sqlalchemy import func, or_
 
 from domain import (
     ProviderModel, OrganizationModel, EncounterModel, PatientModel,
     ProviderListItem, ProviderListResponse, ProviderDetailResponse,
     ProviderEncounterItem, ProviderResourcesResponse, FilterOption,
 )
+from repository._helpers import patient_name_col, clamp_page_size
 
 SORT_COL_MAP = {
     "last_name": ProviderModel.last_name,
@@ -63,6 +64,7 @@ class ProviderRepository:
             .scalar() or 0
         )
 
+        rows = clamp_page_size(rows)
         offset = (page - 1) * rows
         rows_data = (
             self.db.query(
@@ -116,15 +118,7 @@ class ProviderRepository:
             self.db.query(
                 EncounterModel.encounter_id,
                 EncounterModel.patient_id,
-                case(
-                    (PatientModel.first_name == PatientModel.last_name,
-                     func.regexp_replace(PatientModel.first_name, '[0-9]', '', 'g')),
-                    else_=(
-                        func.regexp_replace(PatientModel.first_name, '[0-9]', '', 'g')
-                        + ' '
-                        + func.regexp_replace(PatientModel.last_name, '[0-9]', '', 'g')
-                    )
-                ).label("patient_name"),
+                patient_name_col(),
                 EncounterModel.start_date,
                 EncounterModel.end_date,
                 EncounterModel.duration,

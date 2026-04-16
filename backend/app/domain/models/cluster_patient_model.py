@@ -10,7 +10,7 @@ class ClusterPatientModel(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
 
-    patient_id: str = Field(index=True)
+    patient_id: str = Field(index=True, foreign_key="patient.patient_id")
 
     cluster_label: int = Field(index=True)   # 0, 1, 2, ... or -1 for outliers
     is_outlier: bool = Field(default=False)

@@ -1,0 +1,101 @@
+import { Theme } from "@/utils/theme";
+
+export const ClusterDemographicsGridStyles = (theme: Theme) => ({
+  card: {
+    backgroundColor: theme.colors.surface.containerLowest,
+    borderRadius: theme.borderRadius.lg,
+    boxShadow: theme.shadows.md,
+    padding: `${theme.spacing.lg} ${theme.spacing.xl}`,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: theme.spacing.md,
+  },
+  sectionTitle: {
+    fontSize: "0.7rem",
+    fontWeight: theme.typography.fontWeight.bold,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.1em",
+    color: theme.colors.text.secondary,
+    margin: 0,
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: theme.spacing.lg,
+    "@media (max-width: 900px)": {
+      gridTemplateColumns: "1fr",
+    },
+  },
+  tile: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: theme.spacing.sm,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface.containerLow,
+    borderRadius: theme.borderRadius.md,
+  },
+  tileTitle: {
+    fontSize: "0.7rem",
+    fontWeight: theme.typography.fontWeight.semibold,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.06em",
+    color: theme.colors.text.secondary,
+    margin: 0,
+  },
+  chartWrapper: {
+    width: "100%",
+    height: 180,
+  },
+  donutCenter: {
+    position: "relative" as const,
+    width: "100%",
+    height: 180,
+  },
+  donutCenterLabel: {
+    position: "absolute" as const,
+    inset: 0,
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    justifyContent: "center",
+    pointerEvents: "none" as const,
+  },
+  donutCenterValue: {
+    fontSize: "1.5rem",
+    fontWeight: theme.typography.fontWeight.bold,
+    fontFamily: theme.typography.fontFamilyHeading,
+    lineHeight: 1,
+  },
+  donutCenterCaption: {
+    fontSize: "0.65rem",
+    color: theme.colors.text.secondary,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.06em",
+  },
+  legendRow: {
+    display: "flex",
+    flexWrap: "wrap" as const,
+    gap: theme.spacing.md,
+    justifyContent: "center",
+    fontSize: "0.75rem",
+    color: theme.colors.text.primary,
+  },
+  legendItem: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  legendDot: {
+    width: "10px",
+    height: "10px",
+    borderRadius: "50%",
+  },
+  tooltip: {
+    backgroundColor: theme.colors.surface.containerLowest,
+    border: `1px solid ${theme.colors.border.main}`,
+    borderRadius: theme.borderRadius.md,
+    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+    fontSize: "0.75rem",
+    color: theme.colors.text.primary,
+  },
+});

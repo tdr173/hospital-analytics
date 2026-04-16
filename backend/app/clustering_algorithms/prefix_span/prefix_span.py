@@ -293,13 +293,13 @@ def build_patient_sequences(engine):
     Returns (sequences, patient_ids, id_to_item) where each sequence is a list of
     itemsets (sorted tuples of *integer item ids*).
 
-    Fix (#4): events sharing a (patient, event_date) pair become one *itemset*.
-    Perf: items are deduplicated per patient (keep only the first occurrence of
-    each item across the whole sequence) — for frequent-pattern mining where
-    support is "distinct patients containing the pattern", repeated occurrences
-    of the same item within one patient don't matter, and dropping them turns
-    mean sequence length from ~87 to ~20. Items are also integer-encoded so
-    downstream set/dict ops are cheap.
+    Events sharing a (patient, event_date) pair become one *itemset* — items
+    within one itemset are deduplicated via set() and sorted ascending so the
+    canonical form downstream is unique. Across days, items are intentionally
+    NOT deduplicated: the mining algorithm must see every occurrence to
+    correctly match patterns like "Y -> X" against patient histories of the
+    form "X -> Y -> X". Items are integer-encoded so downstream set/dict ops
+    are cheap.
     """
     events = _fetch_events(engine)
 
@@ -323,9 +323,7 @@ def build_patient_sequences(engine):
     id_to_item = unique_items  # list indexed by id
     events = events.assign(item_id=events["item"].map(item_to_id))
 
-    # dedup: keep the earliest occurrence of each (patient, item)
     events = events.sort_values(["patient_id", "event_date"])
-    events = events.drop_duplicates(subset=["patient_id", "item_id"], keep="first")
 
     sequences = []
     patient_ids = []
@@ -342,7 +340,7 @@ def build_patient_sequences(engine):
 
     lens = [sum(len(s) for s in seq) for seq in sequences]
     print(
-        f"built {len(sequences)} patient sequences (itemset form, int-encoded, deduped) | "
+        f"built {len(sequences)} patient sequences (itemset form, int-encoded) | "
         f"items per seq: min={min(lens)} max={max(lens)} "
         f"mean={sum(lens) / len(lens):.1f}"
     )
@@ -369,17 +367,21 @@ def build_patient_sequences(engine):
 
 def _build_position_index(sequences):
     """
-    For each sequence, build a dict item_id -> (i_idx, j_idx). Because items are
-    deduplicated per patient, each item has at most one position per sequence,
-    so projection is a single dict lookup per seq — no tail scan, no bisect.
+    For each sequence, build a dict item_id -> list[(i_idx, j_idx)] with every
+    occurrence of the item in the sequence, in ascending (i, j) order.
+
+    Storing every occurrence (not just the first) is required for correct
+    support counting. Example: a patient with events X -> Y -> X must match
+    pattern "Y -> X" because the second X follows Y; keeping only the first X
+    would miss this case and undercount the pattern's support.
     """
     index = []
     for seq in sequences:
-        pos = {}
+        pos: dict[int, list[tuple[int, int]]] = defaultdict(list)
         for i, iset in enumerate(seq):
             for j, item in enumerate(iset):
-                pos[item] = (i, j)
-        index.append(pos)
+                pos[item].append((i, j))
+        index.append(dict(pos))
     return index
 
 
@@ -391,6 +393,11 @@ def prefixspan(sequences, min_support, min_len, max_len, item_types=None, verbos
     Perf: at each recursion, we first compute globally reachable items from the
     projection, then only project for items whose local support >= min_support.
     This is the core anti-monotone pruning from the paper.
+
+    Projection follows the paper's pseudo-projection: for each candidate
+    sequence, the new pivot is the *earliest* valid position of the extension
+    item (first position after the current pivot for s-extensions, or the
+    unique same-itemset position for i-extensions).
     """
     pos_index = _build_position_index(sequences)
     results = []
@@ -400,20 +407,27 @@ def prefixspan(sequences, min_support, min_len, max_len, item_types=None, verbos
         s_ext = defaultdict(set)
         i_ext = defaultdict(set)
         for sid, i_idx, j_idx in proj:
-            # iterate positions of this sequence once
-            for item, (pi, pj) in pos_index[sid].items():
-                if pi > i_idx:
-                    s_ext[item].add(sid)
-                elif i_idx >= 0 and pi == i_idx and pj > j_idx:
-                    i_ext[item].add(sid)
+            for item, positions in pos_index[sid].items():
+                for pi, pj in positions:
+                    if pi > i_idx:
+                        s_ext[item].add(sid)
+                        break  # positions are ascending; first s-ext suffices
+                    if i_idx >= 0 and pi == i_idx and pj > j_idx:
+                        i_ext[item].add(sid)
+                        # keep scanning: a later (pi > i_idx) may still give
+                        # an s-extension for the same item in this sequence
         return s_ext, i_ext
 
     def project_s(proj, item):
         out = []
         for sid, i_idx, _ in proj:
-            pos = pos_index[sid].get(item)
-            if pos is not None and pos[0] > i_idx:
-                out.append((sid, pos[0], pos[1]))
+            positions = pos_index[sid].get(item)
+            if not positions:
+                continue
+            for pi, pj in positions:
+                if pi > i_idx:
+                    out.append((sid, pi, pj))
+                    break
         return out
 
     def project_i(proj, item):
@@ -421,9 +435,15 @@ def prefixspan(sequences, min_support, min_len, max_len, item_types=None, verbos
         for sid, i_idx, j_idx in proj:
             if i_idx < 0:
                 continue
-            pos = pos_index[sid].get(item)
-            if pos is not None and pos[0] == i_idx and pos[1] > j_idx:
-                out.append((sid, pos[0], pos[1]))
+            positions = pos_index[sid].get(item)
+            if not positions:
+                continue
+            for pi, pj in positions:
+                if pi > i_idx:
+                    break  # past the pivot itemset, no same-itemset match possible
+                if pi == i_idx and pj > j_idx:
+                    out.append((sid, pi, pj))
+                    break
         return out
 
     def grow(pattern, proj, plen, depth=0):
