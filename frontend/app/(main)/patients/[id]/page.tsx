@@ -61,8 +61,8 @@ const TAB_LABELS = [
   "Immunizations",
   "Allergies",
   "Care Plans",
-  "Encounters",
-  "Sequences",
+  "Visits",
+  "Care Sequences",
 ];
 
 const TAB_FETCHERS: Record<number, (id: string) => any> = {
@@ -115,7 +115,7 @@ export default function PatientDetailPage() {
   }, [tab, id, dispatch, loadedTabs]);
 
   if (loading) {
-    return <div className={classes.pageLoading}>Loading patient data...</div>;
+    return <div className={classes.pageLoading}>Loading patient profile...</div>;
   }
 
   if (error || !patient) {

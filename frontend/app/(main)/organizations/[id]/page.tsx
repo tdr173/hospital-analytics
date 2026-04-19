@@ -53,11 +53,11 @@ export default function OrganizationDetailPage() {
   }, [id, dispatch]);
 
   if (loading) {
-    return <div className={classes.pageLoading}>Loading organization data...</div>;
+    return <div className={classes.pageLoading}>Loading facility data...</div>;
   }
   if (error || !organization) {
     return (
-      <div className={classes.pageError}>{error ?? "Organization not found."}</div>
+      <div className={classes.pageError}>{error ?? "Facility not found."}</div>
     );
   }
 
@@ -72,7 +72,7 @@ export default function OrganizationDetailPage() {
           />
         </div>
         <div className={classes.nameBlock}>
-          <p className={classes.profileLabel}>Organization Profile</p>
+          <p className={classes.profileLabel}>Facility Profile</p>
           <h1 className={classes.orgFullName}>{organization.name ?? "Unknown"}</h1>
           <div className={classes.badgesRow}>
             {organization.city && <span className={classes.badge}>{organization.city}</span>}
@@ -105,8 +105,8 @@ export default function OrganizationDetailPage() {
             },
           }}
         >
-          <Tab label="Providers" disableRipple />
-          <Tab label="Encounters" disableRipple />
+          <Tab label="Clinicians" disableRipple />
+          <Tab label="Visits" disableRipple />
         </Tabs>
 
         <div className={classes.tabContentPadding}>

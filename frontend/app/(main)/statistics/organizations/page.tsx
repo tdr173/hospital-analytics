@@ -25,7 +25,7 @@ export default function OrganizationsPage() {
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading organization statistics...</div>
+      <div className={classes.loading}>Loading facility data...</div>
     );
   }
 
@@ -40,14 +40,14 @@ export default function OrganizationsPage() {
   return (
     <div className={classes.container}>
       <div className={classes.summaryCard}>
-        <div className={classes.summaryLabel}>Total Organizations</div>
+        <div className={classes.summaryLabel}>Total Facilities</div>
         <div className={classes.summaryValue}>
           {data.totalOrganizations.toLocaleString()}
         </div>
       </div>
 
       <div className={classes.utilizationCard}>
-        <h3 className={classes.utilizationTitle}>Utilization</h3>
+        <h3 className={classes.utilizationTitle}>Patient Load</h3>
         <div className={classes.utilizationStats}>
           <div>
             <div className={classes.utilizationStatLabel}>Min</div>

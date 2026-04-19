@@ -28,9 +28,10 @@ export default function EncountersTab({
 }: Props) {
   const classes = useClasses(EncountersTabStyles, { name: "OrgEncountersTab" });
 
-  if (loading) return <div className={classes.tabLoading}>Loading encounters...</div>;
+  if (loading)
+    return <div className={classes.tabLoading}>Loading visits...</div>;
   if (!data.length)
-    return <div className={classes.emptyState}>No encounters recorded.</div>;
+    return <div className={classes.emptyState}>No visits recorded.</div>;
 
   return (
     <div className={classes.container}>
@@ -39,9 +40,9 @@ export default function EncountersTab({
           className={`${classes.gridRow} ${classes.encountersGridRow} ${classes.headerRow}`}
         >
           <div>Patient</div>
-          <div>Provider</div>
+          <div>Clinician</div>
           <div>Date</div>
-          <div>Class</div>
+          <div>Type</div>
           <div>Description</div>
           <div>Duration</div>
         </div>
@@ -64,7 +65,9 @@ export default function EncountersTab({
             >
               {r.providerName}
             </div>
-            <div className={classes.secondaryText}>{formatDate(r.startDate)}</div>
+            <div className={classes.secondaryText}>
+              {formatDate(r.startDate)}
+            </div>
             <div>
               <span className={classes.classBadge}>
                 {ENCOUNTER_CLASS_LABELS[r.encounterClass] ?? r.encounterClass}
@@ -72,7 +75,7 @@ export default function EncountersTab({
             </div>
             <div className={classes.secondaryText}>{r.description}</div>
             <div className={classes.secondaryText}>
-              {r.duration != null ? `${Math.round(r.duration)} min` : "—"}
+              {r.duration != null ? `${Math.round(r.duration)} min` : "-"}
             </div>
           </div>
         ))}

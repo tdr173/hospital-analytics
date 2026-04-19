@@ -24,12 +24,6 @@ def save_cluster_results(
     pca_image_bytes: bytes | None = None,
     extra_feature_cols: list[str] | None = None,
 ) -> None:
-    """
-    Overwrites all clustering data: cluster_meta, cluster, cluster_patient.
-    Previous run is fully replaced — no versioning.
-    """
-    # truncate in dependency order (cluster_patient and cluster reference nothing,
-    # cluster_meta is standalone)
     db.execute(text("DELETE FROM cluster_patient"))
     db.execute(text("DELETE FROM cluster"))
     db.execute(text("DELETE FROM cluster_meta"))
@@ -96,7 +90,7 @@ def save_cluster_results(
         db.execute(insert_patient_sql, outlier_rows)
 
     parsed = _parse_cluster_summaries(cluster_summaries)
-    # Deduplicate by cluster_label — keep first occurrence in case the LLM repeats a label
+    # Deduplicate by cluster_label - keep first occurrence in case the LLM repeats a label
     _seen_labels: set[int] = set()
     _deduped = []
     for row in parsed:
@@ -119,10 +113,9 @@ def save_cluster_results(
 
 
 def _parse_cluster_summaries(text_response: str) -> list[dict]:
-    """
-    Parses Gemini's pipe-separated response into a list of dicts.
-    Expected line format: [cluster_id] | Title | Description | Insight | Recommendation
-    """
+    # Parses Gemini's pipe-separated response into a list of dicts.
+    # Expected line format: [cluster_id] | Title | Description | Insight | Recommendation
+
     rows = []
     for line in text_response.splitlines():
         line = line.strip()
@@ -147,7 +140,7 @@ def _parse_cluster_summaries(text_response: str) -> list[dict]:
 
 
 def _serialize(val):
-    """Convert numpy/pandas types to plain Python for JSON storage."""
+    # Convert numpy/pandas types to plain Python for JSON storage
     if hasattr(val, "item"):
         return val.item()
     if isinstance(val, float) and pd.isna(val):

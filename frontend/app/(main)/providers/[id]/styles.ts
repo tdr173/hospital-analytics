@@ -160,7 +160,7 @@ export const ProviderDetailPageStyles = (theme: Theme) => ({
   // Encounter table rows (CSS grid)
   gridRow: {
     display: "grid",
-    gridTemplateColumns: "1.5fr 90px 110px 2fr 1.5fr 80px 56px",
+    gridTemplateColumns: "1fr 90px 110px 2fr 1.5fr 80px 56px",
     gap: theme.spacing.sm,
     alignItems: "center",
     padding: `${theme.spacing.sm} ${theme.spacing.md}`,

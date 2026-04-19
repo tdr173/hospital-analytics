@@ -35,7 +35,7 @@ export default function ClusterStatisticsPage() {
       {data && (
         <>
           <div className={classes.imageCard}>
-            <p className={classes.imageTitle}>Patient Clusters: PCA Projection</p>
+            <p className={classes.imageTitle}>Patient Groups: Visual Overview</p>
             {data.pcaImage ? (
               <img
                 src={`data:image/png;base64,${data.pcaImage}`}
@@ -44,7 +44,7 @@ export default function ClusterStatisticsPage() {
               />
             ) : (
               <div className={classes.imageFallback}>
-                PCA image not available. Re-run the clustering pipeline to generate it.
+                Chart not available. Re-run the analysis to generate it.
               </div>
             )}
           </div>
@@ -54,7 +54,7 @@ export default function ClusterStatisticsPage() {
             {data.heatmap && (
               <img
                 src={`data:image/png;base64,${data.heatmap}`}
-                alt="Cluster Heatmap"
+                alt="Group Heatmap"
                 className={classes.cardImage}
               />
             )}

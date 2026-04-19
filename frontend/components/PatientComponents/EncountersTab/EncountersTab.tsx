@@ -23,15 +23,15 @@ export default function EncountersTab({ data }: { data: EncounterItem[] }) {
     <div className={classes.tableContainer}>
       <div className={classes.scrollWrapper}>
         {!data || data.length === 0 ? (
-          <div className={classes.emptyState}>No encounters recorded.</div>
+          <div className={classes.emptyState}>No visits recorded.</div>
         ) : (
           <>
             <div className={`${classes.gridRow} ${classes.headerRow}`}>
               <div>Date</div>
               <div>Type</div>
               <div>Description</div>
-              <div>Provider</div>
-              <div>Organization</div>
+              <div>Clinician</div>
+              <div>Facility</div>
               <div>Duration</div>
             </div>
 
@@ -65,17 +65,17 @@ export default function EncountersTab({ data }: { data: EncounterItem[] }) {
 
                   {/* Col 4: Provider (Truncated) */}
                   <div className={classes.secondaryText}>
-                    <TruncatedText text={r.providerName ?? "—"} />
+                    <TruncatedText text={r.providerName ?? "-"} />
                   </div>
 
                   {/* Col 5: Organization (Truncated) */}
                   <div className={classes.secondaryText}>
-                    <TruncatedText text={r.organizationName ?? "—"} />
+                    <TruncatedText text={r.organizationName ?? "-"} />
                   </div>
 
                   {/* Col 6: Centered Duration */}
                   <div className={classes.centeredCell}>
-                    {r.duration != null ? `${Math.round(r.duration)} min` : "—"}
+                    {r.duration != null ? `${Math.round(r.duration)} min` : "-"}
                   </div>
                 </div>
               );

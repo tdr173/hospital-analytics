@@ -42,13 +42,13 @@ export default function CarePlansTab({ data }: { data: CarePlanItem[] }) {
               </div>
 
               <div className={classes.centeredCell}>
-                {r.endDate ? formatDate(r.endDate) : "—"}
+                {r.endDate ? formatDate(r.endDate) : "-"}
               </div>
 
               <div className={classes.centeredCell}>
                 {r.durationDays != null
                   ? `${Math.round(r.durationDays)} d`
-                  : "—"}
+                  : "-"}
               </div>
 
               <div className={classes.secondaryText}>

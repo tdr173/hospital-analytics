@@ -24,7 +24,7 @@ export default function EncountersPage() {
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading encounter statistics...</div>
+      <div className={classes.loading}>Loading visit data...</div>
     );
   }
 
@@ -39,7 +39,7 @@ export default function EncountersPage() {
   return (
     <div className={classes.container}>
       <div className={classes.totalCard}>
-        <div className={classes.totalLabel}>Total Encounters</div>
+        <div className={classes.totalLabel}>Total Visits</div>
         <div className={classes.totalValue}>
           {data.totalEncounters.toLocaleString()}
         </div>
@@ -48,7 +48,7 @@ export default function EncountersPage() {
       <div className={classes.grid}>
         <PieChartComponent
           data={data.encounterClass}
-          title="Encounter Class Distribution"
+          title="Visit Type Distribution"
           colors={[
             "#006780",
             "#028fb0",
@@ -60,19 +60,19 @@ export default function EncountersPage() {
         />
         <BarChartComponent
           data={data.topDescriptions}
-          title="Top Descriptions"
+          title="Top Visit Reasons"
           color="#006780"
           bottomBorder={-20}
         />
 
         <div className={classes.durationTable}>
           <h3 className={classes.durationTitle}>
-            Duration Stats per Encounter Class (minutes)
+            Visit Duration by Type (minutes)
           </h3>
           <table className={classes.table}>
             <thead>
               <tr>
-                <th className={classes.th}>Class</th>
+                <th className={classes.th}>Visit Type</th>
                 <th className={classes.th}>Count</th>
                 <th className={classes.th}>Min</th>
                 <th className={classes.th}>Max</th>
@@ -97,7 +97,7 @@ export default function EncountersPage() {
       <div className={classes.fullWidthChart}>
         <BarChartComponent
           data={data.topReasonDescriptions}
-          title="Top Reason Descriptions"
+          title="Top Visit Reasons"
           color="#028fb0"
           showLabel
           bottomBorder={-10}

@@ -24,10 +24,10 @@ export default function ClusterSummariesPage() {
     dispatch(getClusterRuns());
   }, [dispatch]);
 
-  if (loading) return <div className={classes.loading}>Loading cluster data...</div>;
+  if (loading) return <div className={classes.loading}>Loading patient groups...</div>;
   if (error) return <div className={classes.error}>{error}</div>;
   if (!data || data.clusters.length === 0)
-    return <div className={classes.empty}>No cluster data available.</div>;
+    return <div className={classes.empty}>No patient groups available.</div>;
 
   return (
     <div className={classes.content}>

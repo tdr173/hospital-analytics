@@ -23,7 +23,7 @@ export default function ProceduresPage() {
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading procedure statistics...</div>
+      <div className={classes.loading}>Loading procedure data...</div>
     );
   }
 

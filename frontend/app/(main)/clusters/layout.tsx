@@ -6,14 +6,14 @@ import useClasses from "@/utils/useClasses";
 import { ClustersLayoutStyles } from "./styles";
 
 const clusterTabs = [
-  { name: "CLUSTER SUMMARIES", forward: "/clusters/summaries" },
-  { name: "CLUSTER STATISTICS", forward: "/clusters/statistics" },
+  { name: "PATIENT GROUPS", forward: "/clusters/summaries" },
+  { name: "GROUP STATISTICS", forward: "/clusters/statistics" },
   {
-    name: "NUMERICAL CLUSTER FEATURES",
+    name: "NUMERICAL GROUP FEATURES",
     forward: "/clusters/numerical-features",
   },
   {
-    name: "CATEGORICAL CLUSTER FEATURES",
+    name: "CATEGORICAL GROUP FEATURES",
     forward: "/clusters/categorical-features",
   },
 ];

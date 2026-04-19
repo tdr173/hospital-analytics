@@ -10,6 +10,8 @@ interface Props {
   rows: number;
   total: number;
   onPageChange: (page: number) => void;
+  loading?: boolean;
+  error?: boolean;
 }
 
 export default function SequencePagination({
@@ -17,7 +19,10 @@ export default function SequencePagination({
   rows,
   total,
   onPageChange,
+  loading = false,
+  error = false,
 }: Props) {
+  if (loading || error) return null;
   const classes = useClasses(SequencePaginationStyles, {
     name: "SequencePagination",
   });

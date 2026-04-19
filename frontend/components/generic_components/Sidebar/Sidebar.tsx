@@ -22,17 +22,17 @@ import { useRouter, usePathname } from "next/navigation";
 const sidebarElements = [
   { name: "Home", icon: HomeOutlinedIcon, forward: "/home" },
   {
-    name: "Dataset Statistics",
+    name: "Statistics",
     icon: AnalyticsIcon,
     forward: "/statistics",
   },
-  { name: "Clusters", icon: Groups3Icon, forward: "/clusters" },
-  { name: "Sequences", icon: TimelineIcon, forward: "/sequences" },
+  { name: "Patient Groups", icon: Groups3Icon, forward: "/clusters" },
+  { name: "Care Sequences", icon: TimelineIcon, forward: "/sequences" },
   { name: "Patients", icon: GroupIcon, forward: "/patients" },
-  { name: "Encounters", icon: EventNoteOutlinedIcon, forward: "/encounters" },
-  { name: "Providers", icon: BadgeOutlinedIcon, forward: "/providers" },
-  { name: "Organizations", icon: AccountBalanceOutlinedIcon, forward: "/organizations" },
-  { name: "Register User", icon: PersonAddOutlinedIcon, forward: "/register-user" },
+  { name: "Visits", icon: EventNoteOutlinedIcon, forward: "/encounters" },
+  { name: "Clinicians", icon: BadgeOutlinedIcon, forward: "/providers" },
+  { name: "Facilities", icon: AccountBalanceOutlinedIcon, forward: "/organizations" },
+  { name: "Add User", icon: PersonAddOutlinedIcon, forward: "/register-user" },
 ];
 
 export default function Sidebar() {

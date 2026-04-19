@@ -13,46 +13,46 @@ OVERVIEW:
 --- TABLES ---
 
 TABLE: patient
-  - patient_id (str, PK) — UUID. Never treat as integer.
-  - birthdate (date) — Date of birth.
-  - deathdate (date, nullable) — Date of death. NULL means the patient is alive.
-  - age (int) — Pre-computed age of the patient.
-  - first_name (str), last_name (str) — Patient name.
-  - marital (str) — Marital status. Values: 'M' (Married), 'S' (Single), 'D' (Divorced), 'W' (Widowed).
-  - race (str) — Values: 'White', 'Black', 'Asian', 'Native', 'Other'.
-  - ethnicity (str) — Values: 'Hispanic', 'Non-Hispanic'.
-  - gender (str) — Values: 'M' (Male), 'F' (Female). Do NOT use 'Male'/'Female' in queries.
-  - city (str) — City of residence.
-  - latitude (float), longitude (float) — Geographic coordinates.
+  - patient_id (str, PK) - UUID. Never treat as integer.
+  - birthdate (date) - Date of birth.
+  - deathdate (date, nullable) - Date of death. NULL means the patient is alive.
+  - age (int) - Pre-computed age of the patient.
+  - first_name (str), last_name (str) - Patient name.
+  - marital (str) - Marital status. Values: 'M' (Married), 'S' (Single), 'D' (Divorced), 'W' (Widowed).
+  - race (str) - Values: 'White', 'Black', 'Asian', 'Native', 'Other'.
+  - ethnicity (str) - Values: 'Hispanic', 'Non-Hispanic'.
+  - gender (str) - Values: 'M' (Male), 'F' (Female). Do NOT use 'Male'/'Female' in queries.
+  - city (str) - City of residence.
+  - latitude (float), longitude (float) - Geographic coordinates.
 
 TABLE: organization
-  - organization_id (str, PK) — UUID.
-  - name (str) — Hospital or clinic name (e.g. 'General Hospital').
-  - city (str) — City location.
-  - latitude (float), longitude (float) — Geographic coordinates.
-  - phone (str, nullable) — Contact phone number.
-  - utilization (int) — Total number of patient encounters handled.
+  - organization_id (str, PK) - UUID.
+  - name (str) - Hospital or clinic name (e.g. 'General Hospital').
+  - city (str) - City location.
+  - latitude (float), longitude (float) - Geographic coordinates.
+  - phone (str, nullable) - Contact phone number.
+  - utilization (int) - Total number of patient encounters handled.
 
 TABLE: provider
-  - provider_id (str, PK) — UUID.
-  - organization_id (str, FK → organization) — The organization the provider works at.
-  - first_name (str), last_name (str) — Provider name.
-  - gender (str, nullable) — Provider gender.
-  - speciality (str) — Medical specialty (e.g. 'General Practice', 'Cardiology', 'Internal Medicine', 'Surgery').
-  - city (str, nullable) — City location.
-  - latitude (float), longitude (float) — Geographic coordinates.
-  - utilization (int) — Number of encounters performed.
+  - provider_id (str, PK) - UUID.
+  - organization_id (str, FK → organization) - The organization the provider works at.
+  - first_name (str), last_name (str) - Provider name.
+  - gender (str, nullable) - Provider gender.
+  - speciality (str) - Medical specialty (e.g. 'General Practice', 'Cardiology', 'Internal Medicine', 'Surgery').
+  - city (str, nullable) - City location.
+  - latitude (float), longitude (float) - Geographic coordinates.
+  - utilization (int) - Number of encounters performed.
 
 TABLE: encounter
   PURPOSE: Represents a patient visit/interaction with the healthcare system.
-  - encounter_id (str, PK) — UUID.
+  - encounter_id (str, PK) - UUID.
   - patient_id (str, FK → patient).
   - organization_id (str, FK → organization).
   - provider_id (str, FK → provider).
-  - start_date (datetime) — When the visit started.
-  - end_date (datetime) — When the visit ended.
-  - duration (float) — Length of visit in minutes.
-  - encounter_class (str) — Type of visit. Values:
+  - start_date (datetime) - When the visit started.
+  - end_date (datetime) - When the visit ended.
+  - duration (float) - Length of visit in minutes.
+  - encounter_class (str) - Type of visit. Values:
       'inpatient'   = hospital admission/hospitalization (internare)
       'ambulatory'  = outpatient clinic visit (consultatie ambulatorie)
       'outpatient'  = outpatient visit (similar to ambulatory)
@@ -63,139 +63,139 @@ TABLE: encounter
       'virtual'     = telemedicine/virtual visit
       'snf'         = skilled nursing facility
       'hospice'     = hospice/palliative care
-  - description (str) — Reason for the visit (e.g. 'General examination of patient').
-  - reason_description (str, nullable) — Additional clinical context.
+  - description (str) - Reason for the visit (e.g. 'General examination of patient').
+  - reason_description (str, nullable) - Additional clinical context.
 
 TABLE: observation
   PURPOSE: Clinical measurements and lab results recorded during encounters.
   - id (int, PK).
   - patient_id (str, FK → patient).
   - encounter_id (str, FK → encounter, nullable).
-  - date (datetime) — Date of measurement.
-  - observation_code (str) — LOINC code (e.g. '8310-5' = Body Temperature, '8480-6' = Systolic BP, '39156-5' = BMI, '2093-3' = Cholesterol).
-  - description (str) — Human-readable name (e.g. 'Body Temperature', 'Hemoglobin A1c'). Use ILIKE for searching.
-  - value (str) — Raw string value.
-  - value_numeric (float, nullable) — Numeric result. Use for comparisons (e.g. value_numeric > 38).
-  - units (str, nullable) — Unit of measurement (e.g. 'Cel', 'mm[Hg]', 'kg/m2', 'mg/dL').
+  - date (datetime) - Date of measurement.
+  - observation_code (str) - LOINC code (e.g. '8310-5' = Body Temperature, '8480-6' = Systolic BP, '39156-5' = BMI, '2093-3' = Cholesterol).
+  - description (str) - Human-readable name (e.g. 'Body Temperature', 'Hemoglobin A1c'). Use ILIKE for searching.
+  - value (str) - Raw string value.
+  - value_numeric (float, nullable) - Numeric result. Use for comparisons (e.g. value_numeric > 38).
+  - units (str, nullable) - Unit of measurement (e.g. 'Cel', 'mm[Hg]', 'kg/m2', 'mg/dL').
 
 TABLE: condition
   PURPOSE: Diagnosed medical conditions/diseases.
   - id (int, PK).
   - patient_id (str, FK → patient).
   - encounter_id (str, FK → encounter).
-  - start_date (datetime) — When the condition was diagnosed.
-  - end_date (datetime, nullable) — When resolved. NULL = ongoing/chronic.
-  - condition_code (str) — SNOMED-CT code.
-  - description (str) — Condition name (e.g. 'Diabetes', 'Hypertension', 'Viral sinusitis', 'COVID-19'). Use ILIKE.
+  - start_date (datetime) - When the condition was diagnosed.
+  - end_date (datetime, nullable) - When resolved. NULL = ongoing/chronic.
+  - condition_code (str) - SNOMED-CT code.
+  - description (str) - Condition name (e.g. 'Diabetes', 'Hypertension', 'Viral sinusitis', 'COVID-19'). Use ILIKE.
 
 TABLE: medication
   PURPOSE: Prescribed medications/drugs.
   - id (int, PK).
   - patient_id (str, FK → patient).
   - encounter_id (str, FK → encounter).
-  - start_date (datetime) — When the medication was started.
-  - end_date (datetime, nullable) — When stopped.
-  - duration_days (float) — Pre-computed treatment length in days.
-  - medication_code (str) — RxNorm code.
-  - description (str) — Drug name (e.g. 'Amoxicillin', 'Lisinopril', 'Metformin'). Use ILIKE.
-  - reason_description (str, nullable) — Why the medication was prescribed.
+  - start_date (datetime) - When the medication was started.
+  - end_date (datetime, nullable) - When stopped.
+  - duration_days (float) - Pre-computed treatment length in days.
+  - medication_code (str) - RxNorm code.
+  - description (str) - Drug name (e.g. 'Amoxicillin', 'Lisinopril', 'Metformin'). Use ILIKE.
+  - reason_description (str, nullable) - Why the medication was prescribed.
 
 TABLE: procedure
   PURPOSE: Medical procedures performed on patients.
   - id (int, PK).
   - patient_id (str, FK → patient).
   - encounter_id (str, FK → encounter).
-  - date (datetime) — When the procedure was performed.
-  - procedure_code (str) — SNOMED-CT code.
-  - description (str) — Procedure name (e.g. 'Appendectomy', 'Colonoscopy', 'X-ray'). Use ILIKE.
-  - reason_description (str, nullable) — Clinical reason for the procedure.
+  - date (datetime) - When the procedure was performed.
+  - procedure_code (str) - SNOMED-CT code.
+  - description (str) - Procedure name (e.g. 'Appendectomy', 'Colonoscopy', 'X-ray'). Use ILIKE.
+  - reason_description (str, nullable) - Clinical reason for the procedure.
 
 TABLE: immunization
   PURPOSE: Vaccinations administered to patients.
   - id (int, PK).
   - patient_id (str, FK → patient).
   - encounter_id (str, FK → encounter).
-  - date (datetime) — When the vaccine was given.
-  - immunization_code (str) — CVX code (e.g. '140' = Influenza).
-  - description (str) — Vaccine name (e.g. 'Influenza', 'COVID-19', 'Hepatitis B'). Use ILIKE.
+  - date (datetime) - When the vaccine was given.
+  - immunization_code (str) - CVX code (e.g. '140' = Influenza).
+  - description (str) - Vaccine name (e.g. 'Influenza', 'COVID-19', 'Hepatitis B'). Use ILIKE.
 
 TABLE: allergy
   PURPOSE: Patient allergies.
   - id (int, PK).
   - patient_id (str, FK → patient).
   - encounter_id (str, FK → encounter, nullable).
-  - start_date (date) — When the allergy was first recorded.
-  - end_date (date, nullable) — When resolved. NULL = still active.
-  - allergy_code (str) — SNOMED-CT code.
-  - description (str) — Allergen name (e.g. 'Peanuts', 'Penicillin', 'Bee stings', 'Latex'). Use ILIKE.
+  - start_date (date) - When the allergy was first recorded.
+  - end_date (date, nullable) - When resolved. NULL = still active.
+  - allergy_code (str) - SNOMED-CT code.
+  - description (str) - Allergen name (e.g. 'Peanuts', 'Penicillin', 'Bee stings', 'Latex'). Use ILIKE.
 
 TABLE: careplan
   PURPOSE: Longitudinal care plans assigned to patients (e.g. 'Diabetes self management plan', 'Cardiac care plan').
   - id (int, PK).
   - patient_id (str, FK → patient).
   - encounter_id (str, FK → encounter).
-  - start_date (datetime) — When the care plan started.
-  - end_date (datetime, nullable) — When concluded. NULL = still active.
-  - duration_days (float, nullable) — Pre-computed plan length in days.
-  - careplan_code (str) — SNOMED-CT code.
-  - description (str) — Care plan name (e.g. 'Asthma self management', 'Self-care interventions'). Use ILIKE.
-  - reason_code (str, nullable), reason_description (str, nullable) — Clinical reason for the plan.
+  - start_date (datetime) - When the care plan started.
+  - end_date (datetime, nullable) - When concluded. NULL = still active.
+  - duration_days (float, nullable) - Pre-computed plan length in days.
+  - careplan_code (str) - SNOMED-CT code.
+  - description (str) - Care plan name (e.g. 'Asthma self management', 'Self-care interventions'). Use ILIKE.
+  - reason_code (str, nullable), reason_description (str, nullable) - Clinical reason for the plan.
 
 TABLE: prefix_span_pattern
   PURPOSE: Frequent care-trajectory patterns discovered by PrefixSpan over patient event sequences.
            A "pattern" is an ordered sequence of clinical events; '->' denotes temporal order, items in parentheses occurred on the same day. Event prefixes: C: = Condition, M: = Medication, P: = Procedure, CP: = CarePlan.
   - id (int, PK, serial).
-  - rank (int) — Ordering index for display; lower = higher-ranked in the mining output.
-  - pattern_str (str) — Human-readable sequence (e.g. 'C:Hypertension -> M:Lisinopril'). Use ILIKE.
-  - length (int) — Number of events in the sequence.
-  - support_count (int) — How many distinct patients contain this pattern.
-  - support_pct (float) — support_count / total patients, as a percentage.
-  - ai_analysis (JSONB, nullable) — Cached AI-generated interpretation (not useful for SQL queries).
+  - rank (int) - Ordering index for display; lower = higher-ranked in the mining output.
+  - pattern_str (str) - Human-readable sequence (e.g. 'C:Hypertension -> M:Lisinopril'). Use ILIKE.
+  - length (int) - Number of events in the sequence.
+  - support_count (int) - How many distinct patients contain this pattern.
+  - support_pct (float) - support_count / total patients, as a percentage.
+  - ai_analysis (JSONB, nullable) - Cached AI-generated interpretation (not useful for SQL queries).
 
 TABLE: prefix_span_patient_pattern
-  PURPOSE: Junction table — which patients contain which mined sequence.
+  PURPOSE: Junction table - which patients contain which mined sequence.
   - pattern_id (int, PK, FK → prefix_span_pattern.id).
   - patient_id (str, PK, FK → patient).
   USAGE: JOIN to find patients who follow a pattern, or to count pattern frequency within a cluster.
 
 TABLE: cluster_meta
-  PURPOSE: Singleton — exactly one row storing the metadata for the current clustering run.
+  PURPOSE: Singleton - exactly one row storing the metadata for the current clustering run.
            Fully replaced (DELETE + INSERT) every time k_prototypes is re-executed.
   - id (int, PK, serial).
-  - created_at (timestamp) — When the clustering was executed.
-  - algorithm (str) — Always 'k_prototypes' currently.
-  - n_clusters (int) — Number of clusters requested (e.g. 4).
-  - n_patients (int) — Number of non-outlier patients that were clustered.
-  - n_outliers (int) — Number of patients excluded as statistical outliers.
-  - numerical_features (JSONB) — List of numerical feature names used (e.g. ["age", "qaly", "total_medications"]).
-  - categorical_features (JSONB) — List of categorical feature names used (e.g. ["gender", "has_diabetes"]).
-  - params (JSONB) — Algorithm parameters: scaler, gamma, init method, random_state, outlier_threshold.
-  - metrics (JSONB) — Quality scores: silhouette, gower_silhouette, calinski_harabasz, davies_bouldin.
-  - heatmap (bytes, nullable) — PNG image of cluster heatmap (binary, not useful for SQL queries).
-  - ai_analysis (JSONB, nullable) — Cached AI-generated population analysis (not useful for SQL queries).
+  - created_at (timestamp) - When the clustering was executed.
+  - algorithm (str) - Always 'k_prototypes' currently.
+  - n_clusters (int) - Number of clusters requested (e.g. 4).
+  - n_patients (int) - Number of non-outlier patients that were clustered.
+  - n_outliers (int) - Number of patients excluded as statistical outliers.
+  - numerical_features (JSONB) - List of numerical feature names used (e.g. ["age", "qaly", "total_medications"]).
+  - categorical_features (JSONB) - List of categorical feature names used (e.g. ["gender", "has_diabetes"]).
+  - params (JSONB) - Algorithm parameters: scaler, gamma, init method, random_state, outlier_threshold.
+  - metrics (JSONB) - Quality scores: silhouette, gower_silhouette, calinski_harabasz, davies_bouldin.
+  - heatmap (bytes, nullable) - PNG image of cluster heatmap (binary, not useful for SQL queries).
+  - ai_analysis (JSONB, nullable) - Cached AI-generated population analysis (not useful for SQL queries).
 
 TABLE: cluster
   PURPOSE: One row per cluster. Stores the AI-generated summary for each patient group.
            Fully replaced on every clustering run.
   - id (int, PK, serial).
-  - cluster_label (int) — Cluster index: 0, 1, 2, ... or -1 for the outlier group.
-  - color (str) — Hex color code for UI display (e.g. '#DC2626').
-  - title (str) — Short AI-generated cluster name (e.g. 'Metabolic Strain').
-  - description (str) — AI-generated clinical description of this patient group.
-  - insight (str) — Key clinical finding for this cluster.
-  - recommendation (str) — Suggested clinical action for this cluster.
-  - ai_analysis (JSONB, nullable) — Cached detailed per-cluster AI analysis.
+  - cluster_label (int) - Cluster index: 0, 1, 2, ... or -1 for the outlier group.
+  - color (str) - Hex color code for UI display (e.g. '#DC2626').
+  - title (str) - Short AI-generated cluster name (e.g. 'Metabolic Strain').
+  - description (str) - AI-generated clinical description of this patient group.
+  - insight (str) - Key clinical finding for this cluster.
+  - recommendation (str) - Suggested clinical action for this cluster.
+  - ai_analysis (JSONB, nullable) - Cached detailed per-cluster AI analysis.
 
 TABLE: cluster_patient
   PURPOSE: Maps each patient to their assigned cluster. One row per patient.
            Fully replaced on every clustering run.
   - id (int, PK, serial).
   - patient_id (str, FK → patient).
-  - cluster_label (int) — Which cluster this patient belongs to (-1 = outlier).
-  - is_outlier (bool) — TRUE if the patient was excluded as a statistical outlier.
-  - pca_x (float, nullable) — X coordinate from PCA 2D projection (for scatter plot).
-  - pca_y (float, nullable) — Y coordinate from PCA 2D projection (for scatter plot).
-  - features (JSONB) — All engineered features for this patient at clustering time. Keys include:
+  - cluster_label (int) - Which cluster this patient belongs to (-1 = outlier).
+  - is_outlier (bool) - TRUE if the patient was excluded as a statistical outlier.
+  - pca_x (float, nullable) - X coordinate from PCA 2D projection (for scatter plot).
+  - pca_y (float, nullable) - Y coordinate from PCA 2D projection (for scatter plot).
+  - features (JSONB) - All engineered features for this patient at clustering time. Keys include:
       Numerical: age, qaly, total_medications, total_procedures, active_conditions_count,
                  routine_care_count, acute_care_count, wellness_count, severe_care_count,
                  clinical_severity_score, distinct_providers_seen.
@@ -218,9 +218,9 @@ patient (1) → (N) encounter → (1) organization
 patient (1) → (N) encounter → (1) provider
 encounter (1) → (N) observation, condition, medication, procedure, immunization, allergy, careplan
 provider (N) → (1) organization
-cluster_meta (1) — singleton run metadata
-cluster (N) — one row per cluster label
-patient (1) → (0..1) cluster_patient — current cluster assignment
+cluster_meta (1) - singleton run metadata
+cluster (N) - one row per cluster label
+patient (1) → (0..1) cluster_patient - current cluster assignment
 prefix_span_pattern (1) → (N) prefix_span_patient_pattern → (1) patient
 
 To find which hospital a patient visited: JOIN encounter ON patient_id, then JOIN organization ON organization_id.

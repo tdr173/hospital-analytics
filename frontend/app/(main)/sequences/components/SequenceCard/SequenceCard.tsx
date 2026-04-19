@@ -9,7 +9,7 @@ import SequenceChipRow from "../SequenceChipRow/SequenceChipRow";
 interface Props {
   sequence: SequenceListItem;
   colors: Record<string, string>;
-  onAnalyse: (patternId: number) => void;
+  onAnalyse: (sequence: SequenceListItem) => void;
 }
 
 export default function SequenceCard({ sequence, colors, onAnalyse }: Props) {
@@ -24,7 +24,7 @@ export default function SequenceCard({ sequence, colors, onAnalyse }: Props) {
         {sequence.hasAiAnalysis && (
           <span className={classes.aiReadyBadge}>
             <span className={classes.aiReadyDot} />
-            AI Ready
+            AI Insights Ready
           </span>
         )}
       </div>
@@ -34,10 +34,10 @@ export default function SequenceCard({ sequence, colors, onAnalyse }: Props) {
       <div className={classes.supportBlock}>
         <div className={classes.supportRow}>
           <span className={classes.supportLabel}>
-            Support: <span className={classes.supportValue}>{sequence.supportPct}%</span>
+            Frequency: <span className={classes.supportValue}>{sequence.supportPct}%</span>
           </span>
           <span className={classes.supportValue}>
-            {sequence.supportCount.toLocaleString()} pts
+            {sequence.supportCount.toLocaleString()} patients
           </span>
         </div>
         <div className={classes.supportBarTrack}>
@@ -53,18 +53,18 @@ export default function SequenceCard({ sequence, colors, onAnalyse }: Props) {
 
       <div className={classes.footer}>
         <span className={classes.metaText}>
-          Length:{" "}
+          Steps:{" "}
           <span className={classes.metaValue}>
-            {sequence.length} {sequence.length === 1 ? "Node" : "Nodes"}
+            {sequence.length} {sequence.length === 1 ? "Step" : "Steps"}
           </span>
         </span>
         <button
           className={classes.analyseButton}
-          onClick={() => onAnalyse(sequence.id)}
+          onClick={() => onAnalyse(sequence)}
           type="button"
         >
           <AutoAwesomeIcon style={{ fontSize: 15 }} />
-          Analyze with AI
+          Get AI Insights
         </button>
       </div>
     </div>

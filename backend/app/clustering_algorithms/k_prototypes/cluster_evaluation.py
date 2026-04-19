@@ -20,7 +20,14 @@ NUMERICAL_FEATURES = [
     "clinical_severity_score", # mix intre total_procedures, total_medications si active_conditions
     # "qaly",
     # "days_since_last_encounter",
-    "distinct_providers_seen",
+    # "distinct_providers_seen",
+    # "preventive_to_reactive_ratio",     # wellness / (acute + severe + 1); preventive vs reactive usage
+    # "thirty_day_readmission_count",     # log1p; inpatient/ER readmissions within 30d of prior discharge
+    # "max_gap_in_care_days",             # log1p; longest gap between consecutive encounters
+    # "lifetime_medication_days",         # log1p; total cumulative days on medication
+    # "total_encounter_duration_hours",   # log1p; sum of all encounter durations in hours
+    # "avg_phq9_score",                   # average PHQ-9 score (depression screening)
+    # "avg_total_cholesterol",            # average total cholesterol (mg/dL)
 ]
 
 CATEGORICAL_FEATURES = [
@@ -35,7 +42,12 @@ CATEGORICAL_FEATURES = [
     # "out_of_hours_flyer",
     # "bp_risk_category",
     # "marital",
-    # "smoking_status"
+    # "smoking_status",
+    # "substance_use_profile",    # None / Tobacco Only / Alcohol / Polysubstance or Illicit
+    # "mental_health_severity",   # None / Mild-Moderate / Severe
+    # "pain_management_tier",     # None / Acute/Minor / Chronic Non-Opioid / Chronic Opioid
+    # "employment_status",        # Employed / Part-time / Unemployed / Not in labor force / Unknown
+    # "pregnancy_history",        # None / Past / Active
 ]
 
 
@@ -174,27 +186,58 @@ def compute_famd_metrics(df, numerical_cols, categorical_cols, clusters, n_compo
     # Calinski-Harabasz and Davies-Bouldin on a FAMD embedding. Unlike the
     # numerical-only versions, this reflects both numerical and categorical
     # features in the distance space those metrics operate on.
+    none_result = {"calinski_harabasz_famd": None, "davies_bouldin_famd": None}
+
     try:
         import prince
     except ImportError:
-        return {"calinski_harabasz_famd": None, "davies_bouldin_famd": None}
+        return none_result
 
     labels = np.asarray(clusters)
     if len(np.unique(labels)) < 2:
-        return {"calinski_harabasz_famd": None, "davies_bouldin_famd": None}
+        return none_result
 
-    feat = df[list(numerical_cols) + list(categorical_cols)].copy()
-    for col in numerical_cols:
-        feat[col] = feat[col].astype(float)
-    for col in categorical_cols:
-        feat[col] = feat[col].astype(str)
+    # Keep only columns actually present, drop zero-variance ones (FAMD cannot
+    # decompose a constant column — no dispersion to explain).
+    num_cols = [c for c in numerical_cols if c in df.columns]
+    cat_cols = [c for c in categorical_cols if c in df.columns]
 
-    famd = prince.FAMD(n_components=n_components, random_state=random_state)
-    famd = famd.fit(feat)
-    coords = famd.transform(feat).values
+    feat_num = {}
+    for col in num_cols:
+        vals = pd.to_numeric(df[col], errors="coerce").astype(float)
+        if vals.nunique(dropna=True) > 1:
+            feat_num[col] = vals.fillna(vals.mean())
 
-    ch = calinski_harabasz_score(coords, labels)
-    db = davies_bouldin_score(coords, labels)
+    feat_cat = {}
+    for col in cat_cols:
+        vals = df[col].astype(str)
+        if vals.nunique() > 1:
+            feat_cat[col] = vals
+
+    # FAMD needs at least one numerical and one categorical column to run in
+    # mixed mode. If either side is empty, skip gracefully.
+    if not feat_num or not feat_cat:
+        return none_result
+
+    feat = pd.DataFrame({**feat_num, **feat_cat})
+
+    n_comp = min(n_components, max(2, feat.shape[1] - 1))
+
+    try:
+        famd = prince.FAMD(n_components=n_comp, random_state=random_state)
+        famd = famd.fit(feat)
+        coords = famd.transform(feat).values
+    except Exception as e:
+        print(f"  [!] FAMD failed ({type(e).__name__}: {e}); skipping FAMD metrics")
+        return none_result
+
+    try:
+        ch = calinski_harabasz_score(coords, labels)
+        db = davies_bouldin_score(coords, labels)
+    except Exception as e:
+        print(f"  [!] FAMD scoring failed ({type(e).__name__}: {e})")
+        return none_result
+
     return {
         "calinski_harabasz_famd": round(float(ch), 4),
         "davies_bouldin_famd": round(float(db), 4),

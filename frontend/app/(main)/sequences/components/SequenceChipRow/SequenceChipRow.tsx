@@ -18,6 +18,7 @@ export default function SequenceChipRow({ patternStr, colors }: Props) {
   const steps = parsePattern(patternStr);
 
   return (
+    <div className={classes.wrapper}>
     <div className={classes.row}>
       {steps.map((step, stepIdx) => (
         <React.Fragment key={stepIdx}>
@@ -45,6 +46,7 @@ export default function SequenceChipRow({ patternStr, colors }: Props) {
           )}
         </React.Fragment>
       ))}
+    </div>
     </div>
   );
 }

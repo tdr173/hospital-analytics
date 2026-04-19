@@ -6,10 +6,11 @@ import UserTypeTag from "../../UserTypeTag/UserTypeTag";
 import { usePathname } from "next/navigation";
 
 const ROUTE_TITLES: Record<string, string> = {
-  "/statistics": "Dataset Statistics",
-  "/clusters/summaries": "Clusters - Summaries",
-  "/clusters/statistics": "Clusters - Statistics",
-  "/clusters": "Clusters",
+  "/statistics": "Statistics",
+  "/clusters/summaries": "Patient Groups",
+  "/clusters/statistics": "Group Statistics",
+  "/clusters": "Patient Groups",
+  "/register-user": "Add User",
 };
 
 function capitalize(str: string) {

@@ -26,7 +26,7 @@ export default function MedicationsPage() {
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading medication statistics...</div>
+      <div className={classes.loading}>Loading medication data...</div>
     );
   }
 

@@ -24,7 +24,7 @@ export default function PatientsPage() {
   }, [dispatch]);
 
   if (loading) {
-    return <div className={classes.loading}>Loading patient statistics...</div>;
+    return <div className={classes.loading}>Loading patient data...</div>;
   }
 
   if (error) {

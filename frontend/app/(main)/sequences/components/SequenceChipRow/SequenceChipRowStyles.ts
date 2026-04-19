@@ -1,17 +1,32 @@
 import { Theme } from "@/utils/theme";
 
 export const SequenceChipRowStyles = (theme: Theme) => ({
+  wrapper: {
+    overflow: "hidden",
+    minWidth: 0,
+    width: "100%",
+  },
   row: {
     display: "flex",
-    flexWrap: "wrap" as const,
+    flexWrap: "nowrap" as const,
     alignItems: "center",
     gap: "6px",
-    rowGap: "8px",
+    overflowX: "auto" as const,
+    overflowY: "hidden" as const,
+    paddingBottom: "4px",
+    scrollbarWidth: "thin" as const,
+    scrollbarColor: `${theme.colors.primary.main} transparent`,
+    "&::-webkit-scrollbar": { height: "4px" },
+    "&::-webkit-scrollbar-track": { background: "transparent" },
+    "&::-webkit-scrollbar-thumb": {
+      backgroundColor: theme.colors.primary.main,
+      borderRadius: "4px",
+    },
   },
   step: {
     display: "inline-flex",
     alignItems: "center",
-    flexWrap: "wrap" as const,
+    flexShrink: 0,
     gap: "4px",
   },
   chip: {
@@ -41,5 +56,6 @@ export const SequenceChipRowStyles = (theme: Theme) => ({
     fontSize: "0.9rem",
     fontWeight: theme.typography.fontWeight.bold,
     userSelect: "none" as const,
+    flexShrink: 0,
   },
 });

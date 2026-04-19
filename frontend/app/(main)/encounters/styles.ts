@@ -13,7 +13,7 @@ export const EncountersPageStyles = (theme: Theme) => ({
     borderBottom: `1px solid ${theme.colors.border.main}`,
     backgroundColor: theme.colors.surface.containerLowest,
     display: "grid",
-    gridTemplateColumns: "3fr 1.5fr 1fr 1fr auto",
+    gridTemplateColumns: "3fr 1fr 1fr 1fr 1fr",
     gap: theme.spacing.sm,
     alignItems: "flex-end",
   },

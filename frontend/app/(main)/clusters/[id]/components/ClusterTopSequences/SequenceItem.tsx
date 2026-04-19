@@ -20,27 +20,21 @@ export default function SequenceItem({ seq, color }: Props) {
 
   return (
     <div className={classes.item}>
-      <span
-        className={classes.rankBadge}
-        style={{ backgroundColor: tinted, color: tintedStrong }}
-      >
-        {seq.rank}
-      </span>
       <div className={classes.itemBody}>
         <p className={classes.pattern}>{seq.patternStr}</p>
         <div className={classes.metaRow}>
           <span className={classes.chip}>
-            <span className={classes.chipLabel}>Length:</span>
+            <span className={classes.chipLabel}>Steps:</span>
             <span className={classes.chipValue}>{seq.length}</span>
           </span>
           <span className={classes.chip}>
-            <span className={classes.chipLabel}>In cluster:</span>
+            <span className={classes.chipLabel}>In group:</span>
             <span className={classes.chipValue}>
               {seq.clusterSupportCount.toLocaleString()} patients
             </span>
           </span>
           <span className={classes.chip}>
-            <span className={classes.chipLabel}>Population support:</span>
+            <span className={classes.chipLabel}>Population frequency:</span>
             <span className={classes.chipValue}>{seq.supportPct}%</span>
           </span>
         </div>

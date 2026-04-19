@@ -51,7 +51,7 @@ export interface OrganizationResources {
 
 export interface FetchOrganizationsArgs {
   search?: string;
-  city?: string;
+  city?: string[];
   page: number;
   rows: number;
   sortBy: string;

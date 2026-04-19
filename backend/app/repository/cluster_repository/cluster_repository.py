@@ -317,7 +317,7 @@ class ClusterRepository:
     def lock_cluster_ai_analysis(self, cluster_id: int) -> AiAnalysisResponse | None:
         """Acquire a row-level lock and return cached analysis if present.
 
-        Caller must commit/rollback to release the lock — the service layer
+        Caller must commit/rollback to release the lock - the service layer
         calls save_cluster_ai_analysis which commits.
         """
         cluster = self.db.query(ClusterModel).filter(

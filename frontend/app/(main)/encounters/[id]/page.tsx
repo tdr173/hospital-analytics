@@ -90,9 +90,9 @@ export default function EncounterDetailPage() {
     if (fetcher) dispatch(fetcher(id));
   }, [tab, id, dispatch, loadedTabs]);
 
-  if (loading) return <div className={classes.pageLoading}>Loading encounter data...</div>;
+  if (loading) return <div className={classes.pageLoading}>Loading visit details...</div>;
   if (error || !encounter)
-    return <div className={classes.pageError}>{error ?? "Encounter not found."}</div>;
+    return <div className={classes.pageError}>{error ?? "Visit not found."}</div>;
 
   const tabContent: Record<number, React.ReactNode> = {
     0: <ObservationsTab data={observations} />,
@@ -108,7 +108,7 @@ export default function EncounterDetailPage() {
     <div className={classes.pageContainer}>
       <div className={classes.identityCard}>
         <div className={classes.cardLeft}>
-          <p className={classes.profileLabel}>Encounter Record</p>
+          <p className={classes.profileLabel}>Visit Record</p>
           <h1 className={classes.encounterTitle}>{encounter.description}</h1>
           {encounter.reasonDescription && (
             <p className={classes.encounterReason}>Reason: {encounter.reasonDescription}</p>
@@ -138,14 +138,14 @@ export default function EncounterDetailPage() {
             className={classes.entityChip}
             onClick={() => router.push(`/providers/${encounter.providerId}`)}
           >
-            <span className={classes.entityChipLabel}>Provider</span>
+            <span className={classes.entityChipLabel}>Clinician</span>
             <span className={classes.entityChipValue}>{encounter.providerName}</span>
           </div>
           <div
             className={classes.entityChip}
             onClick={() => router.push(`/organizations/${encounter.organizationId}`)}
           >
-            <span className={classes.entityChipLabel}>Organization</span>
+            <span className={classes.entityChipLabel}>Facility</span>
             <span className={classes.entityChipValue}>
               {encounter.organizationName ?? encounter.organizationId}
             </span>

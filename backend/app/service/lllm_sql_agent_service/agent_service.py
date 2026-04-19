@@ -21,7 +21,7 @@ DANGEROUS_KEYWORDS = re.compile(
 
 
 class AgentState(TypedDict):
-    db: Any  # SQLAlchemy Session — passed through, never serialized
+    db: Any  # SQLAlchemy Session - passed through, never serialized
     user_prompt: str
     chat_history: str
     translated_prompt: str
@@ -71,24 +71,24 @@ Output rules:
 6. ORDER BY so the answer is obvious (e.g. ORDER BY count DESC for "most common", ORDER BY date DESC for "last").
 
 Filtering rules:
-7. Descriptive / free-text fields (description, first_name, last_name, city, reason_description, pattern_str) — use ILIKE with %...% wildcards.
-8. Categorical codes — use `=` with these exact values:
+7. Descriptive / free-text fields (description, first_name, last_name, city, reason_description, pattern_str) - use ILIKE with %...% wildcards.
+8. Categorical codes - use `=` with these exact values:
    - gender: 'M', 'F' (never 'Male'/'Female')
    - marital: 'M', 'S', 'D', 'W'
    - encounter_class: 'inpatient', 'ambulatory', 'outpatient', 'wellness', 'emergency', 'urgentcare', 'home', 'virtual', 'snf', 'hospice'
    - race: 'White', 'Black', 'Asian', 'Native', 'Other'
    - ethnicity: 'Hispanic', 'Non-Hispanic'
 9. Alive vs deceased is encoded by deathdate: `deathdate IS NULL` (alive) / `deathdate IS NOT NULL` (deceased).
-10. Dates — use EXTRACT(YEAR FROM col) for year, DATE_TRUNC for month/week aggregation, BETWEEN or `>=`/`<` for explicit ranges.
-11. Active vs ended for timestamped tables (condition, medication, careplan, allergy) — `end_date IS NULL` means still active.
+10. Dates - use EXTRACT(YEAR FROM col) for year, DATE_TRUNC for month/week aggregation, BETWEEN or `>=`/`<` for explicit ranges.
+11. Active vs ended for timestamped tables (condition, medication, careplan, allergy) - `end_date IS NULL` means still active.
 
 Distinct-counting rules:
-12. Counting or listing patients/providers across clinical tables (condition, medication, procedure, encounter, careplan, etc.) — use COUNT(DISTINCT patient_id) / DISTINCT to avoid duplicates from multiple records per patient.
+12. Counting or listing patients/providers across clinical tables (condition, medication, procedure, encounter, careplan, etc.) - use COUNT(DISTINCT patient_id) / DISTINCT to avoid duplicates from multiple records per patient.
 
 Clustering rules (cluster_meta, cluster, cluster_patient):
 13. cluster_patient is singleton for the current run (no run_id column). Always filter `NOT is_outlier` unless the user explicitly asks about outliers. -1 is the outlier label.
-14. cluster_patient.features is JSONB. Access strings with `features->>'key'`; cast numerics with `(features->>'key')::numeric`. Yes/No flags (has_diabetes, has_hypertension, has_heart_disease, has_cancer, is_polypharmacy) are the string 'Yes'/'No'. A missing key returns NULL — do not assume every feature is present.
-15. If the user asks about clusters, derive per-cluster metrics from cluster_patient.features — do NOT join clinical tables. If the user asks about raw clinical facts (how many patients have X), use the clinical tables directly.
+14. cluster_patient.features is JSONB. Access strings with `features->>'key'`; cast numerics with `(features->>'key')::numeric`. Yes/No flags (has_diabetes, has_hypertension, has_heart_disease, has_cancer, is_polypharmacy) are the string 'Yes'/'No'. A missing key returns NULL - do not assume every feature is present.
+15. If the user asks about clusters, derive per-cluster metrics from cluster_patient.features - do NOT join clinical tables. If the user asks about raw clinical facts (how many patients have X), use the clinical tables directly.
 
 Sequence-mining rules (prefix_span_pattern, prefix_span_patient_pattern):
 16. prefix_span_pattern holds the mined sequences (pattern_str, length, support_count, support_pct). prefix_span_patient_pattern is the (pattern_id, patient_id) junction.
@@ -209,6 +209,9 @@ def generate_query(state: AgentState):
     raw_response = ask_ai(prompt)
     clean_sql = extract_clean_sql(raw_response)
 
+    attempt = state.get("retry_count", 0) + 1
+    print(f"\n[SQL Agent] Generated SQL (attempt {attempt}):\n{clean_sql}\n")
+
     return {"sql_query": clean_sql}
 
 
@@ -231,10 +234,12 @@ def validate_query(state: AgentState):
     response = ask_ai(prompt)
 
     if response.strip().upper().startswith("YES"):
+        print(f"[SQL Agent] Validation: PASSED\n")
         return {"validation_status": "CORRECT", "feedback": ""}
     else:
         lines = response.split('\n')
         feedback = lines[1] if len(lines) > 1 else response
+        print(f"[SQL Agent] Validation: FAILED - {feedback}\n")
         return {
             "validation_status": "INCORRECT",
             "feedback": f"Validation rejected the SQL: {feedback}. The query was: {sql}",
@@ -246,9 +251,11 @@ def execute_query(state: AgentState):
     try:
         result = _db_retrieve(state['db'], state['sql_query'])
         result_str = truncate_result(str(result))
+        print(f"[SQL Agent] Execution: OK - {len(result)} row(s) returned\n")
         return {"query_result": result_str, "error_message": ""}
     except Exception as e:
         error_msg = str(e)
+        print(f"[SQL Agent] Execution: ERROR - {error_msg}\n")
         return {
             "error_message": f"Execution Error: {error_msg}",
             "validation_status": "INCORRECT",

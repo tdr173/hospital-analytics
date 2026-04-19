@@ -81,7 +81,7 @@ export default function ClusterCard({ cluster }: Props) {
           </div>
         </div>
         <div className={classes.statBox}>
-          <div className={classes.statLabel}>Avg Meds</div>
+          <div className={classes.statLabel}>Avg Medications</div>
           <div className={classes.statValue}>{cluster.avgMeds}</div>
         </div>
         <div className={classes.statBox}>
@@ -97,7 +97,7 @@ export default function ClusterCard({ cluster }: Props) {
             style={{ color }}
           />
           <span>
-            <span className={classes.footerLabel}>Insights: </span>
+            <span className={classes.footerLabel}>Clinical Insights: </span>
             {cluster.insight}
           </span>
         </div>
@@ -120,7 +120,7 @@ export default function ClusterCard({ cluster }: Props) {
           onClick={handleAnalyse}
         >
           <AutoAwesomeIcon className={classes.analyseButtonIcon} />
-          Analyse with AI
+          Get AI Insights
         </button>
         <button
           className={classes.viewButton}

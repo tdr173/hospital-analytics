@@ -28,7 +28,7 @@ export default function ClusterVitalsCard({ vitals }: Props) {
 
   return (
     <div className={classes.card}>
-      <p className={classes.sectionTitle}>Cluster Vital Averages</p>
+      <p className={classes.sectionTitle}>Group Vital Averages</p>
       <div className={classes.grid}>
         {items.map((item) => (
           <div key={item.label} className={classes.statBox}>

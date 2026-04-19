@@ -155,7 +155,7 @@ export default function StyledTable<T = any>({
           }}
         />
       )}
-      <TableContainer sx={{ overflowX: "auto", height: "calc(100% - 52px)" }}>
+      <TableContainer sx={{ overflowX: "auto", height: "calc(100% - 52px)", position: "relative" }}>
         <Table
           stickyHeader={stickyHeader}
           size="small"
@@ -201,27 +201,31 @@ export default function StyledTable<T = any>({
           )}
 
           <TableBody>
-            {data.length === 0 ? (
-              <TableRow sx={{ height: "100% !important" }}>
-                <TableCell
-                  colSpan={columns.length}
-                  sx={{
-                    ...bodyCellSx,
-                    textAlign: "center",
-                    padding: "48px 16px",
-                    color: theme.colors.text.secondary,
-                    fontStyle: "italic",
-                    borderBottom: "none",
-                  }}
-                >
-                  {loading ? "Loading..." : emptyMessage}
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((item, index) => renderRow(item, index))
-            )}
+            {data.map((item, index) => renderRow(item, index))}
           </TableBody>
         </Table>
+
+        {data.length === 0 && (
+          <div
+            style={{
+              position: "absolute",
+              top: showHeader ? 37 : 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: theme.typography.fontFamily,
+              fontSize: theme.typography.fontSize.sm,
+              color: theme.colors.text.secondary,
+              fontStyle: "italic",
+              pointerEvents: "none",
+            }}
+          >
+            {loading ? "Loading..." : emptyMessage}
+          </div>
+        )}
       </TableContainer>
 
       {showPagination && (

@@ -14,7 +14,7 @@ SORT_COL_MAP = {
     "first_name": ProviderModel.first_name,
     "speciality": ProviderModel.speciality,
     "city": ProviderModel.city,
-    "encounters": ProviderModel.encounters,
+    "encounters": func.count(EncounterModel.encounter_id),
 }
 
 
@@ -74,11 +74,22 @@ class ProviderRepository:
                 ProviderModel.gender,
                 ProviderModel.speciality,
                 ProviderModel.city,
-                ProviderModel.encounters,
+                func.count(EncounterModel.encounter_id).label("encounters"),
                 OrganizationModel.name.label("organization_name"),
             )
             .outerjoin(OrganizationModel, ProviderModel.organization_id == OrganizationModel.organization_id)
+            .outerjoin(EncounterModel, EncounterModel.provider_id == ProviderModel.provider_id)
             .filter(*filters)
+            .group_by(
+                ProviderModel.provider_id,
+                ProviderModel.first_name,
+                ProviderModel.last_name,
+                ProviderModel.gender,
+                ProviderModel.speciality,
+                ProviderModel.city,
+                ProviderModel.organization_id,
+                OrganizationModel.name,
+            )
             .order_by(sort_expr)
             .limit(rows)
             .offset(offset)
@@ -99,12 +110,25 @@ class ProviderRepository:
                 ProviderModel.city,
                 ProviderModel.latitude,
                 ProviderModel.longitude,
-                ProviderModel.encounters,
+                func.count(EncounterModel.encounter_id).label("encounters"),
                 ProviderModel.organization_id,
                 OrganizationModel.name.label("organization_name"),
             )
             .outerjoin(OrganizationModel, ProviderModel.organization_id == OrganizationModel.organization_id)
+            .outerjoin(EncounterModel, EncounterModel.provider_id == ProviderModel.provider_id)
             .filter(ProviderModel.provider_id == provider_id)
+            .group_by(
+                ProviderModel.provider_id,
+                ProviderModel.first_name,
+                ProviderModel.last_name,
+                ProviderModel.gender,
+                ProviderModel.speciality,
+                ProviderModel.city,
+                ProviderModel.latitude,
+                ProviderModel.longitude,
+                ProviderModel.organization_id,
+                OrganizationModel.name,
+            )
             .first()
         )
 

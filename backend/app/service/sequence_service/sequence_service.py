@@ -15,7 +15,7 @@ IMPORTANT RULES:
 - Focus on the clinical narrative: what is the likely disease progression or care pathway this sequence represents?
 - Gender: describe as "balanced" if 40-60%, "more female/male" if 60-70%, "predominantly female/male" only if >70%.
 - Translate vitals into plain risk language (BMI >=30 = obese, glucose >=126 = diabetic range).
-- Do NOT use em dashes (—). Use commas or plain sentence structure instead.
+- Do NOT use em dashes (-). Use commas or plain sentence structure instead.
 
 SEQUENCE:
   Pattern: {pattern_str}

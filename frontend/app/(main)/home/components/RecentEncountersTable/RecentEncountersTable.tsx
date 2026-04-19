@@ -24,13 +24,13 @@ export default function RecentEncountersTable({
 
   return (
     <div className={classes.card}>
-      <p className={classes.title}>Recent Encounters</p>
+      <p className={classes.title}>Recent Visits</p>
       <div className={`${classes.grid} ${classes.header}`}>
         <div>Patient</div>
-        <div>Provider</div>
-        <div>Organization</div>
+        <div>Clinician</div>
+        <div>Facility</div>
         <div>Date</div>
-        <div>Class</div>
+        <div>Type</div>
         <div>Description</div>
         <div className={classes.actionsHeader}>Actions</div>
       </div>
@@ -46,7 +46,7 @@ export default function RecentEncountersTable({
             {r.patientName}
           </div>
           <div className={classes.secondary}>{r.providerName}</div>
-          <div className={classes.secondary}>{r.organizationName ?? "—"}</div>
+          <div className={classes.secondary}>{r.organizationName ?? "-"}</div>
           <div className={classes.secondary}>{formatDate(r.startDate)}</div>
           <div>
             <span className={classes.classBadge}>{r.encounterClass}</span>
@@ -57,7 +57,7 @@ export default function RecentEncountersTable({
               size="small"
               className={classes.actionButton}
               onClick={() => onEncounterClick(r.encounterId)}
-              aria-label="View encounter"
+              aria-label="View visit"
             >
               <VisibilityOutlinedIcon sx={{ fontSize: "1.05rem" }} />
             </IconButton>

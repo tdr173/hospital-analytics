@@ -25,7 +25,7 @@ export default function ObservationsPage() {
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading observation statistics...</div>
+      <div className={classes.loading}>Loading observation data...</div>
     );
   }
 

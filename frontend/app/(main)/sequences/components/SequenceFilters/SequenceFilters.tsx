@@ -35,18 +35,23 @@ export default function SequenceFilters({
   onSortByChange,
   onSortTypeChange,
 }: Props) {
-  const classes = useClasses(SequenceFiltersStyles, { name: "SequenceFilters" });
+  const classes = useClasses(SequenceFiltersStyles, {
+    name: "SequenceFilters",
+  });
 
   const minLen = resources?.minLength ?? 1;
   const maxLen = resources?.maxLength ?? 1;
-  const lengthOptions = Array.from({ length: Math.max(0, maxLen - minLen + 1) }, (_, i) => {
-    const v = minLen + i;
-    return { value: v, label: `${v} nodes` };
-  });
+  const lengthOptions = Array.from(
+    { length: Math.max(0, maxLen - minLen + 1) },
+    (_, i) => {
+      const v = minLen + i;
+      return { value: v, label: `${v} steps` };
+    },
+  );
 
   const sortOptions: SequenceSortOption[] = resources?.sortOptions ?? [
-    { value: "support", label: "Highest Support" },
-    { value: "length", label: "Sequence Length" },
+    { value: "support", label: "Most Common" },
+    { value: "length", label: "Sequence Steps" },
   ];
 
   return (
@@ -55,25 +60,26 @@ export default function SequenceFilters({
         <label className={classes.fieldLabel}>Search</label>
         <StyledInput
           label=""
-          placeholder="Search pattern..."
+          placeholder="Search care sequences..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           startIcon={<SearchIcon fontSize="small" />}
           clearIcon={search.length > 0}
           onClear={() => onSearchChange("")}
-          height={42}
+          height={36}
           fullWidth
         />
       </div>
 
       <div className={classes.fieldGroup}>
-        <label className={classes.fieldLabel}>Min Length</label>
+        <label className={classes.fieldLabel}>Min Steps</label>
         <StyledDropdown
           label=""
           value={minLength}
           onChange={(v) => onMinLengthChange(Number(v))}
           options={lengthOptions}
           width={140}
+          height={36}
         />
       </div>
 
@@ -85,6 +91,7 @@ export default function SequenceFilters({
           onChange={(v) => onSortByChange(String(v))}
           options={sortOptions}
           width={180}
+          height={36}
         />
       </div>
 
@@ -95,6 +102,7 @@ export default function SequenceFilters({
           className={classes.sortDirectionButton}
           onClick={() => onSortTypeChange(sortType === "desc" ? "asc" : "desc")}
           title={sortType === "desc" ? "Descending" : "Ascending"}
+          style={{ height: 36 }}
         >
           {sortType === "desc" ? (
             <>

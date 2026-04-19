@@ -20,26 +20,42 @@ interface Props {
 }
 
 export default function DailyEncounterChart({ data }: Props) {
-  const classes = useClasses(DailyEncounterChartStyles, { name: "DailyEncounterChart" });
-  const chartData = data.map((d) => ({ name: formatDay(d.day), value: d.count }));
+  const classes = useClasses(DailyEncounterChartStyles, {
+    name: "DailyEncounterChart",
+  });
+  const chartData = data.map((d) => ({
+    name: formatDay(d.day),
+    value: d.count,
+  }));
 
   return (
     <div className={classes.card}>
-      <p className={classes.title}>Encounter Volume — Last 30 Days</p>
+      <p className={classes.title}>Visit Volume – Last 30 Days</p>
       {chartData.length === 0 ? (
-        <div className={classes.empty}>No encounters in the last 30 days.</div>
+        <div className={classes.empty}>No visits recorded in the last 30 days.</div>
       ) : (
         <ResponsiveContainer width="100%" height={240}>
-          <LineChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+          <LineChart
+            data={chartData}
+            margin={{ top: 4, right: 16, left: 0, bottom: 0 }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: 11, fontFamily: theme.typography.fontFamily, fill: "#6B7280" }}
+              tick={{
+                fontSize: 11,
+                fontFamily: theme.typography.fontFamily,
+                fill: "#6B7280",
+              }}
               stroke="#E5E7EB"
               interval="preserveStartEnd"
             />
             <YAxis
-              tick={{ fontSize: 11, fontFamily: theme.typography.fontFamily, fill: "#6B7280" }}
+              tick={{
+                fontSize: 11,
+                fontFamily: theme.typography.fontFamily,
+                fill: "#6B7280",
+              }}
               stroke="#E5E7EB"
               width={45}
             />
@@ -50,7 +66,7 @@ export default function DailyEncounterChart({ data }: Props) {
                   return (
                     <div className={classes.tooltip}>
                       <div className={classes.tooltipLabel}>{label}</div>
-                      <div>{v.toLocaleString()} encounters</div>
+                      <div>{v.toLocaleString()} visits</div>
                     </div>
                   );
                 }

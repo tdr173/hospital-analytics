@@ -21,7 +21,6 @@ const sequencesTabStyles = (theme: Theme) => ({
     alignItems: "center",
     justifyContent: "center",
     gap: theme.spacing.md,
-    padding: `${theme.spacing.sm} 0`,
   },
   position: {
     fontSize: theme.typography.fontSize.sm,

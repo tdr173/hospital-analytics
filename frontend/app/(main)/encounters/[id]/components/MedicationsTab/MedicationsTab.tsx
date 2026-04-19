@@ -41,12 +41,14 @@ export default function MedicationsTab({ data }: Props) {
           <div className={classes.cellCode}>{r.medicationCode}</div>
           <div className={classes.cellSecondary}>{formatDate(r.startDate)}</div>
           <div className={classes.cellSecondary}>
-            {r.endDate ? formatDate(r.endDate) : "—"}
+            {r.endDate ? formatDate(r.endDate) : "-"}
           </div>
           <div className={classes.cellSecondary}>
-            {r.durationDays != null ? `${Math.round(r.durationDays)}d` : "—"}
+            {r.durationDays != null ? `${Math.round(r.durationDays)}d` : "-"}
           </div>
-          <div className={classes.cellSecondary}>{r.reasonDescription ?? "—"}</div>
+          <div className={classes.cellSecondary}>
+            {r.reasonDescription ?? "-"}
+          </div>
         </div>
       ))}
     </>

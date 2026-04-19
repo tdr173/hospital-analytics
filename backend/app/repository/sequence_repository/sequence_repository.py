@@ -103,7 +103,7 @@ class SequenceRepository:
     def lock_pattern_ai_analysis(self, pattern_id: int) -> Optional[dict]:
         """Row-lock the pattern and return cached analysis if present.
 
-        Caller must commit/rollback to release the lock — save_pattern_ai_analysis commits.
+        Caller must commit/rollback to release the lock - save_pattern_ai_analysis commits.
         """
         pattern = self.db.query(PrefixSpanPatternModel).filter(
             PrefixSpanPatternModel.id == pattern_id

@@ -51,7 +51,8 @@ export const ClusterTopSequencesStyles = (theme: Theme) => ({
     minWidth: 0,
   },
   pattern: {
-    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    fontFamily:
+      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
     fontSize: "0.8rem",
     color: theme.colors.text.primary,
     lineHeight: theme.typography.lineHeight.relaxed,

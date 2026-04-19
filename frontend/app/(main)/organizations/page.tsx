@@ -8,7 +8,10 @@ import IconButton from "@mui/material/IconButton";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 
 import { RootState, AppDispatch } from "@/store";
-import { fetchOrganizations, fetchOrganizationResources } from "@/store/slices/organizations/thunks";
+import {
+  fetchOrganizations,
+  fetchOrganizationResources,
+} from "@/store/slices/organizations/thunks";
 import { OrganizationListItem } from "@/models/generic/organizations";
 
 import StyledTable, {
@@ -17,7 +20,7 @@ import StyledTable, {
 } from "@/components/generic_components/StyledTable/StyledTable";
 import StyledInput from "@/components/generic_components/StyledInput/StyledInput";
 import SearchIcon from "@mui/icons-material/Search";
-import StyledDropdown from "@/components/generic_components/StyledDropdown/StyledDropdown";
+import StyledMultiDropdown from "@/components/generic_components/StyledMultiDropdown/StyledMultiDropdown";
 import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
 import StyledButton from "@/components/generic_components/StyledButton/StyledButton";
 import useClasses from "@/utils/useClasses";
@@ -30,8 +33,20 @@ const COLUMNS = [
   { key: "name", label: "Name", sortable: true, width: 250 },
   { key: "city", label: "City", sortable: true, width: 160 },
   { key: "phone", label: "Phone", width: 140 },
-  { key: "providerCount", label: "Providers", sortable: true, width: 100, align: "right" as const },
-  { key: "utilization", label: "Utilization", sortable: true, width: 100, align: "right" as const },
+  {
+    key: "providerCount",
+    label: "Clinicians",
+    sortable: true,
+    width: 100,
+    align: "right" as const,
+  },
+  {
+    key: "utilization",
+    label: "Patient Load",
+    sortable: true,
+    width: 100,
+    align: "right" as const,
+  },
   { key: "actions", label: "Actions", width: 80, align: "center" as const },
 ];
 
@@ -39,7 +54,9 @@ function OrganizationsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const classes = useClasses(OrganizationsPageStyles, { name: "OrganizationsPage" });
+  const classes = useClasses(OrganizationsPageStyles, {
+    name: "OrganizationsPage",
+  });
 
   const { items, total, loading, resources, resourcesLoading } = useSelector(
     (state: RootState) => state.organizations,
@@ -68,9 +85,14 @@ function OrganizationsPageContent() {
   }, [dispatch, searchParams, page, rows, sortBy, sortType]);
 
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
-  const [city, setCity] = useState(searchParams.get("city") ?? "");
+  const [city, setCity] = useState<string[]>(
+    searchParams.get("city") ? searchParams.get("city")!.split(",") : []
+  );
 
-  const setParam = (updates: Record<string, string | null>, resetPage = true) => {
+  const setParam = (
+    updates: Record<string, string | null>,
+    resetPage = true,
+  ) => {
     const p = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([k, v]) => {
       if (v) p.set(k, v);
@@ -93,7 +115,9 @@ function OrganizationsPageContent() {
     const p = new URLSearchParams(searchParams.toString());
     if (search) p.set("search", search);
     else p.delete("search");
-    if (city) p.set("city", city);
+    const allCities = resources?.cities.map((c) => c.value) ?? [];
+    const effectiveCity = city.length > 0 && city.length < allCities.length ? city : [];
+    if (effectiveCity.length) p.set("city", effectiveCity.join(","));
     else p.delete("city");
     p.set("page", "1");
     router.push(`/organizations?${p.toString()}`);
@@ -113,9 +137,7 @@ function OrganizationsPageContent() {
       <TableCell sx={bodyCellSx}>
         <TruncatedText text={o.city ?? "-"} />
       </TableCell>
-      <TableCell sx={bodyCellSx}>
-        {o.phone ?? "-"}
-      </TableCell>
+      <TableCell sx={bodyCellSx}>{o.phone ?? "-"}</TableCell>
       <TableCell sx={bodyCellSx} align="right">
         {o.providerCount}
       </TableCell>
@@ -126,7 +148,7 @@ function OrganizationsPageContent() {
         <IconButton
           size="small"
           onClick={() => router.push(`/organizations/${o.organizationId}`)}
-          aria-label="View organization"
+          aria-label="View facility"
           sx={{
             padding: "4px",
             color: theme.colors.primary.main,
@@ -143,10 +165,7 @@ function OrganizationsPageContent() {
     return <div className={classes.loading}>Loading...</div>;
   }
 
-  const cityOptions = [
-    { value: "", label: "All Cities" },
-    ...resources.cities.map((c) => ({ value: c.value, label: c.label })),
-  ];
+  const cityOptions = resources.cities.map((c) => ({ value: c.value, label: c.label }));
 
   return (
     <div className={classes.pageContainer}>
@@ -156,18 +175,22 @@ function OrganizationsPageContent() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name or city"
-          startIcon={<SearchIcon sx={{ fontSize: "1.1rem", color: "#6b7280" }} />}
+          startIcon={
+            <SearchIcon sx={{ fontSize: "1.1rem", color: "#6b7280" }} />
+          }
           clearIcon
           onClear={() => setSearch("")}
           height={36}
         />
 
-        <StyledDropdown
+        <StyledMultiDropdown
           label="City"
           value={city}
-          onChange={(v) => setCity(v as string)}
+          onChange={(v) => setCity(v as string[])}
           options={cityOptions}
+          placeholder="All Cities"
           width="100%"
+          onClear={() => setCity([])}
         />
 
         <StyledButton
@@ -210,7 +233,7 @@ function OrganizationsPageContent() {
           sortBy={sortBy}
           sortType={sortType}
           onSort={handleSort}
-          emptyMessage="No organizations found matching the selected filters."
+          emptyMessage="No facilities match the selected filters."
         />
       </div>
     </div>

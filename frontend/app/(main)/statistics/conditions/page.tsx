@@ -24,7 +24,7 @@ export default function ConditionsPage() {
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading condition statistics...</div>
+      <div className={classes.loading}>Loading condition data...</div>
     );
   }
 

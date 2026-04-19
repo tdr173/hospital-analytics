@@ -50,7 +50,7 @@ export const fetchOrganizations = createAsyncThunk<
   try {
     const q = new URLSearchParams();
     if (args.search) q.set("search", args.search);
-    if (args.city) q.set("city", args.city);
+    if (args.city?.length) q.set("city", args.city.join(","));  // omitted when empty → backend skips filter
     q.set("page", args.page.toString());
     q.set("rows", args.rows.toString());
     q.set("sortBy", args.sortBy);

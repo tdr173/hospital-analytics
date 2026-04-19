@@ -23,6 +23,7 @@ interface StyledDropdownProps {
   required?: boolean;
   fullWidth?: boolean;
   width?: string | number;
+  height?: string | number;
 }
 
 const selectSx = {
@@ -99,6 +100,7 @@ export default function StyledDropdown({
   required = false,
   fullWidth = false,
   width,
+  height,
 }: StyledDropdownProps) {
   const classes = useClasses(StyledDropdownStyles, { name: "StyledDropdown" });
 
@@ -107,7 +109,10 @@ export default function StyledDropdown({
   };
 
   return (
-    <div className={classes.wrapper} style={{ width: width ?? (fullWidth ? "100%" : undefined) }}>
+    <div
+      className={classes.wrapper}
+      style={{ width: width ?? (fullWidth ? "100%" : undefined) }}
+    >
       <span className={classes.label}>{required ? `${label} *` : label}</span>
 
       <Select
@@ -118,11 +123,30 @@ export default function StyledDropdown({
         error={error}
         fullWidth={fullWidth || !!width}
         variant="outlined"
-        sx={selectSx}
+        sx={{
+          ...selectSx,
+          ...(height !== undefined && {
+            height,
+            "& .MuiSelect-select": {
+              paddingTop: 0,
+              paddingBottom: 0,
+              paddingLeft: "14px",
+              paddingRight: "36px !important",
+              display: "flex",
+              alignItems: "center",
+              height: "100%",
+              boxSizing: "border-box",
+            },
+          }),
+        }}
         MenuProps={{ PaperProps: { sx: menuPaperSx } }}
       >
         {placeholder && (
-          <MenuItem value="" disabled sx={{ color: theme.colors.text.secondary }}>
+          <MenuItem
+            value=""
+            disabled
+            sx={{ color: theme.colors.text.secondary }}
+          >
             {placeholder}
           </MenuItem>
         )}
@@ -136,7 +160,11 @@ export default function StyledDropdown({
       {helperText && (
         <span
           className={classes.helperText}
-          style={{ color: error ? theme.colors.status.error : theme.colors.text.secondary }}
+          style={{
+            color: error
+              ? theme.colors.status.error
+              : theme.colors.text.secondary,
+          }}
         >
           {helperText}
         </span>

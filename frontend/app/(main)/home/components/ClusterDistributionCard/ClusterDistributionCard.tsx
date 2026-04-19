@@ -17,9 +17,9 @@ export default function ClusterDistributionCard({ data }: Props) {
   if (data.length === 0) {
     return (
       <div className={classes.card}>
-        <p className={classes.title}>Cluster Distribution</p>
+        <p className={classes.title}>Patient Group Distribution</p>
         <div className={classes.empty}>
-          No clustering data available. Run the clustering algorithm first.
+          No patient groups yet. Run the grouping analysis first.
         </div>
       </div>
     );
@@ -34,7 +34,7 @@ export default function ClusterDistributionCard({ data }: Props) {
 
   return (
     <div className={classes.card}>
-      <p className={classes.title}>Cluster Distribution</p>
+      <p className={classes.title}>Patient Group Distribution</p>
       <PieChartComponent data={pieData} title="" colors={colors} />
     </div>
   );

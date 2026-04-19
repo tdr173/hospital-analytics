@@ -20,7 +20,9 @@ interface Props {
 }
 
 export default function TopConditionsBar({ data }: Props) {
-  const classes = useClasses(TopConditionsBarStyles, { name: "TopConditionsBar" });
+  const classes = useClasses(TopConditionsBarStyles, {
+    name: "TopConditionsBar",
+  });
 
   const total = data.reduce((acc, d) => acc + d.count, 0);
   const chartData = data.map((d) => ({
@@ -32,7 +34,7 @@ export default function TopConditionsBar({ data }: Props) {
 
   return (
     <div className={classes.card}>
-      <p className={classes.title}>Top 5 Conditions — Last Week</p>
+      <p className={classes.title}>Top 5 Conditions – Last Week</p>
       {chartData.length === 0 ? (
         <div className={classes.empty}>
           No conditions recorded in the last week.
@@ -45,7 +47,11 @@ export default function TopConditionsBar({ data }: Props) {
               layout="vertical"
               margin={{ top: 4, right: 24, left: 8, bottom: 4 }}
             >
-              <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#E5E7EB" />
+              <CartesianGrid
+                horizontal={false}
+                strokeDasharray="3 3"
+                stroke="#E5E7EB"
+              />
               <XAxis type="number" hide domain={[0, "dataMax"]} />
               <YAxis
                 type="category"

@@ -8,7 +8,10 @@ import IconButton from "@mui/material/IconButton";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 
 import { RootState, AppDispatch } from "@/store";
-import { fetchEncounters, fetchEncounterResources } from "@/store/slices/encounters/thunks";
+import {
+  fetchEncounters,
+  fetchEncounterResources,
+} from "@/store/slices/encounters/thunks";
 import { EncounterListItem } from "@/models/generic/encounters";
 
 import StyledTable, {
@@ -30,12 +33,18 @@ const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
 const COLUMNS = [
   { key: "startDate", label: "Date", sortable: true, width: 110 },
-  { key: "encounterClass", label: "Class", sortable: true, width: 110 },
-  { key: "patientName", label: "Patient", width: 180 },
-  { key: "providerName", label: "Provider", width: 180 },
-  { key: "organizationName", label: "Organization", width: 180 },
-  { key: "description", label: "Description", width: 220 },
-  { key: "duration", label: "Duration", sortable: true, width: 90, align: "right" as const },
+  { key: "encounterClass", label: "Type", sortable: true, width: 110 },
+  { key: "patientName", label: "Patient", width: 160 },
+  { key: "providerName", label: "Clinician", width: 160 },
+  { key: "organizationName", label: "Facility", width: 180 },
+  { key: "description", label: "Description", width: 180 },
+  {
+    key: "duration",
+    label: "Duration",
+    sortable: true,
+    width: 140,
+    align: "center" as const,
+  },
   { key: "actions", label: "Actions", width: 80, align: "center" as const },
 ];
 
@@ -62,7 +71,10 @@ function EncountersPageContent() {
     dispatch(
       fetchEncounters({
         search: searchParams.get("search") || undefined,
-        encounterClass: searchParams.get("encounterClass")?.split(",").filter(Boolean),
+        encounterClass: searchParams
+          .get("encounterClass")
+          ?.split(",")
+          .filter(Boolean),
         dateFrom: searchParams.get("dateFrom") || undefined,
         dateTo: searchParams.get("dateTo") || undefined,
         page,
@@ -80,7 +92,10 @@ function EncountersPageContent() {
   const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") ?? "");
   const [dateTo, setDateTo] = useState(searchParams.get("dateTo") ?? "");
 
-  const setParam = (updates: Record<string, string | null>, resetPage = true) => {
+  const setParam = (
+    updates: Record<string, string | null>,
+    resetPage = true,
+  ) => {
     const p = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([k, v]) => {
       if (v) p.set(k, v);
@@ -101,10 +116,15 @@ function EncountersPageContent() {
 
   const handleSearch = () => {
     const p = new URLSearchParams(searchParams.toString());
-    if (search) p.set("search", search); else p.delete("search");
-    if (encounterClass.length) p.set("encounterClass", encounterClass.join(",")); else p.delete("encounterClass");
-    if (dateFrom) p.set("dateFrom", dateFrom); else p.delete("dateFrom");
-    if (dateTo) p.set("dateTo", dateTo); else p.delete("dateTo");
+    if (search) p.set("search", search);
+    else p.delete("search");
+    if (encounterClass.length)
+      p.set("encounterClass", encounterClass.join(","));
+    else p.delete("encounterClass");
+    if (dateFrom) p.set("dateFrom", dateFrom);
+    else p.delete("dateFrom");
+    if (dateTo) p.set("dateTo", dateTo);
+    else p.delete("dateTo");
     p.set("page", "1");
     router.push(`/encounters?${p.toString()}`);
   };
@@ -135,14 +155,14 @@ function EncountersPageContent() {
       <TableCell sx={bodyCellSx}>
         <TruncatedText text={e.description} />
       </TableCell>
-      <TableCell sx={bodyCellSx} align="right">
-        {e.duration != null ? `${Math.round(e.duration)} min` : "—"}
+      <TableCell sx={bodyCellSx} align="center">
+        {e.duration != null ? `${Math.round(e.duration)} min` : "-"}
       </TableCell>
       <TableCell sx={bodyCellSx} align="center">
         <IconButton
           size="small"
           onClick={() => router.push(`/encounters/${e.encounterId}`)}
-          aria-label="View encounter"
+          aria-label="View visit"
           sx={{
             padding: "4px",
             color: theme.colors.primary.main,
@@ -172,14 +192,16 @@ function EncountersPageContent() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by patient name"
-          startIcon={<SearchIcon sx={{ fontSize: "1.1rem", color: "#6b7280" }} />}
+          startIcon={
+            <SearchIcon sx={{ fontSize: "1.1rem", color: "#6b7280" }} />
+          }
           clearIcon
           onClear={() => setSearch("")}
           height={36}
         />
 
         <StyledMultiDropdown
-          label="Class"
+          label="Type"
           value={encounterClass}
           onChange={(v) => setEncounterClass(v as string[])}
           onClear={() => setEncounterClass([])}
@@ -189,7 +211,7 @@ function EncountersPageContent() {
         />
 
         <StyledDatePicker
-          label="Date From"
+          label="From"
           value={dateFrom}
           onChange={setDateFrom}
           fullWidth
@@ -197,7 +219,7 @@ function EncountersPageContent() {
         />
 
         <StyledDatePicker
-          label="Date To"
+          label="To"
           value={dateTo}
           onChange={setDateTo}
           fullWidth
@@ -214,8 +236,16 @@ function EncountersPageContent() {
             color: "#ffffff",
             height: "36px !important",
             whiteSpace: "nowrap",
-            "&:hover": { background: theme.colors.button.primaryHover, boxShadow: "none", transform: "none" },
-            "&:active": { background: theme.colors.button.primaryActive, boxShadow: "none", transform: "none" },
+            "&:hover": {
+              background: theme.colors.button.primaryHover,
+              boxShadow: "none",
+              transform: "none",
+            },
+            "&:active": {
+              background: theme.colors.button.primaryActive,
+              boxShadow: "none",
+              transform: "none",
+            },
           }}
         >
           Search
@@ -236,7 +266,7 @@ function EncountersPageContent() {
           sortBy={sortBy}
           sortType={sortType}
           onSort={handleSort}
-          emptyMessage="No encounters found matching the selected filters."
+          emptyMessage="No visits match the selected filters."
         />
       </div>
     </div>

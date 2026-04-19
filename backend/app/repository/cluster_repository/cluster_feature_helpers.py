@@ -208,7 +208,7 @@ def get_condition_burden_distribution(db: Session, cluster_id: int) -> dict:
 
 
 def get_population_stats(db: Session) -> dict:
-    """Averages & disease rates across non-outlier patients — baseline for AI prompts."""
+    """Averages & disease rates across non-outlier patients - baseline for AI prompts."""
     row = db.query(
         _avg_expr("age", 1).label("avg_age"),
         _avg_expr("avg_bmi", 1).label("avg_bmi"),

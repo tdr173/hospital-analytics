@@ -83,9 +83,9 @@ async def lifespan(app: FastAPI):
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_provider_organization_id ON provider (organization_id)"))
             conn.commit()
     except Exception:
-        logger.exception("Startup migrations failed — some ALTER/INDEX/CONSTRAINT statements did not run")
+        logger.exception("Startup migrations failed - some ALTER/INDEX/CONSTRAINT statements did not run")
 
-    # Observation materialized views — pre-aggregate millions of rows so the
+    # Observation materialized views - pre-aggregate millions of rows so the
     # statistics endpoint responds in milliseconds instead of ~30 seconds.
     # IF NOT EXISTS makes this a no-op on every restart after the first build.
     # Re-run manually after ETL: REFRESH MATERIALIZED VIEW <view_name>;

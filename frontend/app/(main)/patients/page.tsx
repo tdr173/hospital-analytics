@@ -32,14 +32,20 @@ import PatientFilters from "./components/PatientFilters/PatientFilters";
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
 const COLUMNS = [
-  { key: "lastName", label: "Name", sortable: true, width: 210 },
-  { key: "age", label: "Age", sortable: true, width: 60, align: "right" as const },
-  { key: "gender", label: "Gender", width: 80 },
-  { key: "city", label: "City", sortable: true, width: 150 },
-  { key: "race", label: "Race / Ethnicity", width: 190 },
-  { key: "marital", label: "Marital", width: 100 },
-  { key: "status", label: "Status", width: 100 },
-  { key: "cluster", label: "Cluster", width: 160 },
+  { key: "lastName", label: "Name", sortable: true, width: 140 },
+  {
+    key: "age",
+    label: "Age",
+    sortable: true,
+    width: 70,
+    align: "right" as const,
+  },
+  { key: "gender", label: "Gender", width: 100 },
+  { key: "city", label: "City", sortable: true, width: 120 },
+  { key: "race", label: "Race / Ethnicity", width: 120 },
+  { key: "marital", label: "Marital Status", width: 100 },
+  { key: "status", label: "Status", width: 80 },
+  { key: "cluster", label: "Group", width: 180 },
   { key: "actions", label: "Actions", width: 80, align: "center" as const },
 ];
 
@@ -96,7 +102,10 @@ function PatientsPageContent() {
     searchParams.get("marital")?.split(",").filter(Boolean) ?? [],
   );
 
-  const setParam = (updates: Record<string, string | null>, resetPage = true) => {
+  const setParam = (
+    updates: Record<string, string | null>,
+    resetPage = true,
+  ) => {
     const p = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([k, v]) => {
       if (v) p.set(k, v);
@@ -148,7 +157,7 @@ function PatientsPageContent() {
       >
         <TruncatedText text={clearName(p.firstName, p.lastName)} />
       </TableCell>
-      <TableCell sx={bodyCellSx} align="right">
+      <TableCell sx={bodyCellSx} align="center">
         {p.age}
       </TableCell>
       <TableCell sx={bodyCellSx}>
@@ -159,12 +168,15 @@ function PatientsPageContent() {
       </TableCell>
       <TableCell sx={bodyCellSx}>
         <TruncatedText
-          text={p.race ? (p.ethnicity ? `${p.race} · ${p.ethnicity}` : p.race) : "-"}
+          text={
+            p.race ? (p.ethnicity ? `${p.race} · ${p.ethnicity}` : p.race) : "-"
+          }
         />
       </TableCell>
       <TableCell sx={bodyCellSx}>
         {p.marital
-          ? (resources?.maritalStatuses.find((o) => o.value === p.marital)?.label ?? p.marital)
+          ? (resources?.maritalStatuses.find((o) => o.value === p.marital)
+              ?.label ?? p.marital)
           : "-"}
       </TableCell>
       <TableCell sx={bodyCellSx}>
@@ -227,7 +239,7 @@ function PatientsPageContent() {
           sortBy={sortBy}
           sortType={sortType}
           onSort={handleSort}
-          emptyMessage="No patients found matching the selected filters."
+          emptyMessage="No patients match the selected filters."
         />
       </div>
     </div>

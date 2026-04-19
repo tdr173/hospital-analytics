@@ -1,10 +1,11 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { SequenceAiAnalysisResponse } from "@/models/generic/sequences";
+import { SequenceAiAnalysisResponse, SequenceListItem } from "@/models/generic/sequences";
 import { getSequenceAiAnalysis } from "./thunks";
 
 interface SequenceAiState {
   cache: Record<number, SequenceAiAnalysisResponse>;
   currentPatternId: number | null;
+  currentSequence: SequenceListItem | null;
   loading: boolean;
   error: string | null;
 }
@@ -12,6 +13,7 @@ interface SequenceAiState {
 const initialState: SequenceAiState = {
   cache: {},
   currentPatternId: null,
+  currentSequence: null,
   loading: false,
   error: null,
 };
@@ -20,12 +22,14 @@ const sequenceAiSlice = createSlice({
   name: "sequenceAi",
   initialState,
   reducers: {
-    openSequenceAnalysis: (state, action: PayloadAction<number>) => {
-      state.currentPatternId = action.payload;
+    openSequenceAnalysis: (state, action: PayloadAction<SequenceListItem>) => {
+      state.currentPatternId = action.payload.id;
+      state.currentSequence = action.payload;
       state.error = null;
     },
     closeSequenceAnalysis: (state) => {
       state.currentPatternId = null;
+      state.currentSequence = null;
       state.error = null;
     },
   },

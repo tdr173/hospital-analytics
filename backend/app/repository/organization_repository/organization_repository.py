@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 
@@ -25,17 +25,17 @@ class OrganizationRepository:
     def _provider_count_subq(self):
         return (
             self.db.query(
-                ProviderModel.organization_id,
-                func.count(ProviderModel.provider_id).label("provider_count"),
+                EncounterModel.organization_id,
+                func.count(EncounterModel.provider_id.distinct()).label("provider_count"),
             )
-            .group_by(ProviderModel.organization_id)
+            .group_by(EncounterModel.organization_id)
             .subquery()
         )
 
     def get_organizations(
         self,
         search: Optional[str],
-        city: Optional[str],
+        city: Optional[List[str]],
         page: int,
         rows: int,
         sort_by: str,
@@ -50,7 +50,7 @@ class OrganizationRepository:
             ))
 
         if city:
-            filters.append(OrganizationModel.city == city)
+            filters.append(OrganizationModel.city.in_(city))
 
         total = (
             self.db.query(func.count(OrganizationModel.organization_id))
@@ -116,7 +116,9 @@ class OrganizationRepository:
     def get_organization_providers(self, organization_id: str) -> list[OrganizationProviderItem]:
         rows = (
             self.db.query(ProviderModel)
-            .filter(ProviderModel.organization_id == organization_id)
+            .join(EncounterModel, EncounterModel.provider_id == ProviderModel.provider_id)
+            .filter(EncounterModel.organization_id == organization_id)
+            .distinct()
             .order_by(ProviderModel.last_name.asc())
             .all()
         )
@@ -127,7 +129,7 @@ class OrganizationRepository:
                 last_name=r.last_name,
                 gender=r.gender,
                 speciality=r.speciality,
-                utilization=r.utilization,
+                utilization=r.encounters,
             )
             for r in rows
         ]

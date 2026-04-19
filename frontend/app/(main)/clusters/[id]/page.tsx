@@ -32,9 +32,9 @@ export default function ClusterDetailPage() {
     }
   }, [dispatch, id]);
 
-  if (loading) return <div className={classes.loading}>Loading cluster details...</div>;
+  if (loading) return <div className={classes.loading}>Loading group details...</div>;
   if (error) return <div className={classes.error}>{error}</div>;
-  if (!data) return <div className={classes.empty}>No cluster data available.</div>;
+  if (!data) return <div className={classes.empty}>No group data available.</div>;
 
   return (
     <div className={classes.container}>

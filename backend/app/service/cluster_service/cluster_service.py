@@ -13,7 +13,7 @@ IMPORTANT RULES:
 - Translate vitals into plain risk language (e.g. systolic BP >=140 = hypertensive range, glucose >=126 mg/dL = diabetic range, BMI >=30 = obese).
 - Let the dominant careplan category guide the clinical framing (Cardiac, Respiratory, Metabolic, Maternal, Musculoskeletal, Psychiatric, Other, none).
 - If a value is "N/A" or 0 with no clinical meaning, do not mention that metric.
-- Do NOT use em dashes (—) anywhere in your response. Use commas or plain sentence structure instead.
+- Do NOT use em dashes (-) anywhere in your response. Use commas or plain sentence structure instead.
 
 POPULATION CONTEXT:
 - {n_patients} patients across {n_clusters} clusters | Silhouette: {silhouette} | Davies-Bouldin: {davies_bouldin}

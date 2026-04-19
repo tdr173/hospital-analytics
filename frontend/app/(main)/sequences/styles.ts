@@ -32,6 +32,7 @@ export const SequencesPageStyles = (theme: Theme) => ({
     padding: theme.spacing.xxl,
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.md,
+    height: "100%",
   },
   error: {
     display: "flex",

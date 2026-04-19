@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import IconButton from "@mui/material/IconButton";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
@@ -42,23 +42,17 @@ export default function SequencesTab({ data }: Props) {
 
   const colors = resources?.colors ?? {};
 
-  const sequencesById = useMemo(() => {
-    const map: Record<number, SequenceListItem> = {};
-    for (const item of data) map[item.id] = item;
-    return map;
-  }, [data]);
-
-  const handleAnalyse = (patternId: number) => {
-    dispatch(openSequenceAnalysis(patternId));
-    if (!aiCache[patternId]) {
-      dispatch(getSequenceAiAnalysis(patternId));
+  const handleAnalyse = (sequence: SequenceListItem) => {
+    dispatch(openSequenceAnalysis(sequence));
+    if (!aiCache[sequence.id]) {
+      dispatch(getSequenceAiAnalysis(sequence.id));
     }
   };
 
   if (!data || data.length === 0) {
     return (
       <div className={classes.emptyState}>
-        No sequential patterns recorded for this patient.
+        No care sequences recorded for this patient.
       </div>
     );
   }
@@ -70,9 +64,6 @@ export default function SequencesTab({ data }: Props) {
 
   return (
     <div className={classes.container}>
-      <div className={classes.countBar}>
-        {data.length} pattern{data.length === 1 ? "" : "s"} found for this patient
-      </div>
       <div className={classes.list}>
         <SequenceCard
           key={current.id}
@@ -93,7 +84,7 @@ export default function SequencesTab({ data }: Props) {
             <ChevronLeftIcon />
           </IconButton>
           <span className={classes.position}>
-            Pattern {safeIdx + 1} of {data.length}
+            Sequence {safeIdx + 1} of {data.length}
           </span>
           <IconButton
             size="small"
@@ -108,7 +99,7 @@ export default function SequencesTab({ data }: Props) {
           </IconButton>
         </div>
       )}
-      <SequenceAiModal sequencesById={sequencesById} colors={colors} />
+      <SequenceAiModal colors={colors} />
     </div>
   );
 }

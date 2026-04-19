@@ -12,7 +12,9 @@ interface Props {
 }
 
 export default function ObservationsTab({ data }: Props) {
-  const classes = useClasses(ObservationsTabStyles, { name: "ObservationsTab" });
+  const classes = useClasses(ObservationsTabStyles, {
+    name: "ObservationsTab",
+  });
   if (!data.length) {
     return <div className={classes.emptyState}>No observations recorded.</div>;
   }
@@ -54,7 +56,7 @@ export default function ObservationsTab({ data }: Props) {
               <span className={classes.cellSecondary}>{r.value}</span>
             )}
           </div>
-          <div className={classes.cellSecondary}>{r.units ?? "—"}</div>
+          <div className={classes.cellSecondary}>{r.units ?? "-"}</div>
           <div className={classes.cellSecondary}>{formatDate(r.date)}</div>
         </div>
       ))}

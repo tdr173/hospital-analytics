@@ -7,7 +7,7 @@ from datetime import datetime
 
 class ClusterMetaModel(SQLModel, table=True):
     """
-    Singleton table — always exactly one row (id=1).
+    Singleton table - always exactly one row (id=1).
     Stores the metadata for the current (latest) clustering run.
     On re-run: DELETE then INSERT replaces it.
     """

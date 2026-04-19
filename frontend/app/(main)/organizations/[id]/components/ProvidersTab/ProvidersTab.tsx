@@ -12,11 +12,17 @@ interface Props {
   onProviderClick: (id: string) => void;
 }
 
-export default function ProvidersTab({ data, loading, onProviderClick }: Props) {
+export default function ProvidersTab({
+  data,
+  loading,
+  onProviderClick,
+}: Props) {
   const classes = useClasses(ProvidersTabStyles, { name: "OrgProvidersTab" });
 
-  if (loading) return <div className={classes.tabLoading}>Loading providers...</div>;
-  if (!data.length) return <div className={classes.emptyState}>No providers found.</div>;
+  if (loading)
+    return <div className={classes.tabLoading}>Loading clinicians...</div>;
+  if (!data.length)
+    return <div className={classes.emptyState}>No clinicians found.</div>;
 
   return (
     <div className={classes.container}>
@@ -24,9 +30,9 @@ export default function ProvidersTab({ data, loading, onProviderClick }: Props) 
         className={`${classes.gridRow} ${classes.providersGridRow} ${classes.headerRow}`}
       >
         <div>Name</div>
-        <div>Speciality</div>
+        <div>Specialty</div>
         <div>Gender</div>
-        <div className={classes.utilizationHeader}>Utilization</div>
+        <div className={classes.utilizationHeader}>Visits</div>
       </div>
       {data.map((p, i) => (
         <div
@@ -41,7 +47,7 @@ export default function ProvidersTab({ data, loading, onProviderClick }: Props) 
           >
             {clearName(p.firstName, p.lastName)}
           </div>
-          <div className={classes.secondaryText}>{p.speciality ?? "—"}</div>
+          <div className={classes.secondaryText}>{p.speciality ?? "-"}</div>
           <div>
             <GenderBadge gender={p.gender} />
           </div>

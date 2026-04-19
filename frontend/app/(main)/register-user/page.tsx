@@ -22,7 +22,10 @@ const registerSchema = yup.object({
   phone: yup
     .string()
     .required("This field is required.")
-    .matches(/^\+?[0-9\s\-().]{7,20}$/, "Please introduce a valid phone number."),
+    .matches(
+      /^\+?[0-9\s\-().]{7,20}$/,
+      "Please introduce a valid phone number.",
+    ),
   jobTitle: yup.string().required("This field is required."),
   role: yup.string().oneOf(ROLES).required("This field is required."),
 });
@@ -96,11 +99,13 @@ export default function RegisterPage() {
       <div className={classes.card}>
         <div className={classes.leftPanel}>
           <div className={classes.iconBox}>
-            <PersonAddOutlinedIcon sx={{ color: "#0891B2", fontSize: "28px" }} />
+            <PersonAddOutlinedIcon
+              sx={{ color: "#0891B2", fontSize: "28px" }}
+            />
           </div>
-          <h1 className={classes.title}>Create new account</h1>
+          <h1 className={classes.title}>Register New User</h1>
           <p className={classes.subtitle}>
-            Fill in the details below to register a new HospitAI user.
+            Fill in the details below to create a new account.
           </p>
         </div>
 
@@ -108,7 +113,9 @@ export default function RegisterPage() {
           {submittedEmail ? (
             <div className={classes.successContainer}>
               <div className={classes.successIconBox}>
-                <CheckCircleOutlineIcon sx={{ color: "#10b981", fontSize: "32px" }} />
+                <CheckCircleOutlineIcon
+                  sx={{ color: "#10b981", fontSize: "32px" }}
+                />
               </div>
               <div>
                 <p className={classes.successText}>
@@ -116,8 +123,12 @@ export default function RegisterPage() {
                 </p>
                 <p className={classes.successEmail}>{submittedEmail}</p>
               </div>
-              <StyledButton variant="secondary" onClick={handleReset} sx={BUTTON_SX}>
-                Register a new user
+              <StyledButton
+                variant="secondary"
+                onClick={handleReset}
+                sx={BUTTON_SX}
+              >
+                Add User
               </StyledButton>
             </div>
           ) : (
@@ -140,7 +151,9 @@ export default function RegisterPage() {
                 required
                 placeholder="Doe"
                 value={values.lastName}
-                onChange={(e) => setValues({ ...values, lastName: e.target.value })}
+                onChange={(e) =>
+                  setValues({ ...values, lastName: e.target.value })
+                }
                 error={!!errors.lastName}
                 helperText={errors.lastName}
               />
@@ -150,7 +163,9 @@ export default function RegisterPage() {
                 required
                 placeholder="clinician@hospital.org"
                 value={values.email}
-                onChange={(e) => setValues({ ...values, email: e.target.value })}
+                onChange={(e) =>
+                  setValues({ ...values, email: e.target.value })
+                }
                 error={!!errors.email}
                 helperText={errors.email}
               />
@@ -158,9 +173,11 @@ export default function RegisterPage() {
                 label="Phone Number"
                 type="text"
                 required
-                placeholder="+40 712 345 678"
+                placeholder="+40712345678"
                 value={values.phone}
-                onChange={(e) => setValues({ ...values, phone: e.target.value })}
+                onChange={(e) =>
+                  setValues({ ...values, phone: e.target.value })
+                }
                 error={!!errors.phone}
                 helperText={errors.phone}
               />
@@ -170,13 +187,15 @@ export default function RegisterPage() {
                 required
                 placeholder="e.g. Cardiologist"
                 value={values.jobTitle}
-                onChange={(e) => setValues({ ...values, jobTitle: e.target.value })}
+                onChange={(e) =>
+                  setValues({ ...values, jobTitle: e.target.value })
+                }
                 error={!!errors.jobTitle}
                 helperText={errors.jobTitle}
               />
 
               <div className={classes.fullRow}>
-                <p className={classes.roleLabel}>ROLE *</p>
+                <p className={classes.roleLabel}>Role</p>
                 <div className={classes.roleOptions}>
                   {ROLES.map((r) => (
                     <label
@@ -197,7 +216,9 @@ export default function RegisterPage() {
                     </label>
                   ))}
                 </div>
-                {errors.role && <p className={classes.roleError}>{errors.role}</p>}
+                {errors.role && (
+                  <p className={classes.roleError}>{errors.role}</p>
+                )}
               </div>
 
               <div className={classes.fullRow}>

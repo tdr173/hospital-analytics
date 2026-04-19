@@ -2,32 +2,30 @@ Huang + minmax + gamma=auto + 6 clusters + seed=42 + threshold=4
 ================================================================
 Cluster Evaluation Report
 
-Silhouette Score:        0.0953  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
-Gower Silhouette Score:  0.1956  (numerical + categorical, same scale as above)
-Dunn Index (Gower):      0.0091  (range 0 to inf, higher is better; worst-case cluster separation)
-Calinski-Harabasz:       4900.68  (numerical only, range 0 to inf, higher is better)
-Calinski-Harabasz (FAMD):13724.27  (mixed, on 2D FAMD embedding)
-Davies-Bouldin:          1.9622  (numerical only, range 0 to inf, lower is better, <1 good, >2 poor)
-Davies-Bouldin (FAMD):   1.0905  (mixed, on 2D FAMD embedding)
+Silhouette Score:        0.1152  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
+Gower Silhouette Score:  0.2065  (numerical + categorical, same scale as above)
+Calinski-Harabasz:       5377.86  (numerical only, range 0 to inf, higher is better)
+Calinski-Harabasz (FAMD):13634.30  (mixed, on 2D FAMD embedding)
+Davies-Bouldin:          1.8055  (numerical only, range 0 to inf, lower is better, <1 good, >2 poor)
+Davies-Bouldin (FAMD):   1.1334  (mixed, on 2D FAMD embedding)
 
 Per-cluster Silhouette (Gower, weak if near 0 or negative):
-    cluster 0   0.1456
-    cluster 1   0.2109
-    cluster 2   0.0895
-    cluster 3   0.2255
-    cluster 4   0.1185
-    cluster 5   0.3397
+    cluster 0   0.2354
+    cluster 1   0.1881
+    cluster 2   0.0678
+    cluster 3   0.1066
+    cluster 4   0.1449
+    cluster 5   0.4369
 
 Feature Importance (contribution to clustering, range 0 to 1, higher is better)
   Numerical (eta-squared, between-cluster variance / total variance):
-    age                              0.6977
-    clinical_severity_score          0.5705
-    routine_care_count               0.5663
-    severe_care_count                0.5078
-    acute_care_count                 0.4987
-    distinct_providers_seen          0.4454
-    wellness_count                   0.3608
+    age                              0.7552
+    clinical_severity_score          0.5894
+    routine_care_count               0.5631
+    severe_care_count                0.5053
+    acute_care_count                 0.5003
+    wellness_count                   0.3322
   Categorical (Cramer's V, association between feature and cluster label):
-    gender                           0.7052
-    dominant_careplan                0.5409
-    bmi_type                         0.3280
+    gender                           0.6325
+    dominant_careplan                0.5262
+    bmi_type                         0.4119

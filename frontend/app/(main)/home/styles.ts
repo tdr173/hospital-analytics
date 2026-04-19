@@ -19,16 +19,16 @@ export const HomePageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     width: "100%",
-    minHeight: "60vh",
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.md,
+    minHeight: "calc(100vh - 70px)",
   },
   error: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     width: "100%",
-    minHeight: "60vh",
+    minHeight: "calc(100vh - 70px)",
     color: theme.colors.status.error,
   },
   splitRow: {

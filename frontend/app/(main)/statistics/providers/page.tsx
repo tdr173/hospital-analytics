@@ -24,7 +24,7 @@ export default function ProvidersPage() {
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading provider statistics...</div>
+      <div className={classes.loading}>Loading clinician data...</div>
     );
   }
 
@@ -40,13 +40,13 @@ export default function ProvidersPage() {
     <div className={classes.container}>
       <div className={classes.summaryRow}>
         <div className={classes.summaryCard}>
-          <div className={classes.summaryLabel}>Total Providers</div>
+          <div className={classes.summaryLabel}>Total Clinicians</div>
           <div className={classes.summaryValue}>
             {data.totalProviders.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
-          <div className={classes.summaryLabel}>Unique Specialities</div>
+          <div className={classes.summaryLabel}>Unique Specialties</div>
           <div className={classes.summaryValue}>
             {data.uniqueSpecialities.toLocaleString()}
           </div>
@@ -54,7 +54,7 @@ export default function ProvidersPage() {
       </div>
 
       <div className={classes.utilizationCard}>
-        <h3 className={classes.utilizationTitle}>Utilization</h3>
+        <h3 className={classes.utilizationTitle}>Patient Load</h3>
         <div className={classes.utilizationStats}>
           <div>
             <div className={classes.utilizationStatLabel}>Min</div>

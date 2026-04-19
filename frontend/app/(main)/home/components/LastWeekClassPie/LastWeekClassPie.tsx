@@ -20,7 +20,9 @@ interface Props {
 }
 
 export default function LastWeekClassPie({ data }: Props) {
-  const classes = useClasses(LastWeekClassPieStyles, { name: "LastWeekClassPie" });
+  const classes = useClasses(LastWeekClassPieStyles, {
+    name: "LastWeekClassPie",
+  });
 
   const pieData = data.map((d) => ({
     name: capitalize(d.encounterClass),
@@ -28,14 +30,15 @@ export default function LastWeekClassPie({ data }: Props) {
     tooltip: `${capitalize(d.encounterClass)}: ${d.count.toLocaleString()}`,
   }));
   const colors = data.map(
-    (d) => ENCOUNTER_CLASS_COLORS[d.encounterClass] ?? theme.colors.secondary.main,
+    (d) =>
+      ENCOUNTER_CLASS_COLORS[d.encounterClass] ?? theme.colors.secondary.main,
   );
 
   return (
     <div className={classes.card}>
-      <p className={classes.title}>Last Week — Encounters by Class</p>
+      <p className={classes.title}>Last Week – Visits by Type</p>
       {pieData.length === 0 ? (
-        <div className={classes.empty}>No encounters in the last week.</div>
+        <div className={classes.empty}>No visits recorded in the last week.</div>
       ) : (
         <PieChartComponent data={pieData} title="" colors={colors} />
       )}

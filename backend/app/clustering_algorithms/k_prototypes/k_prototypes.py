@@ -5,22 +5,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 import prince
 import seaborn as sns
-from scipy import stats
-from sqlalchemy import text
 from sklearn.preprocessing import StandardScaler, RobustScaler, PowerTransformer, MinMaxScaler
 from sklearn.decomposition import PCA
 from kmodes.kprototypes import KPrototypes
-from google import genai
 from dotenv import load_dotenv
 
 from pathlib import Path
+
+from sqlalchemy import text
 
 from cluster_evaluation import (
     full_evaluation_report,
     NUMERICAL_FEATURES,
     CATEGORICAL_FEATURES,
     compute_general_validation,
-    compute_gower_silhouette,
     compute_gower_mixed_metrics,
     compute_famd_metrics,
 )
@@ -28,20 +26,19 @@ from service.lllm_sql_agent_service import ask_ai
 
 current_folder = Path(__file__).parent
 
-print("HERE")
 
 def build_patient_features(engine) -> pd.DataFrame:
     patient_features = pd.read_sql(
         text(
             """
-                                        SELECT patient_id,
-                                               age,
-                                               gender,
-                                               race,
-                                               ethnicity,
-                                               marital
-                                        FROM patient
-                                        """
+            SELECT patient_id,
+                   age,
+                   gender,
+                   race,
+                   ethnicity,
+                   marital
+            FROM patient
+            """
         ),
         con=engine,
     )
@@ -50,15 +47,9 @@ def build_patient_features(engine) -> pd.DataFrame:
         text(
             """
             SELECT patient_id,
-                   COUNT(*) FILTER (WHERE encounter_class = 'inpatient')   AS inpatient_count,
-                   COUNT(*) FILTER (WHERE encounter_class = 'outpatient')  AS outpatient_count,
-                   COUNT(*) FILTER (WHERE encounter_class = 'emergency')   AS emergency_count,
-                   COUNT(*) FILTER (WHERE encounter_class = 'wellness')    AS wellness_count,
-                   COUNT(*) FILTER (WHERE encounter_class = 'ambulatory')  AS ambulatory_count,
-                   COUNT(*) FILTER (WHERE encounter_class = 'urgentcare')  AS urgentcare_count,
-                   COUNT(*) FILTER (WHERE encounter_class = 'snf')         AS snf_count,
-                   COUNT(*) FILTER (WHERE encounter_class = 'hospice')     AS hospice_count
-            FROM encounter GROUP BY patient_id
+                   COUNT(*) FILTER (WHERE encounter_class = 'inpatient')   AS inpatient_count, COUNT(*) FILTER (WHERE encounter_class = 'outpatient')  AS outpatient_count, COUNT(*) FILTER (WHERE encounter_class = 'emergency')   AS emergency_count, COUNT(*) FILTER (WHERE encounter_class = 'wellness')    AS wellness_count, COUNT(*) FILTER (WHERE encounter_class = 'ambulatory')  AS ambulatory_count, COUNT(*) FILTER (WHERE encounter_class = 'urgentcare')  AS urgentcare_count, COUNT(*) FILTER (WHERE encounter_class = 'snf')         AS snf_count, COUNT(*) FILTER (WHERE encounter_class = 'hospice')     AS hospice_count
+            FROM encounter
+            GROUP BY patient_id
             """
         ),
         con=engine,
@@ -67,25 +58,27 @@ def build_patient_features(engine) -> pd.DataFrame:
     dominant_encounter_features = pd.read_sql(
         text(
             """
-                                                   SELECT DISTINCT ON (patient_id)
-                                                       patient_id,
-                                                       CASE
-                                                           WHEN encounter_class IN ('ambulatory','wellness','outpatient','emergency','urgentcare','inpatient')
-                                                               THEN encounter_class
-                                                           ELSE 'other'
-                                                       END AS dominant_encounter_class
+            SELECT DISTINCT
+            ON (patient_id)
+                patient_id,
+                CASE
+                WHEN encounter_class IN ('ambulatory','wellness','outpatient','emergency','urgentcare','inpatient')
+                THEN encounter_class
+                ELSE 'other'
+            END
+            AS dominant_encounter_class
                                                    FROM (
                                                        SELECT patient_id, encounter_class, COUNT(*) AS cnt
                                                        FROM encounter
                                                        GROUP BY patient_id, encounter_class
                                                    ) sub
                                                    ORDER BY patient_id, cnt DESC
-"""
+            """
         ),
         con=engine,
     )
 
-    # --- REMOVED: total_conditions (redundant with active_conditions_count below) ---
+    # REMOVED: total_conditions (redundant with active_conditions_count below)
     # condition_features = pd.read_sql(
     #     text("SELECT patient_id, COUNT(*) AS total_conditions FROM condition GROUP BY patient_id"),
     #     con=engine,
@@ -95,26 +88,39 @@ def build_patient_features(engine) -> pd.DataFrame:
         text(
             """
             SELECT patient_id,
-                   MAX(CASE WHEN LOWER(description) LIKE '%%diabetes%%' THEN 1 ELSE 0 END)                AS has_diabetes,
-                   MAX(CASE WHEN LOWER(description) LIKE '%%hypertension%%' THEN 1 ELSE 0 END)             AS has_hypertension,
-                   MAX(CASE WHEN LOWER(description) LIKE '%%heart%%'
-                              OR LOWER(description) LIKE '%%coronary%%' THEN 1 ELSE 0 END)                 AS has_heart_disease,
-                   MAX(CASE WHEN LOWER(description) LIKE '%%neoplasm%%'
-                              OR LOWER(description) LIKE '%%cancer%%'
-                              OR LOWER(description) LIKE '%%carcinoma%%'
-                              OR LOWER(description) LIKE '%%leukemia%%'
-                              OR LOWER(description) LIKE '%%lymphoma%%' THEN 1 ELSE 0 END)                 AS has_cancer,
-                   MAX(CASE WHEN LOWER(description) LIKE '%%asthma%%'
-                              OR LOWER(description) LIKE '%%bronchitis%%'
-                              OR LOWER(description) LIKE '%%pulmonary%%'
-                              OR LOWER(description) LIKE '%%covid%%'
-                              OR LOWER(description) LIKE '%%coronavirus%%' THEN 1 ELSE 0 END)              AS has_respiratory_disease,
-                   MAX(CASE WHEN LOWER(description) LIKE '%%kidney%%'
-                              OR LOWER(description) LIKE '%%renal%%' THEN 1 ELSE 0 END)                    AS has_kidney_disease,
-                   MAX(CASE WHEN LOWER(description) LIKE '%%depress%%'
-                              OR LOWER(description) LIKE '%%anxiety%%'
-                              OR LOWER(description) LIKE '%%schizophrenia%%'
-                              OR LOWER(description) LIKE '%%ptsd%%' THEN 1 ELSE 0 END)                     AS has_mental_health
+                   MAX(CASE WHEN LOWER(description) LIKE '%%diabetes%%' THEN 1 ELSE 0 END)     AS has_diabetes,
+                   MAX(CASE WHEN LOWER(description) LIKE '%%hypertension%%' THEN 1 ELSE 0 END) AS has_hypertension,
+                   MAX(CASE
+                           WHEN LOWER(description) LIKE '%%heart%%'
+                               OR LOWER(description) LIKE '%%coronary%%' THEN 1
+                           ELSE 0 END)                                                         AS has_heart_disease,
+                   MAX(CASE
+                           WHEN LOWER(description) LIKE '%%neoplasm%%'
+                               OR LOWER(description) LIKE '%%cancer%%'
+                               OR LOWER(description) LIKE '%%carcinoma%%'
+                               OR LOWER(description) LIKE '%%leukemia%%'
+                               OR LOWER(description) LIKE '%%lymphoma%%' THEN 1
+                           ELSE 0 END)                                                         AS has_cancer,
+                   MAX(CASE
+                           WHEN LOWER(description) LIKE '%%asthma%%'
+                               OR LOWER(description) LIKE '%%bronchitis%%'
+                               OR LOWER(description) LIKE '%%pulmonary%%'
+                               OR LOWER(description) LIKE '%%covid%%'
+                               OR LOWER(description) LIKE '%%coronavirus%%'
+                               OR LOWER(description) LIKE '%%respiratory%%' THEN 1
+                           ELSE 0 END)                                                         AS has_respiratory_disease,
+                   MAX(CASE
+                           WHEN LOWER(description) LIKE '%%kidney%%'
+                               OR LOWER(description) LIKE '%%renal%%' THEN 1
+                           ELSE 0 END)                                                         AS has_kidney_disease,
+                   MAX(CASE
+                           WHEN LOWER(description) LIKE '%%depress%%'
+                               OR LOWER(description) LIKE '%%anxiety%%'
+                               OR LOWER(description) LIKE '%%schizophrenia%%'
+                               OR LOWER(description) LIKE '%%ptsd%%'
+                               OR LOWER(description) LIKE '%%posttraumatic%%'
+                               OR LOWER(description) LIKE '%%suicid%%' THEN 1
+                           ELSE 0 END)                                                         AS has_mental_health
             FROM condition
             GROUP BY patient_id
             """
@@ -138,7 +144,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         text(
             """
             SELECT patient_id,
-                   COUNT(*) AS total_medications,
+                   COUNT(*)                                                                  AS total_medications,
                    -- NEW: is_polypharmacy flag (>=5 currently active meds, clinical standard)
                    CASE WHEN COUNT(*) FILTER (WHERE end_date IS NULL) >= 5 THEN 1 ELSE 0 END AS is_polypharmacy_raw
             FROM medication
@@ -151,16 +157,41 @@ def build_patient_features(engine) -> pd.DataFrame:
     procedure_features = pd.read_sql(
         text(
             """
-                                          SELECT patient_id,
-                                                 COUNT(*) AS total_procedures
-                                          FROM "procedure"
-                                          GROUP BY patient_id
-                                          """
+            SELECT patient_id,
+                   COUNT(*) AS total_procedures
+            FROM "procedure"
+            GROUP BY patient_id
+            """
         ),
         con=engine,
     )
 
-    # --- REMOVED: total_immunizations (weak clustering signal) ---
+    dental_procedure_features = pd.read_sql(
+        text(
+            """
+            SELECT patient_id,
+                   COUNT(*) AS dental_procedures_count
+            FROM "procedure"
+            WHERE LOWER(description) LIKE '%%dental%%'
+               OR LOWER(description) LIKE '%%tooth%%'
+               OR LOWER(description) LIKE '%%teeth%%'
+               OR LOWER(description) LIKE '%%oral%%'
+               OR LOWER(description) LIKE '%%gingiv%%'
+               OR LOWER(description) LIKE '%%periodon%%'
+               OR LOWER(description) LIKE '%%prophylaxis%%'
+               OR LOWER(description) LIKE '%%extraction%%'
+               OR LOWER(description) LIKE '%%filling%%'
+               OR LOWER(description) LIKE '%%root canal%%'
+               OR LOWER(description) LIKE '%%crown%%'
+               OR LOWER(description) LIKE '%%caries%%'
+               OR LOWER(description) LIKE '%%orthodon%%'
+            GROUP BY patient_id
+            """
+        ),
+        con=engine,
+    )
+
+    # REMOVED: total_immunizations (weak clustering signal) ---
     # immunization_features = pd.read_sql(
     #     text("SELECT patient_id, COUNT(*) AS total_immunizations FROM immunization GROUP BY patient_id"),
     #     con=engine,
@@ -175,40 +206,43 @@ def build_patient_features(engine) -> pd.DataFrame:
                    AVG(value_norm) FILTER (WHERE desc_key = 'bmi')         AS avg_bmi,
                    AVG(value_norm) FILTER (WHERE desc_key = 'qaly')        AS qaly,
                    AVG(value_norm) FILTER (WHERE desc_key = 'daly')        AS daly,
-                   AVG(value_norm) FILTER (WHERE desc_key = 'glucose')     AS avg_glucose,
-                   -- kept for inspection; excluded from NUMERICAL_FEATURES until re-evaluated
-                   AVG(value_norm) FILTER (WHERE desc_key = 'systolic_bp') AS avg_systolic_bp
-            FROM (
-                SELECT patient_id,
-                       CASE
-                           WHEN description ILIKE '%%body mass index%%'
-                             OR description ILIKE '%%bmi%%'                    THEN 'bmi'
-                           WHEN description ILIKE '%%qaly%%'                   THEN 'qaly'
-                           WHEN description ILIKE '%%daly%%'                   THEN 'daly'
-                           WHEN description ILIKE '%%systolic blood pressure%%' THEN 'systolic_bp'
-                           -- Glucose: normalize mmol/L -> mg/dL (*18) to fix unit mixing
-                           WHEN description ILIKE '%%glucose%%'                THEN 'glucose'
-                       END AS desc_key,
-                       CASE
-                           WHEN description ILIKE '%%glucose%%' AND units ILIKE '%%mmol%%'
-                               THEN value_numeric * 18
-                           ELSE value_numeric
-                       END AS value_norm,
-                       ROW_NUMBER() OVER (
-                           PARTITION BY patient_id, description
-                           ORDER BY date DESC
-                       ) AS rn
-                FROM observation
-                WHERE value_numeric IS NOT NULL
-                  AND value_numeric > 0
-                  AND (description ILIKE '%%body mass index%%'
-                    OR description ILIKE '%%bmi%%'
-                    OR description ILIKE '%%qaly%%'
-                    OR description ILIKE '%%daly%%'
-                    OR description ILIKE '%%systolic blood pressure%%'
-                    OR description ILIKE '%%glucose%%')
-            ) sub
-            WHERE rn <= 5 AND desc_key IS NOT NULL
+                   AVG(value_norm) FILTER (WHERE desc_key = 'systolic_bp') AS avg_systolic_bp,
+                   AVG(value_norm) FILTER (WHERE desc_key = 'glucose')     AS avg_glucose
+            FROM (SELECT patient_id,
+                         CASE
+                             WHEN description ILIKE '%%body mass index%%'
+                               OR description ILIKE '%%bmi%%'              THEN 'bmi'
+                             WHEN description ILIKE '%%qaly%%'             THEN 'qaly'
+                             WHEN description ILIKE '%%daly%%'             THEN 'daly'
+                             WHEN description ILIKE '%%systolic blood pressure%%' THEN 'systolic_bp'
+                             -- Exclude urine test strip: values are semi-quantitative (0/50/100/250/500)
+                             WHEN description ILIKE '%%glucose%%'
+                              AND description NOT ILIKE '%%urine%%'        THEN 'glucose'
+                         END AS desc_key,
+                         -- Glucose: normalize mmol/L -> mg/dL (*18) to fix unit mixing
+                         CASE
+                             WHEN description ILIKE '%%glucose%%' AND units ILIKE '%%mmol%%'
+                                 THEN value_numeric * 18
+                             ELSE value_numeric
+                         END AS value_norm,
+                         ROW_NUMBER() OVER (
+                             PARTITION BY patient_id, description
+                             ORDER BY date DESC
+                         ) AS rn
+                    FROM observation
+                    WHERE value_numeric IS NOT NULL
+                      AND value_numeric > 0
+                      AND description NOT ILIKE '%%percentile%%'
+                      AND description NOT ILIKE '%%z-score%%'
+                      AND (description ILIKE '%%body mass index%%'
+                       OR description ILIKE '%%bmi%%'
+                       OR description ILIKE '%%qaly%%'
+                       OR description ILIKE '%%daly%%'
+                       OR description ILIKE '%%systolic blood pressure%%'
+                       OR (description ILIKE '%%glucose%%' AND description NOT ILIKE '%%urine%%')
+                      )) sub
+            WHERE rn <= 5
+              AND desc_key IS NOT NULL
             GROUP BY patient_id
             """
         ),
@@ -218,12 +252,12 @@ def build_patient_features(engine) -> pd.DataFrame:
     active_conditions_features = pd.read_sql(
         text(
             """
-                                                  SELECT patient_id,
-                                                         COUNT(*) AS active_conditions_count
-                                                  FROM condition
-                                                  WHERE end_date IS NULL
-                                                  GROUP BY patient_id
-                                                  """
+            SELECT patient_id,
+                   COUNT(*) AS active_conditions_count
+            FROM condition
+            WHERE end_date IS NULL
+            GROUP BY patient_id
+            """
         ),
         con=engine,
     )
@@ -240,7 +274,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    # --- REMOVED: careplan counts (weak, noisy clustering signal) ---
+    # REMOVED: careplan counts (weak, noisy clustering signal)
     # careplan_features = pd.read_sql(
     #     text("""
     #         SELECT patient_id,
@@ -251,121 +285,119 @@ def build_patient_features(engine) -> pd.DataFrame:
     #     con=engine,
     # )
 
-    # NEW: dominant careplan category — primary clinical reason patient is in the system.
+    # NEW: dominant careplan category - primary clinical reason patient is in the system.
     # Raw descriptions (40 values) bucketed into 9 clinical categories.
-    # Allergy (0.45%), Renal (0.29%), Oncology (0.22%) merged into Other — too rare for centroids.
+    # Allergy (0.45%), Renal (0.29%), Oncology (0.22%) merged into Other - too rare for centroids.
     # Severity-ranked careplan categorization: picks the highest-severity careplan
     # per patient rather than the most frequent. 7 clinical groups ranked 1..7.
     dominant_careplan_features = pd.read_sql(
         text(
             """
-            WITH CategorizedPlans AS (
-                SELECT patient_id,
-                       CASE
-                           WHEN description IN (
-                               'Cancer care plan (record artifact)',
-                               'Dialysis care plan (record artifact)',
-                               'Terminal care (regime/therapy)'
-                           ) THEN 'Complex, Oncology & Palliative'
-                           WHEN description IN (
-                               'Routine antenatal care (regime/therapy)'
-                           ) THEN 'Maternal & Antenatal'
-                           WHEN LOWER(description) LIKE '%%fracture%%'
-                             OR LOWER(description) LIKE '%%wound%%'
-                             OR LOWER(description) LIKE '%%surgery%%'
-                             OR LOWER(description) LIKE '%%surgical%%'
-                             OR LOWER(description) LIKE '%%injury%%'
-                             OR LOWER(description) LIKE '%%trauma%%'
-                             OR LOWER(description) LIKE '%%burn%%'
-                             OR LOWER(description) LIKE '%%musculoskeletal%%'
-                             OR LOWER(description) LIKE '%%spinal%%'
-                             OR LOWER(description) LIKE '%%jaw%%'
-                           THEN 'Acute Trauma, Wound & Surgery'
-                           WHEN LOWER(description) LIKE '%%respiratory%%'
-                             OR LOWER(description) LIKE '%%asthma%%'
-                             OR LOWER(description) LIKE '%%pulmonary%%'
-                             OR LOWER(description) LIKE '%%infect%%'
-                             OR LOWER(description) LIKE '%%covid%%'
-                             OR LOWER(description) LIKE '%%pneumonia%%'
-                             OR LOWER(description) LIKE '%%bronchitis%%'
-                             OR LOWER(description) LIKE '%%sinusitis%%'
-                           THEN 'Respiratory & Infectious'
-                           WHEN LOWER(description) LIKE '%%dementia%%'
-                             OR LOWER(description) LIKE '%%psych%%'
-                             OR LOWER(description) LIKE '%%mental%%'
-                             OR LOWER(description) LIKE '%%depressive%%'
-                             OR LOWER(description) LIKE '%%suicide%%'
-                             OR LOWER(description) LIKE '%%behavior%%'
-                             OR LOWER(description) LIKE '%%inattention%%'
-                             OR LOWER(description) LIKE '%%anxiety%%'
-                           THEN 'Mental Health & Cognitive'
-                           WHEN LOWER(description) LIKE '%%diabetes%%'
-                             OR LOWER(description) LIKE '%%hyperlipidemia%%'
-                             OR LOWER(description) LIKE '%%heart%%'
-                             OR LOWER(description) LIKE '%%hypertension%%'
-                             OR LOWER(description) LIKE '%%weight%%'
-                             OR LOWER(description) LIKE '%%cardiac%%'
-                             OR LOWER(description) LIKE '%%coronary%%'
-                           THEN 'Chronic Cardio-Metabolic'
-                           ELSE 'General Rehab & Routine'
-                       END AS care_plan_category,
-                       CASE
-                           WHEN description IN (
-                               'Cancer care plan (record artifact)',
-                               'Dialysis care plan (record artifact)',
-                               'Terminal care (regime/therapy)'
-                           ) THEN 1
-                           WHEN description IN (
-                               'Routine antenatal care (regime/therapy)'
-                           ) THEN 2
-                           WHEN LOWER(description) LIKE '%%fracture%%'
-                             OR LOWER(description) LIKE '%%wound%%'
-                             OR LOWER(description) LIKE '%%surgery%%'
-                             OR LOWER(description) LIKE '%%surgical%%'
-                             OR LOWER(description) LIKE '%%injury%%'
-                             OR LOWER(description) LIKE '%%trauma%%'
-                             OR LOWER(description) LIKE '%%burn%%'
-                             OR LOWER(description) LIKE '%%musculoskeletal%%'
-                             OR LOWER(description) LIKE '%%spinal%%'
-                             OR LOWER(description) LIKE '%%jaw%%'
-                           THEN 3
-                           WHEN LOWER(description) LIKE '%%respiratory%%'
-                             OR LOWER(description) LIKE '%%asthma%%'
-                             OR LOWER(description) LIKE '%%pulmonary%%'
-                             OR LOWER(description) LIKE '%%infect%%'
-                             OR LOWER(description) LIKE '%%covid%%'
-                             OR LOWER(description) LIKE '%%pneumonia%%'
-                             OR LOWER(description) LIKE '%%bronchitis%%'
-                             OR LOWER(description) LIKE '%%sinusitis%%'
-                           THEN 4
-                           WHEN LOWER(description) LIKE '%%dementia%%'
-                             OR LOWER(description) LIKE '%%psych%%'
-                             OR LOWER(description) LIKE '%%mental%%'
-                             OR LOWER(description) LIKE '%%depressive%%'
-                             OR LOWER(description) LIKE '%%suicide%%'
-                             OR LOWER(description) LIKE '%%behavior%%'
-                             OR LOWER(description) LIKE '%%inattention%%'
-                             OR LOWER(description) LIKE '%%anxiety%%'
-                           THEN 5
-                           WHEN LOWER(description) LIKE '%%diabetes%%'
-                             OR LOWER(description) LIKE '%%hyperlipidemia%%'
-                             OR LOWER(description) LIKE '%%heart%%'
-                             OR LOWER(description) LIKE '%%hypertension%%'
-                             OR LOWER(description) LIKE '%%weight%%'
-                             OR LOWER(description) LIKE '%%cardiac%%'
-                             OR LOWER(description) LIKE '%%coronary%%'
-                           THEN 6
-                           ELSE 7
-                       END AS severity_rank
-                FROM careplan
-            ), RankedPatientPlans AS (
-                SELECT patient_id, care_plan_category,
-                       ROW_NUMBER() OVER (
+            WITH CategorizedPlans AS (SELECT patient_id,
+                                             CASE
+                                                 WHEN description IN (
+                                                                      'Cancer care plan (record artifact)',
+                                                                      'Dialysis care plan (record artifact)',
+                                                                      'Terminal care (regime/therapy)'
+                                                     ) THEN 'Complex, Oncology & Palliative'
+                                                 WHEN description IN (
+                                                     'Routine antenatal care (regime/therapy)'
+                                                     ) THEN 'Maternal & Antenatal'
+                                                 WHEN LOWER(description) LIKE '%%fracture%%'
+                                                     OR LOWER(description) LIKE '%%wound%%'
+                                                     OR LOWER(description) LIKE '%%surgery%%'
+                                                     OR LOWER(description) LIKE '%%surgical%%'
+                                                     OR LOWER(description) LIKE '%%injury%%'
+                                                     OR LOWER(description) LIKE '%%trauma%%'
+                                                     OR LOWER(description) LIKE '%%burn%%'
+                                                     OR LOWER(description) LIKE '%%musculoskeletal%%'
+                                                     OR LOWER(description) LIKE '%%spinal%%'
+                                                     OR LOWER(description) LIKE '%%jaw%%'
+                                                     THEN 'Acute Trauma, Wound & Surgery'
+                                                 WHEN LOWER(description) LIKE '%%respiratory%%'
+                                                     OR LOWER(description) LIKE '%%asthma%%'
+                                                     OR LOWER(description) LIKE '%%pulmonary%%'
+                                                     OR LOWER(description) LIKE '%%infect%%'
+                                                     OR LOWER(description) LIKE '%%covid%%'
+                                                     OR LOWER(description) LIKE '%%pneumonia%%'
+                                                     OR LOWER(description) LIKE '%%bronchitis%%'
+                                                     OR LOWER(description) LIKE '%%sinusitis%%'
+                                                     THEN 'Respiratory & Infectious'
+                                                 WHEN LOWER(description) LIKE '%%dementia%%'
+                                                     OR LOWER(description) LIKE '%%psych%%'
+                                                     OR LOWER(description) LIKE '%%mental%%'
+                                                     OR LOWER(description) LIKE '%%depressive%%'
+                                                     OR LOWER(description) LIKE '%%suicide%%'
+                                                     OR LOWER(description) LIKE '%%behavior%%'
+                                                     OR LOWER(description) LIKE '%%inattention%%'
+                                                     OR LOWER(description) LIKE '%%anxiety%%'
+                                                     THEN 'Mental Health & Cognitive'
+                                                 WHEN LOWER(description) LIKE '%%diabetes%%'
+                                                     OR LOWER(description) LIKE '%%hyperlipidemia%%'
+                                                     OR LOWER(description) LIKE '%%heart%%'
+                                                     OR LOWER(description) LIKE '%%hypertension%%'
+                                                     OR LOWER(description) LIKE '%%weight%%'
+                                                     OR LOWER(description) LIKE '%%cardiac%%'
+                                                     OR LOWER(description) LIKE '%%coronary%%'
+                                                     THEN 'Chronic Cardio-Metabolic'
+                                                 ELSE 'General Rehab & Routine'
+                                                 END AS care_plan_category,
+                                             CASE
+                                                 WHEN description IN (
+                                                                      'Cancer care plan (record artifact)',
+                                                                      'Dialysis care plan (record artifact)',
+                                                                      'Terminal care (regime/therapy)'
+                                                     ) THEN 1
+                                                 WHEN description IN (
+                                                     'Routine antenatal care (regime/therapy)'
+                                                     ) THEN 2
+                                                 WHEN LOWER(description) LIKE '%%fracture%%'
+                                                     OR LOWER(description) LIKE '%%wound%%'
+                                                     OR LOWER(description) LIKE '%%surgery%%'
+                                                     OR LOWER(description) LIKE '%%surgical%%'
+                                                     OR LOWER(description) LIKE '%%injury%%'
+                                                     OR LOWER(description) LIKE '%%trauma%%'
+                                                     OR LOWER(description) LIKE '%%burn%%'
+                                                     OR LOWER(description) LIKE '%%musculoskeletal%%'
+                                                     OR LOWER(description) LIKE '%%spinal%%'
+                                                     OR LOWER(description) LIKE '%%jaw%%'
+                                                     THEN 3
+                                                 WHEN LOWER(description) LIKE '%%respiratory%%'
+                                                     OR LOWER(description) LIKE '%%asthma%%'
+                                                     OR LOWER(description) LIKE '%%pulmonary%%'
+                                                     OR LOWER(description) LIKE '%%infect%%'
+                                                     OR LOWER(description) LIKE '%%covid%%'
+                                                     OR LOWER(description) LIKE '%%pneumonia%%'
+                                                     OR LOWER(description) LIKE '%%bronchitis%%'
+                                                     OR LOWER(description) LIKE '%%sinusitis%%'
+                                                     THEN 4
+                                                 WHEN LOWER(description) LIKE '%%dementia%%'
+                                                     OR LOWER(description) LIKE '%%psych%%'
+                                                     OR LOWER(description) LIKE '%%mental%%'
+                                                     OR LOWER(description) LIKE '%%depressive%%'
+                                                     OR LOWER(description) LIKE '%%suicide%%'
+                                                     OR LOWER(description) LIKE '%%behavior%%'
+                                                     OR LOWER(description) LIKE '%%inattention%%'
+                                                     OR LOWER(description) LIKE '%%anxiety%%'
+                                                     THEN 5
+                                                 WHEN LOWER(description) LIKE '%%diabetes%%'
+                                                     OR LOWER(description) LIKE '%%hyperlipidemia%%'
+                                                     OR LOWER(description) LIKE '%%heart%%'
+                                                     OR LOWER(description) LIKE '%%hypertension%%'
+                                                     OR LOWER(description) LIKE '%%weight%%'
+                                                     OR LOWER(description) LIKE '%%cardiac%%'
+                                                     OR LOWER(description) LIKE '%%coronary%%'
+                                                     THEN 6
+                                                 ELSE 7
+                                                 END AS severity_rank
+                                      FROM careplan),
+                 RankedPatientPlans AS (SELECT patient_id,
+                                               care_plan_category,
+                                               ROW_NUMBER() OVER (
                            PARTITION BY patient_id
                            ORDER BY severity_rank ASC
                        ) AS rank_id
-                FROM CategorizedPlans
-            )
+                                        FROM CategorizedPlans)
             SELECT patient_id, care_plan_category AS dominant_careplan
             FROM RankedPatientPlans
             WHERE rank_id = 1
@@ -374,14 +406,14 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    # NEW: care fragmentation / multi-specialty care
+    # care fragmentation / multi-specialty care
     speciality_features = pd.read_sql(
         text(
             """
             SELECT e.patient_id,
                    COUNT(DISTINCT p.speciality) AS distinct_specialities_seen
             FROM encounter e
-            JOIN provider p ON p.provider_id = e.provider_id
+                     JOIN provider p ON p.provider_id = e.provider_id
             WHERE p.speciality IS NOT NULL
             GROUP BY e.patient_id
             """
@@ -410,28 +442,24 @@ def build_patient_features(engine) -> pd.DataFrame:
     ooh_features = pd.read_sql(
         text(
             """
-            WITH acute AS (
-                SELECT patient_id,
-                       EXTRACT(DOW  FROM start_date) AS dow,
-                       EXTRACT(HOUR FROM start_date) AS hr
-                FROM encounter
-                WHERE encounter_class IN ('emergency', 'urgentcare')
-            ),
-            agg AS (
-                SELECT patient_id,
-                       COUNT(*) AS total_acute,
-                       SUM(CASE
-                             WHEN dow IN (0, 6) OR hr >= 20 OR hr < 8 THEN 1
-                             ELSE 0
-                           END) AS ooh_acute
-                FROM acute
-                GROUP BY patient_id
-            )
+            WITH acute AS (SELECT patient_id,
+                                  EXTRACT(DOW FROM start_date)  AS dow,
+                                  EXTRACT(HOUR FROM start_date) AS hr
+                           FROM encounter
+                           WHERE encounter_class IN ('emergency', 'urgentcare')),
+                 agg AS (SELECT patient_id,
+                                COUNT(*) AS total_acute,
+                                SUM(CASE
+                                        WHEN dow IN (0, 6) OR hr >= 20 OR hr < 8 THEN 1
+                                        ELSE 0
+                                    END) AS ooh_acute
+                         FROM acute
+                         GROUP BY patient_id)
             SELECT patient_id,
                    CASE
-                     WHEN total_acute >= 2 AND (ooh_acute::float / total_acute) >= 0.4 THEN 'Yes'
-                     ELSE 'No'
-                   END AS out_of_hours_flyer
+                       WHEN total_acute >= 2 AND (ooh_acute::float / total_acute) >= 0.4 THEN 'Yes'
+                       ELSE 'No'
+                       END AS out_of_hours_flyer
             FROM agg
             """
         ),
@@ -441,12 +469,285 @@ def build_patient_features(engine) -> pd.DataFrame:
     smoking_features = pd.read_sql(
         text(
             """
-            SELECT DISTINCT ON (patient_id)
-                   patient_id,
-                   value AS smoking_status
+            SELECT DISTINCT
+            ON (patient_id)
+                patient_id,
+                value AS smoking_status
             FROM observation
             WHERE description = 'Tobacco smoking status'
             ORDER BY patient_id, date DESC
+            """
+        ),
+        con=engine,
+    )
+
+    # substance_use_profile: None / Tobacco Only / Alcohol / Polysubstance or Illicit
+    # Derived from conditions and AUDIT-C / DAST-10 observation scores.
+    substance_use_features = pd.read_sql(
+        text(
+            """
+            WITH condition_flags AS (
+                SELECT patient_id,
+                       MAX(CASE WHEN LOWER(description) LIKE '%%smokes tobacco%%'
+                                 OR LOWER(description) LIKE '%%tobacco daily%%' THEN 1 ELSE 0 END) AS has_tobacco,
+                       MAX(CASE WHEN LOWER(description) LIKE '%%alcoholism%%'
+                                 OR LOWER(description) LIKE '%%alcohol drinking%%' THEN 1 ELSE 0 END) AS has_alcohol,
+                       MAX(CASE WHEN LOWER(description) LIKE '%%drug abuse%%'
+                                 OR LOWER(description) LIKE '%%misuses drugs%%'
+                                 OR LOWER(description) LIKE '%%opioid abuse%%'
+                                 OR LOWER(description) LIKE '%%dependent drug%%' THEN 1 ELSE 0 END) AS has_illicit
+                FROM condition
+                GROUP BY patient_id
+            ),
+            obs_scores AS (
+                SELECT patient_id,
+                       MAX(value_numeric) FILTER (WHERE description ILIKE '%%AUDIT-C%%'
+                                                     OR description ILIKE '%%Alcohol Use Disorder Identification%%Consumption%%') AS audit_c_score,
+                       MAX(value_numeric) FILTER (WHERE description ILIKE '%%DAST-10%%'
+                                                     OR description ILIKE '%%Drug Abuse Screening%%') AS dast10_score
+                FROM observation
+                WHERE value_numeric IS NOT NULL
+                GROUP BY patient_id
+            )
+            SELECT c.patient_id,
+                   CASE
+                       WHEN COALESCE(c.has_illicit, 0) = 1 OR COALESCE(o.dast10_score, 0) >= 3 THEN 'Polysubstance or Illicit'
+                       WHEN COALESCE(c.has_alcohol, 0) = 1 OR COALESCE(o.audit_c_score, 0) >= 4 THEN 'Alcohol'
+                       WHEN COALESCE(c.has_tobacco, 0) = 1 THEN 'Tobacco Only'
+                       ELSE 'None'
+                   END AS substance_use_profile
+            FROM condition_flags c
+            LEFT JOIN obs_scores o ON o.patient_id = c.patient_id
+            """
+        ),
+        con=engine,
+    )
+
+    # mental_health_severity: None / Mild-Moderate / Severe
+    mental_health_severity_features = pd.read_sql(
+        text(
+            """
+            SELECT patient_id,
+                   CASE
+                       WHEN MAX(CASE WHEN LOWER(description) LIKE '%%major depress%%'
+                                      OR LOWER(description) LIKE '%%posttraumatic%%'
+                                      OR LOWER(description) LIKE '%%suicid%%'
+                                      OR LOWER(description) LIKE '%%overdose%%'
+                                      OR LOWER(description) LIKE '%%psychosis%%'
+                                      OR LOWER(description) LIKE '%%schizophrenia%%'
+                                      OR LOWER(description) LIKE '%%alzheimer%%' THEN 1 ELSE 0 END) = 1 THEN 'Severe'
+                       WHEN MAX(CASE WHEN LOWER(description) LIKE '%%stress%%'
+                                      OR LOWER(description) LIKE '%%anxiety%%'
+                                      OR LOWER(description) LIKE '%%sleep disorder%%'
+                                      OR LOWER(description) LIKE '%%attention deficit%%'
+                                      OR LOWER(description) LIKE '%%depress%%' THEN 1 ELSE 0 END) = 1 THEN 'Mild-Moderate'
+                       ELSE 'None'
+                   END AS mental_health_severity
+            FROM condition
+            GROUP BY patient_id
+            """
+        ),
+        con=engine,
+    )
+
+    # pain_management_tier: None / Acute/Minor / Chronic Non-Opioid / Chronic Opioid
+    pain_management_features = pd.read_sql(
+        text(
+            """
+            WITH pain_conds AS (
+                SELECT patient_id,
+                       MAX(CASE WHEN LOWER(description) LIKE '%%chronic pain%%'
+                                 OR LOWER(description) LIKE '%%chronic low back%%'
+                                 OR LOWER(description) LIKE '%%chronic neck%%'
+                                 OR LOWER(description) LIKE '%%fibromyalgia%%'
+                                 OR LOWER(description) LIKE '%%chronic intractable%%' THEN 1 ELSE 0 END) AS has_chronic_pain,
+                       MAX(CASE WHEN LOWER(description) LIKE '%%sprain%%'
+                                 OR LOWER(description) LIKE '%%laceration%%'
+                                 OR LOWER(description) LIKE '%%fracture%%'
+                                 OR LOWER(description) LIKE '%%muscle pain%%'
+                                 OR LOWER(description) LIKE '%%joint pain%%' THEN 1 ELSE 0 END) AS has_acute_pain
+                FROM condition
+                GROUP BY patient_id
+            ),
+            opioid_meds AS (
+                SELECT patient_id,
+                       MAX(CASE WHEN LOWER(description) LIKE '%%oxycodone%%'
+                                 OR LOWER(description) LIKE '%%fentanyl%%'
+                                 OR LOWER(description) LIKE '%%hydrocodone%%'
+                                 OR LOWER(description) LIKE '%%morphine%%'
+                                 OR LOWER(description) LIKE '%%tramadol%%'
+                                 OR LOWER(description) LIKE '%%buprenorphine%%'
+                                 OR LOWER(description) LIKE '%%codeine%%' THEN 1 ELSE 0 END) AS has_opioid
+                FROM medication
+                GROUP BY patient_id
+            )
+            SELECT pc.patient_id,
+                   CASE
+                       WHEN COALESCE(pc.has_chronic_pain, 0) = 1 AND COALESCE(om.has_opioid, 0) = 1 THEN 'Chronic Opioid'
+                       WHEN COALESCE(pc.has_chronic_pain, 0) = 1 THEN 'Chronic Non-Opioid'
+                       WHEN COALESCE(pc.has_acute_pain, 0) = 1 THEN 'Acute/Minor'
+                       ELSE 'None'
+                   END AS pain_management_tier
+            FROM pain_conds pc
+            LEFT JOIN opioid_meds om ON om.patient_id = pc.patient_id
+            """
+        ),
+        con=engine,
+    )
+
+    # thirty_day_readmission_count: inpatient/emergency encounters starting within 30 days of prior encounter's end
+    thirty_day_readmission_features = pd.read_sql(
+        text(
+            """
+            WITH ordered_enc AS (
+                SELECT patient_id,
+                       start_date,
+                       LAG(end_date) OVER (PARTITION BY patient_id ORDER BY start_date) AS prev_end_date
+                FROM encounter
+                WHERE encounter_class IN ('inpatient', 'emergency')
+            )
+            SELECT patient_id,
+                   COUNT(*) FILTER (WHERE prev_end_date IS NOT NULL
+                                      AND start_date <= prev_end_date + INTERVAL '30 days') AS thirty_day_readmission_count
+            FROM ordered_enc
+            GROUP BY patient_id
+            """
+        ),
+        con=engine,
+    )
+
+    # max_gap_in_care_days: longest gap between consecutive encounters (any class)
+    max_gap_features = pd.read_sql(
+        text(
+            """
+            WITH ordered_enc AS (
+                SELECT patient_id,
+                       start_date,
+                       LAG(end_date) OVER (PARTITION BY patient_id ORDER BY start_date) AS prev_end_date
+                FROM encounter
+            )
+            SELECT patient_id,
+                   MAX(EXTRACT(EPOCH FROM (start_date - prev_end_date)) / 86400)::int AS max_gap_in_care_days
+            FROM ordered_enc
+            WHERE prev_end_date IS NOT NULL
+              AND start_date > prev_end_date
+            GROUP BY patient_id
+            """
+        ),
+        con=engine,
+    )
+
+    # lifetime_medication_days: total days across all medication records.
+    # Active meds (end_date IS NULL) counted as ending today so long-term therapy isn't zeroed.
+    lifetime_medication_features = pd.read_sql(
+        text(
+            """
+            SELECT patient_id,
+                   COALESCE(SUM(CASE WHEN start_date IS NOT NULL
+                                     THEN GREATEST(0, EXTRACT(EPOCH FROM (COALESCE(end_date, CURRENT_DATE) - start_date)) / 86400)
+                                     ELSE 0 END)::int, 0) AS lifetime_medication_days
+            FROM medication
+            GROUP BY patient_id
+            """
+        ),
+        con=engine,
+    )
+
+    # total_encounter_duration_hours: sum of all encounter durations
+    encounter_duration_features = pd.read_sql(
+        text(
+            """
+            SELECT patient_id,
+                   COALESCE(SUM(EXTRACT(EPOCH FROM (end_date - start_date)) / 3600), 0)::numeric(10,1) AS total_encounter_duration_hours
+            FROM encounter
+            WHERE end_date IS NOT NULL AND start_date IS NOT NULL
+            GROUP BY patient_id
+            """
+        ),
+        con=engine,
+    )
+
+    # avg_phq9_score and avg_total_cholesterol from observations
+    phq9_cholesterol_features = pd.read_sql(
+        text(
+            """
+            SELECT patient_id,
+                   AVG(value_numeric) FILTER (WHERE desc_key = 'phq9')        AS avg_phq9_score,
+                   AVG(value_numeric) FILTER (WHERE desc_key = 'cholesterol')  AS avg_total_cholesterol
+            FROM (
+                SELECT patient_id,
+                       CASE
+                           WHEN description ILIKE '%%phq-9%%'
+                             OR description ILIKE '%%phq9%%'
+                             OR description ILIKE '%%patient health questionnaire 9%%' THEN 'phq9'
+                           WHEN description ILIKE '%%cholesterol%%'
+                            AND description NOT ILIKE '%%ldl%%'
+                            AND description NOT ILIKE '%%hdl%%'
+                            AND description NOT ILIKE '%%triglyceride%%'
+                            AND description NOT ILIKE '%%ratio%%' THEN 'cholesterol'
+                       END AS desc_key,
+                       value_numeric,
+                       ROW_NUMBER() OVER (PARTITION BY patient_id, description ORDER BY date DESC) AS rn
+                FROM observation
+                WHERE value_numeric IS NOT NULL
+                  AND value_numeric >= 0
+                  AND (description ILIKE '%%phq-9%%'
+                       OR description ILIKE '%%phq9%%'
+                       OR description ILIKE '%%patient health questionnaire 9%%'
+                       OR (description ILIKE '%%cholesterol%%'
+                           AND description NOT ILIKE '%%ldl%%'
+                           AND description NOT ILIKE '%%hdl%%'
+                           AND description NOT ILIKE '%%triglyceride%%'
+                           AND description NOT ILIKE '%%ratio%%'))
+            ) sub
+            WHERE rn <= 5 AND desc_key IS NOT NULL
+            GROUP BY patient_id
+            """
+        ),
+        con=engine,
+    )
+
+    # employment_status: most recent employment-related condition per patient
+    employment_features = pd.read_sql(
+        text(
+            """
+            SELECT DISTINCT ON (patient_id)
+                patient_id,
+                CASE
+                    WHEN LOWER(description) LIKE '%%full-time employment%%'
+                      OR LOWER(description) LIKE '%%full time employment%%' THEN 'Employed'
+                    WHEN LOWER(description) LIKE '%%part-time employment%%'
+                      OR LOWER(description) LIKE '%%part time employment%%' THEN 'Part-time'
+                    WHEN LOWER(description) LIKE '%%unemployed%%' THEN 'Unemployed'
+                    WHEN LOWER(description) LIKE '%%not in labor force%%' THEN 'Not in labor force'
+                END AS employment_status
+            FROM condition
+            WHERE LOWER(description) LIKE '%%employment%%'
+               OR LOWER(description) LIKE '%%unemployed%%'
+               OR LOWER(description) LIKE '%%labor force%%'
+            ORDER BY patient_id, start_date DESC NULLS LAST, description
+            """
+        ),
+        con=engine,
+    )
+
+    # pregnancy_history: Active (currently pregnant) / Past / None
+    pregnancy_features = pd.read_sql(
+        text(
+            """
+            SELECT patient_id,
+                   CASE
+                       WHEN MAX(CASE WHEN LOWER(description) LIKE '%%normal pregnancy%%'
+                                      AND end_date IS NULL THEN 1 ELSE 0 END) = 1 THEN 'Active'
+                       WHEN MAX(CASE WHEN LOWER(description) LIKE '%%pregnancy%%'
+                                      OR LOWER(description) LIKE '%%miscarriage%%'
+                                      OR LOWER(description) LIKE '%%tubal ligation%%'
+                                      OR LOWER(description) LIKE '%%antenatal%%'
+                                      OR LOWER(description) LIKE '%%eclampsia%%' THEN 1 ELSE 0 END) = 1 THEN 'Past'
+                       ELSE 'None'
+                   END AS pregnancy_history
+            FROM condition
+            GROUP BY patient_id
             """
         ),
         con=engine,
@@ -462,16 +763,27 @@ def build_patient_features(engine) -> pd.DataFrame:
         inpatient_history,
         medication_features,
         procedure_features,
+        dental_procedure_features,
         # immunization_features,       # REMOVED - total_immunizations
         observation_features,
         active_conditions_features,
         recency_features,
         # careplan_features,           # REMOVED - careplan counts
-        dominant_careplan_features,    # NEW - dominant_careplan
-        speciality_features,           # NEW - distinct_specialities_seen (currently zero-variance, kept for reference)
-        provider_features,             # NEW - distinct_providers_seen
-        ooh_features,                  # NEW - out_of_hours_flyer
+        dominant_careplan_features,  # NEW - dominant_careplan
+        speciality_features,  # NEW - distinct_specialities_seen (currently zero-variance, kept for reference)
+        provider_features,  # NEW - distinct_providers_seen
+        ooh_features,  # NEW - out_of_hours_flyer
         smoking_features,
+        substance_use_features,
+        mental_health_severity_features,
+        pain_management_features,
+        thirty_day_readmission_features,
+        max_gap_features,
+        lifetime_medication_features,
+        encounter_duration_features,
+        phq9_cholesterol_features,
+        employment_features,
+        pregnancy_features,
     ]:
         df = df.merge(right_df, on="patient_id", how="left")
 
@@ -484,25 +796,27 @@ def build_patient_features(engine) -> pd.DataFrame:
     df["acute_care_count"] = df["emergency_count"] + df["urgentcare_count"]
     df["severe_care_count"] = df["inpatient_count"] + df["snf_count"] + df["hospice_count"]
 
-    # clinical_severity_score: PCA axis over 3 correlated severity counts (raw values).
+    # Computed from raw counts before log1p transform.
+    df["preventive_to_reactive_ratio"] = df["wellness_count"] / (df["acute_care_count"] + df["severe_care_count"] + 1)
+
+    # clinical_severity_score: PCA axis over 3 correlated severity counts.
+    # log1p locally (don't mutate df — those columns are log1p'd later for display).
     sev_cols = ["total_procedures", "total_medications", "active_conditions_count"]
     for col in sev_cols:
         df[col] = df[col].fillna(0)
-    sev_scaled = StandardScaler().fit_transform(df[sev_cols].values)
+    sev_input = np.log1p(df[sev_cols].clip(lower=0).values)
+    sev_scaled = StandardScaler().fit_transform(sev_input)
     sev_pca = PCA(n_components=1)
     df["clinical_severity_score"] = sev_pca.fit_transform(sev_scaled)[:, 0]
     print(f"clinical_severity_score PCA explained variance ratio: {sev_pca.explained_variance_ratio_[0]:.4f}")
 
     # bmi_type: categorical BMI bucketing to avoid numerical dominance.
-    # Fill NaN avg_bmi with population mean *before* cut, otherwise pd.cut produces
-    # NaN, .astype(str) materializes it as the literal string "nan", and subsequent
-    # .fillna does nothing (no real NaN left to fill).
-    avg_bmi_filled = df["avg_bmi"].fillna(df["avg_bmi"].mean())
+    # Bucket BEFORE filling — preserves the distinction between "measured" and "not measured"
     df["bmi_type"] = pd.cut(
-        avg_bmi_filled,
+        df["avg_bmi"],  # raw, still has NaN for unmeasured patients
         bins=[-float("inf"), 18.5, 25, 30, 35, 40, float("inf")],
         labels=["Underweight", "Normal", "Overweight", "Obese I", "Obese II", "Obese III"],
-    ).astype(str)
+    ).astype(object).where(df["avg_bmi"].notna(), "Unknown").astype(str)
 
     # bp_risk_category: simplified 3-bucket systolic BP risk. Keep NaN as "Unknown"
     # (don't impute before the cut) so patients without BP readings land in their
@@ -524,7 +838,9 @@ def build_patient_features(engine) -> pd.DataFrame:
             df[col] = df[col].fillna(0)
 
     df["gender"] = df["gender"].fillna("F").astype(str)
+
     df["marital"] = df["marital"].replace("unmarried", "S").fillna("S").astype(str)
+
     df["out_of_hours_flyer"] = df["out_of_hours_flyer"].fillna("No").astype(str)
 
     df["dominant_encounter_class"] = df["dominant_encounter_class"].fillna("wellness").astype(str)
@@ -538,8 +854,9 @@ def build_patient_features(engine) -> pd.DataFrame:
 
     df["is_polypharmacy"] = df["is_polypharmacy_raw"].fillna(0).astype(int).map({0: "No", 1: "Yes"})
 
-    # --- REMOVED: has_obesity (double-counted avg_bmi) ---
+    # REMOVED: has_obesity (double-counted avg_bmi)
     # df["has_obesity"] = (df["avg_bmi"] >= 30).astype(int).map({0: "No", 1: "Yes"})
+
     # SNOMED values: "Never smoked tobacco (finding)", "Ex-smoker (finding)", "Smokes tobacco daily (finding)"
     df["smoking_status"] = (
         df["smoking_status"]
@@ -553,6 +870,7 @@ def build_patient_features(engine) -> pd.DataFrame:
             )
         )
     )
+
     df["days_since_last_encounter"] = df["days_since_last_encounter"].fillna(0)
 
     # Categorical bins derived from numerical features.
@@ -572,16 +890,32 @@ def build_patient_features(engine) -> pd.DataFrame:
 
     df["dominant_careplan"] = df["dominant_careplan"].fillna("none")
 
+    for col in ["substance_use_profile", "mental_health_severity", "pain_management_tier"]:
+        df[col] = df[col].fillna("None").astype(str)
+
+    df["employment_status"] = df["employment_status"].fillna("Unknown").astype(str)
+    df["pregnancy_history"] = df["pregnancy_history"].fillna("None").astype(str)
+
+    for col in ["thirty_day_readmission_count", "max_gap_in_care_days",
+                "lifetime_medication_days", "total_encounter_duration_hours",
+                "preventive_to_reactive_ratio"]:
+        df[col] = df[col].fillna(0)
+
+    for col in ["avg_phq9_score", "avg_total_cholesterol"]:
+        if col in df.columns:
+            df[col] = df[col].fillna(df[col].mean())
+
     for col in CATEGORICAL_FEATURES:
         if col in df.columns:
             df[col] = df[col].fillna("unknown")
 
-    # Log1p-transform heavily right-skewed count features AFTER categorical bins are
-    # computed (bins use raw values). Compresses tails so RobustScaler doesn't amplify
-    # extreme patients into cluster-dominating outliers.
-    # outpatient: max=107 vs mean=6.95; ambulatory: max=775 vs mean=29.95
-    # total_medications: max=2618 vs mean=40.98; total_procedures: max=1955 vs mean=144
-    for col in ["total_medications", "total_procedures", "inpatient_count", "emergency_count"]:
+    # Log1p-transform heavily right-skewed count features after categorical bins are computed (bins use raw values).
+    # Compresses tails so RobustScaler doesn't amplify extreme patients into cluster-dominating outliers.
+
+    df["dental_procedures_count"] = df["dental_procedures_count"].fillna(0)
+
+    for col in ["total_medications", "total_procedures", "inpatient_count", "emergency_count",
+                "dental_procedures_count"]:
         if col in df.columns:
             df[col] = np.log1p(df[col])
 
@@ -589,57 +923,21 @@ def build_patient_features(engine) -> pd.DataFrame:
         if col in df.columns:
             df[col] = np.log1p(df[col])
 
-    # days_since_last_encounter: max ~10 958 (30y) dominates raw. log1p compresses
-    # the tail while preserving recency signal.
+    # days_since_last_encounter
     if "days_since_last_encounter" in df.columns:
         df["days_since_last_encounter"] = np.log1p(df["days_since_last_encounter"].clip(lower=0))
+
+    for col in ["thirty_day_readmission_count", "max_gap_in_care_days",
+                "lifetime_medication_days", "total_encounter_duration_hours",
+                "preventive_to_reactive_ratio"]:
+        if col in df.columns:
+            df[col] = np.log1p(df[col].clip(lower=0))
 
     return df
 
 
-def apply_rule_based_prefilter(df):
-    # Carve off clinically obvious groups before k-prototypes sees the data.
-    # These are high-precision rules: patients matching them always land in the
-    # same semantic cluster anyway, and forcing k-prototypes to "discover" them
-    # drags the residual silhouette down.
-    #
-    # Priority order matters: a patient matching multiple rules gets assigned
-    # to the first matching rule (highest clinical severity first).
-    #
-    # Returns (rule_df, remainder_df). rule_df has a `rule_cluster` column
-    # with string labels; remainder_df is what goes into k-prototypes.
-    d = df.copy()
-    d["rule_cluster"] = None
-
-    palliative_mask = (
-        (d["rule_cluster"].isna())
-        & (d.get("dominant_careplan", "") == "Complex, Oncology & Palliative")
-    )
-    d.loc[palliative_mask, "rule_cluster"] = "rule_palliative_oncology"
-
-    maternal_mask = (
-        (d["rule_cluster"].isna())
-        & (d.get("dominant_careplan", "") == "Maternal & Antenatal")
-        & (d.get("gender", "") == "F")
-    )
-    d.loc[maternal_mask, "rule_cluster"] = "rule_maternal"
-
-    if "has_cancer" in d.columns:
-        oncology_mask = (d["rule_cluster"].isna()) & (d["has_cancer"] == "Yes")
-        d.loc[oncology_mask, "rule_cluster"] = "rule_oncology"
-
-    rule_df = d[d["rule_cluster"].notna()].reset_index(drop=True)
-    remainder_df = d[d["rule_cluster"].isna()].drop(columns=["rule_cluster"]).reset_index(drop=True)
-
-    print("\nRule-based prefilter:")
-    if len(rule_df):
-        print(rule_df["rule_cluster"].value_counts().to_string())
-    print(f"  remainder for k-prototypes: {len(remainder_df)} patients")
-    return rule_df, remainder_df
-
-
 def plot_elbow_kproto(
-    df, numerical_cols, categorical_cols, init, scaler, title, filename, location
+        df, numerical_cols, categorical_cols, init, scaler, title, filename, location
 ):
     df_scaled = df.copy()
     df_scaled[numerical_cols] = scaler.fit_transform(df[numerical_cols].values)
@@ -783,23 +1081,28 @@ def plot_categorical_distribution(df, categorical_cols, title, filename, locatio
 
 
 def run_kprototypes(
-    df,
-    numerical_cols,
-    categorical_cols,
-    init,
-    scaler,
-    n_clusters,
-    version_name,
-    location,
-    gamma=None,
-    random_state=42,
-    elbow_plot="off",
+        df,
+        numerical_cols,
+        categorical_cols,
+        init,
+        scaler,
+        n_clusters,
+        version_name,
+        location,
+        gamma=None,
+        random_state=42,
+        elbow_plot="off",
 ):
     if not os.path.exists(location):
         os.makedirs(location)
 
     print(f"\nrunning {version_name}")
-    tag = version_name.lower().replace(" ", "_").replace("(", "").replace(")", "")
+    tag = version_name.lower()
+    for ch in [" ", "(", ")", "|", "=", "+", ",", ":", ";", "/", "\\", "*", "?", '"', "<", ">"]:
+        tag = tag.replace(ch, "_")
+    while "__" in tag:
+        tag = tag.replace("__", "_")
+    tag = tag.strip("_")
 
     # scale numerical features
     df_work = df.copy()
@@ -832,7 +1135,7 @@ def run_kprototypes(
     clusters = kproto.fit_predict(matrix, categorical=cat_positions)
 
     gamma_automat = kproto.gamma
-    print(f"Valoarea gamma setată automat a fost: {gamma_automat}")
+    print(f"auto gamma is: {gamma_automat}")
 
     df_work["cluster"] = clusters
 
@@ -861,23 +1164,8 @@ def run_kprototypes(
     return df_work, X_num_scaled, clusters, float(kproto.cost_)
 
 
-def remove_outliers_zscore(df, threshold=5):
-    # Diagnostic: show distribution of each numerical feature so zero-variance /
-    # all-NaN columns are obvious before they silently wipe every row.
-    print("\nNumerical feature diagnostics:")
-    for col in NUMERICAL_FEATURES:
-        if col not in df.columns:
-            print(f"  {col:<32} MISSING FROM DF")
-            continue
-        s = df[col]
-        print(
-            f"  {col:<32} nonnull={s.notna().sum():>6} "
-            f"min={s.min():>10.2f} max={s.max():>10.2f} "
-            f"mean={s.mean():>10.2f} std={s.std():>10.2f}"
-        )
-
-    # Compute z-scores per column, skipping zero-variance columns so they
-    # don't poison every row with NaN.
+def remove_outliers_zscore(df, threshold=4):
+    # Compute z-scores per column, skipping zero-variance columns so they don't poison every row with NaN.
     data = df[NUMERICAL_FEATURES].to_numpy(dtype=float)
     mask = np.ones(len(df), dtype=bool)
     skipped = []
@@ -890,9 +1178,6 @@ def remove_outliers_zscore(df, threshold=5):
         z = np.abs((col_vals - np.nanmean(col_vals)) / std)
         mask &= z < threshold
 
-    if skipped:
-        print(f"\n  Skipped zero-variance columns during outlier filter: {skipped}")
-
     print(f"\nRemoved {(~mask).sum()} outliers out of {len(df)} patients")
 
     df_cleaned = df[mask].reset_index(drop=True)
@@ -900,7 +1185,7 @@ def remove_outliers_zscore(df, threshold=5):
     return df_cleaned, df_outliers
 
 
-def get_clusters_summary(df_clustered, df_outliers, engine, evaluation_report=""):
+def get_clusters_summary(df_clustered, df_outliers, engine):
     # Combine clustered data and outliers for metric calculation
     df_outliers_temp = df_outliers.copy()
     df_outliers_temp['cluster'] = -1
@@ -923,7 +1208,7 @@ def get_clusters_summary(df_clustered, df_outliers, engine, evaluation_report=""
         ["cluster", "count"], ascending=[True, False])
 
     total_patients = len(df_all)
-    clusters = sorted(df_all["cluster"].unique()) # This will now include -1
+    clusters = sorted(df_all["cluster"].unique())  # This will now include -1
 
     # Build the LLM prompt with the expected output format
     prompt = f"""We clustered {len(df_clustered)} patients into groups, plus {len(df_outliers)} outlier patients.
@@ -931,7 +1216,7 @@ I have summarized the data for EACH cluster below. The outliers are labeled as C
 
 Your task is to write extremely brief text to fit inside small frontend UI cards.
 Do NOT include any extra text, introductions, markdown formatting, or bullet points.
-Do NOT use em dashes (—) anywhere in your response. Use commas or plain sentence structure instead.
+Do NOT use em dashes (-) anywhere in your response. Use commas or plain sentence structure instead.
 
 Structure your response EXACTLY as a list, using the pipe character (|) to separate the fields:
 [Cluster ID] | [#HexColor] | [Short Title] | [1-2 sentences Description] | [1 short sentence Insight] | [1 short sentence Recommendation]
@@ -969,14 +1254,17 @@ CLUSTER DATA SUMMARIES:
         c_cats = {
             'dominant_gender': c_df['gender'].mode()[0] if not c_df['gender'].empty else 'N/A',
             'dominant_marital': c_df['marital'].mode()[0] if 'marital' in c_df and not c_df['marital'].empty else 'N/A',
-            'main_encounter_type': c_df['dominant_encounter_class'].mode()[0] if not c_df['dominant_encounter_class'].empty else 'N/A',
-            'dominant_careplan': c_df['dominant_careplan'].mode()[0] if 'dominant_careplan' in c_df and not c_df['dominant_careplan'].empty else 'N/A',
+            'main_encounter_type': c_df['dominant_encounter_class'].mode()[0] if not c_df[
+                'dominant_encounter_class'].empty else 'N/A',
+            'dominant_careplan': c_df['dominant_careplan'].mode()[0] if 'dominant_careplan' in c_df and not c_df[
+                'dominant_careplan'].empty else 'N/A',
             'diabetes_rate': f"{(c_df['has_diabetes'] == 'Yes').mean() * 100:.0f}%",
             'hypertension_rate': f"{(c_df['has_hypertension'] == 'Yes').mean() * 100:.0f}%",
             'heart_disease_rate': f"{(c_df['has_heart_disease'] == 'Yes').mean() * 100:.0f}%",
             'cancer_rate': f"{(c_df['has_cancer'] == 'Yes').mean() * 100:.0f}%" if 'has_cancer' in c_df else 'N/A',
             'polypharmacy_rate': f"{(c_df['is_polypharmacy'] == 'Yes').mean() * 100:.0f}%" if 'is_polypharmacy' in c_df else 'N/A',
-            'smoking_mix': c_df['smoking_status'].value_counts(normalize=True).round(2).to_dict() if 'smoking_status' in c_df else {},
+            'smoking_mix': c_df['smoking_status'].value_counts(normalize=True).round(
+                2).to_dict() if 'smoking_status' in c_df else {},
         }
 
         # Careplan mix (share of each careplan category within the cluster) so the LLM
@@ -1011,192 +1299,153 @@ CLUSTER DATA SUMMARIES:
 
     return ask_ai(prompt)
 
+
 if __name__ == "__main__":
     load_dotenv()
 
     from db import engine as db_engine
-    from db.db_connector import SessionLocal
-    from save_results import save_cluster_results
-    from sqlalchemy import text
+    from configs import CONFIGS
 
     df = build_patient_features(db_engine)
 
-    n_clusters = [6]
+    scaler_name = "robust"
+    gamma = None
+    rs = 42
+    threshold = 4
+    ELBOW_PLOT = "off"
 
-    scalers = {
-        # "power": PowerTransformer(),
-        # "robust": RobustScaler(),
-        # "standard": StandardScaler(),
-        "minmax": MinMaxScaler(),
-    }
+    df_cleaned, df_outliers = remove_outliers_zscore(df, threshold=threshold)
+    print(
+        f"\nthreshold={threshold}: {len(df_cleaned)} patients after outlier removal "
+        f"({len(df_outliers)} outliers)"
+    )
 
-    gammas = [None]
-    # gammas = [None]
+    general_rows = []
 
-    random_states = [42]
-    outlier_thresholds = [4]
-    ELBOW_PLOT = "off"  # "on" = elbow only (no clustering), "off" = clustering only
+    general_xlsx_path = current_folder / "general_conclusion.xlsx"
 
-    output_base = current_folder / "outputs"
-    output_base.mkdir(parents=True, exist_ok=True)
+    def flush_general_conclusion():
+        # Merge new rows with any existing file. Rows are keyed by (version, k);
+        # fresh results win. Called after every run so a crash preserves progress.
+        new_df = pd.DataFrame(general_rows)
+        if general_xlsx_path.exists():
+            try:
+                existing = pd.read_excel(general_xlsx_path)
+            except Exception as e:
+                print(f"  [!] Could not read existing {general_xlsx_path.name} ({e}); overwriting")
+                existing = pd.DataFrame()
+            combined = pd.concat([existing, new_df], ignore_index=True)
+        else:
+            combined = new_df
+        combined = combined.drop_duplicates(subset=["version", "k"], keep="last")
+        combined = combined.sort_values(["version", "k"]).reset_index(drop=True)
+        combined.to_excel(general_xlsx_path, index=False)
 
-    all_reports = []
-    excel_rows = []
+    K_RANGE = range(6, 7)  # 4..7 inclusive
 
-    for threshold in outlier_thresholds:
-        df_cleaned, df_outliers = remove_outliers_zscore(df, threshold=threshold)
-        print(f"\nthreshold={threshold}: {len(df_cleaned)} patients left after outlier removal ({len(df_outliers)} outliers)")
+    for cfg in CONFIGS:
+        version_tag = f"v{cfg['version']}"
+        num_cols = cfg["numerical"]
+        cat_cols = cfg["categorical"]
 
-        df_for_kproto = df_cleaned
-        df_rules = df_cleaned.iloc[0:0].assign(rule_cluster=pd.Series(dtype=str))
+        version_folder = current_folder / version_tag
+        version_folder.mkdir(parents=True, exist_ok=True)
 
-        for scaler_name, scaler in scalers.items():
-            for gamma in gammas:
-                for n in n_clusters:
-                    for rs in random_states:
-                        gamma_label = "auto" if gamma is None else str(gamma)
-                        version_name = f"Huang + {scaler_name} + gamma={gamma_label} + {n} clusters + seed={rs} + threshold={threshold}"
-                        location = output_base
+        with open(version_folder / "features.txt", "w", encoding="utf-8") as f:
+            f.write(f"version: {version_tag}\nk range: 4..6\n\n")
+            f.write(f"numerical ({len(num_cols)}):\n")
+            for c in num_cols:
+                f.write(f"  - {c}\n")
+            f.write(f"\ncategorical ({len(cat_cols)}):\n")
+            for c in cat_cols:
+                f.write(f"  - {c}\n")
 
-                        print(f"\n{'=' * 40}")
-                        print(f"{version_name}")
-                        print(f"{'=' * 40}")
+        print(f"\n{'#' * 60}\n# {version_tag}\n{'#' * 60}")
+        print(f"  numerical ({len(num_cols)}): {num_cols}")
+        print(f"  categorical ({len(cat_cols)}): {cat_cols}")
 
-                        df_result, X_num_scaled, clusters, kproto_cost = run_kprototypes(
-                            df_for_kproto,
-                            numerical_cols=NUMERICAL_FEATURES,
-                            categorical_cols=CATEGORICAL_FEATURES,
-                            scaler=scaler,
-                            init="Huang",
-                            n_clusters=n,
-                            version_name=version_name,
-                            location=location,
-                            gamma=gamma,
-                            random_state=rs,
-                            elbow_plot=ELBOW_PLOT,
-                        )
+        for k in K_RANGE:
+            gamma_label = "auto" if gamma is None else str(gamma)
+            run_tag = f"{version_tag}_k{k}"
+            location = version_folder / f"k{k}"
+            location.mkdir(parents=True, exist_ok=True)
 
-                        if ELBOW_PLOT == "on":
-                            continue
+            version_name = (
+                f"{run_tag} | Huang + {scaler_name} + gamma={gamma_label} + "
+                f"k={k} + seed={rs} + threshold={threshold}"
+            )
+            print(f"\n{'=' * 60}\n{version_name}\n{'=' * 60}")
 
-                        report = full_evaluation_report(
-                            df=df_result,
-                            X_numerical_scaled=X_num_scaled,
-                            clusters=clusters,
-                            numerical_cols=NUMERICAL_FEATURES,
-                            categorical_cols=CATEGORICAL_FEATURES,
-                        )
+            try:
+                df_result, X_num_scaled, clusters, kproto_cost = run_kprototypes(
+                    df_cleaned,
+                    numerical_cols=num_cols,
+                    categorical_cols=cat_cols,
+                    scaler=RobustScaler(),
+                    init="Huang",
+                    n_clusters=k,
+                    version_name=version_name,
+                    location=location,
+                    gamma=gamma,
+                    random_state=rs,
+                    elbow_plot=ELBOW_PLOT,
+                )
 
-                        all_reports.append(f"{version_name}\n{'=' * len(version_name)}\n{report}\n")
+                if ELBOW_PLOT == "on":
+                    continue
 
-                        gen = compute_general_validation(X_num_scaled, clusters)
-                        gower = compute_gower_mixed_metrics(df_result, NUMERICAL_FEATURES, CATEGORICAL_FEATURES, clusters)
-                        famd_m = compute_famd_metrics(df_result, NUMERICAL_FEATURES, CATEGORICAL_FEATURES, clusters)
+                report = full_evaluation_report(
+                    df=df_result,
+                    X_numerical_scaled=X_num_scaled,
+                    clusters=clusters,
+                    numerical_cols=num_cols,
+                    categorical_cols=cat_cols,
+                )
 
-                        row = {
-                            "run": version_name,
-                            "gamma": gamma_label,
-                            "random_state": rs,
-                            "outlier_threshold": threshold,
-                            "kproto_cost": kproto_cost,
-                            "silhouette": gen["silhouette_score"],
-                            "gower_silhouette": gower["gower_silhouette"],
-                            "silhouette_per_cluster": gower["silhouette_per_cluster"],
-                            "calinski_harabasz": gen["calinski_harabasz_score"],
-                            "calinski_harabasz_famd": famd_m["calinski_harabasz_famd"],
-                            "davies_bouldin": gen["davies_bouldin_score"],
-                            "davies_bouldin_famd": famd_m["davies_bouldin_famd"],
-                        }
+                gen = compute_general_validation(X_num_scaled, clusters)
+                gower = compute_gower_mixed_metrics(df_result, num_cols, cat_cols, clusters)
+                famd_m = compute_famd_metrics(df_result, num_cols, cat_cols, clusters)
 
-                        excel_rows.append(row)
+                metrics_row = {
+                    "kproto_cost": kproto_cost,
+                    "silhouette": gen["silhouette_score"],
+                    "gower_silhouette": gower["gower_silhouette"],
+                    "silhouette_per_cluster": gower["silhouette_per_cluster"],
+                    "calinski_harabasz": gen["calinski_harabasz_score"],
+                    "calinski_harabasz_famd": famd_m["calinski_harabasz_famd"],
+                    "davies_bouldin": gen["davies_bouldin_score"],
+                    "davies_bouldin_famd": famd_m["davies_bouldin_famd"],
+                }
 
-                        # Merge rule-based clusters onto k-proto results. Rule clusters get
-                        # labels n, n+1, ... (after k-proto's 0..n-1). Metrics above are
-                        # reported on the residual only (honest) but the saved cohort
-                        # reflects the full hybrid assignment.
-                        rule_label_map = {name: n + i for i, name in enumerate(sorted(df_rules["rule_cluster"].unique()))} if len(df_rules) else {}
-                        if len(df_rules):
-                            df_rules_labeled = df_rules.copy()
-                            df_rules_labeled["cluster"] = df_rules_labeled["rule_cluster"].map(rule_label_map).astype(int)
-                            df_rules_labeled = df_rules_labeled.drop(columns=["rule_cluster"])
-                            df_combined = pd.concat([df_result, df_rules_labeled], ignore_index=True)
-                        else:
-                            df_combined = df_result
-                        print(f"\nHybrid cluster map (k-proto 0..{n - 1}, rules above): {rule_label_map}")
+                with open(location / "conclusions.txt", "w", encoding="utf-8") as f:
+                    f.write(f"{version_name}\n{'=' * len(version_name)}\n{report}\n")
 
-                        lmm_summary = get_clusters_summary(df_combined, df_outliers, db_engine, evaluation_report=report)
+                pd.DataFrame([{"run": version_name, **metrics_row}]).to_excel(
+                    location / "conclusions.xlsx", index=False
+                )
 
-                        # read heatmap + PCA PNG bytes
-                        tag = version_name.lower().replace(" ", "_").replace("(", "").replace(")", "")
-                        heatmap_path = location / f"heatmap_{tag}.png"
-                        heatmap_bytes = heatmap_path.read_bytes() if heatmap_path.exists() else None
-                        pca_path = location / f"pca_{tag}.png"
-                        pca_image_bytes = pca_path.read_bytes() if pca_path.exists() else None
+                general_rows.append({
+                    "version": version_tag,
+                    "k": k,
+                    "n_numerical": len(num_cols),
+                    "n_categorical": len(cat_cols),
+                    "numerical": ", ".join(num_cols),
+                    "categorical": ", ".join(cat_cols),
+                    **metrics_row,
+                })
 
-                        # compute FAMD coords for full combined cohort + outlier patients
-                        _famd = prince.FAMD(n_components=2, random_state=42)
-                        _df_combined_feat = df_combined[NUMERICAL_FEATURES + CATEGORICAL_FEATURES].copy()
-                        for _col in NUMERICAL_FEATURES:
-                            _df_combined_feat[_col] = _df_combined_feat[_col].astype(float)
-                        for _col in CATEGORICAL_FEATURES:
-                            _df_combined_feat[_col] = _df_combined_feat[_col].astype(str)
-                        _famd = _famd.fit(_df_combined_feat)
-                        pca_coords_clustered = _famd.transform(_df_combined_feat).values
-                        _df_outliers_feat = df_outliers[NUMERICAL_FEATURES + CATEGORICAL_FEATURES].copy()
-                        for _col in NUMERICAL_FEATURES:
-                            _df_outliers_feat[_col] = _df_outliers_feat[_col].astype(float)
-                        for _col in CATEGORICAL_FEATURES:
-                            _df_outliers_feat[_col] = _df_outliers_feat[_col].astype(str)
-                        pca_coords_outliers = _famd.transform(_df_outliers_feat).values
+            except Exception as e:
+                print(f"  [!] {run_tag} failed: {e}")
+                general_rows.append({
+                    "version": version_tag,
+                    "k": k,
+                    "n_numerical": len(num_cols),
+                    "n_categorical": len(cat_cols),
+                    "numerical": ", ".join(num_cols),
+                    "categorical": ", ".join(cat_cols),
+                    "error": str(e),
+                })
 
-                        # save to database
-                        db_session = SessionLocal()
-                        try:
-                            save_cluster_results(
-                                db=db_session,
-                                df_clustered=df_combined,
-                                df_outliers=df_outliers,
-                                pca_coords_clustered=pca_coords_clustered,
-                                pca_coords_outliers=pca_coords_outliers,
-                                numerical_features=NUMERICAL_FEATURES,
-                                categorical_features=CATEGORICAL_FEATURES,
-                                n_clusters=n + len(rule_label_map),
-                                algorithm="k_prototypes_hybrid",
-                                extra_feature_cols=[
-                                    "qaly", "total_medications", "active_conditions_count", "condition_burden",
-                                    "avg_bmi", "avg_systolic_bp", "avg_glucose", "daly",
-                                    "total_procedures", "days_since_last_encounter",
-                                    "marital", "smoking_status",
-                                    "has_diabetes", "has_hypertension", "has_heart_disease",
-                                    "has_cancer", "has_respiratory_disease", "has_mental_health",
-                                    "is_polypharmacy",
-                                    "dominant_encounter_class",
-                                ],
-                                params={
-                                    "scaler": scaler_name,
-                                    "gamma": gamma_label,
-                                    "init": "Huang",
-                                    "random_state": rs,
-                                    "outlier_threshold": threshold,
-                                    "rule_clusters": rule_label_map,
-                                    "metrics_scope": "residual_only",
-                                },
-                                metrics={
-                                    "silhouette": gen["silhouette_score"],
-                                    "gower_silhouette": gower["gower_silhouette"],
-                                    "calinski_harabasz": gen["calinski_harabasz_score"],
-                                    "davies_bouldin": gen["davies_bouldin_score"],
-                                },
-                                cluster_summaries=lmm_summary,
-                                heatmap_bytes=heatmap_bytes,
-                                pca_image_bytes=pca_image_bytes,
-                            )
-                        finally:
-                            db_session.close()
+            flush_general_conclusion()
 
-    clusters_label = "_".join(str(n) for n in n_clusters)
-
-    with open(current_folder / f"conclusions_{clusters_label}.txt", "w", encoding="utf-8") as f:
-        f.write("\n\n".join(all_reports))
-
-    pd.DataFrame(excel_rows).to_excel(current_folder / f"conclusions_{clusters_label}.xlsx", index=False)
+    print(f"\nWrote {general_xlsx_path}")

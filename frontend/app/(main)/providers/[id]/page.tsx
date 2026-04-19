@@ -7,7 +7,10 @@ import IconButton from "@mui/material/IconButton";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 
 import { RootState, AppDispatch } from "@/store";
-import { fetchProviderDetail, fetchProviderEncounters } from "@/store/slices/providers/thunks";
+import {
+  fetchProviderDetail,
+  fetchProviderEncounters,
+} from "@/store/slices/providers/thunks";
 import { resetCurrentProvider } from "@/store/slices/providers/current-provider-slice";
 import { ProviderEncounterItem } from "@/models/generic/providers";
 
@@ -46,17 +49,19 @@ function EncountersTable({
   onEncounterClick: (id: string) => void;
 }) {
   if (encloading) {
-    return <div className={classes.encountersLoading}>Loading encounters...</div>;
+    return (
+      <div className={classes.encountersLoading}>Loading visits...</div>
+    );
   }
   if (!data.length) {
-    return <div className={classes.emptyState}>No encounters recorded.</div>;
+    return <div className={classes.emptyState}>No visits recorded.</div>;
   }
   return (
     <>
       <div className={`${classes.gridRow} ${classes.headerRow}`}>
         <div>Patient Name</div>
         <div>Date</div>
-        <div>Class</div>
+        <div>Type</div>
         <div>Description</div>
         <div>Reason</div>
         <div>Duration</div>
@@ -80,16 +85,18 @@ function EncountersTable({
             </span>
           </div>
           <div className={classes.secondaryText}>{r.description}</div>
-          <div className={classes.secondaryText}>{r.reasonDescription ?? "—"}</div>
           <div className={classes.secondaryText}>
-            {r.duration != null ? `${Math.round(r.duration)} min` : "—"}
+            {r.reasonDescription ?? "-"}
+          </div>
+          <div className={classes.secondaryText}>
+            {r.duration != null ? `${Math.round(r.duration)} min` : "-"}
           </div>
           <div className={classes.actionsCell}>
             <IconButton
               size="small"
               className={classes.actionButton}
               onClick={() => onEncounterClick(r.encounterId)}
-              aria-label="View encounter"
+              aria-label="View visit"
             >
               <VisibilityOutlinedIcon sx={{ fontSize: "1.05rem" }} />
             </IconButton>
@@ -104,7 +111,9 @@ export default function ProviderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const classes = useClasses(ProviderDetailPageStyles, { name: "ProviderDetailPage" });
+  const classes = useClasses(ProviderDetailPageStyles, {
+    name: "ProviderDetailPage",
+  });
 
   const { provider, encounters, loading, encloading, error } = useSelector(
     (state: RootState) => state.currentProvider,
@@ -118,16 +127,18 @@ export default function ProviderDetailPage() {
   }, [id, dispatch]);
 
   if (loading) {
-    return <div className={classes.pageLoading}>Loading provider data...</div>;
+    return <div className={classes.pageLoading}>Loading clinician profile...</div>;
   }
 
   if (error || !provider) {
-    return <div className={classes.pageError}>{error ?? "Provider not found."}</div>;
+    return (
+      <div className={classes.pageError}>{error ?? "Clinician not found."}</div>
+    );
   }
 
   const details = [
-    { label: "Organization", value: provider.organizationName },
-    { label: "Encounters", value: String(provider.encounters) },
+    { label: "Facility", value: provider.organizationName },
+    { label: "Visits", value: String(provider.encounters) },
     { label: "City", value: provider.city },
   ];
 
@@ -142,7 +153,7 @@ export default function ProviderDetailPage() {
           />
         </div>
         <div className={classes.nameBlock}>
-          <p className={classes.profileLabel}>Provider Profile</p>
+          <p className={classes.profileLabel}>Clinician Profile</p>
           <h1 className={classes.providerFullName}>
             {clearName(provider.firstName, provider.lastName) || "Unknown Name"}
           </h1>
@@ -153,7 +164,9 @@ export default function ProviderDetailPage() {
             {provider.gender && (
               <span
                 className={
-                  provider.gender === "F" ? classes.genderBadgeFemale : classes.genderBadgeMale
+                  provider.gender === "F"
+                    ? classes.genderBadgeFemale
+                    : classes.genderBadgeMale
                 }
               >
                 {GENDER_LABELS[provider.gender] ?? provider.gender}
@@ -169,21 +182,27 @@ export default function ProviderDetailPage() {
           {details.map(({ label, value }) => (
             <div key={label}>
               <p className={classes.detailLabel}>{label}</p>
-              <p className={classes.detailValue}>{value ?? "—"}</p>
+              <p className={classes.detailValue}>{value ?? "-"}</p>
             </div>
           ))}
         </div>
       </div>
 
       <div className={classes.encountersPanel}>
-        <div className={classes.encountersPanelHeader}>Recent Provider Encounters</div>
+        <div className={classes.encountersPanelHeader}>
+          Recent Visits
+        </div>
         <div className={classes.encountersPanelBody}>
           <EncountersTable
             data={encounters}
             encloading={encloading}
             classes={classes}
-            onPatientClick={(patientId) => router.push(`/patients/${patientId}`)}
-            onEncounterClick={(encounterId) => router.push(`/encounters/${encounterId}`)}
+            onPatientClick={(patientId) =>
+              router.push(`/patients/${patientId}`)
+            }
+            onEncounterClick={(encounterId) =>
+              router.push(`/encounters/${encounterId}`)
+            }
           />
         </div>
       </div>

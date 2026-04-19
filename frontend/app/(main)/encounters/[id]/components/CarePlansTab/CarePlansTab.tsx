@@ -38,7 +38,9 @@ export default function CarePlansTab({ data }: Props) {
           <div className={classes.cellPrimary}>{r.description}</div>
           <div className={classes.cellCode}>{r.careplanCode}</div>
           <div className={classes.cellSecondary}>{formatDate(r.startDate)}</div>
-          <div className={classes.cellSecondary}>{r.reasonDescription ?? "—"}</div>
+          <div className={classes.cellSecondary}>
+            {r.reasonDescription ?? "-"}
+          </div>
         </div>
       ))}
     </>

@@ -24,6 +24,7 @@ interface StyledMultiDropdownProps {
   fullWidth?: boolean;
   width?: string | number;
   onClear?: () => void;
+  showSelectAll?: boolean;
 }
 
 const selectSx = {
@@ -86,6 +87,8 @@ const menuPaperSx = {
   },
 };
 
+const SELECT_ALL = "__select_all__";
+
 export default function StyledMultiDropdown({
   label,
   value,
@@ -99,17 +102,30 @@ export default function StyledMultiDropdown({
   fullWidth = false,
   width,
   onClear,
+  showSelectAll = true,
 }: StyledMultiDropdownProps) {
   const classes = useClasses(StyledMultiDropdownStyles, { name: "StyledMultiDropdown" });
 
+  const allValues = options.map((o) => o.value);
+  const allSelected = allValues.length > 0 && allValues.every((v) => value.includes(v));
+  const someSelected = value.length > 0 && !allSelected;
+
   const handleChange = (e: SelectChangeEvent<(string | number)[]>) => {
-    const val = e.target.value;
-    onChange(typeof val === "string" ? val.split(",") : val);
+    const raw = e.target.value;
+    const val = typeof raw === "string" ? raw.split(",") : raw;
+    if (val.includes(SELECT_ALL)) {
+      onChange(allSelected ? [] : allValues);
+    } else {
+      onChange(val);
+    }
   };
 
   const renderValue = (selected: (string | number)[]) => {
     if (selected.length === 0) {
       return <span className={classes.placeholderText}>{placeholder}</span>;
+    }
+    if (allSelected) {
+      return <span>All</span>;
     }
     if (selected.length === 1) {
       const opt = options.find((o) => o.value === selected[0]);
@@ -148,6 +164,28 @@ export default function StyledMultiDropdown({
           )
         }
       >
+        {showSelectAll && (
+          <MenuItem
+            value={SELECT_ALL}
+            sx={{
+              borderBottom: `1px solid`,
+              borderColor: "divider",
+              fontWeight: 600,
+            }}
+          >
+            <Checkbox
+              checked={allSelected}
+              indeterminate={someSelected}
+              size="small"
+              sx={{
+                padding: 0,
+                color: theme.colors.grey[400],
+                "&.Mui-checked, &.MuiCheckbox-indeterminate": { color: theme.colors.primary.main },
+              }}
+            />
+            Select All
+          </MenuItem>
+        )}
         {options.map((opt) => (
           <MenuItem key={opt.value} value={opt.value}>
             <Checkbox

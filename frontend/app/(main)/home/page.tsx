@@ -34,7 +34,8 @@ export default function HomePage() {
     if (!data) dispatch(fetchDashboard());
   }, [data, dispatch]);
 
-  if (loading) return <div className={classes.loading}>Loading dashboard...</div>;
+  if (loading)
+    return <div className={classes.loading}>Loading...</div>;
   if (error) return <div className={classes.error}>{error}</div>;
   if (!data) return null;
 

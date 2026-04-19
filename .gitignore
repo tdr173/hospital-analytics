@@ -59,3 +59,7 @@ de_scris_despre.txt
 # ── Clustering outputs ─────────────────────────
 backend/app/clustering_algorithms/*/outputs/
 conclusions/
+
+# ── Large dataset files ────────────────────────
+dataset/cleaned/*.csv
+dataset/raw/

@@ -89,18 +89,10 @@ export default function SequencesPage() {
     setPage(1);
   };
 
-  const sequencesById = useMemo(() => {
-    const map: Record<number, NonNullable<typeof list>["items"][number]> = {};
-    if (list) {
-      for (const item of list.items) map[item.id] = item;
-    }
-    return map;
-  }, [list]);
-
-  const handleAnalyse = (patternId: number) => {
-    dispatch(openSequenceAnalysis(patternId));
-    if (!aiCache[patternId]) {
-      dispatch(getSequenceAiAnalysis(patternId));
+  const handleAnalyse = (sequence: NonNullable<typeof list>["items"][number]) => {
+    dispatch(openSequenceAnalysis(sequence));
+    if (!aiCache[sequence.id]) {
+      dispatch(getSequenceAiAnalysis(sequence.id));
     }
   };
 
@@ -126,12 +118,12 @@ export default function SequencesPage() {
         {listError && <div className={classes.error}>{listError}</div>}
 
         {(listLoading || resourcesLoading) && !list && (
-          <div className={classes.status}>Loading sequences...</div>
+          <div className={classes.status}>Loading care sequences...</div>
         )}
 
-        {!listLoading && !listError && items.length === 0 && (
+        {!listLoading && !listError && !!list && items.length === 0 && (
           <div className={classes.empty}>
-            No sequences match the current filters.
+            No care sequences match the current filters.
           </div>
         )}
 
@@ -153,10 +145,12 @@ export default function SequencesPage() {
           rows={ROWS_PER_PAGE}
           total={total}
           onPageChange={setPage}
+          loading={listLoading || !list}
+          error={!!listError}
         />
       </div>
 
-      <SequenceAiModal sequencesById={sequencesById} colors={colors} />
+      <SequenceAiModal colors={colors} />
     </div>
   );
 }

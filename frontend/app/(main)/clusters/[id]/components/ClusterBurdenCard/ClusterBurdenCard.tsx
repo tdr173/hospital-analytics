@@ -26,8 +26,8 @@ export default function ClusterBurdenCard({ utilization, color }: Props) {
     { label: "Active Conditions", value: utilization.avgActiveConditions },
     { label: "Medications", value: utilization.avgMedications },
     { label: "Procedures", value: utilization.avgProcedures },
-    { label: "Days Since Encounter", value: utilization.avgDaysSinceEncounter },
-    { label: "Distinct Providers", value: utilization.avgDistinctProviders },
+    { label: "Days Since Last Visit", value: utilization.avgDaysSinceEncounter },
+    { label: "Different Clinicians", value: utilization.avgDistinctProviders },
   ];
 
   const careTypes = [
@@ -50,7 +50,7 @@ export default function ClusterBurdenCard({ utilization, color }: Props) {
         <p className={classes.sectionTitle}>Clinical Burden Profile</p>
         <div className={classes.severityBlock}>
           <div className={classes.severityValue}>{utilization.avgClinicalSeverityScore}</div>
-          <div className={classes.severityCaption}>Clinical Severity Score (PCA-derived)</div>
+          <div className={classes.severityCaption}>Clinical Severity Score</div>
         </div>
       </div>
 
@@ -67,7 +67,7 @@ export default function ClusterBurdenCard({ utilization, color }: Props) {
         <div className={classes.rightColumn}>
           <div>
             <p className={classes.sectionTitle} style={{ marginBottom: 8 }}>
-              Care-Type Breakdown (Avg per Patient)
+              Care Type Breakdown (per Patient)
             </p>
             <div className={classes.chartWrapper}>
               <ResponsiveContainer width="100%" height="100%">

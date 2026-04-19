@@ -8,7 +8,10 @@ import IconButton from "@mui/material/IconButton";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 
 import { RootState, AppDispatch } from "@/store";
-import { fetchProviders, fetchProviderResources } from "@/store/slices/providers/thunks";
+import {
+  fetchProviders,
+  fetchProviderResources,
+} from "@/store/slices/providers/thunks";
 import { ProviderListItem } from "@/models/generic/providers";
 
 import StyledTable, {
@@ -28,21 +31,35 @@ import { clearName } from "@/utils/functions";
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
 const COLUMNS = [
-  { key: "lastName", label: "Name", sortable: true, width: 200 },
-  { key: "speciality", label: "Speciality", sortable: true, width: 180 },
-  { key: "gender", label: "Gender", width: 80 },
+  { key: "lastName", label: "Name", sortable: true, width: 160 },
+  { key: "speciality", label: "Specialty", sortable: true, width: 160 },
+  { key: "gender", label: "Gender", width: 70 },
   { key: "city", label: "City", sortable: true, width: 140 },
-  { key: "organizationName", label: "Organization", width: 200 },
-  { key: "encounters", label: "Encounters", sortable: true, width: 100, align: "right" as const },
+  { key: "organizationName", label: "Facility", width: 200 },
+  {
+    key: "encounters",
+    label: "Visits",
+    sortable: true,
+    width: 100,
+    align: "right" as const,
+  },
   { key: "actions", label: "Actions", width: 80, align: "center" as const },
 ];
 
-function GenderBadge({ gender, classes }: { gender: string | null; classes: any }) {
+function GenderBadge({
+  gender,
+  classes,
+}: {
+  gender: string | null;
+  classes: any;
+}) {
   if (!gender) return <span className={classes.genderBadgeEmpty}>-</span>;
   const isFemale = gender === "F";
   return (
-    <span className={isFemale ? classes.genderBadgeFemale : classes.genderBadgeMale}>
-      {isFemale ? "F" : "M"}
+    <span
+      className={isFemale ? classes.genderBadgeFemale : classes.genderBadgeMale}
+    >
+      {isFemale ? "Female" : "Male"}
     </span>
   );
 }
@@ -88,7 +105,10 @@ function ProvidersPageContent() {
     searchParams.get("speciality")?.split(",").filter(Boolean) ?? [],
   );
 
-  const setParam = (updates: Record<string, string | null>, resetPage = true) => {
+  const setParam = (
+    updates: Record<string, string | null>,
+    resetPage = true,
+  ) => {
     const p = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([k, v]) => {
       if (v) p.set(k, v);
@@ -149,7 +169,7 @@ function ProvidersPageContent() {
         <IconButton
           size="small"
           onClick={() => router.push(`/providers/${p.providerId}`)}
-          aria-label="View provider"
+          aria-label="View clinician"
           sx={{
             padding: "4px",
             color: theme.colors.primary.main,
@@ -173,8 +193,10 @@ function ProvidersPageContent() {
           label="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search providers by name"
-          startIcon={<SearchIcon sx={{ fontSize: "1.1rem", color: "#6b7280" }} />}
+          placeholder="Search clinicians by name"
+          startIcon={
+            <SearchIcon sx={{ fontSize: "1.1rem", color: "#6b7280" }} />
+          }
           clearIcon
           onClear={() => setSearch("")}
           height={36}
@@ -191,7 +213,7 @@ function ProvidersPageContent() {
         />
 
         <StyledMultiDropdown
-          label="Speciality"
+          label="Specialty"
           value={speciality}
           onChange={(v) => setSpeciality(v as string[])}
           onClear={() => setSpeciality([])}
@@ -240,7 +262,7 @@ function ProvidersPageContent() {
           sortBy={sortBy}
           sortType={sortType}
           onSort={handleSort}
-          emptyMessage="No providers found matching the selected filters."
+          emptyMessage="No clinicians match the selected filters."
         />
       </div>
     </div>

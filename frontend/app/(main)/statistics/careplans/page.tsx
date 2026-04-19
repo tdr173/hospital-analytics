@@ -23,7 +23,7 @@ export default function CareplansPage() {
   }, [dispatch]);
 
   if (loading) {
-    return <div className={classes.loading}>Loading care plan statistics...</div>;
+    return <div className={classes.loading}>Loading care plan data...</div>;
   }
 
   if (error) {

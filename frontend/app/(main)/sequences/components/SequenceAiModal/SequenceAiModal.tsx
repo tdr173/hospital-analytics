@@ -4,27 +4,24 @@ import { useSelector, useDispatch } from "react-redux";
 import useClasses from "@/utils/useClasses";
 import { RootState, AppDispatch } from "@/store";
 import { closeSequenceAnalysis } from "@/store/slices/sequences/sequence-ai-slice";
-import { SequenceListItem } from "@/models/generic/sequences";
 import { SequenceAiModalStyles } from "./SequenceAiModalStyles";
 import SequenceChipRow from "../SequenceChipRow/SequenceChipRow";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
 interface Props {
-  sequencesById: Record<number, SequenceListItem>;
   colors: Record<string, string>;
 }
 
-export default function SequenceAiModal({ sequencesById, colors }: Props) {
+export default function SequenceAiModal({ colors }: Props) {
   const classes = useClasses(SequenceAiModalStyles, { name: "SequenceAiModal" });
   const dispatch = useAppDispatch();
-  const { cache, currentPatternId, loading, error } = useSelector(
+  const { cache, currentPatternId, currentSequence, loading, error } = useSelector(
     (state: RootState) => state.sequenceAi,
   );
 
-  if (currentPatternId === null) return null;
-  const sequence = sequencesById[currentPatternId];
-  if (!sequence) return null;
+  if (currentPatternId === null || !currentSequence) return null;
+  const sequence = currentSequence;
 
   const data = cache[currentPatternId];
 

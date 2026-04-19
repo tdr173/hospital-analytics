@@ -25,7 +25,7 @@ export default function ImmunizationsPage() {
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading immunization statistics...</div>
+      <div className={classes.loading}>Loading immunization data...</div>
     );
   }
 

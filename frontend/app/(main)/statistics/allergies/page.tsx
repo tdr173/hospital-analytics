@@ -23,7 +23,7 @@ export default function AllergiesPage() {
   }, [dispatch]);
 
   if (loading) {
-    return <div className={classes.loading}>Loading allergy statistics...</div>;
+    return <div className={classes.loading}>Loading allergy data...</div>;
   }
 
   if (error) {
