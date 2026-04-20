@@ -9,7 +9,5 @@ from .get_medication_statistics import *
 from .get_allergy_statistics import *
 from .get_careplan_statistics import *
 from .get_provider_statistics import *
-from .get_organization_statistics import *
-from .get_organization_statistics import *
 from .ask_ai import *
 from .refresh_observation_views import *

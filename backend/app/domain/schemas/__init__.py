@@ -3,6 +3,5 @@ from .cluster_schemas import *
 from .patient_schemas import *
 from .sequence_schemas import *
 from .provider_schemas import *
-from .organization_schemas import *
 from .dashboard_schemas import *
 from .encounter_schemas import *

@@ -15,12 +15,13 @@ export default function ConditionsPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.conditionsStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(ConditionsPageStyles, { name: "ConditionsPage" });
 
   useEffect(() => {
-    dispatch(getConditionsStatistics());
-  }, [dispatch]);
+    dispatch(getConditionsStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return (

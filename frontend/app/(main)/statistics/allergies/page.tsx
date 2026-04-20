@@ -15,12 +15,13 @@ export default function AllergiesPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.allergiesStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(AllergiesPageStyles, { name: "AllergiesPage" });
 
   useEffect(() => {
-    dispatch(getAllergiesStatistics());
-  }, [dispatch]);
+    dispatch(getAllergiesStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return <div className={classes.loading}>Loading allergy data...</div>;

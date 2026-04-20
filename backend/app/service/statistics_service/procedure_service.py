@@ -7,8 +7,8 @@ from domain.schemas.statistics_schemas.procedure_schema import ProcedureStatisti
 
 
 class ProcedureService:
-    def __init__(self, db: Session):
-        self.repo = ProcedureRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = ProcedureRepository(db, range_str)
 
     def get_procedure_summary(self) -> ProcedureStatisticsResponse:
         total = self.repo.get_total_procedures()

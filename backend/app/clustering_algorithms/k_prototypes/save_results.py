@@ -26,18 +26,19 @@ def save_cluster_results(
 ) -> None:
     db.execute(text("DELETE FROM cluster_patient"))
     db.execute(text("DELETE FROM cluster"))
-    db.execute(text("DELETE FROM cluster_meta"))
+    db.execute(text("TRUNCATE cluster_meta RESTART IDENTITY"))
 
     db.execute(
         text("""
             INSERT INTO cluster_meta
-                (created_at, algorithm, n_clusters, n_patients, n_outliers,
+                (id, created_at, algorithm, n_clusters, n_patients, n_outliers,
                  numerical_features, categorical_features, params, metrics, heatmap, pca_image)
             VALUES
-                (:created_at, :algorithm, :n_clusters, :n_patients, :n_outliers,
+                (:id, :created_at, :algorithm, :n_clusters, :n_patients, :n_outliers,
                  :numerical_features, :categorical_features, :params, :metrics, :heatmap, :pca_image)
         """),
         {
+            "id": 1,
             "created_at": datetime.now(),
             "algorithm": algorithm,
             "n_clusters": n_clusters,

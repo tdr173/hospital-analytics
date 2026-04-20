@@ -7,4 +7,3 @@ from .immunization_service import ImmunizationService
 from .medication_service import MedicationService
 from .allergy_service import AllergyService
 from .provider_service import ProviderService
-from .organization_service import OrganizationService

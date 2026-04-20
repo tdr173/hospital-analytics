@@ -94,12 +94,6 @@ export interface UtilizationStats {
   median: number;
 }
 
-export interface OrganizationStatisticsResponse {
-  totalOrganizations: number;
-  utilization: UtilizationStats;
-  topCities: ChartEntry[];
-}
-
 export interface ProviderStatisticsResponse {
   totalProviders: number;
   uniqueSpecialities: number;

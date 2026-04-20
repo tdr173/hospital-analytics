@@ -5,7 +5,7 @@ from pathlib import Path
 
 from db import engine as db_engine
 
-dataset_path = Path(__file__).parent.parent.parent.parent.parent / "synthea" / "output" / "csv"
+dataset_path = Path(__file__).parent.parent.parent.parent / "dataset" / "hospital"
 cleaned_path = Path(__file__).parent.parent.parent.parent / "dataset" / "cleaned"
 
 
@@ -68,43 +68,6 @@ def load_patients(engine):
         index=False,
     )
     print(f"Loaded {len(patients_df)} patients.")
-
-
-def load_organizations(engine):
-    df = pd.read_csv(dataset_path / "organizations.csv")
-
-    keep_cols = {
-        "Id": "organization_id",
-        "NAME": "name",
-        "CITY": "city",
-        "LAT": "latitude",
-        "LON": "longitude",
-        "PHONE": "phone",
-        "UTILIZATION": "utilization",
-    }
-
-    organizations_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
-
-    categorical_cols = ["city"]
-    for col in categorical_cols:
-        if organizations_df[col].isnull().any():
-            organizations_df[col] = organizations_df[col].fillna(organizations_df[col].mode()[0])
-
-    numerical_cols = ["latitude", "longitude", "utilization"]
-    for col in numerical_cols:
-        if organizations_df[col].isnull().any():
-            organizations_df[col] = organizations_df[col].fillna(organizations_df[col].median())
-
-    clear_existing_cleaned_csv("cleaned_organizations.csv")
-    organizations_df.to_csv(cleaned_path / "cleaned_organizations.csv", index=False)
-
-    organizations_df.to_sql(
-        name="organization",
-        con=engine,
-        if_exists="append",
-        index=False,
-    )
-    print(f"Loaded {len(organizations_df)} organizations.")
 
 
 def load_providers(engine):
@@ -170,7 +133,6 @@ def load_encounters(engine):
     encounters_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
 
     today = pd.Timestamp.now(tz="UTC").normalize()
-    max_past = today - pd.DateOffset(years=30)  # cap: no encounter older than 30 years
 
     encounters_df["start_date"] = pd.to_datetime(encounters_df["start_date"])
     encounters_df["end_date"] = pd.to_datetime(encounters_df["end_date"])
@@ -178,10 +140,6 @@ def load_encounters(engine):
     # Clamp future dates to today (synthetic data artifact)
     encounters_df["start_date"] = encounters_df["start_date"].clip(upper=today)
     encounters_df["end_date"] = encounters_df["end_date"].clip(upper=today)
-
-    # Clamp implausibly old dates to 30 years ago
-    encounters_df["start_date"] = encounters_df["start_date"].clip(lower=max_past)
-    encounters_df["end_date"] = encounters_df["end_date"].clip(lower=max_past)
 
     encounters_df["duration"] = (encounters_df["end_date"] - encounters_df["start_date"]).dt.total_seconds() / 60
 
@@ -494,7 +452,6 @@ def _truncate_all_tables(engine):
 def run_etl(engine):
     # _truncate_all_tables(engine)
     # load_patients(engine)
-    # load_organizations(engine)
     # load_providers(engine)
     # load_encounters(engine)
     # load_allergies(engine)

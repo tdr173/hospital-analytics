@@ -106,7 +106,7 @@ class ClusterUtilizationSchema(CamelModel):
     avg_medications: float
     avg_procedures: float
     avg_days_since_encounter: float
-    avg_clinical_severity_score: float
+    avg_clinical_severity_score: Optional[float] = None
     severity_components: SeverityComponentsSchema
     avg_routine_care: float
     avg_acute_care: float

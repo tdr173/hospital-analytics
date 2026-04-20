@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import Depends, Query
 from sqlalchemy.orm import Session
 
 from db.db_connector import get_db
@@ -8,6 +8,9 @@ from domain.schemas.statistics_schemas.careplan_schema import CarePlanStatistics
 
 
 @statistics_router.get("/careplans", response_model=CarePlanStatisticsResponse)
-async def get_careplan_statistics(db: Session = Depends(get_db)):
-    service = CarePlanService(db)
+async def get_careplan_statistics(
+    range: str = Query("all", pattern="^(all|week|month)$"),
+    db: Session = Depends(get_db),
+):
+    service = CarePlanService(db, range)
     return service.get_careplan_summary()

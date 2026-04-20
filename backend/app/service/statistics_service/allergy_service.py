@@ -7,8 +7,8 @@ from domain.schemas.statistics_schemas.allergy_schema import AllergyStatisticsRe
 
 
 class AllergyService:
-    def __init__(self, db: Session):
-        self.repo = AllergyRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = AllergyRepository(db, range_str)
 
     def get_allergy_summary(self) -> AllergyStatisticsResponse:
         total = self.repo.get_total_allergies()

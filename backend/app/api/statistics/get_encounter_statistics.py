@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import Depends, Query
 from sqlalchemy.orm import Session
 
 from db.db_connector import get_db
@@ -8,6 +8,9 @@ from domain.schemas.statistics_schemas.encounter_schema import EncounterStatisti
 
 
 @statistics_router.get("/encounters", response_model=EncounterStatisticsResponse)
-async def get_encounter_statistics(db: Session = Depends(get_db)):
-    service = EncounterService(db)
+async def get_encounter_statistics(
+    range: str = Query("all", pattern="^(all|week|month)$"),
+    db: Session = Depends(get_db),
+):
+    service = EncounterService(db, range)
     return service.get_encounter_summary()

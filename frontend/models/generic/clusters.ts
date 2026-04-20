@@ -100,7 +100,7 @@ export interface ClusterUtilization {
   avgMedications: number;
   avgProcedures: number;
   avgDaysSinceEncounter: number;
-  avgClinicalSeverityScore: number;
+  avgClinicalSeverityScore: number | null;
   severityComponents: SeverityComponents;
   avgRoutineCare: number;
   avgAcuteCare: number;

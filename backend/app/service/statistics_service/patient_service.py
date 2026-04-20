@@ -8,8 +8,8 @@ from domain.schemas.statistics_schemas.patient_schema import (
 
 
 class PatientService:
-    def __init__(self, db: Session):
-        self.repo = PatientRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = PatientRepository(db, range_str)
 
     def get_patient_summary(self) -> PatientStatisticsResponse:
         total = self.repo.get_total_patients()

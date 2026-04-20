@@ -14,14 +14,15 @@ export default function ImmunizationsPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.immunizationsStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(ImmunizationsPageStyles, {
     name: "ImmunizationsPage",
   });
 
   useEffect(() => {
-    dispatch(getImmunizationsStatistics());
-  }, [dispatch]);
+    dispatch(getImmunizationsStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return (

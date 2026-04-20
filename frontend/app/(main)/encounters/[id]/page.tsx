@@ -141,15 +141,6 @@ export default function EncounterDetailPage() {
             <span className={classes.entityChipLabel}>Doctor</span>
             <span className={classes.entityChipValue}>{encounter.providerName}</span>
           </div>
-          <div
-            className={classes.entityChip}
-            onClick={() => router.push(`/organizations/${encounter.organizationId}`)}
-          >
-            <span className={classes.entityChipLabel}>Facility</span>
-            <span className={classes.entityChipValue}>
-              {encounter.organizationName ?? encounter.organizationId}
-            </span>
-          </div>
         </div>
       </div>
 

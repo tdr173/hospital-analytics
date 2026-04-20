@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import Depends, Query
 from sqlalchemy.orm import Session
 
 from db.db_connector import get_db
@@ -8,6 +8,9 @@ from domain.schemas.statistics_schemas.observation_schema import ObservationStat
 
 
 @statistics_router.get("/observations", response_model=ObservationStatisticsResponse)
-async def get_observation_statistics(db: Session = Depends(get_db)):
-    service = ObservationService(db)
+async def get_observation_statistics(
+    range: str = Query("all", pattern="^(all|week|month)$"),
+    db: Session = Depends(get_db),
+):
+    service = ObservationService(db, range)
     return service.get_observation_summary()

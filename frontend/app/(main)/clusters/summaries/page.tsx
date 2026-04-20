@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/store";
-import { getClusterRuns } from "@/store/slices/clusters/thunks";
+import { getClustersOverview } from "@/store/slices/clusters/thunks";
 import useClasses from "@/utils/useClasses";
 import { ClusterSummariesPageStyles } from "./styles";
 import ClusterCard from "./components/ClusterCard/ClusterCard";
@@ -21,7 +21,7 @@ export default function ClusterSummariesPage() {
   );
 
   useEffect(() => {
-    dispatch(getClusterRuns());
+    dispatch(getClustersOverview());
   }, [dispatch]);
 
   if (loading) return <div className={classes.loading}>Loading patient groups...</div>;

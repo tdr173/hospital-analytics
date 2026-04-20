@@ -14,14 +14,15 @@ export default function ObservationsPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.observationsStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(ObservationsPageStyles, {
     name: "ObservationsPage",
   });
 
   useEffect(() => {
-    dispatch(getObservationsStatistics());
-  }, [dispatch]);
+    dispatch(getObservationsStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return (

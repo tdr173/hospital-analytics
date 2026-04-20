@@ -3,15 +3,36 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 
 from domain.models.patient_model import PatientModel
-from repository.statistics_repository._common import with_percentage
+from domain.models.encounter_model import EncounterModel
+from repository.statistics_repository._common import (
+    compute_min_date, with_percentage,
+)
 
 
 class PatientRepository:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, range_str: str = "all"):
         self.db = db
+        # Patients have no intrinsic date column — range filters down to the set
+        # of patients who had encounters within the window.
+        min_date = compute_min_date(db, EncounterModel.start_date, range_str)
+        if min_date is not None:
+            active_ids = (
+                db.query(EncounterModel.patient_id)
+                .filter(EncounterModel.start_date >= min_date)
+                .distinct()
+                .subquery()
+            )
+            self._filter = PatientModel.patient_id.in_(active_ids)
+        else:
+            self._filter = None
+
+    def _apply(self, q):
+        return q.filter(self._filter) if self._filter is not None else q
 
     def get_total_patients(self) -> int:
-        return self.db.query(func.count(PatientModel.patient_id)).scalar()
+        return self._apply(
+            self.db.query(func.count(PatientModel.patient_id))
+        ).scalar()
 
     def get_age_groups(self, total: Optional[int] = None):
         if total is None:
@@ -25,15 +46,12 @@ class PatientRepository:
             else_="65+",
         ).label("label")
 
-        rows = (
+        rows = self._apply(
             self.db.query(
                 age_group,
                 func.count(PatientModel.patient_id).label("count"),
             )
-            .group_by(age_group)
-            .order_by(age_group)
-            .all()
-        )
+        ).group_by(age_group).order_by(age_group).all()
         return with_percentage(rows, total)
 
     def get_gender_distribution(self, total: Optional[int] = None):
@@ -57,29 +75,26 @@ class PatientRepository:
             else_="Deceased",
         ).label("label")
 
-        rows = (
+        rows = self._apply(
             self.db.query(
                 vital_label,
                 func.count(PatientModel.patient_id).label("count"),
             )
-            .group_by(vital_label)
-            .all()
-        )
+        ).group_by(vital_label).all()
         return with_percentage(rows, total)
 
     def get_top_cities(self, total: Optional[int] = None):
         if total is None:
             total = self.get_total_patients()
 
-        rows = (
+        rows = self._apply(
             self.db.query(
                 PatientModel.city.label("label"),
                 func.count(PatientModel.patient_id).label("count"),
             )
-            .group_by(PatientModel.city)
-            .order_by(func.count(PatientModel.patient_id).desc())
-            .all()
-        )
+        ).group_by(PatientModel.city).order_by(
+            func.count(PatientModel.patient_id).desc()
+        ).all()
 
         top_9 = rows[:9]
         others_count = sum(row.count for row in rows[9:])
@@ -98,13 +113,12 @@ class PatientRepository:
         if total is None:
             total = self.get_total_patients()
 
-        rows = (
+        rows = self._apply(
             self.db.query(
                 column.label("label"),
                 func.count(PatientModel.patient_id).label("count"),
             )
-            .group_by(column)
-            .order_by(func.count(PatientModel.patient_id).desc())
-            .all()
-        )
+        ).group_by(column).order_by(
+            func.count(PatientModel.patient_id).desc()
+        ).all()
         return with_percentage(rows, total)

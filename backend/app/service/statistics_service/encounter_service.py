@@ -9,8 +9,8 @@ from domain.schemas.statistics_schemas.encounter_schema import (
 
 
 class EncounterService:
-    def __init__(self, db: Session):
-        self.repo = EncounterRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = EncounterRepository(db, range_str)
 
     def get_encounter_summary(self) -> EncounterStatisticsResponse:
         total = self.repo.get_total_encounters()

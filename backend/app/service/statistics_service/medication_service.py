@@ -10,8 +10,8 @@ from domain.schemas.statistics_schemas.medication_schema import (
 
 
 class MedicationService:
-    def __init__(self, db: Session):
-        self.repo = MedicationRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = MedicationRepository(db, range_str)
 
     def get_medication_summary(self) -> MedicationStatisticsResponse:
         total = self.repo.get_total_medications()

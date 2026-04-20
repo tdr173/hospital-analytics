@@ -15,12 +15,13 @@ export default function CareplansPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.careplansStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(CareplansPageStyles, { name: "CareplansPage" });
 
   useEffect(() => {
-    dispatch(getCareplansStatistics());
-  }, [dispatch]);
+    dispatch(getCareplansStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return <div className={classes.loading}>Loading care plan data...</div>;

@@ -48,10 +48,12 @@ export default function ClusterBurdenCard({ utilization, color }: Props) {
     <div className={classes.card}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <p className={classes.sectionTitle}>Clinical Burden Profile</p>
-        <div className={classes.severityBlock}>
-          <div className={classes.severityValue}>{utilization.avgClinicalSeverityScore}</div>
-          <div className={classes.severityCaption}>Clinical Severity Score</div>
-        </div>
+        {utilization.avgClinicalSeverityScore !== null && (
+          <div className={classes.severityBlock}>
+            <div className={classes.severityValue}>{utilization.avgClinicalSeverityScore}</div>
+            <div className={classes.severityCaption}>Clinical Severity Score</div>
+          </div>
+        )}
       </div>
 
       <div className={classes.twoCol}>

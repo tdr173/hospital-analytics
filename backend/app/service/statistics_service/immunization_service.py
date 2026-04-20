@@ -7,8 +7,8 @@ from domain.schemas.statistics_schemas.immunization_schema import ImmunizationSt
 
 
 class ImmunizationService:
-    def __init__(self, db: Session):
-        self.repo = ImmunizationRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = ImmunizationRepository(db, range_str)
 
     def get_immunization_summary(self) -> ImmunizationStatisticsResponse:
         total = self.repo.get_total_immunizations()

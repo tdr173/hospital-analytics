@@ -10,26 +10,30 @@ import {
   AllergyStatisticsResponse,
   CarePlanStatisticsResponse,
   ProviderStatisticsResponse,
-  OrganizationStatisticsResponse,
 } from "@/models/generic/statistics";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
 import { API_BASE } from "@/store/slices/clusters/thunks";
 import { appendScopeToUrl } from "@/utils/authScope";
+import { StatisticsRange } from "./range-slice";
 
 const defaultHeaders: Record<string, string> = {
   "ngrok-skip-browser-warning": "true",
 };
 
+const rangeQuery = (range: StatisticsRange | undefined) =>
+  range && range !== "all" ? `?range=${range}` : "";
+
 export const getPatientsStatistics = createAsyncThunk<
   PatientStatisticsResponse,
-  void,
+  StatisticsRange | void,
   { rejectValue: ErrorResponse }
->("getPatientsStatistics", async (_, thunkAPI) => {
+>("getPatientsStatistics", async (range, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/patients`, {
-      headers: defaultHeaders,
-    });
+    const response = await fetch(
+      `${API_BASE}/statistics/patients${rangeQuery(range || undefined)}`,
+      { headers: defaultHeaders },
+    );
 
     if (!response.ok) {
       toast.error("Failed to load patients statistics", { toastId: "stat-patients" });
@@ -51,13 +55,14 @@ export const getPatientsStatistics = createAsyncThunk<
 
 export const getEncountersStatistics = createAsyncThunk<
   EncounterStatisticsResponse,
-  void,
+  StatisticsRange | void,
   { rejectValue: ErrorResponse }
->("getEncountersStatistics", async (_, thunkAPI) => {
+>("getEncountersStatistics", async (range, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/encounters`, {
-      headers: defaultHeaders,
-    });
+    const response = await fetch(
+      `${API_BASE}/statistics/encounters${rangeQuery(range || undefined)}`,
+      { headers: defaultHeaders },
+    );
 
     if (!response.ok) {
       toast.error("Failed to load encounters statistics", { toastId: "stat-encounters" });
@@ -79,13 +84,14 @@ export const getEncountersStatistics = createAsyncThunk<
 
 export const getConditionsStatistics = createAsyncThunk<
   ConditionStatisticsResponse,
-  void,
+  StatisticsRange | void,
   { rejectValue: ErrorResponse }
->("getConditionsStatistics", async (_, thunkAPI) => {
+>("getConditionsStatistics", async (range, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/conditions`, {
-      headers: defaultHeaders,
-    });
+    const response = await fetch(
+      `${API_BASE}/statistics/conditions${rangeQuery(range || undefined)}`,
+      { headers: defaultHeaders },
+    );
 
     if (!response.ok) {
       toast.error("Failed to load conditions statistics", { toastId: "stat-conditions" });
@@ -105,43 +111,16 @@ export const getConditionsStatistics = createAsyncThunk<
   }
 });
 
-export const getOrganizationsStatistics = createAsyncThunk<
-  OrganizationStatisticsResponse,
-  void,
-  { rejectValue: ErrorResponse }
->("getOrganizationsStatistics", async (_, thunkAPI) => {
-  try {
-    const response = await fetch(`${API_BASE}/statistics/organizations`, {
-      headers: defaultHeaders,
-    });
-
-    if (!response.ok) {
-      toast.error("Failed to load organizations statistics", { toastId: "stat-organizations" });
-      return thunkAPI.rejectWithValue({
-        error: true,
-        message: "Failed to fetch organizations statistics",
-      });
-    }
-
-    return (await response.json()) as OrganizationStatisticsResponse;
-  } catch (error) {
-    toast.error("Failed to load organizations statistics", { toastId: "stat-organizations" });
-    return thunkAPI.rejectWithValue({
-      error: true,
-      message: "Failed to fetch organizations statistics",
-    });
-  }
-});
-
 export const getProvidersStatistics = createAsyncThunk<
   ProviderStatisticsResponse,
-  void,
+  StatisticsRange | void,
   { rejectValue: ErrorResponse }
->("getProvidersStatistics", async (_, thunkAPI) => {
+>("getProvidersStatistics", async (range, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/providers`, {
-      headers: defaultHeaders,
-    });
+    const response = await fetch(
+      `${API_BASE}/statistics/providers${rangeQuery(range || undefined)}`,
+      { headers: defaultHeaders },
+    );
 
     if (!response.ok) {
       toast.error("Failed to load providers statistics", { toastId: "stat-providers" });
@@ -163,13 +142,14 @@ export const getProvidersStatistics = createAsyncThunk<
 
 export const getAllergiesStatistics = createAsyncThunk<
   AllergyStatisticsResponse,
-  void,
+  StatisticsRange | void,
   { rejectValue: ErrorResponse }
->("getAllergiesStatistics", async (_, thunkAPI) => {
+>("getAllergiesStatistics", async (range, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/allergies`, {
-      headers: defaultHeaders,
-    });
+    const response = await fetch(
+      `${API_BASE}/statistics/allergies${rangeQuery(range || undefined)}`,
+      { headers: defaultHeaders },
+    );
 
     if (!response.ok) {
       toast.error("Failed to load allergies statistics", { toastId: "stat-allergies" });
@@ -191,13 +171,14 @@ export const getAllergiesStatistics = createAsyncThunk<
 
 export const getCareplansStatistics = createAsyncThunk<
   CarePlanStatisticsResponse,
-  void,
+  StatisticsRange | void,
   { rejectValue: ErrorResponse }
->("getCareplansStatistics", async (_, thunkAPI) => {
+>("getCareplansStatistics", async (range, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/careplans`, {
-      headers: defaultHeaders,
-    });
+    const response = await fetch(
+      `${API_BASE}/statistics/careplans${rangeQuery(range || undefined)}`,
+      { headers: defaultHeaders },
+    );
 
     if (!response.ok) {
       toast.error("Failed to load careplans statistics", { toastId: "stat-careplans" });
@@ -219,13 +200,14 @@ export const getCareplansStatistics = createAsyncThunk<
 
 export const getMedicationsStatistics = createAsyncThunk<
   MedicationStatisticsResponse,
-  void,
+  StatisticsRange | void,
   { rejectValue: ErrorResponse }
->("getMedicationsStatistics", async (_, thunkAPI) => {
+>("getMedicationsStatistics", async (range, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/medications`, {
-      headers: defaultHeaders,
-    });
+    const response = await fetch(
+      `${API_BASE}/statistics/medications${rangeQuery(range || undefined)}`,
+      { headers: defaultHeaders },
+    );
 
     if (!response.ok) {
       toast.error("Failed to load medications statistics", { toastId: "stat-medications" });
@@ -247,13 +229,14 @@ export const getMedicationsStatistics = createAsyncThunk<
 
 export const getProceduresStatistics = createAsyncThunk<
   ProcedureStatisticsResponse,
-  void,
+  StatisticsRange | void,
   { rejectValue: ErrorResponse }
->("getProceduresStatistics", async (_, thunkAPI) => {
+>("getProceduresStatistics", async (range, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/procedures`, {
-      headers: defaultHeaders,
-    });
+    const response = await fetch(
+      `${API_BASE}/statistics/procedures${rangeQuery(range || undefined)}`,
+      { headers: defaultHeaders },
+    );
 
     if (!response.ok) {
       toast.error("Failed to load procedures statistics", { toastId: "stat-procedures" });
@@ -275,13 +258,14 @@ export const getProceduresStatistics = createAsyncThunk<
 
 export const getImmunizationsStatistics = createAsyncThunk<
   ImmunizationStatisticsResponse,
-  void,
+  StatisticsRange | void,
   { rejectValue: ErrorResponse }
->("getImmunizationsStatistics", async (_, thunkAPI) => {
+>("getImmunizationsStatistics", async (range, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/immunizations`, {
-      headers: defaultHeaders,
-    });
+    const response = await fetch(
+      `${API_BASE}/statistics/immunizations${rangeQuery(range || undefined)}`,
+      { headers: defaultHeaders },
+    );
 
     if (!response.ok) {
       toast.error("Failed to load immunizations statistics", { toastId: "stat-immunizations" });
@@ -303,13 +287,14 @@ export const getImmunizationsStatistics = createAsyncThunk<
 
 export const getObservationsStatistics = createAsyncThunk<
   ObservationStatisticsResponse,
-  void,
+  StatisticsRange | void,
   { rejectValue: ErrorResponse }
->("getObservationsStatistics", async (_, thunkAPI) => {
+>("getObservationsStatistics", async (range, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/observations`, {
-      headers: defaultHeaders,
-    });
+    const response = await fetch(
+      `${API_BASE}/statistics/observations${rangeQuery(range || undefined)}`,
+      { headers: defaultHeaders },
+    );
 
     if (!response.ok) {
       toast.error("Failed to load observations statistics", { toastId: "stat-observations" });

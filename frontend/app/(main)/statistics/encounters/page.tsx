@@ -16,12 +16,13 @@ export default function EncountersPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.encountersStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(EncountersPageStyles, { name: "EncountersPage" });
 
   useEffect(() => {
-    dispatch(getEncountersStatistics());
-  }, [dispatch]);
+    dispatch(getEncountersStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return (

@@ -9,8 +9,8 @@ from domain.schemas.statistics_schemas.provider_schema import (
 
 
 class ProviderService:
-    def __init__(self, db: Session):
-        self.repo = ProviderRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = ProviderRepository(db, range_str)
 
     def get_provider_summary(self) -> ProviderStatisticsResponse:
         total = self.repo.get_total_providers()

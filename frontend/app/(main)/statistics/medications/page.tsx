@@ -15,14 +15,15 @@ export default function MedicationsPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.medicationsStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(MedicationsPageStyles, {
     name: "MedicationsPage",
   });
 
   useEffect(() => {
-    dispatch(getMedicationsStatistics());
-  }, [dispatch]);
+    dispatch(getMedicationsStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return (

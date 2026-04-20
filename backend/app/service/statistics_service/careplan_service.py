@@ -7,8 +7,8 @@ from domain.schemas.statistics_schemas.careplan_schema import CarePlanStatistics
 
 
 class CarePlanService:
-    def __init__(self, db: Session):
-        self.repo = CarePlanRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = CarePlanRepository(db, range_str)
 
     def get_careplan_summary(self) -> CarePlanStatisticsResponse:
         total = self.repo.get_total_careplans()

@@ -14,12 +14,13 @@ export default function ProceduresPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.proceduresStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(ProceduresPageStyles, { name: "ProceduresPage" });
 
   useEffect(() => {
-    dispatch(getProceduresStatistics());
-  }, [dispatch]);
+    dispatch(getProceduresStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return (

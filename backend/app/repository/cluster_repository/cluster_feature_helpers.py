@@ -42,6 +42,11 @@ def _f(row, attr) -> float:
     return float(getattr(row, attr) or 0)
 
 
+def _f_opt(row, attr) -> float | None:
+    val = getattr(row, attr)
+    return float(val) if val is not None else None
+
+
 def cluster_size(db: Session, cluster_id: int) -> dict:
     """Outlier (-1) percentage is vs ALL patients; regular clusters are vs non-outliers."""
     filters = _cluster_filters(cluster_id)
@@ -100,13 +105,19 @@ def get_utilization(db: Session, cluster_id: int) -> dict:
 
     keys = [
         "avg_active_conditions", "avg_medications", "avg_procedures",
-        "avg_days_since_encounter", "avg_clinical_severity_score",
+        "avg_days_since_encounter",
         "avg_routine_care", "avg_acute_care", "avg_wellness_care",
         "avg_severe_care", "avg_distinct_providers",
     ]
     if not row:
-        return {k: 0.0 for k in keys}
-    return {k: _f(row, k) for k in keys}
+        return {
+            **{k: 0.0 for k in keys},
+            "avg_clinical_severity_score": None,
+        }
+    return {
+        **{k: _f(row, k) for k in keys},
+        "avg_clinical_severity_score": _f_opt(row, "avg_clinical_severity_score"),
+    }
 
 
 def get_disease_prevalence(db: Session, cluster_id: int) -> dict:

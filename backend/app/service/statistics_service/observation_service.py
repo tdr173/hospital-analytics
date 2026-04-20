@@ -11,8 +11,8 @@ from domain.schemas.statistics_schemas.observation_schema import (
 
 
 class ObservationService:
-    def __init__(self, db: Session):
-        self.repo = ObservationRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = ObservationRepository(db, range_str)
 
     def get_observation_summary(self) -> ObservationStatisticsResponse:
         total_observations = self.repo.get_total_observations()

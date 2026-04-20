@@ -24,6 +24,27 @@ from service.lllm_sql_agent_service import ask_ai
 
 current_folder = Path(__file__).parent
 
+# Columns used for global z-score outlier detection. The three _SKEWED ones are
+# log1p'd internally inside remove_outliers_zscore — z-scores on raw long-tailed
+# counts flag too many "outliers" just for being on the tail.
+OUTLIER_NUMERICAL_FEATURES = [
+    "age",
+    "total_medications",
+    "total_procedures",
+    "active_conditions_count",
+    "distinct_providers_seen",
+    "lifetime_medication_days",
+    "total_encounter_duration_hours",
+    "wellness_count",
+    "acute_care_count",
+    "severe_care_count",
+]
+_SKEWED_OUTLIER_COLS = {
+    "total_medications",
+    "lifetime_medication_days",
+    "total_encounter_duration_hours",
+}
+
 
 def build_patient_features(engine) -> pd.DataFrame:
     patient_features = pd.read_sql(
@@ -138,6 +159,42 @@ def build_patient_features(engine) -> pd.DataFrame:
                                                        ELSE 0
                                                        END
                                            )                   AS has_mental_health,
+
+                                           -- HEART DISEASE
+                                           MAX(CASE
+                                                   WHEN (LOWER(description) LIKE '%%heart failure%%'
+                                                       OR LOWER(description) LIKE '%%myocardial infarction%%'
+                                                       OR LOWER(description) LIKE '%%coronary%%'
+                                                       OR LOWER(description) LIKE '%%cardiac arrest%%'
+                                                       OR LOWER(description) LIKE '%%atrial fibrillation%%'
+                                                       OR LOWER(description) LIKE '%%arrhythmia%%'
+                                                       OR LOWER(description) LIKE '%%angina%%'
+                                                       OR LOWER(description) LIKE '%%ischemic heart%%'
+                                                       OR LOWER(description) LIKE '%%cardiomyopathy%%')
+                                                       AND LOWER(description) NOT LIKE '%%family history%%' THEN 1
+                                                   ELSE 0 END) AS has_heart_disease,
+
+                                           -- CHRONIC RESPIRATORY
+                                           MAX(CASE
+                                                   WHEN (LOWER(description) LIKE '%%copd%%'
+                                                       OR LOWER(description) LIKE '%%chronic obstructive%%'
+                                                       OR LOWER(description) LIKE '%%emphysema%%'
+                                                       OR LOWER(description) LIKE '%%chronic bronchitis%%'
+                                                       OR LOWER(description) LIKE '%%asthma%%'
+                                                       OR LOWER(description) LIKE '%%pulmonary fibrosis%%')
+                                                       AND LOWER(description) NOT LIKE '%%family history%%' THEN 1
+                                                   ELSE 0 END) AS has_chronic_resp,
+
+                                           -- ACTIVE ACUTE RESPIRATORY (still open: end_date IS NULL)
+                                           MAX(CASE
+                                                   WHEN (LOWER(description) LIKE '%%acute bronchitis%%'
+                                                       OR LOWER(description) LIKE '%%pneumonia%%'
+                                                       OR LOWER(description) LIKE '%%acute respiratory%%'
+                                                       OR LOWER(description) LIKE '%%acute upper respiratory%%'
+                                                       OR LOWER(description) LIKE '%%influenza%%'
+                                                       OR LOWER(description) LIKE '%%bronchiolitis%%')
+                                                       AND end_date IS NULL THEN 1
+                                                   ELSE 0 END) AS has_active_acute_resp
                                     FROM condition
                                     GROUP BY patient_id)
             SELECT patient_id,
@@ -586,18 +643,12 @@ def build_patient_features(engine) -> pd.DataFrame:
     df["severe_care_count"] = df["inpatient_count"] + df["snf_count"] + df["hospice_count"]
     df["preventive_to_reactive_ratio"] = df["wellness_count"] / (df["acute_care_count"] + df["severe_care_count"] + 1)
 
-    # --- clinical_severity_score: PCA over 3 correlated severity counts ------------
-    # log1p applied locally to the PCA input; the raw columns in df stay un-logged so
-    # downstream categorical bins below (medication_intensity, condition_burden) still
-    # see the true counts.
-    sev_cols = ["total_procedures", "total_medications", "active_conditions_count"]
-    for col in sev_cols:
+    # Fill severity-count NaNs to 0 — needed here because several downstream
+    # categorical bins (medication_intensity, condition_burden) read these raw
+    # counts. The clinical_severity_score PCA is now computed inside run_kprototypes
+    # so df itself stays fully unscaled.
+    for col in ["total_procedures", "total_medications", "active_conditions_count"]:
         df[col] = df[col].fillna(0)
-    sev_input = np.log1p(df[sev_cols].clip(lower=0).values)
-    sev_scaled = StandardScaler().fit_transform(sev_input)
-    sev_pca = PCA(n_components=1)
-    df["clinical_severity_score"] = sev_pca.fit_transform(sev_scaled)[:, 0]
-    print(f"clinical_severity_score PCA explained variance ratio: {sev_pca.explained_variance_ratio_[0]:.4f}")
 
     # --- Categorical bins from sparse observation numerics -------------------------
     # Rule: NEVER mean-impute sparse numerics — the artificial values shift k-prototypes
@@ -672,10 +723,8 @@ def build_patient_features(engine) -> pd.DataFrame:
                 "lifetime_medication_days", "total_encounter_duration_hours"]:
         df[col] = df[col].fillna(0)
 
-    # --- log1p on the three genuinely asymmetric numerics --------------------------
-    # Applied AFTER medication_intensity was bucketed from the raw count above.
-    for col in ["total_medications", "lifetime_medication_days", "total_encounter_duration_hours"]:
-        df[col] = np.log1p(df[col].clip(lower=0))
+    # log1p on the three skewed count columns was moved into run_kprototypes so
+    # raw values flow to the LLM, DB, and FE. Scaling is a clustering-only concern.
 
     # --- Drop replaced raw numerics and intermediate helpers -----------------------
     df = df.drop(columns=["avg_bmi", "avg_systolic_bp", "avg_glucose", "is_polypharmacy_raw"],
@@ -687,8 +736,21 @@ def build_patient_features(engine) -> pd.DataFrame:
 def plot_elbow_kproto(
         df, numerical_cols, categorical_cols, init, scaler, title, filename, location
 ):
+    # Mirror the transform pipeline used in run_kprototypes so the elbow curve
+    # reflects the same feature space as the real clustering run.
     df_scaled = df.copy()
-    df_scaled[numerical_cols] = scaler.fit_transform(df[numerical_cols].values)
+
+    for col in ["total_medications", "lifetime_medication_days", "total_encounter_duration_hours"]:
+        if col in numerical_cols:
+            df_scaled[col] = np.log1p(df_scaled[col].clip(lower=0).astype(float))
+
+    if "clinical_severity_score" in numerical_cols:
+        sev_cols = ["total_procedures", "total_medications", "active_conditions_count"]
+        sev_input = np.log1p(df[sev_cols].clip(lower=0).values.astype(float))
+        sev_standardized = StandardScaler().fit_transform(sev_input)
+        df_scaled["clinical_severity_score"] = PCA(n_components=1).fit_transform(sev_standardized)[:, 0]
+
+    df_scaled[numerical_cols] = scaler.fit_transform(df_scaled[numerical_cols].values)
 
     all_cols = numerical_cols + categorical_cols
     matrix = df_scaled[all_cols].to_numpy()
@@ -852,10 +914,38 @@ def run_kprototypes(
         tag = tag.replace("__", "_")
     tag = tag.strip("_")
 
-    # scale numerical features
+    # df_work stays RAW: it's what we return for the LLM prompt, DB persistence,
+    # and the FE. All clustering-only transforms (log1p, severity PCA, scaler)
+    # are applied to df_scaled, which is only used to build the clustering matrix.
     df_work = df.copy()
-    X_num_scaled = scaler.fit_transform(df_work[numerical_cols].values)
     df_scaled = df_work.copy()
+
+    # log1p the three skewed count columns (only if the config uses them).
+    skewed_count_cols = [
+        "total_medications",
+        "lifetime_medication_days",
+        "total_encounter_duration_hours",
+    ]
+    for col in skewed_count_cols:
+        if col in numerical_cols:
+            df_scaled[col] = np.log1p(df_scaled[col].clip(lower=0).astype(float))
+
+    # Derive clinical_severity_score from raw severity counts when the config
+    # includes it. We ALSO write it to df_work so plots / FE / features JSONB
+    # still have the value — it's a standardized PCA score by construction, so
+    # "unscaled" doesn't apply; raw severity inputs (total_procedures,
+    # total_medications, active_conditions_count) remain in df_work for the LLM.
+    if "clinical_severity_score" in numerical_cols:
+        sev_cols = ["total_procedures", "total_medications", "active_conditions_count"]
+        sev_input = np.log1p(df_work[sev_cols].clip(lower=0).values.astype(float))
+        sev_standardized = StandardScaler().fit_transform(sev_input)
+        sev_pca = PCA(n_components=1)
+        css = sev_pca.fit_transform(sev_standardized)[:, 0]
+        print(f"clinical_severity_score PCA explained variance ratio: {sev_pca.explained_variance_ratio_[0]:.4f}")
+        df_work["clinical_severity_score"] = css
+        df_scaled["clinical_severity_score"] = css
+
+    X_num_scaled = scaler.fit_transform(df_scaled[numerical_cols].values)
     df_scaled[numerical_cols] = X_num_scaled
 
     all_cols = numerical_cols + categorical_cols
@@ -914,14 +1004,20 @@ def run_kprototypes(
 
 def remove_outliers_zscore(df, threshold=4):
     # Compute z-scores per column, skipping zero-variance columns so they don't poison every row with NaN.
-    data = df[NUMERICAL_FEATURES].to_numpy(dtype=float)
+    cols = [c for c in OUTLIER_NUMERICAL_FEATURES if c in df.columns]
+    data = df[cols].to_numpy(dtype=float)
+
+    # log1p the skewed count cols internally so their heavy right tails don't
+    # blow z-scores up and flag half the cohort as outliers.
+    for i, col in enumerate(cols):
+        if col in _SKEWED_OUTLIER_COLS:
+            data[:, i] = np.log1p(np.clip(data[:, i], 0, None))
+
     mask = np.ones(len(df), dtype=bool)
-    skipped = []
-    for i, col in enumerate(NUMERICAL_FEATURES):
+    for i, col in enumerate(cols):
         col_vals = data[:, i]
         std = np.nanstd(col_vals)
         if std == 0 or np.isnan(std):
-            skipped.append(col)
             continue
         z = np.abs((col_vals - np.nanmean(col_vals)) / std)
         mask &= z < threshold
@@ -991,11 +1087,14 @@ CLUSTER DATA SUMMARIES:
         c_size = len(c_df)
         c_pct = (c_size / total_patients) * 100
 
+        # clinical_severity_score is a standardized PCA z-score (~N(0,1)) — not
+        # interpretable in absolute terms, so omit it. The LLM gets the raw severity
+        # inputs (total_procedures, total_medications, active_conditions_count) instead.
         mean_cols = [col for col in [
             'age', 'qaly', 'daly',
             'total_procedures', 'total_medications',
             'active_conditions_count', 'lifetime_medication_days',
-            'total_encounter_duration_hours', 'clinical_severity_score',
+            'total_encounter_duration_hours',
         ] if col in c_df.columns]
         c_means = c_df[mean_cols].mean().round(1).to_dict()
 

@@ -9,8 +9,8 @@ from domain.schemas.statistics_schemas.condition_schema import (
 
 
 class ConditionService:
-    def __init__(self, db: Session):
-        self.repo = ConditionRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = ConditionRepository(db, range_str)
 
     def get_condition_summary(self) -> ConditionStatisticsResponse:
         total = self.repo.get_total_conditions()

@@ -12,7 +12,6 @@ import Groups3Icon from "@mui/icons-material/Groups3";
 import GroupIcon from "@mui/icons-material/Group";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import EventNoteOutlinedIcon from "@mui/icons-material/EventNoteOutlined";
-import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
 import TimelineIcon from "@mui/icons-material/Timeline";
 import PersonAddOutlinedIcon from "@mui/icons-material/PersonAddOutlined";
 
@@ -77,12 +76,6 @@ const sidebarElements: SidebarElement[] = [
     name: "Doctors",
     icon: BadgeOutlinedIcon,
     forward: "/providers",
-    allowedRoles: ["MANAGER"],
-  },
-  {
-    name: "Facilities",
-    icon: AccountBalanceOutlinedIcon,
-    forward: "/organizations",
     allowedRoles: ["MANAGER"],
   },
   {

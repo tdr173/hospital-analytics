@@ -15,12 +15,13 @@ export default function ProvidersPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.providersStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(ProvidersPageStyles, { name: "ProvidersPage" });
 
   useEffect(() => {
-    dispatch(getProvidersStatistics());
-  }, [dispatch]);
+    dispatch(getProvidersStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return (

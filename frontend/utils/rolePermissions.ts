@@ -13,7 +13,6 @@ export const ROUTE_ROLES: RouteRoles[] = [
   { prefix: "/patients", allowed: ["MANAGER", "DOCTOR"] },
   { prefix: "/encounters", allowed: ["MANAGER", "DOCTOR", "PATIENT"] },
   { prefix: "/providers", allowed: ["MANAGER", "DOCTOR"] },
-  { prefix: "/organizations", allowed: ["MANAGER", "DOCTOR"] },
   { prefix: "/ask", allowed: ["MANAGER", "DOCTOR"] },
   { prefix: "/register-user", allowed: ["MANAGER", "DOCTOR", "PATIENT"] },
 ];

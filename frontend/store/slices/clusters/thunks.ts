@@ -147,11 +147,11 @@ export const getClusterDetail = createAsyncThunk<
   condition: (_, { getState }) => !getState().clusterDetail.loading,
 });
 
-export const getClusterRuns = createAsyncThunk<
+export const getClustersOverview = createAsyncThunk<
   ClustersResponse,
   void,
   { state: RootState; rejectValue: ErrorResponse }
->("getClusterRuns", async (_, thunkAPI) => {
+>("getClustersOverview", async (_, thunkAPI) => {
   try {
     const response = await fetch(`${API_BASE}/clusters`, {
       headers: defaultHeaders,

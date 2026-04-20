@@ -16,12 +16,13 @@ export default function PatientsPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.patientsStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(PatientsPageStyles, { name: "PatientsPage" });
 
   useEffect(() => {
-    dispatch(getPatientsStatistics());
-  }, [dispatch]);
+    dispatch(getPatientsStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return <div className={classes.loading}>Loading patient data...</div>;
