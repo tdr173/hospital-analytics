@@ -35,11 +35,11 @@ import CarePlansTab from "./components/CarePlansTab/CarePlansTab";
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
 const TAB_LABELS = [
-  "Observations",
+  "Test Results",
   "Conditions",
   "Medications",
   "Procedures",
-  "Immunizations",
+  "Vaccinations",
   "Allergies",
   "Care Plans",
 ];
@@ -138,7 +138,7 @@ export default function EncounterDetailPage() {
             className={classes.entityChip}
             onClick={() => router.push(`/providers/${encounter.providerId}`)}
           >
-            <span className={classes.entityChipLabel}>Clinician</span>
+            <span className={classes.entityChipLabel}>Doctor</span>
             <span className={classes.entityChipValue}>{encounter.providerName}</span>
           </div>
           <div

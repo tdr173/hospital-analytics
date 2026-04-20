@@ -6,16 +6,16 @@ import { StatisticsLayoutStyles } from "./styles";
 
 const statisticsTabs = [
   { name: "PATIENTS", forward: "/statistics/patients" },
-  { name: "ENCOUNTERS", forward: "/statistics/encounters" },
+  { name: "VISITS", forward: "/statistics/encounters" },
   { name: "CONDITIONS", forward: "/statistics/conditions" },
-  { name: "OBSERVATIONS", forward: "/statistics/observations" },
+  { name: "TEST RESULTS", forward: "/statistics/observations" },
   { name: "MEDICATIONS", forward: "/statistics/medications" },
   { name: "PROCEDURES", forward: "/statistics/procedures" },
-  { name: "IMMUNIZATIONS", forward: "/statistics/immunizations" },
+  { name: "VACCINATIONS", forward: "/statistics/immunizations" },
   { name: "ALLERGIES", forward: "/statistics/allergies" },
   { name: "CARE PLANS", forward: "/statistics/careplans" },
-  { name: "ORGANIZATIONS", forward: "/statistics/organizations" },
-  { name: "PROVIDERS", forward: "/statistics/providers" },
+  { name: "FACILITIES", forward: "/statistics/organizations" },
+  { name: "DOCTORS", forward: "/statistics/providers" },
 ];
 
 export default function StatisticsLayout({

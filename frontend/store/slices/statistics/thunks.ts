@@ -15,6 +15,7 @@ import {
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
 import { API_BASE } from "@/store/slices/clusters/thunks";
+import { appendScopeToUrl } from "@/utils/authScope";
 
 const defaultHeaders: Record<string, string> = {
   "ngrok-skip-browser-warning": "true",
@@ -334,7 +335,7 @@ export const getSqlAgentResponse = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("getSqlAgentResponse", async ({ question, history }, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/statistics/sql-agent`, {
+    const response = await fetch(appendScopeToUrl(`${API_BASE}/statistics/sql-agent`), {
       method: "POST",
       headers: {
         ...defaultHeaders,

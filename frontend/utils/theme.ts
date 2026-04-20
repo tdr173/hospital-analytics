@@ -72,6 +72,15 @@ export interface Theme {
       female: string;
       femaleBg: string;
     };
+    charts: {
+      gender: { male: string; female: string };
+      ageGroups: string[];
+      encounterClass: Record<string, string>;
+      burden: string[];
+      categorical: string[];
+      defaultPalette: string[];
+      outlier: string;
+    };
   };
   spacing: {
     xs: string;
@@ -199,6 +208,47 @@ const theme: Theme = {
       maleBg: "#dbeafe",
       female: "#9333ea",
       femaleBg: "#f3e8ff",
+    },
+    charts: {
+      gender: {
+        male: "#2563eb",
+        female: "#9333ea",
+      },
+      ageGroups: ["#006780", "#028fb0", "#6cd3f7", "#515f74", "#b7eaff"],
+      encounterClass: {
+        emergency: "#ef4444",
+        ambulatory: "#006780",
+        inpatient: "#8b5cf6",
+        wellness: "#10b981",
+        urgentcare: "#f59e0b",
+        other: "#515f74",
+      },
+      burden: ["#84CC16", "#EAB308", "#DC2626"],
+      categorical: [
+        "#DC2626",
+        "#2563EB",
+        "#16A34A",
+        "#F97316",
+        "#06B6D4",
+        "#7C3AED",
+        "#92400E",
+        "#EAB308",
+        "#9CA3AF",
+        "#BE185D",
+      ],
+      defaultPalette: [
+        "#006780",
+        "#028fb0",
+        "#6cd3f7",
+        "#515f74",
+        "#b7eaff",
+        "#3a4555",
+        "#d5e3fc",
+        "#00201d",
+        "#8ba4c4",
+        "#c6c6cd",
+      ],
+      outlier: "#9CA3AF",
     },
   },
   spacing: {

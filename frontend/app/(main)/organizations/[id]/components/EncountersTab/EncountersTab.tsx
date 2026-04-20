@@ -40,7 +40,7 @@ export default function EncountersTab({
           className={`${classes.gridRow} ${classes.encountersGridRow} ${classes.headerRow}`}
         >
           <div>Patient</div>
-          <div>Clinician</div>
+          <div>Doctor</div>
           <div>Date</div>
           <div>Type</div>
           <div>Description</div>

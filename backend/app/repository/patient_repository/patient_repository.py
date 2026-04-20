@@ -105,6 +105,9 @@ class PatientRepository:
         rows: int,
         sort_by: str,
         sort_type: str,
+        role: Optional[str] = None,
+        patient_id_scope: Optional[str] = None,
+        provider_id_scope: Optional[str] = None,
     ) -> PatientListResponse:
         sort_col = SORT_COL_MAP.get(sort_by, PatientModel.last_name)
         sort_expr = (
@@ -114,6 +117,18 @@ class PatientRepository:
         )
 
         filters = []
+
+        role_u = (role or "MANAGER").upper()
+        if role_u == "PATIENT" and patient_id_scope:
+            filters.append(PatientModel.patient_id == patient_id_scope)
+        elif role_u == "DOCTOR" and provider_id_scope:
+            panel = (
+                self.db.query(EncounterModel.patient_id)
+                .filter(EncounterModel.provider_id == provider_id_scope)
+                .distinct()
+                .subquery()
+            )
+            filters.append(PatientModel.patient_id.in_(panel))
 
         if search:
             filters.append(or_(

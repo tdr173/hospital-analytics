@@ -12,20 +12,10 @@ import {
 } from "recharts";
 import { CategoricalFeatureChartData } from "@/models/generic/clusters";
 import useClasses from "@/utils/useClasses";
+import theme from "@/utils/theme";
 import { StackedBarChartComponentStyles } from "./StackedBarChartComponentStyles";
 
-const ORDERED_COLORS = [
-  "#DC2626", // red
-  "#2563EB", // blue
-  "#16A34A", // green
-  "#F97316", // orange
-  "#06B6D4", // cyan
-  "#7C3AED", // purple
-  "#92400E", // brown
-  "#EAB308", // yellow
-  "#9CA3AF", // gray
-  "#BE185D", // pink
-];
+const ORDERED_COLORS = theme.colors.charts.categorical;
 
 function getCategoryColors(count: number): string[] {
   return ORDERED_COLORS.slice(0, count);

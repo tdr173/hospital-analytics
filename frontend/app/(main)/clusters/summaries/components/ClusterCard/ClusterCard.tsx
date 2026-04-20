@@ -70,7 +70,7 @@ export default function ClusterCard({ cluster }: Props) {
           </div>
         </div>
         <div className={classes.statBox}>
-          <div className={classes.statLabel}>Avg QALY</div>
+          <div className={classes.statLabel}>Avg Quality of Life</div>
           <div className={classes.statValue}>{cluster.avgQaly}</div>
         </div>
         <div className={classes.statBox}>

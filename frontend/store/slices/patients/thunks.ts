@@ -18,13 +18,15 @@ import {
 import { ErrorResponse } from "@/models/generic/generic";
 import { SequenceListItem } from "@/models/generic/sequences";
 import { API_BASE } from "@/store/slices/clusters/thunks";
+import { appendScopeToUrl } from "@/utils/authScope";
 
 const defaultHeaders: Record<string, string> = {
   "ngrok-skip-browser-warning": "true",
 };
 
 async function get<T>(url: string, label: string): Promise<T> {
-  const res = await fetch(url, { headers: defaultHeaders });
+  const scoped = appendScopeToUrl(url);
+  const res = await fetch(scoped, { headers: defaultHeaders });
   if (!res.ok) {
     toast.error(`Failed to load ${label}`, { toastId: `fetch-${label}` });
     throw new Error(`${res.status}`);

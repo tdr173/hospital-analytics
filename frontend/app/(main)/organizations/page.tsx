@@ -35,7 +35,7 @@ const COLUMNS = [
   { key: "phone", label: "Phone", width: 140 },
   {
     key: "providerCount",
-    label: "Clinicians",
+    label: "Doctors",
     sortable: true,
     width: 100,
     align: "right" as const,

@@ -18,6 +18,8 @@ import GenderPie from "./components/GenderPie/GenderPie";
 import RecentEncountersTable from "./components/RecentEncountersTable/RecentEncountersTable";
 import TopConditionsBar from "./components/TopConditionsBar/TopConditionsBar";
 import ClusterDistributionCard from "./components/ClusterDistributionCard/ClusterDistributionCard";
+import PatientSelfView from "@/components/PatientSelfView/PatientSelfView";
+import PracticeLlmSummaryCard from "@/components/PracticeLlmSummaryCard/PracticeLlmSummaryCard";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
@@ -26,21 +28,28 @@ export default function HomePage() {
   const router = useRouter();
   const classes = useClasses(HomePageStyles, { name: "HomePage" });
 
+  const role = useSelector((s: RootState) => s.auth.user?.role);
   const { data, loading, error } = useSelector(
     (state: RootState) => state.dashboard,
   );
 
   useEffect(() => {
+    if (role === "PATIENT") return;
     if (!data) dispatch(fetchDashboard());
-  }, [data, dispatch]);
+  }, [data, dispatch, role]);
 
-  if (loading)
-    return <div className={classes.loading}>Loading...</div>;
+  if (role === "PATIENT") {
+    return <PatientSelfView />;
+  }
+
+  if (loading) return <div className={classes.loading}>Loading...</div>;
   if (error) return <div className={classes.error}>{error}</div>;
   if (!data) return null;
 
   return (
     <div className={classes.container}>
+      {role === "DOCTOR" && <PracticeLlmSummaryCard />}
+
       <KpiPrimaryRow kpis={data.kpis} />
 
       <div className={classes.splitRow}>
@@ -61,9 +70,12 @@ export default function HomePage() {
         onEncounterClick={(id) => router.push(`/encounters/${id}`)}
       />
 
-      <TopConditionsBar data={data.topConditionsLastWeek} />
-
-      <ClusterDistributionCard data={data.clusterDistribution} />
+      {role === "MANAGER" && (
+        <>
+          <TopConditionsBar data={data.topConditionsLastWeek} />
+          <ClusterDistributionCard data={data.clusterDistribution} />
+        </>
+      )}
     </div>
   );
 }

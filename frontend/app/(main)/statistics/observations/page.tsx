@@ -25,7 +25,7 @@ export default function ObservationsPage() {
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading observation data...</div>
+      <div className={classes.loading}>Loading test result data...</div>
     );
   }
 
@@ -41,7 +41,7 @@ export default function ObservationsPage() {
     <div className={classes.container}>
       <div className={classes.summaryRow}>
         <div className={classes.summaryCard}>
-          <div className={classes.summaryLabel}>Total Observations</div>
+          <div className={classes.summaryLabel}>Total Test Results</div>
           <div className={classes.summaryValue}>
             {data.totalObservations.toLocaleString()}
           </div>
@@ -59,7 +59,7 @@ export default function ObservationsPage() {
       </div>
 
       <div className={classes.perPatientCard}>
-        <h3 className={classes.perPatientTitle}>Observations per Patient</h3>
+        <h3 className={classes.perPatientTitle}>Test Results per Patient</h3>
         <div className={classes.perPatientStats}>
           <div>
             <div className={classes.perPatientStatLabel}>Min</div>
@@ -85,7 +85,7 @@ export default function ObservationsPage() {
       <div className={classes.chartSection}>
         <BarChartComponent
           data={data.topObservationTypes}
-          title="Top Numeric Observation Types"
+          title="Top Numeric Test Types"
           color="#006780"
           showLabel
           bottomBorder={-10}
@@ -95,12 +95,12 @@ export default function ObservationsPage() {
       <div className={classes.grid}>
         <div className={classes.numericTable}>
           <h3 className={classes.numericTitle}>
-            Numeric Stats per Observation Type
+            Numeric Stats per Test Type
           </h3>
           <table className={classes.table}>
             <thead>
               <tr>
-                <th className={classes.thFirst}>Observation</th>
+                <th className={classes.thFirst}>Test</th>
                 <th className={classes.th}>Records</th>
                 <th className={classes.th}>Patients</th>
                 <th className={classes.th}>Patient %</th>
@@ -133,11 +133,11 @@ export default function ObservationsPage() {
       {data.categoricalStats && data.categoricalStats.length > 0 && (
         <div className={classes.gridWithMargin}>
           <div className={classes.numericTable}>
-            <h3 className={classes.numericTitle}>Categorical Observations</h3>
+            <h3 className={classes.numericTitle}>Categorical Test Results</h3>
             <table className={classes.table}>
               <thead>
                 <tr>
-                  <th className={classes.thFirst}>Observation</th>
+                  <th className={classes.thFirst}>Test</th>
                   <th className={classes.th}>Records</th>
                   <th className={classes.th}>Patients</th>
                   <th className={classes.th}>Patient %</th>

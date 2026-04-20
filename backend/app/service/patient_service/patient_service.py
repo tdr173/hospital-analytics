@@ -6,8 +6,10 @@ class PatientService:
     def __init__(self, repo: PatientRepository):
         self.repo = repo
 
-    def get_patients(self, search, gender, age_group, status, race, marital, city, page, rows, sort_by, sort_type):
-        return self.repo.get_patients(search, gender, age_group, status, race, marital, city, page, rows, sort_by, sort_type)
+    def get_patients(self, search, gender, age_group, status, race, marital, city, page, rows, sort_by, sort_type,
+                     role=None, patient_id_scope=None, provider_id_scope=None):
+        return self.repo.get_patients(search, gender, age_group, status, race, marital, city, page, rows, sort_by, sort_type,
+                                      role=role, patient_id_scope=patient_id_scope, provider_id_scope=provider_id_scope)
 
     def get_patient(self, patient_id: str):
         return self.repo.get_patient(patient_id)

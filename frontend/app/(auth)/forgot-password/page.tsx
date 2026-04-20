@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
             label="Email Address"
             type="email"
             required
-            placeholder="clinician@hospital.org"
+            placeholder="doctor@hospital.org"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             error={!!error}

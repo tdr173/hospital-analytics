@@ -31,6 +31,7 @@ import currentOrganizationReducer from "./slices/organizations/current-organizat
 import dashboardReducer from "./slices/dashboard/dashboard-slice";
 import encountersReducer from "./slices/encounters/encounters-slice";
 import currentEncounterReducer from "./slices/encounters/current-encounter-slice";
+import authReducer from "./slices/auth/auth-slice";
 
 export const store = configureStore({
   reducer: {
@@ -65,6 +66,7 @@ export const store = configureStore({
     dashboard: dashboardReducer,
     encounters: encountersReducer,
     currentEncounter: currentEncounterReducer,
+    auth: authReducer,
   },
 });
 

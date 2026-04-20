@@ -345,10 +345,27 @@ def build_history_string(history: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def run_agent(db: Session, prompt: str, history=None):
+DOCTOR_SCOPE_CLAUSE = """\
+
+MANDATORY ROLE SCOPE — DOCTOR (provider_id = '{provider_id}'):
+- Every SQL query you generate MUST restrict results to encounters where provider_id = '{provider_id}'.
+- When the question is about patients, restrict to patients who have at least one encounter with that provider_id. Use: patient.patient_id IN (SELECT DISTINCT patient_id FROM encounter WHERE provider_id = '{provider_id}').
+- Never expose other doctors' patients, encounters, or aggregate counts. If the question cannot be answered under this scope, say so in the final answer.
+"""
+
+
+def run_agent(db: Session, prompt: str, history=None, role: str = None, provider_id: str = None):
+    user_prompt = prompt
+    if role and role.upper() == "DOCTOR" and provider_id:
+        user_prompt = (
+            DOCTOR_SCOPE_CLAUSE.format(provider_id=provider_id)
+            + "\n\nUser question: "
+            + prompt
+        )
+
     initial_state = {
         "db": db,
-        "user_prompt": prompt,
+        "user_prompt": user_prompt,
         "chat_history": build_history_string(history or []),
         "translated_prompt": "",
         "sql_query": "",
@@ -360,6 +377,13 @@ def run_agent(db: Session, prompt: str, history=None):
     }
 
     final_state = graph.invoke(initial_state, {"recursion_limit": 20})
+
+    if role and role.upper() == "DOCTOR" and provider_id:
+        sql = final_state.get("sql_query", "") or ""
+        if provider_id not in sql:
+            return {
+                "response": "Unable to answer under doctor scope — the generated query did not reference your provider id. Try rephrasing.",
+            }
 
     if final_state.get("error_message") == "NOT_RETRIEVAL":
         return {"response": "I can only help with data retrieval questions. Please ask something about the database."}

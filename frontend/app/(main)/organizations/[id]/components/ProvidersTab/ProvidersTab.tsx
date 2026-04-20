@@ -20,9 +20,9 @@ export default function ProvidersTab({
   const classes = useClasses(ProvidersTabStyles, { name: "OrgProvidersTab" });
 
   if (loading)
-    return <div className={classes.tabLoading}>Loading clinicians...</div>;
+    return <div className={classes.tabLoading}>Loading doctors...</div>;
   if (!data.length)
-    return <div className={classes.emptyState}>No clinicians found.</div>;
+    return <div className={classes.emptyState}>No doctors found.</div>;
 
   return (
     <div className={classes.container}>

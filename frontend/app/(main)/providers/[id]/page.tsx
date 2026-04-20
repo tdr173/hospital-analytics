@@ -127,12 +127,12 @@ export default function ProviderDetailPage() {
   }, [id, dispatch]);
 
   if (loading) {
-    return <div className={classes.pageLoading}>Loading clinician profile...</div>;
+    return <div className={classes.pageLoading}>Loading doctor profile...</div>;
   }
 
   if (error || !provider) {
     return (
-      <div className={classes.pageError}>{error ?? "Clinician not found."}</div>
+      <div className={classes.pageError}>{error ?? "Doctor not found."}</div>
     );
   }
 
@@ -153,7 +153,7 @@ export default function ProviderDetailPage() {
           />
         </div>
         <div className={classes.nameBlock}>
-          <p className={classes.profileLabel}>Clinician Profile</p>
+          <p className={classes.profileLabel}>Doctor Profile</p>
           <h1 className={classes.providerFullName}>
             {clearName(provider.firstName, provider.lastName) || "Unknown Name"}
           </h1>

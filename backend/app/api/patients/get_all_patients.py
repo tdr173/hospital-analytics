@@ -7,6 +7,7 @@ from domain import PatientListResponse
 from repository import PatientRepository
 from service import PatientService
 from .patient_router import patient_router
+from api._scope import Scope, scope_dep
 
 import re
 
@@ -28,6 +29,7 @@ async def get_patients(
     sort_by: str = Query("lastName", alias="sortBy"),
     sort_type: str = Query("asc", alias="sortType"),
     db: Session = Depends(get_db),
+    scope: Scope = Depends(scope_dep),
 ):
     service = PatientService(PatientRepository(db))
     return service.get_patients(
@@ -42,4 +44,7 @@ async def get_patients(
         rows=rows,
         sort_by=_to_snake(sort_by),
         sort_type=sort_type,
+        role=scope.role,
+        patient_id_scope=scope.patient_id,
+        provider_id_scope=scope.provider_id,
     )

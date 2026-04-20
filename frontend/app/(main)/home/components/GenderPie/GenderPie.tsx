@@ -2,13 +2,13 @@
 
 import useClasses from "@/utils/useClasses";
 import theme from "@/utils/theme";
-import PieChartComponent from "@/components/generic_components/PieChartComponent/PieChartComponent";
+import BarChartComponent from "@/components/generic_components/BarChartComponent/BarChartComponent";
 import { GenderDistributionItem } from "@/models/generic/dashboard";
 import { GenderPieStyles } from "./GenderPieStyles";
 
 const GENDER_COLORS: Record<string, string> = {
-  M: theme.colors.gender.male,
-  F: theme.colors.gender.female,
+  M: theme.colors.charts.gender.male,
+  F: theme.colors.charts.gender.female,
 };
 
 interface Props {
@@ -18,7 +18,7 @@ interface Props {
 export default function GenderPie({ data }: Props) {
   const classes = useClasses(GenderPieStyles, { name: "GenderPie" });
 
-  const pieData = data.map((d) => {
+  const barData = data.map((d) => {
     const name = d.gender === "M" ? "Male" : d.gender === "F" ? "Female" : d.gender;
     return {
       name,
@@ -33,10 +33,10 @@ export default function GenderPie({ data }: Props) {
   return (
     <div className={classes.card}>
       <p className={classes.title}>Gender</p>
-      {pieData.length === 0 ? (
+      {barData.length === 0 ? (
         <div className={classes.empty}>No patient data available.</div>
       ) : (
-        <PieChartComponent data={pieData} title="" colors={colors} />
+        <BarChartComponent data={barData} title="" colors={colors} />
       )}
     </div>
   );

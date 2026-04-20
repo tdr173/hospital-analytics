@@ -9,6 +9,7 @@ import {
   Legend,
 } from "recharts";
 import useClasses from "@/utils/useClasses";
+import theme from "@/utils/theme";
 import { PieChartStyles } from "./PieChartStyles";
 
 interface ChartEntry {
@@ -23,18 +24,7 @@ interface PieChartComponentProps {
   colors?: string[];
 }
 
-const DEFAULT_COLORS = [
-  "#006780",
-  "#028fb0",
-  "#6cd3f7",
-  "#515f74",
-  "#b7eaff",
-  "#3a4555",
-  "#d5e3fc",
-  "#00201d",
-  "#8ba4c4",
-  "#c6c6cd",
-];
+const DEFAULT_COLORS = theme.colors.charts.defaultPalette;
 
 export default function PieChartComponent({
   data,

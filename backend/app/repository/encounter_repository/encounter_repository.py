@@ -35,6 +35,9 @@ class EncounterRepository:
         rows: int,
         sort_by: str,
         sort_type: str,
+        role: Optional[str] = None,
+        patient_id_scope: Optional[str] = None,
+        provider_id_scope: Optional[str] = None,
     ) -> EncounterListResponse:
         sort_col = SORT_COL_MAP.get(sort_by, EncounterModel.start_date)
         sort_expr = (
@@ -45,6 +48,12 @@ class EncounterRepository:
 
         enc_filters = []
         patient_filters = []
+
+        role_u = (role or "MANAGER").upper()
+        if role_u == "PATIENT" and patient_id_scope:
+            enc_filters.append(EncounterModel.patient_id == patient_id_scope)
+        elif role_u == "DOCTOR" and provider_id_scope:
+            enc_filters.append(EncounterModel.provider_id == provider_id_scope)
 
         if search:
             patient_filters.append(or_(

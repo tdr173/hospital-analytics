@@ -7,13 +7,7 @@ import { EncounterClassItem } from "@/models/generic/dashboard";
 import { LastWeekClassPieStyles } from "./LastWeekClassPieStyles";
 import { capitalize } from "../../utils/formatters";
 
-const ENCOUNTER_CLASS_COLORS: Record<string, string> = {
-  emergency: "#ef4444",
-  ambulatory: theme.colors.primary.main,
-  inpatient: "#8b5cf6",
-  wellness: "#10b981",
-  urgentcare: "#f59e0b",
-};
+const ENCOUNTER_CLASS_COLORS = theme.colors.charts.encounterClass;
 
 interface Props {
   data: EncounterClassItem[];

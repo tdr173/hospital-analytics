@@ -43,7 +43,7 @@ const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 function MetricsRow({ s, classes }: { s: PatientSummary; classes: any }) {
   return (
     <div className={classes.metricsRow}>
-      <MetricComponent label="QALY" value={s.qaly} />
+      <MetricComponent label="Quality of Life" value={s.qaly} />
       <MetricComponent label="Avg BMI" value={s.avgBmi} unit="kg/m²" />
       <MetricComponent label="Active Conditions" value={s.activeConditions} />
       <MetricComponent label="Total Medications" value={s.totalMedications} />
@@ -58,7 +58,7 @@ const TAB_LABELS = [
   "Conditions",
   "Medications",
   "Procedures",
-  "Immunizations",
+  "Vaccinations",
   "Allergies",
   "Care Plans",
   "Visits",

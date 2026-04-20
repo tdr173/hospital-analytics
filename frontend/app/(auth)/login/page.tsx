@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
 import StyledInput from "@/components/generic_components/StyledInput/StyledInput";
 import StyledButton from "@/components/generic_components/StyledButton/StyledButton";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
@@ -9,6 +10,15 @@ import Link from "next/link";
 import * as yup from "yup";
 import useClasses from "@/utils/useClasses";
 import { LoginPageStyles } from "./styles";
+import { AppDispatch } from "@/store";
+import { login } from "@/store/slices/auth/auth-slice";
+import {
+  SEEDED_USERS,
+  fetchDemoPatientId,
+  fetchDemoProviderId,
+} from "@/store/slices/auth/thunks";
+
+const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
 const loginSchema = yup.object({
   email: yup
@@ -23,6 +33,7 @@ const loginSchema = yup.object({
 
 export default function LoginPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
@@ -47,6 +58,24 @@ export default function LoginPage() {
       return;
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+    const role = SEEDED_USERS[normalizedEmail];
+    if (!role) {
+      setErrors({
+        email: "Email not recognized. Use one of the seed accounts.",
+      });
+      return;
+    }
+
+    let patientId: string | undefined;
+    let providerId: string | undefined;
+    if (role === "PATIENT") {
+      patientId = await fetchDemoPatientId();
+    } else if (role === "DOCTOR") {
+      providerId = await fetchDemoProviderId();
+    }
+
+    dispatch(login({ email: normalizedEmail, role, patientId, providerId }));
     router.push("/home");
   };
 
@@ -74,7 +103,7 @@ export default function LoginPage() {
           label="Email Address"
           type="email"
           required
-          placeholder="clinician@hospital.org"
+          placeholder="doctor@hospitai.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           error={!!errors.email}

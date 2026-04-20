@@ -169,7 +169,7 @@ function ProvidersPageContent() {
         <IconButton
           size="small"
           onClick={() => router.push(`/providers/${p.providerId}`)}
-          aria-label="View clinician"
+          aria-label="View doctor"
           sx={{
             padding: "4px",
             color: theme.colors.primary.main,
@@ -193,7 +193,7 @@ function ProvidersPageContent() {
           label="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search clinicians by name"
+          placeholder="Search doctors by name"
           startIcon={
             <SearchIcon sx={{ fontSize: "1.1rem", color: "#6b7280" }} />
           }
@@ -262,7 +262,7 @@ function ProvidersPageContent() {
           sortBy={sortBy}
           sortType={sortType}
           onSort={handleSort}
-          emptyMessage="No clinicians match the selected filters."
+          emptyMessage="No doctors match the selected filters."
         />
       </div>
     </div>

@@ -105,7 +105,7 @@ export default function OrganizationDetailPage() {
             },
           }}
         >
-          <Tab label="Clinicians" disableRipple />
+          <Tab label="Doctors" disableRipple />
           <Tab label="Visits" disableRipple />
         </Tabs>
 

@@ -8,6 +8,7 @@ from domain import EncounterListResponse
 from repository import EncounterRepository
 from service import EncounterService
 from .encounter_router import encounter_router
+from api._scope import Scope, scope_dep
 
 
 def _to_snake(name: str) -> str:
@@ -25,6 +26,7 @@ async def get_encounters(
     sort_by: str = Query("startDate", alias="sortBy"),
     sort_type: str = Query("desc", alias="sortType"),
     db: Session = Depends(get_db),
+    scope: Scope = Depends(scope_dep),
 ):
     return EncounterService(EncounterRepository(db)).get_encounters(
         search=search,
@@ -35,4 +37,7 @@ async def get_encounters(
         rows=rows,
         sort_by=_to_snake(sort_by),
         sort_type=sort_type,
+        role=scope.role,
+        patient_id_scope=scope.patient_id,
+        provider_id_scope=scope.provider_id,
     )

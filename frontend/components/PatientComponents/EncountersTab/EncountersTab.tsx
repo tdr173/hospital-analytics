@@ -30,7 +30,7 @@ export default function EncountersTab({ data }: { data: EncounterItem[] }) {
               <div>Date</div>
               <div>Type</div>
               <div>Description</div>
-              <div>Clinician</div>
+              <div>Doctor</div>
               <div>Facility</div>
               <div>Duration</div>
             </div>

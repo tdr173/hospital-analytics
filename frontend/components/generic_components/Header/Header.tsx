@@ -1,9 +1,11 @@
 "use client";
 
+import { useSelector } from "react-redux";
 import useClasses from "@/utils/useClasses";
 import headerStyles from "./HeaderStyles";
 import UserTypeTag from "../../UserTypeTag/UserTypeTag";
 import { usePathname } from "next/navigation";
+import type { RootState } from "@/store";
 
 const ROUTE_TITLES: Record<string, string> = {
   "/statistics": "Statistics",
@@ -20,6 +22,7 @@ function capitalize(str: string) {
 export default function Header() {
   const classes = useClasses(headerStyles, { name: "HeaderStyles" });
   const pathname = usePathname();
+  const role = useSelector((s: RootState) => s.auth.user?.role);
 
   const matchedKey = Object.keys(ROUTE_TITLES)
     .sort((a, b) => b.length - a.length)
@@ -32,7 +35,7 @@ export default function Header() {
   return (
     <div className={classes.headerContainer}>
       <span className={classes.pageTitle}>{title}</span>
-      <UserTypeTag userType="admin" />
+      {role && <UserTypeTag userType={role} />}
     </div>
   );
 }

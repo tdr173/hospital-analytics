@@ -27,7 +27,7 @@ export default function RecentEncountersTable({
       <p className={classes.title}>Recent Visits</p>
       <div className={`${classes.grid} ${classes.header}`}>
         <div>Patient</div>
-        <div>Clinician</div>
+        <div>Doctor</div>
         <div>Facility</div>
         <div>Date</div>
         <div>Type</div>

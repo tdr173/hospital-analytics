@@ -5,6 +5,7 @@ import theme from "@/utils/theme";
 import { ClusterDemographics } from "@/models/generic/clusters";
 import { ClusterDemographicsGridStyles } from "./ClusterDemographicsGridStyles";
 import PieChartComponent from "@/components/generic_components/PieChartComponent/PieChartComponent";
+import BarChartComponent from "@/components/generic_components/BarChartComponent/BarChartComponent";
 
 interface Props {
   demographics: ClusterDemographics;
@@ -34,7 +35,7 @@ const BURDEN_ORDER = ["low", "medium", "high"];
 const MARITAL_ORDER = ["M", "S", "D", "W"];
 const SMOKING_ORDER = ["current", "former", "never"];
 
-const BURDEN_COLORS = ["#84CC16", "#EAB308", "#DC2626"];
+const BURDEN_COLORS = theme.colors.charts.burden;
 
 function mapDistribution(
   dist: Record<string, number>,
@@ -68,10 +69,13 @@ export default function ClusterDemographicsGrid({ demographics }: Props) {
     <div className={classes.card}>
       <p className={classes.sectionTitle}>Demographics</p>
       <div className={classes.grid}>
-        <PieChartComponent
+        <BarChartComponent
           title="Gender"
           data={genderData}
-          colors={[theme.colors.gender.female, theme.colors.gender.male]}
+          colors={[
+            theme.colors.charts.gender.female,
+            theme.colors.charts.gender.male,
+          ]}
         />
         <PieChartComponent title="Marital Status" data={maritalData} />
         <PieChartComponent title="Smoking Status" data={smokingData} />

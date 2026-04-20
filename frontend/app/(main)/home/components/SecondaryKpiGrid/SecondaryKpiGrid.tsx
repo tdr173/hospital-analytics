@@ -22,11 +22,11 @@ export default function SecondaryKpiGrid({ kpis }: Props) {
 
   const items = [
     { key: "totalConditions", label: "Total Conditions", value: kpis.totalConditions.toLocaleString(), Icon: LocalHospitalOutlinedIcon },
-    { key: "totalCareplans", label: "Total Careplans", value: kpis.totalCareplans.toLocaleString(), Icon: AssignmentOutlinedIcon },
+    { key: "totalCareplans", label: "Total Care Plans", value: kpis.totalCareplans.toLocaleString(), Icon: AssignmentOutlinedIcon },
     { key: "totalProcedures", label: "Total Procedures", value: kpis.totalProcedures.toLocaleString(), Icon: MedicalServicesOutlinedIcon },
     { key: "totalOrganizations", label: "Total Facilities", value: kpis.totalOrganizations.toLocaleString(), Icon: AccountBalanceOutlinedIcon },
     { key: "avgEncountersPerPatient", label: "Avg Visits / Patient", value: kpis.avgEncountersPerPatient.toFixed(2), Icon: TrendingUpOutlinedIcon },
-    { key: "activeCareplans", label: "Active Careplans", value: kpis.activeCareplans.toLocaleString(), Icon: AssignmentTurnedInOutlinedIcon },
+    { key: "activeCareplans", label: "Active Care Plans", value: kpis.activeCareplans.toLocaleString(), Icon: AssignmentTurnedInOutlinedIcon },
     { key: "newPatientsLast30Days", label: "New Patients (Last 30 Days)", value: kpis.newPatientsLast30Days.toLocaleString(), Icon: PersonAddAlt1OutlinedIcon },
     { key: "avgPatientAge", label: "Avg Patient Age", value: `${kpis.avgPatientAge.toFixed(1)} yrs`, Icon: CakeOutlinedIcon },
   ];

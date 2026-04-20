@@ -8,6 +8,7 @@ import useClasses from "@/utils/useClasses";
 import { EncountersPageStyles } from "./EncountersPageStyles";
 import BarChartComponent from "@/components/generic_components/BarChartComponent/BarChartComponent";
 import PieChartComponent from "@/components/generic_components/PieChartComponent/PieChartComponent";
+import theme from "@/utils/theme";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
@@ -49,19 +50,16 @@ export default function EncountersPage() {
         <PieChartComponent
           data={data.encounterClass}
           title="Visit Type Distribution"
-          colors={[
-            "#006780",
-            "#028fb0",
-            "#6cd3f7",
-            "#3a4555",
-            "#515f74",
-            "#b7eaff",
-          ]}
+          colors={data.encounterClass.map(
+            (d) =>
+              theme.colors.charts.encounterClass[d.name.toLowerCase()] ??
+              theme.colors.charts.encounterClass.other,
+          )}
         />
         <BarChartComponent
           data={data.topDescriptions}
           title="Top Visit Reasons"
-          color="#006780"
+          color={theme.colors.primary.main}
           bottomBorder={-20}
         />
 
@@ -98,7 +96,7 @@ export default function EncountersPage() {
         <BarChartComponent
           data={data.topReasonDescriptions}
           title="Top Visit Reasons"
-          color="#028fb0"
+          color={theme.colors.primary.light}
           showLabel
           bottomBorder={-10}
         />

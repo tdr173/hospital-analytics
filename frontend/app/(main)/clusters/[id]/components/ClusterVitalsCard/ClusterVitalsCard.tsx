@@ -22,8 +22,8 @@ export default function ClusterVitalsCard({ vitals }: Props) {
     { label: "Avg BMI", value: vitals.avgBmi },
     { label: "Avg Systolic BP", value: vitals.avgSystolicBp, unit: "mmHg" },
     { label: "Avg Glucose", value: vitals.avgGlucose, unit: "mg/dL" },
-    { label: "Avg QALY", value: vitals.avgQaly },
-    { label: "Avg DALY", value: vitals.avgDaly },
+    { label: "Avg Quality of Life", value: vitals.avgQaly },
+    { label: "Avg Disease Burden", value: vitals.avgDaly },
   ];
 
   return (

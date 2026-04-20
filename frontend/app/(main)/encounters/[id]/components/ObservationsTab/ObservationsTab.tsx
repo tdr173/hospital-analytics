@@ -16,7 +16,7 @@ export default function ObservationsTab({ data }: Props) {
     name: "ObservationsTab",
   });
   if (!data.length) {
-    return <div className={classes.emptyState}>No observations recorded.</div>;
+    return <div className={classes.emptyState}>No test results recorded.</div>;
   }
 
   const maxNumeric = Math.max(...data.map((d) => d.valueNumeric ?? 0), 1);

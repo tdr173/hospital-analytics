@@ -1,11 +1,12 @@
 "use client";
 
 import useClasses from "@/utils/useClasses";
+import theme from "@/utils/theme";
 import PieChartComponent from "@/components/generic_components/PieChartComponent/PieChartComponent";
 import { AgeGroupItem } from "@/models/generic/dashboard";
 import { AgeGroupsPieStyles } from "./AgeGroupsPieStyles";
 
-const AGE_GROUP_COLORS = ["#006780", "#028fb0", "#6cd3f7", "#515f74", "#b7eaff"];
+const AGE_GROUP_COLORS = theme.colors.charts.ageGroups;
 
 interface Props {
   data: AgeGroupItem[];

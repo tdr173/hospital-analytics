@@ -27,7 +27,7 @@ export default function ClusterBurdenCard({ utilization, color }: Props) {
     { label: "Medications", value: utilization.avgMedications },
     { label: "Procedures", value: utilization.avgProcedures },
     { label: "Days Since Last Visit", value: utilization.avgDaysSinceEncounter },
-    { label: "Different Clinicians", value: utilization.avgDistinctProviders },
+    { label: "Different Doctors", value: utilization.avgDistinctProviders },
   ];
 
   const careTypes = [

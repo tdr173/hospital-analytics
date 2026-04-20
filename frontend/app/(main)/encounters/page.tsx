@@ -35,7 +35,7 @@ const COLUMNS = [
   { key: "startDate", label: "Date", sortable: true, width: 110 },
   { key: "encounterClass", label: "Type", sortable: true, width: 110 },
   { key: "patientName", label: "Patient", width: 160 },
-  { key: "providerName", label: "Clinician", width: 160 },
+  { key: "providerName", label: "Doctor", width: 160 },
   { key: "organizationName", label: "Facility", width: 180 },
   { key: "description", label: "Description", width: 180 },
   {

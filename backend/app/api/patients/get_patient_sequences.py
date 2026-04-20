@@ -7,8 +7,14 @@ from domain import SequenceListItem
 from repository import PatientRepository
 from service import PatientService
 from .patient_router import patient_router
+from api._scope import Scope, scope_dep, require_patient_access
 
 
 @patient_router.get("/{patient_id}/sequences", response_model=List[SequenceListItem])
-async def get_patient_sequences(patient_id: str, db: Session = Depends(get_db)):
+async def get_patient_sequences(
+    patient_id: str,
+    db: Session = Depends(get_db),
+    scope: Scope = Depends(scope_dep),
+):
+    require_patient_access(scope, patient_id)
     return PatientService(PatientRepository(db)).get_patient_sequences(patient_id)

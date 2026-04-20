@@ -25,7 +25,7 @@ export default function ImmunizationsPage() {
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading immunization data...</div>
+      <div className={classes.loading}>Loading vaccination data...</div>
     );
   }
 
@@ -41,13 +41,13 @@ export default function ImmunizationsPage() {
     <div className={classes.container}>
       <div className={classes.summaryRow}>
         <div className={classes.summaryCard}>
-          <div className={classes.summaryLabel}>Total Immunizations</div>
+          <div className={classes.summaryLabel}>Total Vaccinations</div>
           <div className={classes.summaryValue}>
             {data.totalImmunizations.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
-          <div className={classes.summaryLabel}>Unique Immunizations</div>
+          <div className={classes.summaryLabel}>Unique Vaccinations</div>
           <div className={classes.summaryValue}>
             {data.uniqueImmunizations.toLocaleString()}
           </div>
@@ -59,7 +59,7 @@ export default function ImmunizationsPage() {
       </div>
 
       <div className={classes.perPatientCard}>
-        <h3 className={classes.perPatientTitle}>Immunizations per Patient</h3>
+        <h3 className={classes.perPatientTitle}>Vaccinations per Patient</h3>
         <div className={classes.perPatientStats}>
           <div>
             <div className={classes.perPatientStatLabel}>Min</div>
@@ -85,7 +85,7 @@ export default function ImmunizationsPage() {
       <div className={classes.chartContainer}>
         <BarChartComponent
           data={data.topImmunizations}
-          title="Top 15 Immunizations"
+          title="Top 15 Vaccinations"
           color="#006780"
           showLabel
           bottomBorder={-8}

@@ -5,8 +5,10 @@ class EncounterService:
     def __init__(self, repo: EncounterRepository):
         self.repo = repo
 
-    def get_encounters(self, search, encounter_class, date_from, date_to, page, rows, sort_by, sort_type):
-        return self.repo.get_encounters(search, encounter_class, date_from, date_to, page, rows, sort_by, sort_type)
+    def get_encounters(self, search, encounter_class, date_from, date_to, page, rows, sort_by, sort_type,
+                       role=None, patient_id_scope=None, provider_id_scope=None):
+        return self.repo.get_encounters(search, encounter_class, date_from, date_to, page, rows, sort_by, sort_type,
+                                        role=role, patient_id_scope=patient_id_scope, provider_id_scope=provider_id_scope)
 
     def get_encounter(self, encounter_id: str):
         return self.repo.get_encounter(encounter_id)

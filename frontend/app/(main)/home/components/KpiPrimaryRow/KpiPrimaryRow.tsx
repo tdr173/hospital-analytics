@@ -25,7 +25,7 @@ export default function KpiPrimaryRow({ kpis }: Props) {
     },
     {
       key: "totalProviders",
-      label: "Total Clinicians",
+      label: "Total Doctors",
       value: (kpis.totalProviders ?? 0).toLocaleString(),
       sub: null,
       Icon: BadgeOutlinedIcon,
