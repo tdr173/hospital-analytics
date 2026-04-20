@@ -550,43 +550,46 @@ def build_patient_features(engine) -> pd.DataFrame:
 
     df = patient_features.copy()
 
+    # Merge the 19 feature frames built from SQL above. patient_features is the base
+    # (already copied into df), so it is NOT re-merged here.
     for right_df in [
-    patient_features,
-    encounter_features,
-    condition_features,
-    disease_flags,
-    inpatient_history,
-    medication_features,
-    procedure_features,
-    observation_features,
-    active_conditions_features,
-    dominant_careplan_features,
-    provider_features,
-    ooh_features,
-    substance_use_features,
-    pain_management_features,
-    thirty_day_readmission_features,
-    lifetime_medication_features,
-    encounter_duration_features,
-    cholesterol_features,
-    pregnancy_features
-]:
+        encounter_features,
+        dominant_encounter_features,
+        condition_features,
+        disease_flags,
+        inpatient_history,
+        medication_features,
+        procedure_features,
+        observation_features,
+        active_conditions_features,
+        dominant_careplan_features,
+        provider_features,
+        ooh_features,
+        substance_use_features,
+        pain_management_features,
+        thirty_day_readmission_features,
+        lifetime_medication_features,
+        encounter_duration_features,
+        cholesterol_features,
+        pregnancy_features,
+    ]:
         df = df.merge(right_df, on="patient_id", how="left")
 
-    # Care-class aggregates: split utilization into 4 axes.
+    # --- Encounter-count aggregates ------------------------------------------------
+    # 0 = "no encounters of that class", semantically correct — no imputation bias.
     for col in ["ambulatory_count", "outpatient_count", "emergency_count", "urgentcare_count",
                 "wellness_count", "inpatient_count", "snf_count", "hospice_count"]:
-        if col in df.columns:
-            df[col] = df[col].fillna(0)
+        df[col] = df[col].fillna(0)
+
     df["routine_care_count"] = df["ambulatory_count"] + df["outpatient_count"]
     df["acute_care_count"] = df["emergency_count"] + df["urgentcare_count"]
     df["severe_care_count"] = df["inpatient_count"] + df["snf_count"] + df["hospice_count"]
-
-    # Computed from raw counts before log1p transform.
     df["preventive_to_reactive_ratio"] = df["wellness_count"] / (df["acute_care_count"] + df["severe_care_count"] + 1)
 
-    # clinical_severity_score: PCA axis over 3 correlated severity counts.
-    # log1p locally (don't mutate df — those columns are log1p'd later for display).
+    # --- clinical_severity_score: PCA over 3 correlated severity counts ------------
+    # log1p applied locally to the PCA input; the raw columns in df stay un-logged so
+    # downstream categorical bins below (medication_intensity, condition_burden) still
+    # see the true counts.
     sev_cols = ["total_procedures", "total_medications", "active_conditions_count"]
     for col in sev_cols:
         df[col] = df[col].fillna(0)
@@ -596,128 +599,87 @@ def build_patient_features(engine) -> pd.DataFrame:
     df["clinical_severity_score"] = sev_pca.fit_transform(sev_scaled)[:, 0]
     print(f"clinical_severity_score PCA explained variance ratio: {sev_pca.explained_variance_ratio_[0]:.4f}")
 
-    # bmi_type: categorical BMI bucketing to avoid numerical dominance.
-    # Bucket BEFORE filling — preserves the distinction between "measured" and "not measured"
+    # --- Categorical bins from sparse observation numerics -------------------------
+    # Rule: NEVER mean-impute sparse numerics — the artificial values shift k-prototypes
+    # centroids. Instead, we bucket raw values and route unmeasured patients to "Unknown".
     df["bmi_type"] = pd.cut(
-        df["avg_bmi"],  # raw, still has NaN for unmeasured patients
+        df["avg_bmi"],
         bins=[-float("inf"), 18.5, 25, 30, 35, 40, float("inf")],
         labels=["Underweight", "Normal", "Overweight", "Obese I", "Obese II", "Obese III"],
     ).astype(object).where(df["avg_bmi"].notna(), "Unknown").astype(str)
 
-    # bp_risk_category: simplified 3-bucket systolic BP risk. Keep NaN as "Unknown"
-    # (don't impute before the cut) so patients without BP readings land in their
-    # own category instead of being forced into the mean bucket.
     df["bp_risk_category"] = pd.cut(
         df["avg_systolic_bp"],
         bins=[-float("inf"), 119.9, 139.9, float("inf")],
         labels=["Normal", "Elevated", "Hypertensive"],
     ).astype(object).where(df["avg_systolic_bp"].notna(), "Unknown").astype(str)
 
-    # Observation-derived vitals: fill missing with global mean.
-    for col in ["avg_bmi", "qaly", "daly", "avg_systolic_bp", "avg_glucose"]:
-        if col in df.columns:
-            df[col] = df[col].fillna(df[col].mean())
+    # Standard fasting-glucose thresholds: <100 Normal, 100–125 Prediabetic, >=126 Diabetic.
+    df["glucose_risk_category"] = pd.cut(
+        df["avg_glucose"],
+        bins=[-float("inf"), 99.9, 125.9, float("inf")],
+        labels=["Normal", "Prediabetic", "Diabetic"],
+    ).astype(object).where(df["avg_glucose"].notna(), "Unknown").astype(str)
 
-    # Count-based numerics: zero is semantically correct (no meds -> 0 meds).
-    for col in NUMERICAL_FEATURES:
-        if col in df.columns:
-            df[col] = df[col].fillna(0)
+    # qaly/daly are Synthea-complete numerics — if any NaN appears, 0 is the neutral default.
+    for col in ["qaly", "daly"]:
+        df[col] = df[col].fillna(0)
 
-    df["gender"] = df["gender"].fillna("F").astype(str)
-
-    df["marital"] = df["marital"].replace("unmarried", "S").fillna("S").astype(str)
-
-    df["out_of_hours_flyer"] = df["out_of_hours_flyer"].fillna("No").astype(str)
-
-    df["dominant_encounter_class"] = df["dominant_encounter_class"].fillna("wellness").astype(str)
-
-    for flag in [
-        "has_diabetes", "has_hypertension", "has_heart_disease", "has_cancer",
-        "has_respiratory_disease", "has_kidney_disease", "has_mental_health",
-        "has_inpatient_history",
-    ]:
-        df[flag] = df[flag].fillna(0).astype(int).map({0: "No", 1: "Yes"})
-
-    df["is_polypharmacy"] = df["is_polypharmacy_raw"].fillna(0).astype(int).map({0: "No", 1: "Yes"})
-
-    # REMOVED: has_obesity (double-counted avg_bmi)
-    # df["has_obesity"] = (df["avg_bmi"] >= 30).astype(int).map({0: "No", 1: "Yes"})
-
-    # SNOMED values: "Never smoked tobacco (finding)", "Ex-smoker (finding)", "Smokes tobacco daily (finding)"
-    df["smoking_status"] = (
-        df["smoking_status"]
-        .fillna("Never smoked tobacco (finding)")
-        .astype(str)
-        .apply(
-            lambda v: (
-                "current" if "daily" in v.lower() or "some day" in v.lower()
-                else ("former" if "ex-smoker" in v.lower() or "ex smoker" in v.lower()
-                      else "never")
-            )
-        )
-    )
-
-    df["days_since_last_encounter"] = df["days_since_last_encounter"].fillna(0)
-
-    # Categorical bins derived from numerical features.
+    # --- Categorical bins from count numerics (pre-log1p) --------------------------
     df["condition_burden"] = pd.cut(
         df["active_conditions_count"],
         bins=[-1, 3, 10, float("inf")],
         labels=["low", "medium", "high"],
         right=True,
-    ).astype(str).fillna("low")
+    ).astype(str)
 
     df["medication_intensity"] = pd.cut(
         df["total_medications"],
         bins=[-1, 5, 20, float("inf")],
         labels=["low", "medium", "high"],
         right=True,
-    ).astype(str).fillna("low")
+    ).astype(str)
 
-    df["dominant_careplan"] = df["dominant_careplan"].fillna("none")
+    # --- Demographics and base categoricals ----------------------------------------
+    df["gender"] = df["gender"].fillna("F").astype(str)
+    df["marital"] = df["marital"].replace("unmarried", "S").fillna("S").astype(str)
+    df["race"] = df["race"].fillna("Unknown").astype(str)
+    df["ethnicity"] = df["ethnicity"].fillna("Unknown").astype(str)
 
-    for col in ["substance_use_profile", "mental_health_severity", "pain_management_tier"]:
-        df[col] = df[col].fillna("None").astype(str)
+    # --- Disease flags: map 0/1 -> No/Yes (k-prototypes treats them as categorical) -
+    for flag in [
+        "has_diabetes", "has_hypertension", "has_heart_disease", "has_cancer",
+        "has_kidney_disease", "has_mental_health", "has_inpatient_history",
+    ]:
+        df[flag] = df[flag].fillna(0).astype(int).map({0: "No", 1: "Yes"})
 
-    df["employment_status"] = df["employment_status"].fillna("Unknown").astype(str)
+    df["is_polypharmacy"] = df["is_polypharmacy_raw"].fillna(0).astype(int).map({0: "No", 1: "Yes"})
+
+    # --- Categorical NaN fills from LEFT JOINs -------------------------------------
+    df["dominant_encounter_class"] = df["dominant_encounter_class"].fillna("wellness").astype(str)
+    df["dominant_careplan"] = df["dominant_careplan"].fillna("None").astype(str)
+    df["respiratory_disease_profile"] = df["respiratory_disease_profile"].fillna("None").astype(str)
+    df["substance_use_profile"] = df["substance_use_profile"].fillna("None").astype(str)
+    df["pain_management_tier"] = df["pain_management_tier"].fillna("None").astype(str)
+    df["readmission_risk_tier"] = df["readmission_risk_tier"].fillna("None").astype(str)
+    df["cholesterol_risk_category"] = df["cholesterol_risk_category"].fillna("Unknown").astype(str)
     df["pregnancy_history"] = df["pregnancy_history"].fillna("None").astype(str)
+    df["out_of_hours_flyer"] = df["out_of_hours_flyer"].fillna("No").astype(str)
 
-    for col in ["thirty_day_readmission_count", "max_gap_in_care_days",
-                "lifetime_medication_days", "total_encounter_duration_hours",
-                "preventive_to_reactive_ratio"]:
+    # --- Remaining numerics: fillna(0) where 0 is semantically correct --------------
+    for col in ["total_conditions", "total_medications", "total_procedures",
+                "active_conditions_count", "distinct_providers_seen",
+                "lifetime_medication_days", "total_encounter_duration_hours"]:
         df[col] = df[col].fillna(0)
 
-    for col in ["avg_phq9_score", "avg_total_cholesterol"]:
-        if col in df.columns:
-            df[col] = df[col].fillna(df[col].mean())
+    # --- log1p on the three genuinely asymmetric numerics --------------------------
+    # Applied AFTER medication_intensity was bucketed from the raw count above.
+    for col in ["total_medications", "lifetime_medication_days", "total_encounter_duration_hours"]:
+        df[col] = np.log1p(df[col].clip(lower=0))
 
-    for col in CATEGORICAL_FEATURES:
-        if col in df.columns:
-            df[col] = df[col].fillna("unknown")
-
-    # Log1p-transform heavily right-skewed count features after categorical bins are computed (bins use raw values).
-    # Compresses tails so RobustScaler doesn't amplify extreme patients into cluster-dominating outliers.
-
-    df["dental_procedures_count"] = df["dental_procedures_count"].fillna(0)
-
-    for col in ["total_medications", "total_procedures", "inpatient_count", "emergency_count",
-                "dental_procedures_count"]:
-        if col in df.columns:
-            df[col] = np.log1p(df[col])
-
-    for col in ["routine_care_count", "acute_care_count", "wellness_count", "severe_care_count"]:
-        if col in df.columns:
-            df[col] = np.log1p(df[col])
-
-    # days_since_last_encounter
-    if "days_since_last_encounter" in df.columns:
-        df["days_since_last_encounter"] = np.log1p(df["days_since_last_encounter"].clip(lower=0))
-
-    for col in ["thirty_day_readmission_count", "max_gap_in_care_days",
-                "lifetime_medication_days", "total_encounter_duration_hours",
-                "preventive_to_reactive_ratio"]:
-        if col in df.columns:
-            df[col] = np.log1p(df[col].clip(lower=0))
+    # --- Drop replaced raw numerics and intermediate helpers -----------------------
+    df = df.drop(columns=["avg_bmi", "avg_systolic_bp", "avg_glucose", "is_polypharmacy_raw"],
+                 errors="ignore")
 
     return df
 
@@ -1030,10 +992,10 @@ CLUSTER DATA SUMMARIES:
         c_pct = (c_size / total_patients) * 100
 
         mean_cols = [col for col in [
-            'age', 'avg_bmi', 'qaly', 'daly',
-            'avg_systolic_bp', 'avg_glucose',
+            'age', 'qaly', 'daly',
             'total_procedures', 'total_medications',
-            'active_conditions_count', 'days_since_last_encounter',
+            'active_conditions_count', 'lifetime_medication_days',
+            'total_encounter_duration_hours', 'clinical_severity_score',
         ] if col in c_df.columns]
         c_means = c_df[mean_cols].mean().round(1).to_dict()
 
@@ -1049,8 +1011,11 @@ CLUSTER DATA SUMMARIES:
             'heart_disease_rate': f"{(c_df['has_heart_disease'] == 'Yes').mean() * 100:.0f}%",
             'cancer_rate': f"{(c_df['has_cancer'] == 'Yes').mean() * 100:.0f}%" if 'has_cancer' in c_df else 'N/A',
             'polypharmacy_rate': f"{(c_df['is_polypharmacy'] == 'Yes').mean() * 100:.0f}%" if 'is_polypharmacy' in c_df else 'N/A',
-            'smoking_mix': c_df['smoking_status'].value_counts(normalize=True).round(
-                2).to_dict() if 'smoking_status' in c_df else {},
+            'bmi_mix': c_df['bmi_type'].value_counts(normalize=True).round(2).to_dict() if 'bmi_type' in c_df else {},
+            'bp_mix': c_df['bp_risk_category'].value_counts(normalize=True).round(2).to_dict() if 'bp_risk_category' in c_df else {},
+            'glucose_mix': c_df['glucose_risk_category'].value_counts(normalize=True).round(2).to_dict() if 'glucose_risk_category' in c_df else {},
+            'substance_use_mix': c_df['substance_use_profile'].value_counts(normalize=True).round(2).to_dict() if 'substance_use_profile' in c_df else {},
+            'readmission_mix': c_df['readmission_risk_tier'].value_counts(normalize=True).round(2).to_dict() if 'readmission_risk_tier' in c_df else {},
         }
 
         # Careplan mix (share of each careplan category within the cluster) so the LLM
@@ -1090,7 +1055,7 @@ if __name__ == "__main__":
     load_dotenv()
 
     from db import engine as db_engine
-    from clustering_algorithms.k_prototypes.old.configs import CONFIGS
+    from configs import CONFIGS
 
     df = build_patient_features(db_engine)
 
