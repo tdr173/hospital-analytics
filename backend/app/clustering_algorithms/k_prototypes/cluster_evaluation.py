@@ -11,46 +11,6 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-NUMERICAL_FEATURES = [
-    "routine_care_count", # ambulatory (vizite la cabinet) + outpatient (vizite la cabinet spitalicesc)
-    "acute_care_count", # emergency (upu, urgente) + urgentcare (urgente care nu pun viata in pericol)
-    "wellness_count", # wellness encounters
-    "severe_care_count", # inpatient (internare clasica) + snf (centru de recuperare) + hospice (ingrijire plaiativa)
-    "age",
-    "clinical_severity_score", # mix intre total_procedures, total_medications si active_conditions
-    # "qaly",
-    # "days_since_last_encounter",
-    # "distinct_providers_seen",
-    # "preventive_to_reactive_ratio",     # wellness / (acute + severe + 1); preventive vs reactive usage
-    # "thirty_day_readmission_count",     # log1p; inpatient/ER readmissions within 30d of prior discharge
-    # "max_gap_in_care_days",             # log1p; longest gap between consecutive encounters
-    # "lifetime_medication_days",         # log1p; total cumulative days on medication
-    # "total_encounter_duration_hours",   # log1p; sum of all encounter durations in hours
-    # "avg_phq9_score",                   # average PHQ-9 score (depression screening)
-    # "avg_total_cholesterol",            # average total cholesterol (mg/dL)
-]
-
-CATEGORICAL_FEATURES = [
-    "bmi_type",
-    "gender",
-    # "has_diabetes",
-    # "has_cancer",
-    # "has_respiratory_disease",
-    # "has_heart_disease",
-    # "has_mental_health",
-    "dominant_careplan",
-    # "out_of_hours_flyer",
-    # "bp_risk_category",
-    # "marital",
-    # "smoking_status",
-    # "substance_use_profile",    # None / Tobacco Only / Alcohol / Polysubstance or Illicit
-    # "mental_health_severity",   # None / Mild-Moderate / Severe
-    # "pain_management_tier",     # None / Acute/Minor / Chronic Non-Opioid / Chronic Opioid
-    # "employment_status",        # Employed / Part-time / Unemployed / Not in labor force / Unknown
-    # "pregnancy_history",        # None / Past / Active
-]
-
-
 def compute_general_validation(X_numerical_scaled, clusters):
     n_clusters = len(np.unique(clusters))
     if n_clusters < 2:

@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import prince
 import seaborn as sns
-from sklearn.preprocessing import StandardScaler, RobustScaler, PowerTransformer, MinMaxScaler
+from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.decomposition import PCA
 from kmodes.kprototypes import KPrototypes
 from dotenv import load_dotenv
@@ -16,8 +16,6 @@ from sqlalchemy import text
 
 from cluster_evaluation import (
     full_evaluation_report,
-    NUMERICAL_FEATURES,
-    CATEGORICAL_FEATURES,
     compute_general_validation,
     compute_gower_mixed_metrics,
     compute_famd_metrics,
@@ -78,56 +76,90 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    # REMOVED: total_conditions (redundant with active_conditions_count below)
-    # condition_features = pd.read_sql(
-    #     text("SELECT patient_id, COUNT(*) AS total_conditions FROM condition GROUP BY patient_id"),
-    #     con=engine,
-    # )
+    condition_features = pd.read_sql(
+        text("SELECT patient_id, COUNT(*) AS total_conditions FROM condition GROUP BY patient_id"),
+        con=engine,
+    )
 
     disease_flags = pd.read_sql(
         text(
             """
+            WITH agg_conditions AS (SELECT patient_id,
+                                           -- DIABETES - 12%
+                                           MAX(CASE
+                                                   WHEN (LOWER(description) LIKE '%%diabetes%%' OR
+                                                         LOWER(description) LIKE '%%diabetic%%')
+                                                       AND LOWER(description) NOT LIKE '%%prediabetes%%' THEN 1
+                                                   ELSE 0 END) AS has_diabetes,
+
+                                           -- HYPERTENSION - 20%
+                                           MAX(CASE
+                                                   WHEN LOWER(description) LIKE '%%hypertension%%'
+                                                       AND LOWER(description) NOT LIKE '%%prehypertension%%' THEN 1
+                                                   ELSE 0 END) AS has_hypertension,
+
+                                           -- CANCER - 4.77%
+                                           MAX(CASE
+                                                   WHEN (LOWER(description) LIKE '%%neoplasm%%' OR
+                                                         LOWER(description) LIKE '%%cancer%%'
+                                                       OR LOWER(description) LIKE '%%carcinoma%%' OR
+                                                         LOWER(description) LIKE '%%leukemia%%'
+                                                       OR LOWER(description) LIKE '%%lymphoma%%' OR
+                                                         LOWER(description) LIKE '%%myeloma%%'
+                                                       OR LOWER(description) LIKE '%%melanoma%%' OR
+                                                         LOWER(description) LIKE '%%sarcoma%%'
+                                                       OR LOWER(description) LIKE '%%malignant%%')
+                                                       AND LOWER(description) NOT LIKE '%%suspected%%'
+                                                       AND LOWER(description) NOT LIKE '%%family history%%' THEN 1
+                                                   ELSE 0 END) AS has_cancer,
+
+                                           -- KIDNEY DISEASE - 8%
+                                           MAX(CASE
+                                                   WHEN LOWER(description) LIKE '%%kidney%%' OR
+                                                        LOWER(description) LIKE '%%renal%%'
+                                                       OR LOWER(description) LIKE '%%nephro%%' OR
+                                                        LOWER(description) LIKE '%%pyelonephritis%%'
+                                                       OR LOWER(description) LIKE '%%microalbuminuria%%' OR
+                                                        LOWER(description) LIKE '%%proteinuria%%' THEN 1
+                                                   ELSE 0 END) AS has_kidney_disease,
+
+                                           -- MENTAL HEALTH - 12.77%
+                                           MAX(
+                                                   CASE
+                                                       WHEN LOWER(description) LIKE '%%depress%%'
+                                                           OR LOWER(description) LIKE '%%anxiety%%'
+                                                           OR LOWER(description) LIKE '%%schizophrenia%%'
+                                                           OR LOWER(description) LIKE '%%ptsd%%'
+                                                           OR LOWER(description) LIKE '%%posttraumatic%%'
+                                                           OR LOWER(description) LIKE '%%suicid%%'
+                                                           OR LOWER(description) LIKE '%%bipolar%%'
+                                                           OR LOWER(description) LIKE '%%attention deficit%%'
+                                                           THEN 1
+                                                       ELSE 0
+                                                       END
+                                           )                   AS has_mental_health,
+                                    FROM condition
+                                    GROUP BY patient_id)
             SELECT patient_id,
-                   MAX(CASE WHEN LOWER(description) LIKE '%%diabetes%%' THEN 1 ELSE 0 END)     AS has_diabetes,
-                   MAX(CASE WHEN LOWER(description) LIKE '%%hypertension%%' THEN 1 ELSE 0 END) AS has_hypertension,
-                   MAX(CASE
-                           WHEN LOWER(description) LIKE '%%heart%%'
-                               OR LOWER(description) LIKE '%%coronary%%' THEN 1
-                           ELSE 0 END)                                                         AS has_heart_disease,
-                   MAX(CASE
-                           WHEN LOWER(description) LIKE '%%neoplasm%%'
-                               OR LOWER(description) LIKE '%%cancer%%'
-                               OR LOWER(description) LIKE '%%carcinoma%%'
-                               OR LOWER(description) LIKE '%%leukemia%%'
-                               OR LOWER(description) LIKE '%%lymphoma%%' THEN 1
-                           ELSE 0 END)                                                         AS has_cancer,
-                   MAX(CASE
-                           WHEN LOWER(description) LIKE '%%asthma%%'
-                               OR LOWER(description) LIKE '%%bronchitis%%'
-                               OR LOWER(description) LIKE '%%pulmonary%%'
-                               OR LOWER(description) LIKE '%%covid%%'
-                               OR LOWER(description) LIKE '%%coronavirus%%'
-                               OR LOWER(description) LIKE '%%respiratory%%' THEN 1
-                           ELSE 0 END)                                                         AS has_respiratory_disease,
-                   MAX(CASE
-                           WHEN LOWER(description) LIKE '%%kidney%%'
-                               OR LOWER(description) LIKE '%%renal%%' THEN 1
-                           ELSE 0 END)                                                         AS has_kidney_disease,
-                   MAX(CASE
-                           WHEN LOWER(description) LIKE '%%depress%%'
-                               OR LOWER(description) LIKE '%%anxiety%%'
-                               OR LOWER(description) LIKE '%%schizophrenia%%'
-                               OR LOWER(description) LIKE '%%ptsd%%'
-                               OR LOWER(description) LIKE '%%posttraumatic%%'
-                               OR LOWER(description) LIKE '%%suicid%%' THEN 1
-                           ELSE 0 END)                                                         AS has_mental_health
-            FROM condition
-            GROUP BY patient_id
+                   has_diabetes,
+                   has_hypertension,
+                   has_heart_disease,
+                   has_cancer,
+                   has_kidney_disease,
+                   has_mental_health,
+                   CASE
+                       WHEN has_chronic_resp = 1 AND has_active_acute_resp = 1 THEN 'Chronic with Active Acute'
+                       WHEN has_chronic_resp = 1 THEN 'Chronic'
+                       WHEN has_active_acute_resp = 1 THEN 'Active Acute'
+                       ELSE 'None'
+                       END AS respiratory_disease_profile
+            FROM agg_conditions
             """
         ),
         con=engine,
     )
 
+    # has_inaptient_history - 31.19%
     inpatient_history = pd.read_sql(
         text(
             """
@@ -140,6 +172,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
+    # is_polypharmacy - 17.71%
     medication_features = pd.read_sql(
         text(
             """
@@ -166,84 +199,52 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    dental_procedure_features = pd.read_sql(
-        text(
-            """
-            SELECT patient_id,
-                   COUNT(*) AS dental_procedures_count
-            FROM "procedure"
-            WHERE LOWER(description) LIKE '%%dental%%'
-               OR LOWER(description) LIKE '%%tooth%%'
-               OR LOWER(description) LIKE '%%teeth%%'
-               OR LOWER(description) LIKE '%%oral%%'
-               OR LOWER(description) LIKE '%%gingiv%%'
-               OR LOWER(description) LIKE '%%periodon%%'
-               OR LOWER(description) LIKE '%%prophylaxis%%'
-               OR LOWER(description) LIKE '%%extraction%%'
-               OR LOWER(description) LIKE '%%filling%%'
-               OR LOWER(description) LIKE '%%root canal%%'
-               OR LOWER(description) LIKE '%%crown%%'
-               OR LOWER(description) LIKE '%%caries%%'
-               OR LOWER(description) LIKE '%%orthodon%%'
-            GROUP BY patient_id
-            """
-        ),
-        con=engine,
-    )
-
-    # REMOVED: total_immunizations (weak clustering signal) ---
-    # immunization_features = pd.read_sql(
-    #     text("SELECT patient_id, COUNT(*) AS total_immunizations FROM immunization GROUP BY patient_id"),
-    #     con=engine,
-    # )
-
     # Uses ILIKE patterns so it tolerates LOINC-style suffixes / casing differences
     # (e.g. "Glucose [Mass/volume] in Blood", "Body mass index (BMI)", etc.)
     observation_features = pd.read_sql(
         text(
             """
             SELECT patient_id,
-                   AVG(value_norm) FILTER (WHERE desc_key = 'bmi')         AS avg_bmi,
-                   AVG(value_norm) FILTER (WHERE desc_key = 'qaly')        AS qaly,
-                   AVG(value_norm) FILTER (WHERE desc_key = 'daly')        AS daly,
-                   AVG(value_norm) FILTER (WHERE desc_key = 'systolic_bp') AS avg_systolic_bp,
-                   AVG(value_norm) FILTER (WHERE desc_key = 'glucose')     AS avg_glucose
+                   ROUND(AVG(value_norm) FILTER (WHERE desc_key = 'bmi'), 2)         AS avg_bmi,
+                   ROUND(AVG(value_norm) FILTER (WHERE desc_key = 'qaly'), 2)        AS qaly,
+                   ROUND(AVG(value_norm) FILTER (WHERE desc_key = 'daly'), 2)        AS daly,
+                   ROUND(AVG(value_norm) FILTER (WHERE desc_key = 'systolic_bp'), 2) AS avg_systolic_bp,
+                   ROUND(AVG(value_norm) FILTER (WHERE desc_key = 'glucose'), 2)     AS avg_glucose
             FROM (SELECT patient_id,
                          CASE
-                             WHEN description ILIKE '%%body mass index%%'
-                               OR description ILIKE '%%bmi%%'              THEN 'bmi'
-                             WHEN description ILIKE '%%qaly%%'             THEN 'qaly'
-                             WHEN description ILIKE '%%daly%%'             THEN 'daly'
-                             WHEN description ILIKE '%%systolic blood pressure%%' THEN 'systolic_bp'
-                             -- Exclude urine test strip: values are semi-quantitative (0/50/100/250/500)
-                             WHEN description ILIKE '%%glucose%%'
-                              AND description NOT ILIKE '%%urine%%'        THEN 'glucose'
-                         END AS desc_key,
-                         -- Glucose: normalize mmol/L -> mg/dL (*18) to fix unit mixing
-                         CASE
-                             WHEN description ILIKE '%%glucose%%' AND units ILIKE '%%mmol%%'
-                                 THEN value_numeric * 18
-                             ELSE value_numeric
-                         END AS value_norm,
-                         ROW_NUMBER() OVER (
-                             PARTITION BY patient_id, description
-                             ORDER BY date DESC
-                         ) AS rn
-                    FROM observation
-                    WHERE value_numeric IS NOT NULL
-                      AND value_numeric > 0
-                      AND description NOT ILIKE '%%percentile%%'
-                      AND description NOT ILIKE '%%z-score%%'
-                      AND (description ILIKE '%%body mass index%%'
-                       OR description ILIKE '%%bmi%%'
-                       OR description ILIKE '%%qaly%%'
-                       OR description ILIKE '%%daly%%'
-                       OR description ILIKE '%%systolic blood pressure%%'
-                       OR (description ILIKE '%%glucose%%' AND description NOT ILIKE '%%urine%%')
-                      )) sub
-            WHERE rn <= 5
+                             WHEN description ILIKE '%%bmi%%' OR description ILIKE '%%body mass index%%' THEN 'bmi'
+            WHEN description ILIKE '%%qaly%%' THEN 'qaly'
+            WHEN description ILIKE '%%daly%%' THEN 'daly'
+            WHEN description ILIKE '%%systolic%%' AND description ILIKE '%%blood pressure%%' THEN 'systolic_bp'
+            WHEN description ILIKE '%%glucose%%' AND description NOT ILIKE '%%urine%%' THEN 'glucose'
+        END AS desc_key,
+        CASE
+            WHEN description ILIKE '%%glucose%%' AND units ILIKE '%%mmol%%' THEN value_numeric * 18.0
+            ELSE value_numeric
+        END AS value_norm,
+        ROW_NUMBER() OVER (
+            PARTITION BY patient_id, 
+            (CASE 
+                WHEN description ILIKE '%%bmi%%' OR description ILIKE '%%body mass index%%' THEN 'bmi'
+                WHEN description ILIKE '%%qaly%%' THEN 'qaly'
+                WHEN description ILIKE '%%daly%%' THEN 'daly'
+                WHEN description ILIKE '%%systolic%%' THEN 'systolic_bp'
+                WHEN description ILIKE '%%glucose%%' THEN 'glucose'
+            END)
+            ORDER BY date DESC
+        ) AS rn
+                  FROM observation
+                  WHERE value_numeric IS NOT NULL
+                    AND value_numeric
+                      > 0
+                    AND description NOT ILIKE '%%percentile%%'
+                    AND description NOT ILIKE '%%z-score%%') sub
+            WHERE rn <= 3 -- Redus la 3 pentru a fi mai aproape de starea curentă
               AND desc_key IS NOT NULL
-            GROUP BY patient_id
+              -- Filtru de siguranță pentru date aberante
+              AND NOT (desc_key = 'bmi' AND value_norm > 100)
+              AND NOT (desc_key = 'glucose' AND value_norm > 1000)
+            GROUP BY patient_id;
             """
         ),
         con=engine,
@@ -262,29 +263,6 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    recency_features = pd.read_sql(
-        text(
-            """
-            SELECT patient_id,
-                   (CURRENT_DATE - MAX(end_date)::date) AS days_since_last_encounter
-            FROM encounter
-            GROUP BY patient_id
-            """
-        ),
-        con=engine,
-    )
-
-    # REMOVED: careplan counts (weak, noisy clustering signal)
-    # careplan_features = pd.read_sql(
-    #     text("""
-    #         SELECT patient_id,
-    #                COUNT(*) AS total_careplans,
-    #                COUNT(DISTINCT description) AS n_distinct_careplans
-    #         FROM careplan GROUP BY patient_id
-    #     """),
-    #     con=engine,
-    # )
-
     # NEW: dominant careplan category - primary clinical reason patient is in the system.
     # Raw descriptions (40 values) bucketed into 9 clinical categories.
     # Allergy (0.45%), Renal (0.29%), Oncology (0.22%) merged into Other - too rare for centroids.
@@ -300,48 +278,23 @@ def build_patient_features(engine) -> pd.DataFrame:
                                                                       'Dialysis care plan (record artifact)',
                                                                       'Terminal care (regime/therapy)'
                                                      ) THEN 'Complex, Oncology & Palliative'
+
                                                  WHEN description IN (
                                                      'Routine antenatal care (regime/therapy)'
                                                      ) THEN 'Maternal & Antenatal'
-                                                 WHEN LOWER(description) LIKE '%%fracture%%'
-                                                     OR LOWER(description) LIKE '%%wound%%'
-                                                     OR LOWER(description) LIKE '%%surgery%%'
-                                                     OR LOWER(description) LIKE '%%surgical%%'
-                                                     OR LOWER(description) LIKE '%%injury%%'
-                                                     OR LOWER(description) LIKE '%%trauma%%'
-                                                     OR LOWER(description) LIKE '%%burn%%'
-                                                     OR LOWER(description) LIKE '%%musculoskeletal%%'
-                                                     OR LOWER(description) LIKE '%%spinal%%'
-                                                     OR LOWER(description) LIKE '%%jaw%%'
-                                                     THEN 'Acute Trauma, Wound & Surgery'
-                                                 WHEN LOWER(description) LIKE '%%respiratory%%'
-                                                     OR LOWER(description) LIKE '%%asthma%%'
-                                                     OR LOWER(description) LIKE '%%pulmonary%%'
-                                                     OR LOWER(description) LIKE '%%infect%%'
-                                                     OR LOWER(description) LIKE '%%covid%%'
-                                                     OR LOWER(description) LIKE '%%pneumonia%%'
-                                                     OR LOWER(description) LIKE '%%bronchitis%%'
-                                                     OR LOWER(description) LIKE '%%sinusitis%%'
-                                                     THEN 'Respiratory & Infectious'
-                                                 WHEN LOWER(description) LIKE '%%dementia%%'
-                                                     OR LOWER(description) LIKE '%%psych%%'
-                                                     OR LOWER(description) LIKE '%%mental%%'
-                                                     OR LOWER(description) LIKE '%%depressive%%'
-                                                     OR LOWER(description) LIKE '%%suicide%%'
-                                                     OR LOWER(description) LIKE '%%behavior%%'
-                                                     OR LOWER(description) LIKE '%%inattention%%'
-                                                     OR LOWER(description) LIKE '%%anxiety%%'
-                                                     THEN 'Mental Health & Cognitive'
-                                                 WHEN LOWER(description) LIKE '%%diabetes%%'
-                                                     OR LOWER(description) LIKE '%%hyperlipidemia%%'
-                                                     OR LOWER(description) LIKE '%%heart%%'
-                                                     OR LOWER(description) LIKE '%%hypertension%%'
-                                                     OR LOWER(description) LIKE '%%weight%%'
-                                                     OR LOWER(description) LIKE '%%cardiac%%'
-                                                     OR LOWER(description) LIKE '%%coronary%%'
-                                                     THEN 'Chronic Cardio-Metabolic'
-                                                 ELSE 'General Rehab & Routine'
+
+                                                 WHEN LOWER(description) ~ '(fracture|wound|surgery|surgical|injury|trauma|burn|musculoskeletal|spinal|jaw)'
+                    THEN 'Acute Trauma, Wound & Surgery'
+
+                                                 WHEN LOWER(description) ~ '(respiratory|asthma|pulmonary|infect|covid|pneumonia|bronchitis|sinusitis)'
+                    THEN 'Respiratory & Infectious'
+
+                                                 WHEN LOWER(description) ~ '(diabetes|hyperlipidemia|heart|hypertension|weight|cardiac|coronary)'
+                    THEN 'Chronic Cardio-Metabolic'
+
+                                                 ELSE 'General Rehab & Routine' -- Aici vor intra acum și cei cu Mental Health
                                                  END AS care_plan_category,
+
                                              CASE
                                                  WHEN description IN (
                                                                       'Cancer care plan (record artifact)',
@@ -351,77 +304,28 @@ def build_patient_features(engine) -> pd.DataFrame:
                                                  WHEN description IN (
                                                      'Routine antenatal care (regime/therapy)'
                                                      ) THEN 2
-                                                 WHEN LOWER(description) LIKE '%%fracture%%'
-                                                     OR LOWER(description) LIKE '%%wound%%'
-                                                     OR LOWER(description) LIKE '%%surgery%%'
-                                                     OR LOWER(description) LIKE '%%surgical%%'
-                                                     OR LOWER(description) LIKE '%%injury%%'
-                                                     OR LOWER(description) LIKE '%%trauma%%'
-                                                     OR LOWER(description) LIKE '%%burn%%'
-                                                     OR LOWER(description) LIKE '%%musculoskeletal%%'
-                                                     OR LOWER(description) LIKE '%%spinal%%'
-                                                     OR LOWER(description) LIKE '%%jaw%%'
-                                                     THEN 3
-                                                 WHEN LOWER(description) LIKE '%%respiratory%%'
-                                                     OR LOWER(description) LIKE '%%asthma%%'
-                                                     OR LOWER(description) LIKE '%%pulmonary%%'
-                                                     OR LOWER(description) LIKE '%%infect%%'
-                                                     OR LOWER(description) LIKE '%%covid%%'
-                                                     OR LOWER(description) LIKE '%%pneumonia%%'
-                                                     OR LOWER(description) LIKE '%%bronchitis%%'
-                                                     OR LOWER(description) LIKE '%%sinusitis%%'
-                                                     THEN 4
-                                                 WHEN LOWER(description) LIKE '%%dementia%%'
-                                                     OR LOWER(description) LIKE '%%psych%%'
-                                                     OR LOWER(description) LIKE '%%mental%%'
-                                                     OR LOWER(description) LIKE '%%depressive%%'
-                                                     OR LOWER(description) LIKE '%%suicide%%'
-                                                     OR LOWER(description) LIKE '%%behavior%%'
-                                                     OR LOWER(description) LIKE '%%inattention%%'
-                                                     OR LOWER(description) LIKE '%%anxiety%%'
-                                                     THEN 5
-                                                 WHEN LOWER(description) LIKE '%%diabetes%%'
-                                                     OR LOWER(description) LIKE '%%hyperlipidemia%%'
-                                                     OR LOWER(description) LIKE '%%heart%%'
-                                                     OR LOWER(description) LIKE '%%hypertension%%'
-                                                     OR LOWER(description) LIKE '%%weight%%'
-                                                     OR LOWER(description) LIKE '%%cardiac%%'
-                                                     OR LOWER(description) LIKE '%%coronary%%'
-                                                     THEN 6
-                                                 ELSE 7
+                                                 WHEN LOWER(description) ~ '(fracture|wound|surgery|surgical|injury|trauma|burn|musculoskeletal|spinal|jaw)' THEN 3
+                                                 WHEN LOWER(description) ~ '(respiratory|asthma|pulmonary|infect|covid|pneumonia|bronchitis|sinusitis)' THEN 4
+                                                 WHEN LOWER(description) ~ '(diabetes|hyperlipidemia|heart|hypertension|weight|cardiac|coronary)' THEN 5
+                                                 ELSE 6 -- Rangul final pentru restul (General & Mental Health)
                                                  END AS severity_rank
                                       FROM careplan),
                  RankedPatientPlans AS (SELECT patient_id,
                                                care_plan_category,
                                                ROW_NUMBER() OVER (
-                           PARTITION BY patient_id
-                           ORDER BY severity_rank ASC
-                       ) AS rank_id
+               PARTITION BY patient_id
+               ORDER BY severity_rank ASC
+           ) AS rank_id
                                         FROM CategorizedPlans)
             SELECT patient_id, care_plan_category AS dominant_careplan
             FROM RankedPatientPlans
-            WHERE rank_id = 1
+            WHERE rank_id = 1;
             """
         ),
         con=engine,
     )
 
-    # care fragmentation / multi-specialty care
-    speciality_features = pd.read_sql(
-        text(
-            """
-            SELECT e.patient_id,
-                   COUNT(DISTINCT p.speciality) AS distinct_specialities_seen
-            FROM encounter e
-                     JOIN provider p ON p.provider_id = e.provider_id
-            WHERE p.speciality IS NOT NULL
-            GROUP BY e.patient_id
-            """
-        ),
-        con=engine,
-    )
-
-    # distinct providers seen per patient (care continuity / fragmentation at provider level)
+    # distinct_providers_seen - min 1, avg 3.41, max 9
     provider_features = pd.read_sql(
         text(
             """
@@ -435,10 +339,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    # Out-of-hours flyer: pattern of using ER/urgent care on weekends or nights
-    # (20:00-07:59). Requires >=2 acute visits to distinguish a behavioral pattern
-    # from a single isolated emergency. Patients with <2 acute visits get "No"
-    # after the left-merge fillna below.
+    # out_of_hours_flyer - 14.47%
     ooh_features = pd.read_sql(
         text(
             """
@@ -457,7 +358,7 @@ def build_patient_features(engine) -> pd.DataFrame:
                          GROUP BY patient_id)
             SELECT patient_id,
                    CASE
-                       WHEN total_acute >= 2 AND (ooh_acute::float / total_acute) >= 0.4 THEN 'Yes'
+                       WHEN total_acute >= 5 AND (ooh_acute::float / total_acute) >= 0.8 THEN 'Yes'
                        ELSE 'No'
                        END AS out_of_hours_flyer
             FROM agg
@@ -466,172 +367,90 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    smoking_features = pd.read_sql(
-        text(
-            """
-            SELECT DISTINCT
-            ON (patient_id)
-                patient_id,
-                value AS smoking_status
-            FROM observation
-            WHERE description = 'Tobacco smoking status'
-            ORDER BY patient_id, date DESC
-            """
-        ),
-        con=engine,
-    )
-
-    # substance_use_profile: None / Tobacco Only / Alcohol / Polysubstance or Illicit
-    # Derived from conditions and AUDIT-C / DAST-10 observation scores.
+    # substance_use_profile: No/Low Risk - 74.04%, Moderate Risk (Alcohol) - 11.76%, High Risk (Drug/Illicit) - 14.20%
+    # Derived from conditions (diagnoses) and AUDIT-C / DAST-10 screening scores.
     substance_use_features = pd.read_sql(
         text(
             """
-            WITH condition_flags AS (
-                SELECT patient_id,
-                       MAX(CASE WHEN LOWER(description) LIKE '%%smokes tobacco%%'
-                                 OR LOWER(description) LIKE '%%tobacco daily%%' THEN 1 ELSE 0 END) AS has_tobacco,
-                       MAX(CASE WHEN LOWER(description) LIKE '%%alcoholism%%'
-                                 OR LOWER(description) LIKE '%%alcohol drinking%%' THEN 1 ELSE 0 END) AS has_alcohol,
-                       MAX(CASE WHEN LOWER(description) LIKE '%%drug abuse%%'
-                                 OR LOWER(description) LIKE '%%misuses drugs%%'
-                                 OR LOWER(description) LIKE '%%opioid abuse%%'
-                                 OR LOWER(description) LIKE '%%dependent drug%%' THEN 1 ELSE 0 END) AS has_illicit
-                FROM condition
-                GROUP BY patient_id
-            ),
-            obs_scores AS (
-                SELECT patient_id,
-                       MAX(value_numeric) FILTER (WHERE description ILIKE '%%AUDIT-C%%'
-                                                     OR description ILIKE '%%Alcohol Use Disorder Identification%%Consumption%%') AS audit_c_score,
-                       MAX(value_numeric) FILTER (WHERE description ILIKE '%%DAST-10%%'
-                                                     OR description ILIKE '%%Drug Abuse Screening%%') AS dast10_score
-                FROM observation
-                WHERE value_numeric IS NOT NULL
-                GROUP BY patient_id
-            )
-            SELECT c.patient_id,
+            WITH condition_flags AS (SELECT patient_id,
+                                            MAX(CASE WHEN LOWER(description) ~ '(drug abuse|misuses drugs|opioid abuse|dependent drug)' THEN 1 ELSE 0 END) AS has_illicit,
+                                            MAX(CASE WHEN LOWER(description) ~ '(alcoholism|alcohol drinking)' THEN 1 ELSE 0 END)                          AS has_alcohol
+                                     FROM condition
+                                     GROUP BY patient_id),
+                 obs_scores AS (SELECT patient_id,
+                                       MAX(value_numeric) FILTER (WHERE description ILIKE '%%DAST-10%%') AS dast10_score, MAX(value_numeric) FILTER (WHERE description ILIKE '%%AUDIT-C%%') AS audit_c_score
+                                FROM observation
+                                WHERE value_numeric IS NOT NULL
+                                GROUP BY patient_id)
+            SELECT p.patient_id,
                    CASE
-                       WHEN COALESCE(c.has_illicit, 0) = 1 OR COALESCE(o.dast10_score, 0) >= 3 THEN 'Polysubstance or Illicit'
-                       WHEN COALESCE(c.has_alcohol, 0) = 1 OR COALESCE(o.audit_c_score, 0) >= 4 THEN 'Alcohol'
-                       WHEN COALESCE(c.has_tobacco, 0) = 1 THEN 'Tobacco Only'
-                       ELSE 'None'
-                   END AS substance_use_profile
-            FROM condition_flags c
-            LEFT JOIN obs_scores o ON o.patient_id = c.patient_id
+                       WHEN COALESCE(c.has_illicit, 0) = 1 OR COALESCE(o.dast10_score, 0) >= 3
+                           THEN 'High Risk (Drug/Illicit)'
+                       WHEN COALESCE(c.has_alcohol, 0) = 1 OR COALESCE(o.audit_c_score, 0) >= 4
+                           THEN 'Moderate Risk (Alcohol)'
+                       ELSE 'No/Low Risk'
+                       END AS substance_use_profile
+            FROM patient p
+                     LEFT JOIN condition_flags c ON p.patient_id = c.patient_id
+                     LEFT JOIN obs_scores o ON p.patient_id = o.patient_id
             """
         ),
         con=engine,
     )
 
-    # mental_health_severity: None / Mild-Moderate / Severe
-    mental_health_severity_features = pd.read_sql(
-        text(
-            """
-            SELECT patient_id,
-                   CASE
-                       WHEN MAX(CASE WHEN LOWER(description) LIKE '%%major depress%%'
-                                      OR LOWER(description) LIKE '%%posttraumatic%%'
-                                      OR LOWER(description) LIKE '%%suicid%%'
-                                      OR LOWER(description) LIKE '%%overdose%%'
-                                      OR LOWER(description) LIKE '%%psychosis%%'
-                                      OR LOWER(description) LIKE '%%schizophrenia%%'
-                                      OR LOWER(description) LIKE '%%alzheimer%%' THEN 1 ELSE 0 END) = 1 THEN 'Severe'
-                       WHEN MAX(CASE WHEN LOWER(description) LIKE '%%stress%%'
-                                      OR LOWER(description) LIKE '%%anxiety%%'
-                                      OR LOWER(description) LIKE '%%sleep disorder%%'
-                                      OR LOWER(description) LIKE '%%attention deficit%%'
-                                      OR LOWER(description) LIKE '%%depress%%' THEN 1 ELSE 0 END) = 1 THEN 'Mild-Moderate'
-                       ELSE 'None'
-                   END AS mental_health_severity
-            FROM condition
-            GROUP BY patient_id
-            """
-        ),
-        con=engine,
-    )
-
-    # pain_management_tier: None / Acute/Minor / Chronic Non-Opioid / Chronic Opioid
+    # pain_management_tier: None - 44% / Acute/Minor = 30.46% / Chronic Non-Opioid - 12.37% / Chronic Opioid - 13.17%
     pain_management_features = pd.read_sql(
         text(
             """
-            WITH pain_conds AS (
-                SELECT patient_id,
-                       MAX(CASE WHEN LOWER(description) LIKE '%%chronic pain%%'
-                                 OR LOWER(description) LIKE '%%chronic low back%%'
-                                 OR LOWER(description) LIKE '%%chronic neck%%'
-                                 OR LOWER(description) LIKE '%%fibromyalgia%%'
-                                 OR LOWER(description) LIKE '%%chronic intractable%%' THEN 1 ELSE 0 END) AS has_chronic_pain,
-                       MAX(CASE WHEN LOWER(description) LIKE '%%sprain%%'
-                                 OR LOWER(description) LIKE '%%laceration%%'
-                                 OR LOWER(description) LIKE '%%fracture%%'
-                                 OR LOWER(description) LIKE '%%muscle pain%%'
-                                 OR LOWER(description) LIKE '%%joint pain%%' THEN 1 ELSE 0 END) AS has_acute_pain
-                FROM condition
-                GROUP BY patient_id
-            ),
-            opioid_meds AS (
-                SELECT patient_id,
-                       MAX(CASE WHEN LOWER(description) LIKE '%%oxycodone%%'
-                                 OR LOWER(description) LIKE '%%fentanyl%%'
-                                 OR LOWER(description) LIKE '%%hydrocodone%%'
-                                 OR LOWER(description) LIKE '%%morphine%%'
-                                 OR LOWER(description) LIKE '%%tramadol%%'
-                                 OR LOWER(description) LIKE '%%buprenorphine%%'
-                                 OR LOWER(description) LIKE '%%codeine%%' THEN 1 ELSE 0 END) AS has_opioid
-                FROM medication
-                GROUP BY patient_id
-            )
-            SELECT pc.patient_id,
+            WITH pain_conds AS (SELECT patient_id,
+                                       MAX(CASE WHEN LOWER(description) ~ '(chronic pain|chronic low back|chronic neck|fibromyalgia|chronic intractable)' THEN 1 ELSE 0 END) AS has_chronic_pain,
+                                       MAX(CASE WHEN LOWER(description) ~ '(sprain|laceration|fracture|muscle pain|joint pain)' THEN 1 ELSE 0 END)                           AS has_acute_pain
+                                FROM condition
+                                GROUP BY patient_id),
+                 opioid_meds AS (SELECT patient_id,
+                                        MAX(CASE WHEN LOWER(description) ~ '(oxycodone|fentanyl|hydrocodone|morphine|tramadol|buprenorphine|codeine)' THEN 1 ELSE 0 END) AS has_opioid
+                                 FROM medication
+                                 GROUP BY patient_id)
+            SELECT p.patient_id,
                    CASE
-                       WHEN COALESCE(pc.has_chronic_pain, 0) = 1 AND COALESCE(om.has_opioid, 0) = 1 THEN 'Chronic Opioid'
+                       WHEN COALESCE(pc.has_chronic_pain, 0) = 1 AND COALESCE(om.has_opioid, 0) = 1
+                           THEN 'Chronic Opioid'
                        WHEN COALESCE(pc.has_chronic_pain, 0) = 1 THEN 'Chronic Non-Opioid'
                        WHEN COALESCE(pc.has_acute_pain, 0) = 1 THEN 'Acute/Minor'
                        ELSE 'None'
-                   END AS pain_management_tier
-            FROM pain_conds pc
-            LEFT JOIN opioid_meds om ON om.patient_id = pc.patient_id
+                       END AS pain_management_tier
+            FROM patient p
+                     LEFT JOIN pain_conds pc ON p.patient_id = pc.patient_id
+                     LEFT JOIN opioid_meds om ON p.patient_id = om.patient_id
             """
         ),
         con=engine,
     )
 
-    # thirty_day_readmission_count: inpatient/emergency encounters starting within 30 days of prior encounter's end
+    # readmission_risk_tier: None - 81.43%, Occasional - 12.11%, Frequent - 4.26%, Super-Utilizer - 2.21%
+    # Categorical feature based on clinical risk levels of 30-day hospital readmissions.
     thirty_day_readmission_features = pd.read_sql(
         text(
             """
-            WITH ordered_enc AS (
-                SELECT patient_id,
-                       start_date,
-                       LAG(end_date) OVER (PARTITION BY patient_id ORDER BY start_date) AS prev_end_date
-                FROM encounter
-                WHERE encounter_class IN ('inpatient', 'emergency')
-            )
-            SELECT patient_id,
-                   COUNT(*) FILTER (WHERE prev_end_date IS NOT NULL
-                                      AND start_date <= prev_end_date + INTERVAL '30 days') AS thirty_day_readmission_count
-            FROM ordered_enc
-            GROUP BY patient_id
-            """
-        ),
-        con=engine,
-    )
-
-    # max_gap_in_care_days: longest gap between consecutive encounters (any class)
-    max_gap_features = pd.read_sql(
-        text(
-            """
-            WITH ordered_enc AS (
-                SELECT patient_id,
-                       start_date,
-                       LAG(end_date) OVER (PARTITION BY patient_id ORDER BY start_date) AS prev_end_date
-                FROM encounter
-            )
-            SELECT patient_id,
-                   MAX(EXTRACT(EPOCH FROM (start_date - prev_end_date)) / 86400)::int AS max_gap_in_care_days
-            FROM ordered_enc
-            WHERE prev_end_date IS NOT NULL
-              AND start_date > prev_end_date
-            GROUP BY patient_id
+            WITH ordered_enc AS (SELECT patient_id,
+                                        start_date,
+                                        LAG(end_date) OVER (PARTITION BY patient_id ORDER BY start_date) AS prev_end_date
+                                 FROM encounter
+                                 WHERE encounter_class IN ('inpatient', 'emergency')),
+                 readmission_logic AS (SELECT patient_id,
+                                              COUNT(*) FILTER (WHERE prev_end_date IS NOT NULL 
+                                          AND start_date <= prev_end_date + INTERVAL '30 days') AS readm_count
+                                       FROM ordered_enc
+                                       GROUP BY patient_id)
+            SELECT p.patient_id,
+                   CASE
+                       WHEN COALESCE(r.readm_count, 0) = 0 THEN '0. None'
+                       WHEN r.readm_count BETWEEN 1 AND 2 THEN '1. Occasional (1-2)'
+                       WHEN r.readm_count BETWEEN 3 AND 5 THEN '2. Frequent (3-5)'
+                       ELSE '3. Super-Utilizer (>5)'
+                       END AS readmission_risk_tier
+            FROM patient p
+                     LEFT JOIN readmission_logic r ON p.patient_id = r.patient_id;
             """
         ),
         con=engine,
@@ -643,9 +462,12 @@ def build_patient_features(engine) -> pd.DataFrame:
         text(
             """
             SELECT patient_id,
-                   COALESCE(SUM(CASE WHEN start_date IS NOT NULL
-                                     THEN GREATEST(0, EXTRACT(EPOCH FROM (COALESCE(end_date, CURRENT_DATE) - start_date)) / 86400)
-                                     ELSE 0 END)::int, 0) AS lifetime_medication_days
+                   COALESCE(SUM(CASE
+                                    WHEN start_date IS NOT NULL
+                                        THEN GREATEST(0,
+                                                      EXTRACT(EPOCH FROM (COALESCE(end_date, CURRENT_DATE) - start_date)) /
+                                                      86400)
+                                    ELSE 0 END) ::int, 0) AS lifetime_medication_days
             FROM medication
             GROUP BY patient_id
             """
@@ -658,74 +480,43 @@ def build_patient_features(engine) -> pd.DataFrame:
         text(
             """
             SELECT patient_id,
-                   COALESCE(SUM(EXTRACT(EPOCH FROM (end_date - start_date)) / 3600), 0)::numeric(10,1) AS total_encounter_duration_hours
+                   COALESCE(SUM(EXTRACT(EPOCH FROM (end_date - start_date)) / 3600), 0) ::numeric(10,1) AS total_encounter_duration_hours
             FROM encounter
-            WHERE end_date IS NOT NULL AND start_date IS NOT NULL
+            WHERE end_date IS NOT NULL
+              AND start_date IS NOT NULL
             GROUP BY patient_id
             """
         ),
         con=engine,
     )
 
-    # avg_phq9_score and avg_total_cholesterol from observations
-    phq9_cholesterol_features = pd.read_sql(
+    # cholesterol_risk_category: Optimal - 21.29, Borderline - 24.74, High = 5.62, Very High - 5.71, Unknown - 42.64
+    # Bucketed average total cholesterol into clinical risk tiers.
+    cholesterol_features = pd.read_sql(
         text(
             """
-            SELECT patient_id,
-                   AVG(value_numeric) FILTER (WHERE desc_key = 'phq9')        AS avg_phq9_score,
-                   AVG(value_numeric) FILTER (WHERE desc_key = 'cholesterol')  AS avg_total_cholesterol
-            FROM (
-                SELECT patient_id,
-                       CASE
-                           WHEN description ILIKE '%%phq-9%%'
-                             OR description ILIKE '%%phq9%%'
-                             OR description ILIKE '%%patient health questionnaire 9%%' THEN 'phq9'
-                           WHEN description ILIKE '%%cholesterol%%'
-                            AND description NOT ILIKE '%%ldl%%'
-                            AND description NOT ILIKE '%%hdl%%'
-                            AND description NOT ILIKE '%%triglyceride%%'
-                            AND description NOT ILIKE '%%ratio%%' THEN 'cholesterol'
-                       END AS desc_key,
-                       value_numeric,
-                       ROW_NUMBER() OVER (PARTITION BY patient_id, description ORDER BY date DESC) AS rn
-                FROM observation
-                WHERE value_numeric IS NOT NULL
-                  AND value_numeric >= 0
-                  AND (description ILIKE '%%phq-9%%'
-                       OR description ILIKE '%%phq9%%'
-                       OR description ILIKE '%%patient health questionnaire 9%%'
-                       OR (description ILIKE '%%cholesterol%%'
-                           AND description NOT ILIKE '%%ldl%%'
-                           AND description NOT ILIKE '%%hdl%%'
-                           AND description NOT ILIKE '%%triglyceride%%'
-                           AND description NOT ILIKE '%%ratio%%'))
-            ) sub
-            WHERE rn <= 5 AND desc_key IS NOT NULL
+            WITH cholesterol_obs AS (SELECT patient_id,
+                                            AVG(value_numeric) AS avg_cholesterol
+                                     FROM observation
+                                     WHERE value_numeric IS NOT NULL
+                                       AND value_numeric >= 0
+                                       AND description ILIKE '%%cholesterol%%'
+                AND description NOT ILIKE '%%ldl%%'
+                AND description NOT ILIKE '%%hdl%%'
+                AND description NOT ILIKE '%%triglyceride%%'
+                AND description NOT ILIKE '%%ratio%%'
             GROUP BY patient_id
-            """
-        ),
-        con=engine,
-    )
-
-    # employment_status: most recent employment-related condition per patient
-    employment_features = pd.read_sql(
-        text(
-            """
-            SELECT DISTINCT ON (patient_id)
-                patient_id,
-                CASE
-                    WHEN LOWER(description) LIKE '%%full-time employment%%'
-                      OR LOWER(description) LIKE '%%full time employment%%' THEN 'Employed'
-                    WHEN LOWER(description) LIKE '%%part-time employment%%'
-                      OR LOWER(description) LIKE '%%part time employment%%' THEN 'Part-time'
-                    WHEN LOWER(description) LIKE '%%unemployed%%' THEN 'Unemployed'
-                    WHEN LOWER(description) LIKE '%%not in labor force%%' THEN 'Not in labor force'
-                END AS employment_status
-            FROM condition
-            WHERE LOWER(description) LIKE '%%employment%%'
-               OR LOWER(description) LIKE '%%unemployed%%'
-               OR LOWER(description) LIKE '%%labor force%%'
-            ORDER BY patient_id, start_date DESC NULLS LAST, description
+                )
+            SELECT p.patient_id,
+                   CASE
+                       WHEN c.avg_cholesterol IS NULL THEN 'Unknown'
+                       WHEN c.avg_cholesterol < 170 THEN 'Optimal'
+                       WHEN c.avg_cholesterol < 200 THEN 'Borderline'
+                       WHEN c.avg_cholesterol < 240 THEN 'High'
+                       ELSE 'Very High'
+                       END AS cholesterol_risk_category
+            FROM patient p
+                     LEFT JOIN cholesterol_obs c ON c.patient_id = p.patient_id;
             """
         ),
         con=engine,
@@ -737,15 +528,19 @@ def build_patient_features(engine) -> pd.DataFrame:
             """
             SELECT patient_id,
                    CASE
-                       WHEN MAX(CASE WHEN LOWER(description) LIKE '%%normal pregnancy%%'
-                                      AND end_date IS NULL THEN 1 ELSE 0 END) = 1 THEN 'Active'
-                       WHEN MAX(CASE WHEN LOWER(description) LIKE '%%pregnancy%%'
-                                      OR LOWER(description) LIKE '%%miscarriage%%'
-                                      OR LOWER(description) LIKE '%%tubal ligation%%'
-                                      OR LOWER(description) LIKE '%%antenatal%%'
-                                      OR LOWER(description) LIKE '%%eclampsia%%' THEN 1 ELSE 0 END) = 1 THEN 'Past'
+                       WHEN MAX(CASE
+                                    WHEN LOWER(description) LIKE '%%normal pregnancy%%'
+                                        AND end_date IS NULL THEN 1
+                                    ELSE 0 END) = 1 THEN 'Active'
+                       WHEN MAX(CASE
+                                    WHEN LOWER(description) LIKE '%%pregnancy%%'
+                                        OR LOWER(description) LIKE '%%miscarriage%%'
+                                        OR LOWER(description) LIKE '%%tubal ligation%%'
+                                        OR LOWER(description) LIKE '%%antenatal%%'
+                                        OR LOWER(description) LIKE '%%eclampsia%%' THEN 1
+                                    ELSE 0 END) = 1 THEN 'Past'
                        ELSE 'None'
-                   END AS pregnancy_history
+                       END AS pregnancy_history
             FROM condition
             GROUP BY patient_id
             """
@@ -756,35 +551,26 @@ def build_patient_features(engine) -> pd.DataFrame:
     df = patient_features.copy()
 
     for right_df in [
-        encounter_features,
-        dominant_encounter_features,
-        # condition_features,          # REMOVED - total_conditions
-        disease_flags,
-        inpatient_history,
-        medication_features,
-        procedure_features,
-        dental_procedure_features,
-        # immunization_features,       # REMOVED - total_immunizations
-        observation_features,
-        active_conditions_features,
-        recency_features,
-        # careplan_features,           # REMOVED - careplan counts
-        dominant_careplan_features,  # NEW - dominant_careplan
-        speciality_features,  # NEW - distinct_specialities_seen (currently zero-variance, kept for reference)
-        provider_features,  # NEW - distinct_providers_seen
-        ooh_features,  # NEW - out_of_hours_flyer
-        smoking_features,
-        substance_use_features,
-        mental_health_severity_features,
-        pain_management_features,
-        thirty_day_readmission_features,
-        max_gap_features,
-        lifetime_medication_features,
-        encounter_duration_features,
-        phq9_cholesterol_features,
-        employment_features,
-        pregnancy_features,
-    ]:
+    patient_features,
+    encounter_features,
+    condition_features,
+    disease_flags,
+    inpatient_history,
+    medication_features,
+    procedure_features,
+    observation_features,
+    active_conditions_features,
+    dominant_careplan_features,
+    provider_features,
+    ooh_features,
+    substance_use_features,
+    pain_management_features,
+    thirty_day_readmission_features,
+    lifetime_medication_features,
+    encounter_duration_features,
+    cholesterol_features,
+    pregnancy_features
+]:
         df = df.merge(right_df, on="patient_id", how="left")
 
     # Care-class aggregates: split utilization into 4 axes.
@@ -1304,7 +1090,7 @@ if __name__ == "__main__":
     load_dotenv()
 
     from db import engine as db_engine
-    from configs import CONFIGS
+    from clustering_algorithms.k_prototypes.old.configs import CONFIGS
 
     df = build_patient_features(db_engine)
 
@@ -1324,6 +1110,7 @@ if __name__ == "__main__":
 
     general_xlsx_path = current_folder / "general_conclusion.xlsx"
 
+
     def flush_general_conclusion():
         # Merge new rows with any existing file. Rows are keyed by (version, k);
         # fresh results win. Called after every run so a crash preserves progress.
@@ -1340,6 +1127,7 @@ if __name__ == "__main__":
         combined = combined.drop_duplicates(subset=["version", "k"], keep="last")
         combined = combined.sort_values(["version", "k"]).reset_index(drop=True)
         combined.to_excel(general_xlsx_path, index=False)
+
 
     K_RANGE = range(6, 7)  # 4..7 inclusive
 
