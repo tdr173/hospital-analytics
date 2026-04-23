@@ -1,0 +1,36 @@
+v28_sstandard_gauto_rs42_th6_k6 | Huang + standard + gamma=auto + k=6 + seed=42 + threshold=6
+=============================================================================================
+Cluster Evaluation Report
+
+Silhouette Score:        0.2262  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
+Gower Silhouette Score:  0.0928  (numerical + categorical, same scale as above)
+Calinski-Harabasz:       8292.26  (numerical only, range 0 to inf, higher is better)
+Calinski-Harabasz (FAMD):5492.40  (mixed, on 2D FAMD embedding)
+Davies-Bouldin:          1.2727  (numerical only, range 0 to inf, lower is better, <1 good, >2 poor)
+Davies-Bouldin (FAMD):   1.8066  (mixed, on 2D FAMD embedding)
+
+Per-cluster Silhouette (Gower, weak if near 0 or negative):
+    cluster 0   0.0623
+    cluster 1   0.2292
+    cluster 2   0.0895
+    cluster 3   0.1501
+    cluster 4   -0.0360
+    cluster 5   0.0279
+
+Feature Importance (contribution to clustering, range 0 to 1, higher is better)
+  Numerical (eta-squared, between-cluster variance / total variance):
+    age                              0.7795
+    active_conditions_count          0.7268
+    acute_care_count                 0.7263
+    preventive_to_reactive_ratio     0.6618
+    wellness_count                   0.5200
+    distinct_providers_seen          0.5058
+  Categorical (Cramer's V, association between feature and cluster label):
+    has_hypertension                 0.5552
+    pregnancy_history                0.4237
+    dominant_careplan                0.4126
+    out_of_hours_flyer               0.4058
+    readmission_risk_tier            0.3726
+    bmi_type                         0.3677
+    gender                           0.2991
+    has_mental_health                0.1861

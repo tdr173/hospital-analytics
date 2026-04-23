@@ -1,0 +1,20 @@
+version: v19
+k range: 4..6
+
+numerical (6):
+  - age
+  - active_conditions_count
+  - distinct_providers_seen
+  - wellness_count
+  - acute_care_count
+  - total_encounter_duration_hours
+
+categorical (8):
+  - gender
+  - pregnancy_history
+  - has_diabetes
+  - glucose_risk_category
+  - bmi_type
+  - cholesterol_risk_category
+  - dominant_careplan
+  - readmission_risk_tier

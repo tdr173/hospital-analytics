@@ -1,0 +1,20 @@
+version: v27
+k range: 4..6
+
+numerical (6):
+  - age
+  - active_conditions_count
+  - distinct_providers_seen
+  - wellness_count
+  - acute_care_count
+  - total_encounter_duration_hours
+
+categorical (8):
+  - gender
+  - pregnancy_history
+  - medication_intensity
+  - has_hypertension
+  - has_mental_health
+  - dominant_careplan
+  - readmission_risk_tier
+  - bmi_type

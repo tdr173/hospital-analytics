@@ -1,0 +1,20 @@
+version: v30
+k range: 4..6
+
+numerical (6):
+  - age
+  - clinical_severity_score
+  - lifetime_medication_days
+  - distinct_providers_seen
+  - wellness_count
+  - severe_care_count
+
+categorical (8):
+  - gender
+  - pregnancy_history
+  - has_heart_disease
+  - is_polypharmacy
+  - has_hypertension
+  - has_diabetes
+  - dominant_careplan
+  - bmi_type

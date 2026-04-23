@@ -1,0 +1,18 @@
+version: v4
+k range: 4..6
+
+numerical (5):
+  - age
+  - clinical_severity_score
+  - lifetime_medication_days
+  - distinct_providers_seen
+  - total_encounter_duration_hours
+
+categorical (7):
+  - gender
+  - pregnancy_history
+  - has_diabetes
+  - has_hypertension
+  - has_heart_disease
+  - cholesterol_risk_category
+  - dominant_careplan

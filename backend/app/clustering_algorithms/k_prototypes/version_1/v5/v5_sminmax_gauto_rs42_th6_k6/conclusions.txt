@@ -1,0 +1,33 @@
+v5_sminmax_gauto_rs42_th6_k6 | Huang + minmax + gamma=auto + k=6 + seed=42 + threshold=6
+========================================================================================
+Cluster Evaluation Report
+
+Silhouette Score:        0.2957  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
+Gower Silhouette Score:  0.0699  (numerical + categorical, same scale as above)
+Calinski-Harabasz:       41112.49  (numerical only, range 0 to inf, higher is better)
+Calinski-Harabasz (FAMD):6843.48  (mixed, on 2D FAMD embedding)
+Davies-Bouldin:          0.7891  (numerical only, range 0 to inf, lower is better, <1 good, >2 poor)
+Davies-Bouldin (FAMD):   1.4905  (mixed, on 2D FAMD embedding)
+
+Per-cluster Silhouette (Gower, weak if near 0 or negative):
+    cluster 0   0.3281
+    cluster 1   -0.0269
+    cluster 2   -0.1153
+    cluster 3   -0.0021
+    cluster 4   0.2935
+    cluster 5   0.0555
+
+Feature Importance (contribution to clustering, range 0 to 1, higher is better)
+  Numerical (eta-squared, between-cluster variance / total variance):
+    clinical_severity_score          0.9193
+    age                              0.5839
+    acute_care_count                 0.3974
+    lifetime_medication_days         0.3818
+  Categorical (Cramer's V, association between feature and cluster label):
+    gender                           0.5182
+    pregnancy_history                0.4985
+    dominant_careplan                0.4650
+    bmi_type                         0.4341
+    readmission_risk_tier            0.2928
+    substance_use_profile            0.2391
+    respiratory_disease_profile      0.0950

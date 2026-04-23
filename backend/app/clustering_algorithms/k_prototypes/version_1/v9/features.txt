@@ -1,0 +1,18 @@
+version: v9
+k range: 4..6
+
+numerical (5):
+  - age
+  - active_conditions_count
+  - lifetime_medication_days
+  - total_encounter_duration_hours
+  - distinct_providers_seen
+
+categorical (7):
+  - gender
+  - pregnancy_history
+  - dominant_careplan
+  - has_diabetes
+  - has_hypertension
+  - has_heart_disease
+  - bmi_type

@@ -1,0 +1,11 @@
+version: v42
+k range: 4..6
+
+numerical (1):
+  - age
+
+categorical (4):
+  - gender
+  - pregnancy_history
+  - race
+  - ethnicity

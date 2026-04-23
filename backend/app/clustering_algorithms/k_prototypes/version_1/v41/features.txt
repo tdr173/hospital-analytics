@@ -1,0 +1,18 @@
+version: v41
+k range: 4..6
+
+numerical (6):
+  - age
+  - distinct_providers_seen
+  - wellness_count
+  - severe_care_count
+  - routine_care_count
+  - total_encounter_duration_hours
+
+categorical (6):
+  - gender
+  - pregnancy_history
+  - dominant_careplan
+  - dominant_encounter_class
+  - out_of_hours_flyer
+  - pain_management_tier

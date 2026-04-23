@@ -1,0 +1,17 @@
+version: v6
+k range: 4..6
+
+numerical (5):
+  - qaly
+  - clinical_severity_score
+  - lifetime_medication_days
+  - severe_care_count
+  - distinct_providers_seen
+
+categorical (6):
+  - gender
+  - pregnancy_history
+  - dominant_careplan
+  - has_hypertension
+  - readmission_risk_tier
+  - bmi_type

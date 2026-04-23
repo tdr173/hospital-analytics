@@ -1,0 +1,33 @@
+v41_sminmax_gauto_rs42_th6_k5 | Huang + minmax + gamma=auto + k=5 + seed=42 + threshold=6
+=========================================================================================
+Cluster Evaluation Report
+
+Silhouette Score:        0.0604  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
+Gower Silhouette Score:  0.2194  (numerical + categorical, same scale as above)
+Calinski-Harabasz:       4256.16  (numerical only, range 0 to inf, higher is better)
+Calinski-Harabasz (FAMD):11395.22  (mixed, on 2D FAMD embedding)
+Davies-Bouldin:          4.1756  (numerical only, range 0 to inf, lower is better, <1 good, >2 poor)
+Davies-Bouldin (FAMD):   3.1057  (mixed, on 2D FAMD embedding)
+
+Per-cluster Silhouette (Gower, weak if near 0 or negative):
+    cluster 0   0.4479
+    cluster 1   0.1960
+    cluster 2   -0.1133
+    cluster 3   0.1370
+    cluster 4   0.3777
+
+Feature Importance (contribution to clustering, range 0 to 1, higher is better)
+  Numerical (eta-squared, between-cluster variance / total variance):
+    age                              0.6105
+    distinct_providers_seen          0.4370
+    severe_care_count                0.3105
+    wellness_count                   0.2871
+    total_encounter_duration_hours   0.2669
+    routine_care_count               0.1406
+  Categorical (Cramer's V, association between feature and cluster label):
+    gender                           0.6399
+    pregnancy_history                0.6298
+    dominant_careplan                0.5884
+    pain_management_tier             0.3832
+    dominant_encounter_class         0.3577
+    out_of_hours_flyer               0.2890

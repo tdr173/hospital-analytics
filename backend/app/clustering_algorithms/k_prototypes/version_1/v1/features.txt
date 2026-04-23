@@ -1,0 +1,16 @@
+version: v1
+k range: 4..6
+
+numerical (6):
+  - routine_care_count
+  - acute_care_count
+  - wellness_count
+  - severe_care_count
+  - age
+  - clinical_severity_score
+
+categorical (4):
+  - bmi_type
+  - gender
+  - dominant_careplan
+  - pregnancy_history
