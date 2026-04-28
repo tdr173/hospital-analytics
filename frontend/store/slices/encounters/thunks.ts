@@ -17,6 +17,38 @@ import {
 import { ErrorResponse } from "@/models/generic/generic";
 import { API_BASE } from "@/store/slices/clusters/thunks";
 import { appendScopeToUrl } from "@/utils/authScope";
+import { apiPost, apiPatch, apiDelete } from "@/store/slices/_apiClient";
+
+export type SubRecordKind =
+  | "observation"
+  | "condition"
+  | "medication"
+  | "procedure"
+  | "immunization"
+  | "careplan"
+  | "allergy";
+
+const PATH_SEG: Record<SubRecordKind, string> = {
+  observation: "observations",
+  condition: "conditions",
+  medication: "medications",
+  procedure: "procedures",
+  immunization: "immunizations",
+  careplan: "careplans",
+  allergy: "allergies",
+};
+
+export interface EncounterCreatePayload {
+  patientId: string;
+  providerId?: string | null;
+  startDate: string;
+  endDate: string;
+  encounterClass: string;
+  description: string;
+  reasonDescription?: string | null;
+}
+
+export type EncounterUpdatePayload = Partial<Omit<EncounterCreatePayload, "patientId">>;
 
 const defaultHeaders: Record<string, string> = {
   "ngrok-skip-browser-warning": "true",
@@ -163,5 +195,89 @@ export const fetchEncounterCareplans = createAsyncThunk<
     return await get<EncounterCarePlanItem[]>(`${API_BASE}/encounters/${encounterId}/careplans`, "careplans");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch careplans" });
+  }
+});
+
+export const createEncounter = createAsyncThunk<
+  EncounterDetail,
+  EncounterCreatePayload,
+  { rejectValue: ErrorResponse }
+>("encounters/createEncounter", async (payload, thunkAPI) => {
+  try {
+    return await apiPost<EncounterDetail>(`${API_BASE}/encounters`, payload, "create encounter");
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to create encounter" });
+  }
+});
+
+export const updateEncounter = createAsyncThunk<
+  EncounterDetail,
+  { encounterId: string; payload: EncounterUpdatePayload },
+  { rejectValue: ErrorResponse }
+>("encounters/updateEncounter", async ({ encounterId, payload }, thunkAPI) => {
+  try {
+    return await apiPatch<EncounterDetail>(`${API_BASE}/encounters/${encounterId}`, payload, "update encounter");
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to update encounter" });
+  }
+});
+
+export const deleteEncounter = createAsyncThunk<
+  string,
+  string,
+  { rejectValue: ErrorResponse }
+>("encounters/deleteEncounter", async (encounterId, thunkAPI) => {
+  try {
+    await apiDelete(`${API_BASE}/encounters/${encounterId}`, "delete encounter");
+    return encounterId;
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to delete encounter" });
+  }
+});
+
+export const createEncounterSubRecord = createAsyncThunk<
+  unknown,
+  { kind: SubRecordKind; encounterId: string; payload: Record<string, unknown> },
+  { rejectValue: ErrorResponse }
+>("encounters/createSubRecord", async ({ kind, encounterId, payload }, thunkAPI) => {
+  try {
+    return await apiPost(
+      `${API_BASE}/encounters/${encounterId}/${PATH_SEG[kind]}`,
+      payload,
+      `create ${kind}`,
+    );
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: `Failed to create ${kind}` });
+  }
+});
+
+export const updateEncounterSubRecord = createAsyncThunk<
+  unknown,
+  { kind: SubRecordKind; encounterId: string; recordId: number; payload: Record<string, unknown> },
+  { rejectValue: ErrorResponse }
+>("encounters/updateSubRecord", async ({ kind, encounterId, recordId, payload }, thunkAPI) => {
+  try {
+    return await apiPatch(
+      `${API_BASE}/encounters/${encounterId}/${PATH_SEG[kind]}/${recordId}`,
+      payload,
+      `update ${kind}`,
+    );
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: `Failed to update ${kind}` });
+  }
+});
+
+export const deleteEncounterSubRecord = createAsyncThunk<
+  void,
+  { kind: SubRecordKind; encounterId: string; recordId: number },
+  { rejectValue: ErrorResponse }
+>("encounters/deleteSubRecord", async ({ kind, encounterId, recordId }, thunkAPI) => {
+  try {
+    await apiDelete(
+      `${API_BASE}/encounters/${encounterId}/${PATH_SEG[kind]}/${recordId}`,
+      `delete ${kind}`,
+    );
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: `Failed to delete ${kind}` });
   }
 });

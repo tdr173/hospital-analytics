@@ -22,6 +22,8 @@ import {
   fetchPatientCareplans,
   fetchPatientEncounters,
   fetchPatientSequences,
+  fetchPatientObservations,
+  PatientObservationItem,
 } from "./thunks";
 
 interface CurrentPatientState {
@@ -35,6 +37,7 @@ interface CurrentPatientState {
   careplans: CarePlanItem[];
   encounters: EncounterItem[];
   sequences: SequenceListItem[];
+  observations: PatientObservationItem[];
   loading: boolean;
   error: string | null;
   loadedTabs: number[];
@@ -51,6 +54,7 @@ const initialState: CurrentPatientState = {
   careplans: [],
   encounters: [],
   sequences: [],
+  observations: [],
   loading: false,
   error: null,
   loadedTabs: [],
@@ -150,6 +154,14 @@ const currentPatientSlice = createSlice({
       })
       .addCase(fetchPatientSequences.rejected, (state) => {
         addTab(state, 7);
+      })
+      // Observations (tab 8)
+      .addCase(fetchPatientObservations.fulfilled, (state, action) => {
+        state.observations = action.payload;
+        addTab(state, 8);
+      })
+      .addCase(fetchPatientObservations.rejected, (state) => {
+        addTab(state, 8);
       });
   },
 });

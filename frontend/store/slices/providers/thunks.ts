@@ -11,6 +11,19 @@ import {
 import { ErrorResponse } from "@/models/generic/generic";
 import { API_BASE } from "@/store/slices/clusters/thunks";
 import { appendScopeToUrl } from "@/utils/authScope";
+import { apiPost, apiPatch, apiDelete } from "@/store/slices/_apiClient";
+
+export interface ProviderCreatePayload {
+  firstName: string;
+  lastName: string;
+  gender?: string | null;
+  speciality?: string | null;
+  city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+export type ProviderUpdatePayload = Partial<ProviderCreatePayload>;
 
 const defaultHeaders: Record<string, string> = {
   "ngrok-skip-browser-warning": "true",
@@ -73,6 +86,43 @@ export const fetchProviderDetail = createAsyncThunk<
     return await get<ProviderDetail>(`${API_BASE}/providers/${providerId}`, "provider");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch provider" });
+  }
+});
+
+export const createProvider = createAsyncThunk<
+  ProviderDetail,
+  ProviderCreatePayload,
+  { rejectValue: ErrorResponse }
+>("providers/createProvider", async (payload, thunkAPI) => {
+  try {
+    return await apiPost<ProviderDetail>(`${API_BASE}/providers`, payload, "create doctor");
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to create doctor" });
+  }
+});
+
+export const updateProvider = createAsyncThunk<
+  ProviderDetail,
+  { providerId: string; payload: ProviderUpdatePayload },
+  { rejectValue: ErrorResponse }
+>("providers/updateProvider", async ({ providerId, payload }, thunkAPI) => {
+  try {
+    return await apiPatch<ProviderDetail>(`${API_BASE}/providers/${providerId}`, payload, "update doctor");
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to update doctor" });
+  }
+});
+
+export const deleteProvider = createAsyncThunk<
+  string,
+  string,
+  { rejectValue: ErrorResponse }
+>("providers/deleteProvider", async (providerId, thunkAPI) => {
+  try {
+    await apiDelete(`${API_BASE}/providers/${providerId}`, "delete doctor");
+    return providerId;
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to delete doctor" });
   }
 });
 

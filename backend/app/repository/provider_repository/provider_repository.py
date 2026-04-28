@@ -1,3 +1,4 @@
+import uuid
 from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
@@ -6,6 +7,9 @@ from domain import (
     ProviderModel, OrganizationModel, EncounterModel, PatientModel,
     ProviderListItem, ProviderListResponse, ProviderDetailResponse,
     ProviderEncounterItem, ProviderResourcesResponse, FilterOption,
+)
+from domain.schemas.provider_schemas.provider_schema import (
+    ProviderCreateRequest, ProviderUpdateRequest,
 )
 from repository._helpers import patient_name_col, clamp_page_size
 
@@ -156,6 +160,54 @@ class ProviderRepository:
             .all()
         )
         return [ProviderEncounterItem(**row._asdict()) for row in rows]
+
+    def _resolve_default_org(self) -> OrganizationModel:
+        org = self.db.query(OrganizationModel).first()
+        if not org:
+            raise ValueError("No organization configured")
+        return org
+
+    def create_provider(self, payload: ProviderCreateRequest) -> ProviderDetailResponse:
+        org = self._resolve_default_org()
+        provider = ProviderModel(
+            provider_id=uuid.uuid4().hex,
+            organization_id=org.organization_id,
+            first_name=payload.first_name,
+            last_name=payload.last_name,
+            gender=payload.gender,
+            speciality=payload.speciality,
+            city=payload.city or org.city,
+            latitude=payload.latitude if payload.latitude is not None else org.latitude,
+            longitude=payload.longitude if payload.longitude is not None else org.longitude,
+        )
+        self.db.add(provider)
+        self.db.commit()
+        self.db.refresh(provider)
+        return self.get_provider(provider.provider_id)
+
+    def update_provider(self, provider_id: str, payload: ProviderUpdateRequest) -> ProviderDetailResponse:
+        provider = self.db.get(ProviderModel, provider_id)
+        if not provider:
+            raise ValueError(f"Provider {provider_id} not found")
+        for field, value in payload.model_dump(exclude_unset=True).items():
+            setattr(provider, field, value)
+        self.db.add(provider)
+        self.db.commit()
+        return self.get_provider(provider_id)
+
+    def delete_provider(self, provider_id: str) -> None:
+        provider = self.db.get(ProviderModel, provider_id)
+        if not provider:
+            raise ValueError(f"Provider {provider_id} not found")
+        encounter_count = (
+            self.db.query(func.count(EncounterModel.encounter_id))
+            .filter(EncounterModel.provider_id == provider_id)
+            .scalar() or 0
+        )
+        if encounter_count > 0:
+            raise ValueError(f"Provider has {encounter_count} encounters; cannot delete")
+        self.db.delete(provider)
+        self.db.commit()
 
     def get_provider_resources(self) -> ProviderResourcesResponse:
         speciality_rows = (

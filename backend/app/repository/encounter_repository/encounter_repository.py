@@ -1,3 +1,4 @@
+import uuid
 from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
@@ -12,7 +13,28 @@ from domain import (
     EncounterCarePlanItem,
     EncounterResourcesResponse, FilterOption,
 )
+from domain.schemas.encounter_schemas.encounter_schema import (
+    EncounterCreateRequest, EncounterUpdateRequest,
+    ObservationCreateRequest, ObservationUpdateRequest,
+    ConditionCreateRequest, ConditionUpdateRequest,
+    MedicationCreateRequest, MedicationUpdateRequest,
+    ProcedureCreateRequest, ProcedureUpdateRequest,
+    ImmunizationCreateRequest, ImmunizationUpdateRequest,
+    CarePlanCreateRequest, CarePlanUpdateRequest,
+    AllergyCreateRequest, AllergyUpdateRequest,
+)
 from repository._helpers import patient_name_col, provider_name_col, clamp_page_size
+
+
+SUBRECORD_MODELS = {
+    "observation": ObservationModel,
+    "condition": ConditionModel,
+    "medication": MedicationModel,
+    "procedure": ProcedureModel,
+    "immunization": ImmunizationModel,
+    "careplan": CarePlanModel,
+    "allergy": AllergyModel,
+}
 
 SORT_COL_MAP = {
     "start_date": EncounterModel.start_date,
@@ -265,6 +287,113 @@ class EncounterRepository:
             )
             for r in rows
         ]
+
+    def _resolve_default_org_id(self) -> str:
+        org = self.db.query(OrganizationModel).first()
+        if not org:
+            raise ValueError("No organization configured")
+        return org.organization_id
+
+    def _ensure_encounter(self, encounter_id: str, provider_id_scope: Optional[str]) -> EncounterModel:
+        enc = self.db.get(EncounterModel, encounter_id)
+        if not enc:
+            raise ValueError(f"Encounter {encounter_id} not found")
+        if provider_id_scope and enc.provider_id != provider_id_scope:
+            raise PermissionError("Encounter does not belong to this provider")
+        return enc
+
+    def create_encounter(self, payload: EncounterCreateRequest, provider_id_scope: Optional[str]) -> EncounterDetailResponse:
+        if not self.db.get(PatientModel, payload.patient_id):
+            raise ValueError(f"Patient {payload.patient_id} not found")
+        provider_id = provider_id_scope or payload.provider_id
+        if not provider_id:
+            raise ValueError("providerId required when role is not DOCTOR")
+        if not self.db.get(ProviderModel, provider_id):
+            raise ValueError(f"Provider {provider_id} not found")
+        org_id = self._resolve_default_org_id()
+        duration = max((payload.end_date - payload.start_date).total_seconds() / 60.0, 0.0)
+        enc = EncounterModel(
+            encounter_id=uuid.uuid4().hex,
+            patient_id=payload.patient_id,
+            provider_id=provider_id,
+            organization_id=org_id,
+            start_date=payload.start_date,
+            end_date=payload.end_date,
+            duration=duration,
+            encounter_class=payload.encounter_class,
+            description=payload.description,
+            reason_description=payload.reason_description,
+        )
+        self.db.add(enc)
+        self.db.commit()
+        return self.get_encounter(enc.encounter_id)
+
+    def update_encounter(self, encounter_id: str, payload: EncounterUpdateRequest, provider_id_scope: Optional[str]) -> EncounterDetailResponse:
+        enc = self._ensure_encounter(encounter_id, provider_id_scope)
+        data = payload.model_dump(exclude_unset=True)
+        for field, value in data.items():
+            setattr(enc, field, value)
+        if payload.start_date is not None or payload.end_date is not None:
+            enc.duration = max((enc.end_date - enc.start_date).total_seconds() / 60.0, 0.0)
+        self.db.add(enc)
+        self.db.commit()
+        return self.get_encounter(encounter_id)
+
+    def delete_encounter(self, encounter_id: str, provider_id_scope: Optional[str]) -> None:
+        enc = self._ensure_encounter(encounter_id, provider_id_scope)
+        for model in SUBRECORD_MODELS.values():
+            count = (
+                self.db.query(func.count(model.id))
+                .filter(model.encounter_id == encounter_id)
+                .scalar() or 0
+            )
+            if count > 0:
+                raise ValueError(f"Encounter has dependent {model.__tablename__} rows; cannot delete")
+        self.db.delete(enc)
+        self.db.commit()
+
+    def create_subrecord(self, kind: str, encounter_id: str, payload, provider_id_scope: Optional[str]):
+        enc = self._ensure_encounter(encounter_id, provider_id_scope)
+        model = SUBRECORD_MODELS[kind]
+        data = payload.model_dump(exclude_unset=False)
+        instance = model(
+            patient_id=enc.patient_id,
+            encounter_id=encounter_id,
+            **data,
+        )
+        if kind == "medication" and payload.start_date and payload.end_date:
+            instance.duration_days = max((payload.end_date - payload.start_date).total_seconds() / 86400.0, 0.0)
+        if kind == "careplan" and payload.start_date and payload.end_date:
+            instance.duration_days = max((payload.end_date - payload.start_date).total_seconds() / 86400.0, 0.0)
+        self.db.add(instance)
+        self.db.commit()
+        self.db.refresh(instance)
+        return instance
+
+    def update_subrecord(self, kind: str, encounter_id: str, record_id: int, payload, provider_id_scope: Optional[str]):
+        self._ensure_encounter(encounter_id, provider_id_scope)
+        model = SUBRECORD_MODELS[kind]
+        instance = self.db.get(model, record_id)
+        if not instance or instance.encounter_id != encounter_id:
+            raise ValueError(f"{kind} {record_id} not found in encounter {encounter_id}")
+        data = payload.model_dump(exclude_unset=True)
+        for field, value in data.items():
+            setattr(instance, field, value)
+        if kind in ("medication", "careplan") and instance.start_date and instance.end_date:
+            instance.duration_days = max((instance.end_date - instance.start_date).total_seconds() / 86400.0, 0.0)
+        self.db.add(instance)
+        self.db.commit()
+        self.db.refresh(instance)
+        return instance
+
+    def delete_subrecord(self, kind: str, encounter_id: str, record_id: int, provider_id_scope: Optional[str]) -> None:
+        self._ensure_encounter(encounter_id, provider_id_scope)
+        model = SUBRECORD_MODELS[kind]
+        instance = self.db.get(model, record_id)
+        if not instance or instance.encounter_id != encounter_id:
+            raise ValueError(f"{kind} {record_id} not found in encounter {encounter_id}")
+        self.db.delete(instance)
+        self.db.commit()
 
     def get_encounter_resources(self) -> EncounterResourcesResponse:
         rows = (

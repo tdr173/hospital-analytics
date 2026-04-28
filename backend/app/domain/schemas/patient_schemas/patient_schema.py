@@ -74,6 +74,7 @@ class ConditionItem(CamelModel):
     condition_code: str
     start_date: datetime
     end_date: Optional[datetime] = None
+    encounter_id: Optional[str] = None
 
 
 class MedicationItem(CamelModel):
@@ -84,6 +85,7 @@ class MedicationItem(CamelModel):
     end_date: Optional[datetime] = None
     duration_days: Optional[float] = None
     reason_description: Optional[str] = None
+    encounter_id: Optional[str] = None
 
 
 class ProcedureItem(CamelModel):
@@ -93,6 +95,7 @@ class ProcedureItem(CamelModel):
     start_date: datetime
     end_date: Optional[datetime] = None
     reason_description: Optional[str] = None
+    encounter_id: Optional[str] = None
 
 
 class CarePlanItem(CamelModel):
@@ -103,6 +106,7 @@ class CarePlanItem(CamelModel):
     end_date: Optional[datetime] = None
     duration_days: Optional[float] = None
     reason_description: Optional[str] = None
+    encounter_id: Optional[str] = None
 
 
 class ImmunizationItem(CamelModel):
@@ -110,6 +114,7 @@ class ImmunizationItem(CamelModel):
     description: str
     immunization_code: str
     date: datetime
+    encounter_id: Optional[str] = None
 
 
 class AllergyItem(CamelModel):
@@ -118,6 +123,48 @@ class AllergyItem(CamelModel):
     allergy_code: str
     start_date: date
     end_date: Optional[date] = None
+    encounter_id: Optional[str] = None
+
+
+class PatientCreateRequest(CamelModel):
+    first_name: str
+    last_name: str
+    age: int
+    birthdate: Optional[date] = None
+    deathdate: Optional[date] = None
+    gender: Optional[str] = None
+    race: Optional[str] = None
+    ethnicity: Optional[str] = None
+    marital: Optional[str] = None
+    city: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
+class PatientUpdateRequest(CamelModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    age: Optional[int] = None
+    birthdate: Optional[date] = None
+    deathdate: Optional[date] = None
+    gender: Optional[str] = None
+    race: Optional[str] = None
+    ethnicity: Optional[str] = None
+    marital: Optional[str] = None
+    city: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
+class PatientObservationItem(CamelModel):
+    id: int
+    date: datetime
+    observation_code: str
+    description: str
+    value: str
+    value_numeric: Optional[float] = None
+    units: Optional[str] = None
+    encounter_id: Optional[str] = None
 
 
 class EncounterItem(CamelModel):

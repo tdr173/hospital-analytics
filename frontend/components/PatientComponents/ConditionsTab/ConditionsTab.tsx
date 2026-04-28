@@ -5,11 +5,20 @@ import { formatDate } from "@/utils/functions";
 import useClasses from "@/utils/useClasses";
 import conditionsTabStyles from "./ConditionsTabStyles";
 import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
+import RowActions from "@/components/generic_components/RowActions/RowActions";
 
-export default function ConditionsTab({ data }: { data: ConditionItem[] }) {
+interface ConditionsTabProps {
+  data: ConditionItem[];
+  onEdit?: (item: ConditionItem) => void;
+  onDelete?: (item: ConditionItem) => void;
+}
+
+export default function ConditionsTab({ data, onEdit, onDelete }: ConditionsTabProps) {
   const classes = useClasses(conditionsTabStyles, {
     name: "ConditionsTabStyles",
   });
+  const showActions = !!(onEdit || onDelete);
+  const gridTemplate = showActions ? "3fr 1fr 1fr 1fr 80px" : "3fr 1fr 1fr 1fr";
 
   if (!data || data.length === 0) {
     return <div className={classes.emptyState}>No conditions recorded.</div>;
@@ -18,11 +27,12 @@ export default function ConditionsTab({ data }: { data: ConditionItem[] }) {
   return (
     <div className={classes.tableContainer}>
       <div className={classes.scrollWrapper}>
-        <div className={`${classes.gridRow} ${classes.headerRow}`}>
+        <div className={`${classes.gridRow} ${classes.headerRow}`} style={{ gridTemplateColumns: gridTemplate }}>
           <div>Condition</div>
           <div>Condition Code</div>
           <div>Start Date</div>
           <div>End Date</div>
+          {showActions && <div>Actions</div>}
         </div>
 
         {data.map((r, index) => {
@@ -33,19 +43,16 @@ export default function ConditionsTab({ data }: { data: ConditionItem[] }) {
             <div
               key={r.id}
               className={`${classes.gridRow} ${classes.dataRow} ${rowColorClass}`}
+              style={{ gridTemplateColumns: gridTemplate }}
             >
-              {/* Column 1: Left Aligned (Default) */}
               {<TruncatedText text={r.description} />}
 
-              {/* Column 2: Centered Code */}
               <div className={classes.snomedCode}>{r.conditionCode}</div>
 
-              {/* Column 3: Centered Start Date */}
               <div className={classes.centeredCell}>
                 {formatDate(r.startDate)}
               </div>
 
-              {/* Column 4: Centered End Date/Badge */}
               <div className={classes.centeredCell}>
                 {r.endDate ? (
                   formatDate(r.endDate)
@@ -53,6 +60,10 @@ export default function ConditionsTab({ data }: { data: ConditionItem[] }) {
                   <span className={classes.ongoingBadge}>Ongoing</span>
                 )}
               </div>
+
+              {showActions && (
+                <RowActions item={r} onEdit={onEdit} onDelete={onDelete} />
+              )}
             </div>
           );
         })}

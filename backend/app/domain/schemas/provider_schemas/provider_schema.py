@@ -39,6 +39,26 @@ class ProviderDetailResponse(CamelModel):
     organization_name: Optional[str] = None
 
 
+class ProviderCreateRequest(CamelModel):
+    first_name: str
+    last_name: str
+    gender: Optional[str] = None
+    speciality: Optional[str] = None
+    city: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
+class ProviderUpdateRequest(CamelModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    gender: Optional[str] = None
+    speciality: Optional[str] = None
+    city: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
 class ProviderEncounterItem(CamelModel):
     encounter_id: str
     patient_id: str

@@ -5,11 +5,20 @@ import { formatDate } from "@/utils/functions";
 import useClasses from "@/utils/useClasses";
 import proceduresTabStyles from "./ProceduresTabStyles";
 import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
+import RowActions from "@/components/generic_components/RowActions/RowActions";
 
-export default function ProceduresTab({ data }: { data: ProcedureItem[] }) {
+interface ProceduresTabProps {
+  data: ProcedureItem[];
+  onEdit?: (item: ProcedureItem) => void;
+  onDelete?: (item: ProcedureItem) => void;
+}
+
+export default function ProceduresTab({ data, onEdit, onDelete }: ProceduresTabProps) {
   const classes = useClasses(proceduresTabStyles, {
     name: "ProceduresTabStyles",
   });
+  const showActions = !!(onEdit || onDelete);
+  const gridTemplate = showActions ? "2fr 1fr 2fr 80px" : "2fr 1fr 2fr";
 
   if (!data || data.length === 0) {
     return <div className={classes.emptyState}>No procedures recorded.</div>;
@@ -18,10 +27,11 @@ export default function ProceduresTab({ data }: { data: ProcedureItem[] }) {
   return (
     <div className={classes.tableContainer}>
       <div className={classes.scrollWrapper}>
-        <div className={`${classes.gridRow} ${classes.headerRow}`}>
+        <div className={`${classes.gridRow} ${classes.headerRow}`} style={{ gridTemplateColumns: gridTemplate }}>
           <div>Procedure</div>
           <div>Date</div>
           <div>Reason</div>
+          {showActions && <div>Actions</div>}
         </div>
 
         {data.map((r, index) => {
@@ -32,16 +42,14 @@ export default function ProceduresTab({ data }: { data: ProcedureItem[] }) {
             <div
               key={r.id}
               className={`${classes.gridRow} ${classes.dataRow} ${rowColorClass}`}
+              style={{ gridTemplateColumns: gridTemplate }}
             >
-              {/* Column 1: Procedure Name (Left Aligned) */}
               <TruncatedText text={r.description} />
 
-              {/* Column 2: Centered Date */}
               <div className={classes.centeredCell}>
                 {formatDate(r.startDate)}
               </div>
 
-              {/* Column 3: Centered Reason (Secondary Color) */}
               <div className={classes.secondaryText}>
                 {r.reasonDescription ? (
                   <TruncatedText text={r.reasonDescription} />
@@ -49,6 +57,10 @@ export default function ProceduresTab({ data }: { data: ProcedureItem[] }) {
                   "-"
                 )}
               </div>
+
+              {showActions && (
+                <RowActions item={r} onEdit={onEdit} onDelete={onDelete} />
+              )}
             </div>
           );
         })}

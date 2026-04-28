@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
+import AddIcon from "@mui/icons-material/Add";
 
 import { RootState, AppDispatch } from "@/store";
 import {
@@ -18,9 +19,29 @@ import {
   fetchPatientCareplans,
   fetchPatientEncounters,
   fetchPatientSequences,
+  fetchPatientObservations,
+  PatientObservationItem,
 } from "@/store/slices/patients/thunks";
+import {
+  createEncounter,
+  updateEncounter,
+  deleteEncounter,
+  createEncounterSubRecord,
+  updateEncounterSubRecord,
+  deleteEncounterSubRecord,
+  SubRecordKind,
+} from "@/store/slices/encounters/thunks";
 import { resetCurrentPatient } from "@/store/slices/patients/current-patient-slice";
-import { PatientSummary } from "@/models/generic/patients";
+import {
+  PatientSummary,
+  EncounterItem,
+  ConditionItem,
+  MedicationItem,
+  ProcedureItem,
+  ImmunizationItem,
+  AllergyItem,
+  CarePlanItem,
+} from "@/models/generic/patients";
 
 import IdentityCard from "@/components/PatientComponents/PatientIdentityCard/PatientIdentityCard";
 import ConditionsTab from "@/components/PatientComponents/ConditionsTab/ConditionsTab";
@@ -31,8 +52,15 @@ import AllergiesTab from "@/components/PatientComponents/AllergiesTab/AllergiesT
 import CarePlansTab from "@/components/PatientComponents/CarePlansTab/CarePlansTab";
 import EncountersTab from "@/components/PatientComponents/EncountersTab/EncountersTab";
 import SequencesTab from "@/components/PatientComponents/SequencesTab/SequencesTab";
+import ObservationsTab from "@/components/PatientComponents/ObservationsTab/ObservationsTab";
 
 import MetricComponent from "@/components/PatientComponents/MetricComponent/MetricComponent";
+import StyledButton from "@/components/generic_components/StyledButton/StyledButton";
+import FormModal from "@/components/generic_components/FormModal/FormModal";
+import EncounterFormModal, {
+  EncounterFormValue,
+} from "./components/EncounterFormModal/EncounterFormModal";
+import SubRecordFormModal from "./components/SubRecordFormModal/SubRecordFormModal";
 
 import useClasses from "@/utils/useClasses";
 import { PatientDetailPageStyles } from "./styles";
@@ -63,6 +91,7 @@ const TAB_LABELS = [
   "Care Plans",
   "Visits",
   "Care Sequences",
+  "Observations",
 ];
 
 const TAB_FETCHERS: Record<number, (id: string) => any> = {
@@ -73,7 +102,38 @@ const TAB_FETCHERS: Record<number, (id: string) => any> = {
   5: fetchPatientCareplans,
   6: fetchPatientEncounters,
   7: fetchPatientSequences,
+  8: fetchPatientObservations,
 };
+
+const TAB_TO_KIND: Record<number, SubRecordKind | null> = {
+  0: "condition",
+  1: "medication",
+  2: "procedure",
+  3: "immunization",
+  4: "allergy",
+  5: "careplan",
+  6: null, // encounters tab — handled separately
+  7: null, // sequences — read-only
+  8: "observation",
+};
+
+const ADD_LABEL: Record<number, string> = {
+  0: "Add condition",
+  1: "Add medication",
+  2: "Add procedure",
+  3: "Add vaccination",
+  4: "Add allergy",
+  5: "Add care plan",
+  6: "Add visit",
+  8: "Add observation",
+};
+
+interface RecordRef {
+  kind: SubRecordKind;
+  encounterId: string;
+  recordId: number;
+  initial: any;
+}
 
 export default function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -93,12 +153,24 @@ export default function PatientDetailPage() {
     careplans,
     encounters,
     sequences,
+    observations,
     loading,
     error,
     loadedTabs,
   } = useSelector((state: RootState) => state.currentPatient);
+  const role = useSelector((state: RootState) => state.auth.user?.role);
+  const canManage = role === "MANAGER" || role === "DOCTOR";
 
   const [tab, setTab] = useState(0);
+  const [encModalOpen, setEncModalOpen] = useState(false);
+  const [encEditing, setEncEditing] = useState<EncounterItem | null>(null);
+  const [encDeleting, setEncDeleting] = useState<EncounterItem | null>(null);
+  const [subModalOpen, setSubModalOpen] = useState(false);
+  const [subKind, setSubKind] = useState<SubRecordKind>("condition");
+  const [subInitial, setSubInitial] = useState<any | null>(null);
+  const [subDeleting, setSubDeleting] = useState<RecordRef | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -106,6 +178,8 @@ export default function PatientDetailPage() {
     dispatch(fetchPatientDetail(id));
     dispatch(fetchPatientSummary(id));
     dispatch(fetchPatientConditions(id));
+    // Encounters power the visit-picker for sub-records, so always fetch them up-front.
+    dispatch(fetchPatientEncounters(id));
   }, [id, dispatch]);
 
   useEffect(() => {
@@ -113,6 +187,114 @@ export default function PatientDetailPage() {
     const fetcher = TAB_FETCHERS[tab];
     if (fetcher) dispatch(fetcher(id));
   }, [tab, id, dispatch, loadedTabs]);
+
+  const refreshTabData = (tabIndex: number) => {
+    if (!id) return;
+    const fetcher = TAB_FETCHERS[tabIndex];
+    if (fetcher) dispatch(fetcher(id));
+    if (tabIndex === 0) dispatch(fetchPatientConditions(id));
+    dispatch(fetchPatientSummary(id));
+  };
+
+  const refreshEncounters = () => {
+    if (!id) return;
+    dispatch(fetchPatientEncounters(id));
+  };
+
+  const openSubAdd = (kind: SubRecordKind) => {
+    setSubKind(kind);
+    setSubInitial(null);
+    setFormError(null);
+    setSubModalOpen(true);
+  };
+
+  const openSubEdit = (
+    kind: SubRecordKind,
+    record: any,
+    codeField: string,
+  ) => {
+    if (!record.encounterId) {
+      setFormError("Cannot edit: missing encounter link");
+      return;
+    }
+    setSubKind(kind);
+    setFormError(null);
+    setSubInitial({
+      encounterId: record.encounterId,
+      code: record[codeField] ?? "",
+      description: record.description,
+      startDate: record.startDate ?? null,
+      endDate: record.endDate ?? null,
+      date: record.date ?? null,
+      reasonDescription: record.reasonDescription ?? null,
+      value: record.value ?? "",
+      valueNumeric: record.valueNumeric ?? null,
+      units: record.units ?? null,
+      _recordId: record.id,
+    });
+    setSubModalOpen(true);
+  };
+
+  const handleSubSubmit = async (
+    encounterId: string,
+    payload: Record<string, unknown>,
+  ) => {
+    setSubmitting(true);
+    setFormError(null);
+    const recordId = subInitial?._recordId as number | undefined;
+    const result = await (recordId
+      ? dispatch(updateEncounterSubRecord({ kind: subKind, encounterId, recordId, payload }))
+      : dispatch(createEncounterSubRecord({ kind: subKind, encounterId, payload })));
+    setSubmitting(false);
+    if ((result as any).error) {
+      setFormError((result as any).payload?.message ?? "Save failed");
+      return;
+    }
+    setSubModalOpen(false);
+    setSubInitial(null);
+    refreshTabData(tab);
+  };
+
+  const confirmSubDelete = async () => {
+    if (!subDeleting) return;
+    setSubmitting(true);
+    const result = await dispatch(
+      deleteEncounterSubRecord({
+        kind: subDeleting.kind,
+        encounterId: subDeleting.encounterId,
+        recordId: subDeleting.recordId,
+      }),
+    );
+    setSubmitting(false);
+    setSubDeleting(null);
+    if (!(result as any).error) refreshTabData(tab);
+  };
+
+  const handleEncSubmit = async (value: EncounterFormValue) => {
+    if (!id) return;
+    setSubmitting(true);
+    setFormError(null);
+    const result = await (encEditing
+      ? dispatch(updateEncounter({ encounterId: encEditing.encounterId, payload: value }))
+      : dispatch(createEncounter({ patientId: id, ...value })));
+    setSubmitting(false);
+    if ((result as any).error) {
+      setFormError((result as any).payload?.message ?? "Save failed");
+      return;
+    }
+    setEncModalOpen(false);
+    setEncEditing(null);
+    refreshEncounters();
+  };
+
+  const confirmEncDelete = async () => {
+    if (!encDeleting) return;
+    setSubmitting(true);
+    const result = await dispatch(deleteEncounter(encDeleting.encounterId));
+    setSubmitting(false);
+    setEncDeleting(null);
+    if (!(result as any).error) refreshEncounters();
+  };
 
   if (loading) {
     return <div className={classes.pageLoading}>Loading patient profile...</div>;
@@ -124,16 +306,87 @@ export default function PatientDetailPage() {
     );
   }
 
+  const renderConditions = () => (
+    <ConditionsTab
+      data={conditions}
+      onEdit={canManage ? (item: ConditionItem) => openSubEdit("condition", item, "conditionCode") : undefined}
+      onDelete={canManage ? (item: ConditionItem) => item.encounterId && setSubDeleting({ kind: "condition", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+    />
+  );
+  const renderMedications = () => (
+    <MedicationsTab
+      data={medications}
+      onEdit={canManage ? (item: MedicationItem) => openSubEdit("medication", item, "medicationCode") : undefined}
+      onDelete={canManage ? (item: MedicationItem) => item.encounterId && setSubDeleting({ kind: "medication", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+    />
+  );
+  const renderProcedures = () => (
+    <ProceduresTab
+      data={procedures}
+      onEdit={canManage ? (item: ProcedureItem) => openSubEdit("procedure", item, "procedureCode") : undefined}
+      onDelete={canManage ? (item: ProcedureItem) => item.encounterId && setSubDeleting({ kind: "procedure", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+    />
+  );
+  const renderImmunizations = () => (
+    <ImmunizationsTab
+      data={immunizations}
+      onEdit={canManage ? (item: ImmunizationItem) => openSubEdit("immunization", item, "immunizationCode") : undefined}
+      onDelete={canManage ? (item: ImmunizationItem) => item.encounterId && setSubDeleting({ kind: "immunization", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+    />
+  );
+  const renderAllergies = () => (
+    <AllergiesTab
+      data={allergies}
+      onEdit={canManage ? (item: AllergyItem) => openSubEdit("allergy", item, "allergyCode") : undefined}
+      onDelete={canManage ? (item: AllergyItem) => item.encounterId && setSubDeleting({ kind: "allergy", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+    />
+  );
+  const renderCareplans = () => (
+    <CarePlansTab
+      data={careplans}
+      onEdit={canManage ? (item: CarePlanItem) => openSubEdit("careplan", item, "careplanCode") : undefined}
+      onDelete={canManage ? (item: CarePlanItem) => item.encounterId && setSubDeleting({ kind: "careplan", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+    />
+  );
+  const renderEncounters = () => (
+    <EncountersTab
+      data={encounters}
+      onEdit={canManage ? (item) => { setEncEditing(item); setFormError(null); setEncModalOpen(true); } : undefined}
+      onDelete={canManage ? (item) => setEncDeleting(item) : undefined}
+    />
+  );
+  const renderObservations = () => (
+    <ObservationsTab
+      data={observations}
+      onEdit={canManage ? (item: PatientObservationItem) => openSubEdit("observation", item, "observationCode") : undefined}
+      onDelete={canManage ? (item: PatientObservationItem) => item.encounterId && setSubDeleting({ kind: "observation", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+    />
+  );
+
   const tabContent: Record<number, React.ReactNode> = {
-    0: <ConditionsTab data={conditions} />,
-    1: <MedicationsTab data={medications} />,
-    2: <ProceduresTab data={procedures} />,
-    3: <ImmunizationsTab data={immunizations} />,
-    4: <AllergiesTab data={allergies} />,
-    5: <CarePlansTab data={careplans} />,
-    6: <EncountersTab data={encounters} />,
+    0: renderConditions(),
+    1: renderMedications(),
+    2: renderProcedures(),
+    3: renderImmunizations(),
+    4: renderAllergies(),
+    5: renderCareplans(),
+    6: renderEncounters(),
     7: <SequencesTab data={sequences} />,
+    8: renderObservations(),
   };
+
+  const handleAddClick = () => {
+    if (tab === 6) {
+      setEncEditing(null);
+      setFormError(null);
+      setEncModalOpen(true);
+      return;
+    }
+    const kind = TAB_TO_KIND[tab];
+    if (kind) openSubAdd(kind);
+  };
+
+  const showAddButton = canManage && (tab === 6 || !!TAB_TO_KIND[tab]);
 
   return (
     <div className={classes.pageContainer}>
@@ -172,6 +425,30 @@ export default function PatientDetailPage() {
           ))}
         </Tabs>
 
+        {showAddButton && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              padding: "8px 16px 0",
+            }}
+          >
+            <StyledButton
+              onClick={handleAddClick}
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                height: "32px",
+                fontSize: "0.8rem",
+              }}
+            >
+              <AddIcon sx={{ fontSize: "1rem" }} />
+              {ADD_LABEL[tab]}
+            </StyledButton>
+          </div>
+        )}
+
         <div className={classes.tabContentPadding}>
           {!loadedTabs.includes(tab) ? (
             <div className={classes.tabLoading}>Loading...</div>
@@ -180,6 +457,60 @@ export default function PatientDetailPage() {
           )}
         </div>
       </div>
+
+      <EncounterFormModal
+        open={encModalOpen}
+        initial={encEditing}
+        submitting={submitting}
+        errorMessage={formError}
+        onClose={() => {
+          setEncModalOpen(false);
+          setEncEditing(null);
+        }}
+        onSubmit={handleEncSubmit}
+      />
+
+      <FormModal
+        open={!!encDeleting}
+        title="Delete visit"
+        submitLabel="Delete"
+        destructive
+        submitting={submitting}
+        onClose={() => setEncDeleting(null)}
+        onSubmit={confirmEncDelete}
+        layout="single"
+      >
+        <div>
+          Delete this visit? Records attached to it must be removed first.
+        </div>
+      </FormModal>
+
+      <SubRecordFormModal
+        open={subModalOpen}
+        kind={subKind}
+        encounters={encounters}
+        initial={subInitial}
+        submitting={submitting}
+        errorMessage={formError}
+        onClose={() => {
+          setSubModalOpen(false);
+          setSubInitial(null);
+        }}
+        onSubmit={handleSubSubmit}
+      />
+
+      <FormModal
+        open={!!subDeleting}
+        title={`Delete ${subDeleting?.kind ?? "record"}`}
+        submitLabel="Delete"
+        destructive
+        submitting={submitting}
+        onClose={() => setSubDeleting(null)}
+        onSubmit={confirmSubDelete}
+        layout="single"
+      >
+        <div>Delete this {subDeleting?.kind} record? This cannot be undone.</div>
+      </FormModal>
     </div>
   );
 }
