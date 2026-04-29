@@ -15,7 +15,8 @@ from sqlalchemy import text
 
 from cluster_evaluation import full_evaluation_report, _fast_gower_matrix
 
-# from service.lllm_sql_agent_service import ask_ai
+from service.lllm_sql_agent_service import ask_ai
+from save_results import save_cluster_results
 
 current_folder = Path(__file__).parent
 
@@ -774,25 +775,60 @@ def plot_elbow_kproto(
     print("saved elbow plot")
 
 
-def plot_umap_scatter(df_mixed, numerical_cols, categorical_cols, clusters, title, filename, location):
-    import umap
+# def plot_umap_scatter(df_mixed, numerical_cols, categorical_cols, clusters, title, filename, location):
+#     import umap
+#
+#     # We pass the entire dataframe because _fast_gower_matrix expects the raw df
+#     # along with the column lists to do its own internal ranging/encoding.
+#     df_feat = df_mixed.copy()
+#
+#     print("  Computing Gower distance matrix for UMAP (~1.9 GB RAM for 22k patients)...")
+#     dist_matrix = _fast_gower_matrix(df_feat, numerical_cols, categorical_cols)
+#
+#     # Run UMAP explicitly telling it to use our precomputed Gower matrix
+#     print("  Running UMAP on precomputed Gower distances...")
+#     coords = umap.UMAP(
+#         n_components=2,
+#         metric='precomputed',
+#         n_neighbors=50,  # 50-100 helps pull global clinical profiles together
+#         min_dist=0.5,  # 0.5 prevents identical points from overlapping into a single dot
+#         random_state=42
+#     ).fit_transform(dist_matrix)
+#
+#     plt.figure(figsize=(10, 7))
+#     scatter = plt.scatter(
+#         coords[:, 0],
+#         coords[:, 1],
+#         c=clusters,
+#         cmap="tab10",
+#         alpha=1,
+#         s=30,
+#         edgecolors="k",
+#         linewidths=0.3,
+#     )
+#     plt.legend(*scatter.legend_elements(), title="Cluster")
+#     plt.xlabel("UMAP 1 (Gower Space)")
+#     plt.ylabel("UMAP 2 (Gower Space)")
+#     plt.title(f"UMAP Scatter (Gower) - {title}")
+#     plt.grid(True, alpha=0.3)
+#     plt.tight_layout()
+#     plt.savefig(location / filename, dpi=150)
+#     plt.close()
+#     print("  saved umap scatter")
 
-    # We pass the entire dataframe because _fast_gower_matrix expects the raw df
-    # along with the column lists to do its own internal ranging/encoding.
-    df_feat = df_mixed.copy()
 
-    print("  Computing Gower distance matrix for UMAP (~1.9 GB RAM for 22k patients)...")
-    dist_matrix = _fast_gower_matrix(df_feat, numerical_cols, categorical_cols)
+def plot_famd_scatter(df_mixed, numerical_cols, categorical_cols, clusters, title, filename, location):
+    import prince
 
-    # Run UMAP explicitly telling it to use our precomputed Gower matrix
-    print("  Running UMAP on precomputed Gower distances...")
-    coords = umap.UMAP(
-        n_components=2,
-        metric='precomputed',
-        n_neighbors=50,  # 50-100 helps pull global clinical profiles together
-        min_dist=0.5,  # 0.5 prevents identical points from overlapping into a single dot
-        random_state=42
-    ).fit_transform(dist_matrix)
+    df_feat = df_mixed[numerical_cols + categorical_cols].copy()
+    for col in numerical_cols:
+        df_feat[col] = df_feat[col].astype(float)
+    for col in categorical_cols:
+        df_feat[col] = df_feat[col].astype(str)
+
+    famd = prince.FAMD(n_components=2, random_state=42)
+    famd = famd.fit(df_feat)
+    coords = famd.transform(df_feat).values  # shape (n, 2)
 
     plt.figure(figsize=(10, 7))
     scatter = plt.scatter(
@@ -806,14 +842,14 @@ def plot_umap_scatter(df_mixed, numerical_cols, categorical_cols, clusters, titl
         linewidths=0.3,
     )
     plt.legend(*scatter.legend_elements(), title="Cluster")
-    plt.xlabel("UMAP 1 (Gower Space)")
-    plt.ylabel("UMAP 2 (Gower Space)")
-    plt.title(f"UMAP Scatter (Gower) - {title}")
+    plt.xlabel("Dim 1")
+    plt.ylabel("Dim 2")
+    plt.title(f"FAMD Scatter - {title}")
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.savefig(location / filename, dpi=150)
     plt.close()
-    print("  saved umap scatter")
+    print("saved famd scatter")
 
 def plot_cluster_heatmap(df, feature_cols, title, filename, location):
     cluster_means = df.groupby("cluster")[feature_cols].mean()
@@ -995,13 +1031,17 @@ def run_kprototypes(
     clusters = kproto.fit_predict(matrix, categorical=cat_positions)
 
     gamma_automat = kproto.gamma
+    if isinstance(gamma_automat, dict):
+        gamma_automat = float(np.mean(list(gamma_automat.values())))
+    else:
+        gamma_automat = float(gamma_automat)
     print(f"auto gamma is: {gamma_automat}")
 
     df_work["cluster"] = clusters
 
     print(f"converged in {kproto.n_iter_} iterations, cost={kproto.cost_:.2f}")
 
-    # plot_umap_scatter(df_work, numerical_cols, categorical_cols, clusters, version_name, f"umap_{tag}.png", location)
+    plot_famd_scatter(df_work, numerical_cols, categorical_cols, clusters, version_name, f"famd_{tag}.png", location)
 
     plot_cluster_heatmap(
         df_work, numerical_cols, version_name, f"heatmap_{tag}.png", location
@@ -1021,7 +1061,10 @@ def run_kprototypes(
         print(f"\n{cat}:")
         print(pd.crosstab(df_work["cluster"], df_work[cat], normalize="index").round(2))
 
-    return df_work, X_num_scaled, clusters, float(kproto.cost_), float(gamma_automat)
+    cost_val = kproto.cost_
+    if isinstance(cost_val, dict):
+        cost_val = sum(cost_val.values())
+    return df_work, X_num_scaled, clusters, float(cost_val), gamma_automat
 
 
 def remove_outliers_zscore(df, threshold=4):
@@ -1051,128 +1094,132 @@ def remove_outliers_zscore(df, threshold=4):
     return df_cleaned, df_outliers
 
 
-# def get_clusters_summary(df_clustered, df_outliers, engine):
-#     # Combine clustered data and outliers for metric calculation
-#     df_outliers_temp = df_outliers.copy()
-#     df_outliers_temp['cluster'] = -1
-#     df_all = pd.concat([df_clustered, df_outliers_temp], ignore_index=True)
-#
-#     # Pull top conditions/meds/encounters per cluster for the LLM prompt
-#     conditions = pd.read_sql(text("SELECT patient_id, description FROM condition"), con=engine)
-#     conditions = conditions.merge(df_all[["patient_id", "cluster"]], on="patient_id")
-#     top_conditions = conditions.groupby(["cluster", "description"]).size().reset_index(name="count").sort_values(
-#         ["cluster", "count"], ascending=[True, False])
-#
-#     medications = pd.read_sql(text("SELECT patient_id, description FROM medication"), con=engine)
-#     medications = medications.merge(df_all[["patient_id", "cluster"]], on="patient_id")
-#     top_medications = medications.groupby(["cluster", "description"]).size().reset_index(name="count").sort_values(
-#         ["cluster", "count"], ascending=[True, False])
-#
-#     procedures = pd.read_sql(text('SELECT patient_id, description FROM "procedure"'), con=engine)
-#     procedures = procedures.merge(df_all[["patient_id", "cluster"]], on="patient_id")
-#     top_procedures = procedures.groupby(["cluster", "description"]).size().reset_index(name="count").sort_values(
-#         ["cluster", "count"], ascending=[True, False])
-#
-#     total_patients = len(df_all)
-#     clusters = sorted(df_all["cluster"].unique())  # This will now include -1
-#
-#     # Build the LLM prompt with the expected output format
-#     prompt = f"""We clustered {len(df_clustered)} patients into groups, plus {len(df_outliers)} outlier patients.
-# I have summarized the data for EACH cluster below. The outliers are labeled as Cluster -1.
-#
-# Your task is to write extremely brief text to fit inside small frontend UI cards.
-# Do NOT include any extra text, introductions, markdown formatting, or bullet points.
-# Do NOT use em dashes (-) anywhere in your response. Use commas or plain sentence structure instead.
-#
-# Structure your response EXACTLY as a list, using the pipe character (|) to separate the fields:
-# [Cluster ID] | [#HexColor] | [Short Title] | [1-2 sentences Description] | [1 short sentence Insight] | [1 short sentence Recommendation]
-#
-# Title rules: 2-4 words, plain everyday language that anyone can understand, no medical jargon (e.g. "Older Adults with Chronic Conditions", "Young and Healthy", "High-Need Patients").
-# Description rules: 1-2 short sentences in plain language, understandable by a non-medical reader, no jargon.
-# Insight rules: pick the MOST distinguishing signal for this cluster (dominant careplan focus, disease prevalence, polypharmacy, vitals, recency of care, or encounter mix). Use concrete numbers.
-# Recommendation rules: tie the action to that insight (e.g. cardiac careplan dominance -> cardiology follow-up; polypharmacy -> medication review; long gap since last visit -> outreach).
-#
-# Choose a suggestive hex color for each cluster that reflects its clinical profile (e.g. red tones for high-risk, green for healthy, blue for elderly chronic, orange for moderate, purple for psychiatric, teal for maternal).
-# Use distinct, saturated colors. The outlier cluster (-1) should always be gray (#9CA3AF).
-#
-# Example output:
-# [0] | #DC2626 | Older Adults with Many Conditions | Elderly patients who visit the hospital often and take many medications. | Cardiac careplan dominant, 85% hypertensive, average 12 active medications. | Coordinate cardiology follow-up and run medication reviews to reduce emergency visits.
-# [1] | #16A34A | Young and Healthy | Younger people who rarely need medical care. | Wellness encounters dominate and chronic disease rates are near zero. | Keep them engaged with preventive care programs.
-# [-1] | #9CA3AF | Unusual Cases | Patients who stand out significantly from the rest of the population. | Very high variation in procedures and resource use. | Review each case individually.
-#
-# =========================================
-# CLUSTER DATA SUMMARIES:
-# =========================================
-# """
-#     for c in clusters:
-#         c_df = df_all[df_all['cluster'] == c]
-#         c_size = len(c_df)
-#         c_pct = (c_size / total_patients) * 100
-#
-#         # clinical_severity_score is a standardized PCA z-score (~N(0,1)) — not
-#         # interpretable in absolute terms, so omit it. The LLM gets the raw severity
-#         # inputs (total_procedures, total_medications, active_conditions_count) instead.
-#         mean_cols = [col for col in [
-#             'age', 'qaly', 'daly',
-#             'total_procedures', 'total_medications',
-#             'active_conditions_count', 'lifetime_medication_days',
-#             'total_encounter_duration_hours',
-#         ] if col in c_df.columns]
-#         c_means = c_df[mean_cols].mean().round(1).to_dict()
-#
-#         c_cats = {
-#             'dominant_gender': c_df['gender'].mode()[0] if not c_df['gender'].empty else 'N/A',
-#             'dominant_marital': c_df['marital'].mode()[0] if 'marital' in c_df and not c_df['marital'].empty else 'N/A',
-#             'main_encounter_type': c_df['dominant_encounter_class'].mode()[0] if not c_df[
-#                 'dominant_encounter_class'].empty else 'N/A',
-#             'dominant_careplan': c_df['dominant_careplan'].mode()[0] if 'dominant_careplan' in c_df and not c_df[
-#                 'dominant_careplan'].empty else 'N/A',
-#             'diabetes_rate': f"{(c_df['has_diabetes'] == 'Yes').mean() * 100:.0f}%",
-#             'hypertension_rate': f"{(c_df['has_hypertension'] == 'Yes').mean() * 100:.0f}%",
-#             'heart_disease_rate': f"{(c_df['has_heart_disease'] == 'Yes').mean() * 100:.0f}%",
-#             'cancer_rate': f"{(c_df['has_cancer'] == 'Yes').mean() * 100:.0f}%" if 'has_cancer' in c_df else 'N/A',
-#             'polypharmacy_rate': f"{(c_df['is_polypharmacy'] == 'Yes').mean() * 100:.0f}%" if 'is_polypharmacy' in c_df else 'N/A',
-#             'bmi_mix': c_df['bmi_type'].value_counts(normalize=True).round(2).to_dict() if 'bmi_type' in c_df else {},
-#             'bp_mix': c_df['bp_risk_category'].value_counts(normalize=True).round(2).to_dict() if 'bp_risk_category' in c_df else {},
-#             'glucose_mix': c_df['glucose_risk_category'].value_counts(normalize=True).round(2).to_dict() if 'glucose_risk_category' in c_df else {},
-#             'substance_use_mix': c_df['substance_use_profile'].value_counts(normalize=True).round(2).to_dict() if 'substance_use_profile' in c_df else {},
-#             'readmission_mix': c_df['readmission_risk_tier'].value_counts(normalize=True).round(2).to_dict() if 'readmission_risk_tier' in c_df else {},
-#         }
-#
-#         # Careplan mix (share of each careplan category within the cluster) so the LLM
-#         # can tell e.g. a cardiac-dominant cluster from a psychiatric one even when the
-#         # mode is the same.
-#         careplan_mix = (
-#             c_df['dominant_careplan'].value_counts(normalize=True).round(2).head(4).to_dict()
-#             if 'dominant_careplan' in c_df else {}
-#         )
-#
-#         c_cond = top_conditions[top_conditions['cluster'] == c]['description'].head(4).tolist()
-#         c_meds = top_medications[top_medications['cluster'] == c]['description'].head(3).tolist()
-#         c_proc = top_procedures[top_procedures['cluster'] == c]['description'].head(3).tolist()
-#
-#         prompt += f"\n### DATA FOR CLUSTER {c} ({c_size} patients, {c_pct:.1f}% of total) ###\n"
-#         prompt += f"- Key Averages: {c_means}\n"
-#         prompt += f"- Demographics & Disease Rates: {c_cats}\n"
-#         prompt += f"- Careplan Mix (share of patients): {careplan_mix}\n"
-#         prompt += f"- Top Conditions: {c_cond}\n"
-#         prompt += f"- Top Medications: {c_meds}\n"
-#         prompt += f"- Top Procedures: {c_proc}\n"
-#
-#     # return ask_ai(prompt)
+def get_clusters_summary(df_clustered, df_outliers, engine):
+    # Combine clustered data and outliers for metric calculation
+    df_outliers_temp = df_outliers.copy()
+    df_outliers_temp['cluster'] = -1
+    df_all = pd.concat([df_clustered, df_outliers_temp], ignore_index=True)
+
+    # Pull top conditions/meds/encounters per cluster for the LLM prompt
+    conditions = pd.read_sql(text("SELECT patient_id, description FROM condition"), con=engine)
+    conditions = conditions.merge(df_all[["patient_id", "cluster"]], on="patient_id")
+    top_conditions = conditions.groupby(["cluster", "description"]).size().reset_index(name="count").sort_values(
+        ["cluster", "count"], ascending=[True, False])
+
+    medications = pd.read_sql(text("SELECT patient_id, description FROM medication"), con=engine)
+    medications = medications.merge(df_all[["patient_id", "cluster"]], on="patient_id")
+    top_medications = medications.groupby(["cluster", "description"]).size().reset_index(name="count").sort_values(
+        ["cluster", "count"], ascending=[True, False])
+
+    procedures = pd.read_sql(text('SELECT patient_id, description FROM "procedure"'), con=engine)
+    procedures = procedures.merge(df_all[["patient_id", "cluster"]], on="patient_id")
+    top_procedures = procedures.groupby(["cluster", "description"]).size().reset_index(name="count").sort_values(
+        ["cluster", "count"], ascending=[True, False])
+
+    total_patients = len(df_all)
+    clusters = sorted(df_all["cluster"].unique())  # This will now include -1
+
+    # Build the LLM prompt with the expected output format
+    prompt = f"""We clustered {len(df_clustered)} patients into groups, plus {len(df_outliers)} outlier patients.
+I have summarized the data for EACH cluster below. The outliers are labeled as Cluster -1.
+
+Your task is to write extremely brief text to fit inside small frontend UI cards.
+Do NOT include any extra text, introductions, markdown formatting, or bullet points.
+Do NOT use em dashes (-) anywhere in your response. Use commas or plain sentence structure instead.
+
+Structure your response EXACTLY as a list, using the pipe character (|) to separate the fields:
+[Cluster ID] | [#HexColor] | [Short Title] | [1-2 sentences Description] | [1 short sentence Insight] | [1 short sentence Recommendation]
+
+Title rules: 2-4 words, plain everyday language that anyone can understand, no medical jargon (e.g. "Older Adults with Chronic Conditions", "Young and Healthy", "High-Need Patients").
+Description rules: 1-2 short sentences in plain language, understandable by a non-medical reader, no jargon.
+Insight rules: pick the MOST distinguishing signal for this cluster (dominant careplan focus, disease prevalence, polypharmacy, vitals, recency of care, or encounter mix). Use concrete numbers.
+Recommendation rules: tie the action to that insight (e.g. cardiac careplan dominance -> cardiology follow-up; polypharmacy -> medication review; long gap since last visit -> outreach).
+
+Choose a suggestive hex color for each cluster that reflects its clinical profile (e.g. red tones for high-risk, green for healthy, blue for elderly chronic, orange for moderate, purple for psychiatric, teal for maternal).
+Use distinct, saturated colors. The outlier cluster (-1) should always be gray (#9CA3AF).
+
+Example output:
+[0] | #DC2626 | Older Adults with Many Conditions | Elderly patients who visit the hospital often and take many medications. | Cardiac careplan dominant, 85% hypertensive, average 12 active medications. | Coordinate cardiology follow-up and run medication reviews to reduce emergency visits.
+[1] | #16A34A | Young and Healthy | Younger people who rarely need medical care. | Wellness encounters dominate and chronic disease rates are near zero. | Keep them engaged with preventive care programs.
+[-1] | #9CA3AF | Unusual Cases | Patients who stand out significantly from the rest of the population. | Very high variation in procedures and resource use. | Review each case individually.
+
+=========================================
+CLUSTER DATA SUMMARIES:
+=========================================
+"""
+    for c in clusters:
+        c_df = df_all[df_all['cluster'] == c]
+        c_size = len(c_df)
+        c_pct = (c_size / total_patients) * 100
+
+        # clinical_severity_score is a standardized PCA z-score (~N(0,1)) — not
+        # interpretable in absolute terms, so omit it. The LLM gets the raw severity
+        # inputs (total_procedures, total_medications, active_conditions_count) instead.
+        mean_cols = [col for col in [
+            'age', 'qaly', 'daly',
+            'total_procedures', 'total_medications',
+            'active_conditions_count', 'lifetime_medication_days',
+            'total_encounter_duration_hours',
+        ] if col in c_df.columns]
+        c_means = c_df[mean_cols].mean().round(1).to_dict()
+
+        c_cats = {
+            'dominant_gender': c_df['gender'].mode()[0] if not c_df['gender'].empty else 'N/A',
+            'dominant_marital': c_df['marital'].mode()[0] if 'marital' in c_df and not c_df['marital'].empty else 'N/A',
+            'main_encounter_type': c_df['dominant_encounter_class'].mode()[0] if not c_df[
+                'dominant_encounter_class'].empty else 'N/A',
+            'dominant_careplan': c_df['dominant_careplan'].mode()[0] if 'dominant_careplan' in c_df and not c_df[
+                'dominant_careplan'].empty else 'N/A',
+            'diabetes_rate': f"{(c_df['has_diabetes'] == 'Yes').mean() * 100:.0f}%",
+            'hypertension_rate': f"{(c_df['has_hypertension'] == 'Yes').mean() * 100:.0f}%",
+            'heart_disease_rate': f"{(c_df['has_heart_disease'] == 'Yes').mean() * 100:.0f}%",
+            'cancer_rate': f"{(c_df['has_cancer'] == 'Yes').mean() * 100:.0f}%" if 'has_cancer' in c_df else 'N/A',
+            'polypharmacy_rate': f"{(c_df['is_polypharmacy'] == 'Yes').mean() * 100:.0f}%" if 'is_polypharmacy' in c_df else 'N/A',
+            'bmi_mix': c_df['bmi_type'].value_counts(normalize=True).round(2).to_dict() if 'bmi_type' in c_df else {},
+            'bp_mix': c_df['bp_risk_category'].value_counts(normalize=True).round(2).to_dict() if 'bp_risk_category' in c_df else {},
+            'glucose_mix': c_df['glucose_risk_category'].value_counts(normalize=True).round(2).to_dict() if 'glucose_risk_category' in c_df else {},
+            'substance_use_mix': c_df['substance_use_profile'].value_counts(normalize=True).round(2).to_dict() if 'substance_use_profile' in c_df else {},
+            'readmission_mix': c_df['readmission_risk_tier'].value_counts(normalize=True).round(2).to_dict() if 'readmission_risk_tier' in c_df else {},
+        }
+
+        # Careplan mix (share of each careplan category within the cluster) so the LLM
+        # can tell e.g. a cardiac-dominant cluster from a psychiatric one even when the
+        # mode is the same.
+        careplan_mix = (
+            c_df['dominant_careplan'].value_counts(normalize=True).round(2).head(4).to_dict()
+            if 'dominant_careplan' in c_df else {}
+        )
+
+        c_cond = top_conditions[top_conditions['cluster'] == c]['description'].head(4).tolist()
+        c_meds = top_medications[top_medications['cluster'] == c]['description'].head(3).tolist()
+        c_proc = top_procedures[top_procedures['cluster'] == c]['description'].head(3).tolist()
+
+        prompt += f"\n### DATA FOR CLUSTER {c} ({c_size} patients, {c_pct:.1f}% of total) ###\n"
+        prompt += f"- Key Averages: {c_means}\n"
+        prompt += f"- Demographics & Disease Rates: {c_cats}\n"
+        prompt += f"- Careplan Mix (share of patients): {careplan_mix}\n"
+        prompt += f"- Top Conditions: {c_cond}\n"
+        prompt += f"- Top Medications: {c_meds}\n"
+        prompt += f"- Top Procedures: {c_proc}\n"
+
+    return ask_ai(prompt)
 
 
 if __name__ == "__main__":
     load_dotenv()
 
-    from db import engine as db_engine
+    from db import engine as db_engine, SessionLocal
     from configs import CONFIGS
 
     df = build_patient_features(db_engine)
 
-    SCALERS = ["robust", "standard", "minmax"]
-    GAMMAS = [None]
+    # SCALERS = ["robust", "standard", "minmax"]
+    SCALERS = ["minmax"]
+    # GAMMAS = [None, 0.07, 0.13, 0.17]
+    GAMMAS = [0.13]
+    # RANDOM_STATES = [7, 42, 100]
     RANDOM_STATES = [42]
+    # THRESHOLDS = [4, 6]
     THRESHOLDS = [6]
     ELBOW_PLOT = "off"
 
@@ -1184,10 +1231,10 @@ if __name__ == "__main__":
 
     general_rows = []
 
-    RESULTS_FOLDER = current_folder / "version_1"
+    RESULTS_FOLDER = current_folder / "final"
     RESULTS_FOLDER.mkdir(parents=True, exist_ok=True)
 
-    general_xlsx_path = RESULTS_FOLDER / "general_conclusion.xlsx"
+    general_xlsx_path = RESULTS_FOLDER / "general_conclusion_1.xlsx"
 
 
     def flush_general_conclusion():
@@ -1206,7 +1253,7 @@ if __name__ == "__main__":
         combined.to_excel(general_xlsx_path, index=False)
 
 
-    K_RANGES = [4, 5, 6, 7]  # flat list of k values to run
+    K_RANGES = [5]  # flat list of k values to run
 
     for threshold in THRESHOLDS:
         df_cleaned, df_outliers = remove_outliers_zscore(df, threshold=threshold)
@@ -1219,6 +1266,7 @@ if __name__ == "__main__":
             version_tag = f"v{cfg['version']}"
             num_cols = cfg["numerical"]
             cat_cols = cfg["categorical"]
+            k_values = [cfg["preferred_k"]] if "preferred_k" in cfg else K_RANGES
 
             version_folder = RESULTS_FOLDER / version_tag
             version_folder.mkdir(parents=True, exist_ok=True)
@@ -1239,7 +1287,7 @@ if __name__ == "__main__":
             for scaler_name in SCALERS:
                 for gamma in GAMMAS:
                     for rs in RANDOM_STATES:
-                        for k in K_RANGES:
+                        for k in k_values:
                             gamma_label = "auto" if gamma is None else str(gamma)
                             run_tag = f"{version_tag}_s{scaler_name}_g{gamma_label}_rs{rs}_th{threshold}_k{k}"
                             location = version_folder / run_tag
@@ -1309,6 +1357,22 @@ if __name__ == "__main__":
                                     "categorical": ", ".join(cat_cols),
                                     **metrics_row,
                                 })
+
+                                summary_text = get_clusters_summary(df_result, df_outliers, db_engine)
+                                with open(location / "llm_summary.txt", "w", encoding="utf-8") as f:
+                                    f.write(summary_text)
+                                with SessionLocal() as session:
+                                    save_cluster_results(
+                                        db=session,
+                                        df_clustered=df_result,
+                                        df_outliers=df_outliers,
+                                        numerical_features=num_cols,
+                                        categorical_features=cat_cols,
+                                        n_clusters=k,
+                                        params={"scaler": scaler_name, "gamma": gamma_label, "random_state": rs, "threshold": threshold},
+                                        metrics=metrics_row,
+                                        cluster_summaries=summary_text,
+                                    )
 
                             except Exception as e:
                                 print(f"  [!] {run_tag} failed: {e}")

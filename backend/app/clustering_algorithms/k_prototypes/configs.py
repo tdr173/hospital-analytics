@@ -816,27 +816,27 @@ CONFIGS = [
 #     },
 #
 #     # v36 — Dual-severity stress test (violates redundancy rule — diagnostic only)
-    {
-        "version": 36,
-        "description": "Corrected config: Kept clinical_severity_score, removed raw conditions to fix redundancy error",
-        "numerical": [
-            "age",
-            "clinical_severity_score",
-            "lifetime_medication_days",
-            "wellness_count",
-            "severe_care_count"
-        ],
-        "categorical": [
-            "gender",
-            "pregnancy_history",
-            "has_heart_disease",
-            "is_polypharmacy",
-            "has_hypertension",
-            "has_diabetes",
-            "dominant_careplan",
-            "bmi_type"
-        ]
-    },
+#     {
+#         "version": 36,
+#         "description": "Corrected config: Kept clinical_severity_score, removed raw conditions to fix redundancy error",
+#         "numerical": [
+#             "age",
+#             "clinical_severity_score",
+#             "lifetime_medication_days",
+#             "wellness_count",
+#             "severe_care_count"
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "is_polypharmacy",
+#             "has_hypertension",
+#             "has_diabetes",
+#             "dominant_careplan",
+#             "bmi_type"
+#         ]
+#     },
 #
 #     # v37 — Maximal high-k config: 3 chronic flags + 2 graded metabolic (pushes k>=5 separation)
 #     {
@@ -904,27 +904,28 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v40 — Severity-only — drop all utilization signals
-#     {
-#         "version": 40,
-#         "description": "Severity-only — drop all utilization signals",
-#         "numerical": [
-#             "age",
-#             "active_conditions_count",
-#             "total_medications",
-#             "lifetime_medication_days",
-#         ],
-#         "categorical": [
-#             "gender",
-#             "pregnancy_history",
-#             "has_heart_disease",
-#             "has_diabetes",
-#             "has_hypertension",
-#             "condition_burden",
-#             "bmi_type",
-#             "cholesterol_risk_category",
-#         ],
-#     },
+# #     # v40 — Severity-only — drop all utilization signals ############### GOOD
+    {
+        "version": 40,
+        "preferred_k": 5,
+        "description": "Severity-only — drop all utilization signals",
+        "numerical": [
+            "age",
+            "active_conditions_count",
+            "total_medications",
+            "lifetime_medication_days",
+        ],
+        "categorical": [
+            "gender",
+            "pregnancy_history",
+            "has_heart_disease",
+            "has_diabetes",
+            "has_hypertension",
+            "condition_burden",
+            "bmi_type",
+            "cholesterol_risk_category",
+        ],
+    },
 #
 #     # v41 — Utilization-only — drop severity/chronicity signals
 #     {
@@ -1071,6 +1072,323 @@ CONFIGS = [
 #             "has_hypertension",
 #             "dominant_careplan",
 #             "bmi_type",
+#         ],
+#     },
+#     {
+#         "version": 48,
+#         "numerical": [
+#             "age",
+#             "qaly",
+#             "distinct_providers_seen",
+#             "clinical_severity_score",
+#             "preventive_to_reactive_ratio"
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "dominant_careplan",
+#             "bmi_type",
+#             "cholesterol_risk_category"
+#         ],
+#     },
+# {
+#         "version": 49,
+#         "numerical": [
+#             "age",
+#             "distinct_providers_seen",
+#             "total_procedures",
+#             "total_medications",
+#             "active_conditions_count",
+#             "preventive_to_reactive_ratio"
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "dominant_careplan",
+#             "cholesterol_risk_category"
+#         ],
+#     },
+# {
+#         "version": 50,
+#         "numerical": [
+#             "age",
+#             "distinct_providers_seen",
+#             "clinical_severity_score",
+#             "wellness_count",
+#             "acute_care_count",
+#             "severe_care_count",
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "dominant_careplan",
+#             "cholesterol_risk_category"
+#         ],
+#     },
+# {
+#         "version": 51,
+#         "numerical": [
+#             "age",
+#             "distinct_providers_seen",
+#             "total_procedures",
+#             "total_medications",
+#             "active_conditions_count",
+#             "preventive_to_reactive_ratio"
+#         ],
+#         "categorical": [
+#             "gender",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "dominant_careplan",
+#         ],
+#     },
+# {
+#         "version": 52,
+#         "numerical": [
+#             "qaly",
+#             "total_procedures",
+#             "total_medications",
+#             "active_conditions_count",
+#             "wellness_count",
+#             "acute_care_count",
+#             "severe_care_count",
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "dominant_careplan",
+#             "dominant_encounter_class"
+#         ],
+#     },
+# {
+#     "version": 53,
+#     "numerical": [
+#         "age",
+#         "total_conditions",
+#         "active_conditions_count",
+#         "lifetime_medication_days",
+#         "total_encounter_duration_hours",
+#         "preventive_to_reactive_ratio"
+#     ],
+#     "categorical": [
+#         "gender",
+#         "has_diabetes",
+#         "has_hypertension",
+#         "has_heart_disease",
+#         "has_kidney_disease",
+#         "condition_burden",
+#         "medication_intensity",
+#         "bp_risk_category"
+#     ]
+# },
+# {
+#     "version": 54,
+#     "numerical": [
+#         "age",
+#         "qaly",
+#         "distinct_providers_seen",
+#         "acute_care_count",
+#         "severe_care_count",
+#         "total_encounter_duration_hours"
+#     ],
+#     "categorical": [
+#         "gender",
+#         "dominant_encounter_class",
+#         "has_inpatient_history",
+#         "out_of_hours_flyer",
+#         "readmission_risk_tier",
+#         "substance_use_profile",
+#         "pain_management_tier"
+#     ]
+# } ######################################### GOOOD
+#     {
+#         "version": 55,
+#         "preferred_k": 4,
+#         "numerical": [
+#             "age",
+#             "active_conditions_count",
+#             "total_medications",
+#             "total_procedures",
+#             "preventive_to_reactive_ratio"
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "condition_burden",
+#             "bmi_type",
+#             "dominant_careplan"
+#         ],
+#     },
+#     {
+#         "version": 56,
+#         "numerical": [
+#             "age",
+#             "clinical_severity_score",
+#             "wellness_count",
+#             "severe_care_count",
+#             "acute_care_count"
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "condition_burden",
+#             "bmi_type",
+#             "dominant_careplan"
+#         ],
+#     },
+#     {
+#         "version": 57,
+#         "numerical": [
+#             "age",
+#             "active_conditions_count",
+#             "total_medications",
+#             "total_procedures",
+#             "preventive_to_reactive_ratio"
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "bmi_type",
+#             "dominant_careplan"
+#         ],
+#     },
+#     {
+#         "version": 58,
+#         "numerical": [
+#             "age",
+#             "clinical_severity_score",
+#             "preventive_to_reactive_ratio",
+#             "distinct_providers_seen",
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "dominant_careplan"
+#         ],
+#     },
+# {
+#         "version": 59,
+#         "numerical": [
+#             "age",
+#             "clinical_severity_score",
+#             "preventive_to_reactive_ratio",
+#             "distinct_providers_seen",
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "dominant_careplan",
+#             "dominant_encounter_class"
+#         ],
+#     },
+#     {
+#         "version": 60,
+#         "preferred_k": 6,
+#         "description": "",
+#         "numerical": [
+#             "age",
+#             "active_conditions_count",
+#             "total_medications",
+#             "preventive_to_reactive_ratio",
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "condition_burden",
+#             "bmi_type",
+#             "cholesterol_risk_category",
+#         ],
+#     },
+# {
+#         "version": 61,
+#         "description": "",
+#         "numerical": [
+#             "age",
+#             "active_conditions_count",
+#             "total_medications",
+#             "total_procedures",
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "condition_burden",
+#             "dominant_encounter_class",
+#             "dominant_careplan"
+#         ],
+#     },
+# {
+#         "version": 62,
+#         "description": "",
+#         "numerical": [
+#             "age",
+#             "active_conditions_count",
+#             "total_medications",
+#             "total_procedures",
+#             "preventive_to_reactive_ratio",
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "condition_burden",
+#             "dominant_encounter_class",
+#             "dominant_careplan"
+#         ],
+#     },
+# {
+#         "version": 63,
+#         "description": "",
+#         "numerical": [
+#             "age",
+#             "qaly",
+#             "clinical_severity_score",
+#             "preventive_to_reactive_ratio",
+#             "total_encounter_duration_hours"
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "dominant_encounter_class",
+#             "dominant_careplan"
 #         ],
 #     },
 ]
