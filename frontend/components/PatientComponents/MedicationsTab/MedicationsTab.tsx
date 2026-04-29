@@ -5,11 +5,22 @@ import { formatDate } from "@/utils/functions";
 import useClasses from "@/utils/useClasses";
 import medicationsTabStyles from "./MedicationsTabStyles";
 import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
+import RowActions from "@/components/generic_components/RowActions/RowActions";
 
-export default function MedicationsTab({ data }: { data: MedicationItem[] }) {
+interface MedicationsTabProps {
+  data: MedicationItem[];
+  onEdit?: (item: MedicationItem) => void;
+  onDelete?: (item: MedicationItem) => void;
+}
+
+export default function MedicationsTab({ data, onEdit, onDelete }: MedicationsTabProps) {
   const classes = useClasses(medicationsTabStyles, {
     name: "MedicationsTabStyles",
   });
+  const showActions = !!(onEdit || onDelete);
+  const gridTemplate = showActions
+    ? "2fr 1fr 1fr 1fr 1fr 80px"
+    : "2fr 1fr 1fr 1fr 1fr";
 
   if (!data || data.length === 0) {
     return <div className={classes.emptyState}>No medications recorded.</div>;
@@ -18,12 +29,13 @@ export default function MedicationsTab({ data }: { data: MedicationItem[] }) {
   return (
     <div className={classes.tableContainer}>
       <div className={classes.scrollWrapper}>
-        <div className={`${classes.gridRow} ${classes.headerRow}`}>
+        <div className={`${classes.gridRow} ${classes.headerRow}`} style={{ gridTemplateColumns: gridTemplate }}>
           <div>Medication</div>
           <div>Start Date</div>
           <div>End Date</div>
           <div>Duration</div>
           <div>Reason</div>
+          {showActions && <div>Actions</div>}
         </div>
 
         {data.map((r, index) => {
@@ -34,28 +46,24 @@ export default function MedicationsTab({ data }: { data: MedicationItem[] }) {
             <div
               key={r.id}
               className={`${classes.gridRow} ${classes.dataRow} ${rowColorClass}`}
+              style={{ gridTemplateColumns: gridTemplate }}
             >
-              {/* Column 1: Left Aligned */}
               <TruncatedText text={r.description} />
 
-              {/* Column 2: Centered Start Date */}
               <div className={classes.centeredCell}>
                 {formatDate(r.startDate)}
               </div>
 
-              {/* Column 3: Centered End Date */}
               <div className={classes.centeredCell}>
                 {r.endDate ? formatDate(r.endDate) : "-"}
               </div>
 
-              {/* Column 4: Centered Duration */}
               <div className={classes.centeredCell}>
                 {r.durationDays != null
                   ? `${Math.round(r.durationDays)} d`
                   : "-"}
               </div>
 
-              {/* Column 5: Centered Reason */}
               <div className={classes.secondaryText}>
                 {r.reasonDescription ? (
                   <TruncatedText text={r.reasonDescription} />
@@ -63,6 +71,10 @@ export default function MedicationsTab({ data }: { data: MedicationItem[] }) {
                   "-"
                 )}
               </div>
+
+              {showActions && (
+                <RowActions item={r} onEdit={onEdit} onDelete={onDelete} />
+              )}
             </div>
           );
         })}

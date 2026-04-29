@@ -11,8 +11,17 @@ import { RootState, AppDispatch } from "@/store";
 import {
   fetchProviders,
   fetchProviderResources,
+  createProvider,
+  updateProvider,
+  deleteProvider,
+  ProviderCreatePayload,
 } from "@/store/slices/providers/thunks";
-import { ProviderListItem } from "@/models/generic/providers";
+import { ProviderListItem, ProviderDetail } from "@/models/generic/providers";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import AddIcon from "@mui/icons-material/Add";
+import DoctorFormModal from "./components/DoctorFormModal/DoctorFormModal";
+import FormModal from "@/components/generic_components/FormModal/FormModal";
 
 import StyledTable, {
   StyledTableRow,
@@ -73,6 +82,14 @@ function ProvidersPageContent() {
   const { items, total, loading, resources, resourcesLoading } = useSelector(
     (state: RootState) => state.providers,
   );
+  const role = useSelector((state: RootState) => state.auth.user?.role);
+  const canManageDoctors = role === "MANAGER";
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<ProviderListItem | null>(null);
+  const [deleting, setDeleting] = useState<ProviderListItem | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!resources) dispatch(fetchProviderResources());
@@ -139,6 +156,48 @@ function ProvidersPageContent() {
     router.push(`/providers?${p.toString()}`);
   };
 
+  const refreshList = () =>
+    dispatch(
+      fetchProviders({
+        search: searchParams.get("search") || undefined,
+        gender: searchParams.get("gender")?.split(",").filter(Boolean),
+        speciality: searchParams.get("speciality")?.split(",").filter(Boolean),
+        page,
+        rows,
+        sortBy,
+        sortType,
+      }),
+    );
+
+  const handleSubmitDoctor = async (payload: ProviderCreatePayload) => {
+    setSubmitting(true);
+    setFormError(null);
+    const result = await (editing
+      ? dispatch(updateProvider({ providerId: editing.providerId, payload }))
+      : dispatch(createProvider(payload)));
+    setSubmitting(false);
+    if ((result as any).error) {
+      setFormError((result as any).payload?.message ?? "Save failed");
+      return;
+    }
+    setModalOpen(false);
+    setEditing(null);
+    if (!editing && page !== 1) {
+      const p = new URLSearchParams(searchParams.toString());
+      p.set("page", "1");
+      router.push(`/providers?${p.toString()}`);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleting) return;
+    setSubmitting(true);
+    const result = await dispatch(deleteProvider(deleting.providerId));
+    setSubmitting(false);
+    setDeleting(null);
+    if (!(result as any).error) refreshList();
+  };
+
   const renderRow = (p: ProviderListItem, i: number) => (
     <StyledTableRow key={p.providerId} index={i}>
       <TableCell
@@ -178,6 +237,38 @@ function ProvidersPageContent() {
         >
           <VisibilityOutlinedIcon sx={{ fontSize: "1.05rem" }} />
         </IconButton>
+        {canManageDoctors && (
+          <>
+            <IconButton
+              size="small"
+              onClick={() => {
+                setEditing(p);
+                setFormError(null);
+                setModalOpen(true);
+              }}
+              aria-label="Edit doctor"
+              sx={{
+                padding: "4px",
+                color: theme.colors.text.secondary,
+                "&:hover": { backgroundColor: "rgba(0, 103, 128, 0.08)" },
+              }}
+            >
+              <EditOutlinedIcon sx={{ fontSize: "1.05rem" }} />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => setDeleting(p)}
+              aria-label="Delete doctor"
+              sx={{
+                padding: "4px",
+                color: theme.colors.status.error,
+                "&:hover": { backgroundColor: "rgba(239, 68, 68, 0.08)" },
+              }}
+            >
+              <DeleteOutlineIcon sx={{ fontSize: "1.05rem" }} />
+            </IconButton>
+          </>
+        )}
       </TableCell>
     </StyledTableRow>
   );
@@ -186,8 +277,76 @@ function ProvidersPageContent() {
     return <div className={classes.loading}>Loading...</div>;
   }
 
+  const initialForModal: ProviderDetail | null = editing
+    ? {
+        providerId: editing.providerId,
+        firstName: editing.firstName,
+        lastName: editing.lastName,
+        gender: editing.gender,
+        speciality: editing.speciality,
+        city: editing.city,
+        encounters: editing.encounters,
+        organizationId: "",
+        organizationName: editing.organizationName,
+      }
+    : null;
+
   return (
     <div className={classes.pageContainer}>
+      {canManageDoctors && (
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <StyledButton
+            onClick={() => {
+              setEditing(null);
+              setFormError(null);
+              setModalOpen(true);
+            }}
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              height: "40px",
+            }}
+          >
+            <AddIcon sx={{ fontSize: "1.05rem" }} />
+            Add doctor
+          </StyledButton>
+        </div>
+      )}
+
+      <DoctorFormModal
+        open={modalOpen}
+        initial={initialForModal}
+        resources={resources}
+        submitting={submitting}
+        errorMessage={formError}
+        onClose={() => {
+          setModalOpen(false);
+          setEditing(null);
+        }}
+        onSubmit={handleSubmitDoctor}
+      />
+
+      <FormModal
+        open={!!deleting}
+        title="Delete doctor"
+        submitLabel="Delete"
+        destructive
+        submitting={submitting}
+        onClose={() => setDeleting(null)}
+        onSubmit={handleConfirmDelete}
+        layout="single"
+      >
+        <div>
+          Delete{" "}
+          <strong>
+            {deleting?.firstName} {deleting?.lastName}
+          </strong>
+          ? This cannot be undone. Doctors with linked encounters cannot be
+          deleted.
+        </div>
+      </FormModal>
+
       <div className={classes.filterBar}>
         <StyledInput
           label="Search"
@@ -199,7 +358,7 @@ function ProvidersPageContent() {
           }
           clearIcon
           onClear={() => setSearch("")}
-          height={36}
+          height={"40px"}
         />
 
         <StyledMultiDropdown

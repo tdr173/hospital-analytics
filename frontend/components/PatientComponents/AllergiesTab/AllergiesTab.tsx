@@ -5,11 +5,20 @@ import { formatDate } from "@/utils/functions";
 import useClasses from "@/utils/useClasses";
 import allergiesTabStyles from "./AllergiesTabStyles";
 import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
+import RowActions from "@/components/generic_components/RowActions/RowActions";
 
-export default function AllergiesTab({ data }: { data: AllergyItem[] }) {
+interface AllergiesTabProps {
+  data: AllergyItem[];
+  onEdit?: (item: AllergyItem) => void;
+  onDelete?: (item: AllergyItem) => void;
+}
+
+export default function AllergiesTab({ data, onEdit, onDelete }: AllergiesTabProps) {
   const classes = useClasses(allergiesTabStyles, {
     name: "AllergiesTabStyles",
   });
+  const showActions = !!(onEdit || onDelete);
+  const gridTemplate = showActions ? "3fr 1fr 1fr 80px" : "3fr 1fr 1fr";
 
   if (!data || data.length === 0) {
     return <div className={classes.emptyState}>No allergies recorded.</div>;
@@ -18,10 +27,11 @@ export default function AllergiesTab({ data }: { data: AllergyItem[] }) {
   return (
     <div className={classes.tableContainer}>
       <div className={classes.scrollWrapper}>
-        <div className={`${classes.gridRow} ${classes.headerRow}`}>
+        <div className={`${classes.gridRow} ${classes.headerRow}`} style={{ gridTemplateColumns: gridTemplate }}>
           <div>Allergen</div>
           <div>Recorded</div>
           <div>Status</div>
+          {showActions && <div>Actions</div>}
         </div>
 
         {data.map((r, index) => {
@@ -32,16 +42,14 @@ export default function AllergiesTab({ data }: { data: AllergyItem[] }) {
             <div
               key={r.id}
               className={`${classes.gridRow} ${classes.dataRow} ${rowColorClass}`}
+              style={{ gridTemplateColumns: gridTemplate }}
             >
-              {/* Column 1: Allergen Name */}
               <TruncatedText text={r.description} />
 
-              {/* Column 2: Centered Recorded Date */}
               <div className={classes.centeredCell}>
                 {formatDate(r.startDate)}
               </div>
 
-              {/* Column 3: Centered Status */}
               <div className={classes.centeredCell}>
                 {r.endDate ? (
                   <span className={classes.allergyResolved}>
@@ -51,6 +59,10 @@ export default function AllergiesTab({ data }: { data: AllergyItem[] }) {
                   <span className={classes.allergyActive}>Active</span>
                 )}
               </div>
+
+              {showActions && (
+                <RowActions item={r} onEdit={onEdit} onDelete={onDelete} />
+              )}
             </div>
           );
         })}

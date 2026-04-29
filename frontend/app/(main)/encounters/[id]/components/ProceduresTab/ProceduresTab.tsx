@@ -4,15 +4,21 @@ import useClasses from "@/utils/useClasses";
 import { EncounterProcedureItem } from "@/models/generic/encounters";
 import { formatDate } from "@/utils/functions";
 import { ProceduresTabStyles } from "./ProceduresTabStyles";
+import RowActions from "@/components/generic_components/RowActions/RowActions";
 
-const COLS = "2.5fr 1fr 110px 2fr";
+const BASE_COLS = "2.5fr 1fr 110px 2fr";
 
 interface Props {
   data: EncounterProcedureItem[];
+  onEdit?: (item: EncounterProcedureItem) => void;
+  onDelete?: (item: EncounterProcedureItem) => void;
 }
 
-export default function ProceduresTab({ data }: Props) {
+export default function ProceduresTab({ data, onEdit, onDelete }: Props) {
   const classes = useClasses(ProceduresTabStyles, { name: "ProceduresTab" });
+  const showActions = !!(onEdit || onDelete);
+  const COLS = showActions ? `${BASE_COLS} 80px` : BASE_COLS;
+
   if (!data.length) {
     return <div className={classes.emptyState}>No procedures recorded.</div>;
   }
@@ -26,6 +32,7 @@ export default function ProceduresTab({ data }: Props) {
         <div>Code</div>
         <div>Date</div>
         <div>Reason</div>
+        {showActions && <div>Actions</div>}
       </div>
       {data.map((r, i) => (
         <div
@@ -41,6 +48,7 @@ export default function ProceduresTab({ data }: Props) {
           <div className={classes.cellSecondary}>
             {r.reasonDescription ?? "-"}
           </div>
+          {showActions && <RowActions item={r} onEdit={onEdit} onDelete={onDelete} />}
         </div>
       ))}
     </>

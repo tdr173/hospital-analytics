@@ -118,8 +118,8 @@ export const ClusterAnalysisModalStyles = (theme: Theme) => ({
     color: theme.colors.text.secondary,
   },
   spinner: {
-    width: "36px",
-    height: "36px",
+    width: "40px",
+    height: "40px",
     border: `3px solid ${theme.colors.border.light}`,
     borderTopColor: "currentColor",
     borderRadius: "50%",

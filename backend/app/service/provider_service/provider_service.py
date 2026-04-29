@@ -16,3 +16,12 @@ class ProviderService:
 
     def get_provider_resources(self):
         return self.repo.get_provider_resources()
+
+    def create_provider(self, payload):
+        return self.repo.create_provider(payload)
+
+    def update_provider(self, provider_id: str, payload):
+        return self.repo.update_provider(provider_id, payload)
+
+    def delete_provider(self, provider_id: str):
+        return self.repo.delete_provider(provider_id)

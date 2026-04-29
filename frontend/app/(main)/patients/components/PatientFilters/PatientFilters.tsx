@@ -24,6 +24,8 @@ interface Props {
   onRaceChange: (v: string[]) => void;
   onMaritalChange: (v: string[]) => void;
   onApply: () => void;
+  canManagePatients: boolean;
+  addButton?: () => React.ReactNode;
 }
 
 export default function PatientFilters({
@@ -41,11 +43,13 @@ export default function PatientFilters({
   onRaceChange,
   onMaritalChange,
   onApply,
+  canManagePatients = false,
+  addButton,
 }: Props) {
   const classes = useClasses(PatientFiltersStyles, { name: "PatientFilters" });
 
   return (
-    <div className={classes.bar}>
+    <div className={!canManagePatients ? classes.bar : classes.barWithAdd}>
       <StyledInput
         label="Search"
         value={search}
@@ -54,7 +58,7 @@ export default function PatientFilters({
         startIcon={<SearchIcon sx={{ fontSize: "1.1rem", color: "#6b7280" }} />}
         clearIcon
         onClear={() => onSearchChange("")}
-        height={36}
+        height={"40px"}
       />
       <StyledMultiDropdown
         label="Gender"
@@ -110,7 +114,7 @@ export default function PatientFilters({
           boxShadow: "none",
           border: "none",
           color: "#ffffff",
-          height: "36px !important",
+          height: "40px !important",
           "&:hover": {
             background: theme.colors.button.primaryHover,
             boxShadow: "none",
@@ -125,6 +129,7 @@ export default function PatientFilters({
       >
         Search
       </StyledButton>
+      {canManagePatients && addButton && addButton()}
     </div>
   );
 }

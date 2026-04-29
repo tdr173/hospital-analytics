@@ -19,6 +19,33 @@ import { ErrorResponse } from "@/models/generic/generic";
 import { SequenceListItem } from "@/models/generic/sequences";
 import { API_BASE } from "@/store/slices/clusters/thunks";
 import { appendScopeToUrl } from "@/utils/authScope";
+import { apiPost, apiPatch, apiDelete } from "@/store/slices/_apiClient";
+
+export interface PatientObservationItem {
+  id: number;
+  date: string;
+  observationCode: string;
+  description: string;
+  value: string;
+  valueNumeric: number | null;
+  units: string | null;
+  encounterId: string | null;
+}
+
+export interface PatientCreatePayload {
+  firstName: string;
+  lastName: string;
+  age: number;
+  birthdate?: string | null;
+  deathdate?: string | null;
+  gender?: string | null;
+  race?: string | null;
+  ethnicity?: string | null;
+  marital?: string | null;
+  city?: string | null;
+}
+
+export type PatientUpdatePayload = Partial<PatientCreatePayload>;
 
 const defaultHeaders: Record<string, string> = {
   "ngrok-skip-browser-warning": "true",
@@ -180,6 +207,55 @@ export const fetchPatientEncounters = createAsyncThunk<
     return await get<EncounterItem[]>(`${API_BASE}/patients/${patientId}/encounters`, "encounters");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch encounters" });
+  }
+});
+
+export const fetchPatientObservations = createAsyncThunk<
+  PatientObservationItem[],
+  string,
+  { rejectValue: ErrorResponse }
+>("patients/fetchPatientObservations", async (patientId, thunkAPI) => {
+  try {
+    return await get<PatientObservationItem[]>(`${API_BASE}/patients/${patientId}/observations`, "observations");
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch observations" });
+  }
+});
+
+export const createPatient = createAsyncThunk<
+  PatientDetail,
+  PatientCreatePayload,
+  { rejectValue: ErrorResponse }
+>("patients/createPatient", async (payload, thunkAPI) => {
+  try {
+    return await apiPost<PatientDetail>(`${API_BASE}/patients`, payload, "create patient");
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to create patient" });
+  }
+});
+
+export const updatePatient = createAsyncThunk<
+  PatientDetail,
+  { patientId: string; payload: PatientUpdatePayload },
+  { rejectValue: ErrorResponse }
+>("patients/updatePatient", async ({ patientId, payload }, thunkAPI) => {
+  try {
+    return await apiPatch<PatientDetail>(`${API_BASE}/patients/${patientId}`, payload, "update patient");
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to update patient" });
+  }
+});
+
+export const deletePatient = createAsyncThunk<
+  string,
+  string,
+  { rejectValue: ErrorResponse }
+>("patients/deletePatient", async (patientId, thunkAPI) => {
+  try {
+    await apiDelete(`${API_BASE}/patients/${patientId}`, "delete patient");
+    return patientId;
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to delete patient" });
   }
 });
 

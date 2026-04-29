@@ -4,15 +4,21 @@ import useClasses from "@/utils/useClasses";
 import { EncounterMedicationItem } from "@/models/generic/encounters";
 import { formatDate } from "@/utils/functions";
 import { MedicationsTabStyles } from "./MedicationsTabStyles";
+import RowActions from "@/components/generic_components/RowActions/RowActions";
 
-const COLS = "2fr 1fr 100px 100px 80px 1.5fr";
+const BASE_COLS = "2fr 1fr 100px 100px 80px 1.5fr";
 
 interface Props {
   data: EncounterMedicationItem[];
+  onEdit?: (item: EncounterMedicationItem) => void;
+  onDelete?: (item: EncounterMedicationItem) => void;
 }
 
-export default function MedicationsTab({ data }: Props) {
+export default function MedicationsTab({ data, onEdit, onDelete }: Props) {
   const classes = useClasses(MedicationsTabStyles, { name: "MedicationsTab" });
+  const showActions = !!(onEdit || onDelete);
+  const COLS = showActions ? `${BASE_COLS} 80px` : BASE_COLS;
+
   if (!data.length) {
     return <div className={classes.emptyState}>No medications recorded.</div>;
   }
@@ -28,6 +34,7 @@ export default function MedicationsTab({ data }: Props) {
         <div>Ended</div>
         <div>Duration</div>
         <div>Reason</div>
+        {showActions && <div>Actions</div>}
       </div>
       {data.map((r, i) => (
         <div
@@ -49,6 +56,7 @@ export default function MedicationsTab({ data }: Props) {
           <div className={classes.cellSecondary}>
             {r.reasonDescription ?? "-"}
           </div>
+          {showActions && <RowActions item={r} onEdit={onEdit} onDelete={onDelete} />}
         </div>
       ))}
     </>

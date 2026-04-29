@@ -23,6 +23,7 @@ interface StyledMultiDropdownProps {
   required?: boolean;
   fullWidth?: boolean;
   width?: string | number;
+  height?: string | number;
   onClear?: () => void;
   showSelectAll?: boolean;
 }
@@ -101,13 +102,17 @@ export default function StyledMultiDropdown({
   required = false,
   fullWidth = false,
   width,
+  height = 40,
   onClear,
   showSelectAll = true,
 }: StyledMultiDropdownProps) {
-  const classes = useClasses(StyledMultiDropdownStyles, { name: "StyledMultiDropdown" });
+  const classes = useClasses(StyledMultiDropdownStyles, {
+    name: "StyledMultiDropdown",
+  });
 
   const allValues = options.map((o) => o.value);
-  const allSelected = allValues.length > 0 && allValues.every((v) => value.includes(v));
+  const allSelected =
+    allValues.length > 0 && allValues.every((v) => value.includes(v));
   const someSelected = value.length > 0 && !allSelected;
 
   const handleChange = (e: SelectChangeEvent<(string | number)[]>) => {
@@ -135,8 +140,13 @@ export default function StyledMultiDropdown({
   };
 
   return (
-    <div className={classes.wrapper} style={{ width: width ?? (fullWidth ? "100%" : undefined) }}>
-      <span className={classes.label}>{required ? `${label} *` : label}</span>
+    <div
+      className={classes.wrapper}
+      style={{ width: width ?? (fullWidth ? "100%" : undefined) }}
+    >
+      <span className={classes.label} style={{ marginBottom: "6px" }}>
+        {required ? `${label} *` : label}
+      </span>
 
       <Select
         multiple
@@ -148,19 +158,51 @@ export default function StyledMultiDropdown({
         fullWidth={fullWidth || !!width}
         variant="outlined"
         renderValue={renderValue}
-        sx={selectSx}
+        sx={{
+          ...selectSx,
+          ...(height !== undefined && {
+            height,
+            "& .MuiSelect-select": {
+              paddingTop: 0,
+              paddingBottom: 0,
+              paddingLeft: "14px",
+              paddingRight: "36px !important",
+              display: "flex",
+              alignItems: "center",
+              height: "100%",
+              boxSizing: "border-box",
+            },
+          }),
+        }}
         MenuProps={{ PaperProps: { sx: menuPaperSx } }}
         IconComponent={() =>
           value.length > 0 && onClear ? (
             <IconButton
               size="small"
-              onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); onClear(); }}
-              sx={{ position: "absolute", right: "4px", padding: "3px", color: theme.colors.text.secondary }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onClear();
+              }}
+              sx={{
+                position: "absolute",
+                right: "4px",
+                padding: "3px",
+                color: theme.colors.text.secondary,
+              }}
             >
               <CloseIcon sx={{ fontSize: "1rem" }} />
             </IconButton>
           ) : (
-            <ExpandMoreIcon sx={{ fontSize: "1.25rem", color: theme.colors.text.secondary, position: "absolute", right: "8px", pointerEvents: "none" }} />
+            <ExpandMoreIcon
+              sx={{
+                fontSize: "1.25rem",
+                color: theme.colors.text.secondary,
+                position: "absolute",
+                right: "8px",
+                pointerEvents: "none",
+              }}
+            />
           )
         }
       >
@@ -180,7 +222,9 @@ export default function StyledMultiDropdown({
               sx={{
                 padding: 0,
                 color: theme.colors.grey[400],
-                "&.Mui-checked, &.MuiCheckbox-indeterminate": { color: theme.colors.primary.main },
+                "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                  color: theme.colors.primary.main,
+                },
               }}
             />
             Select All
@@ -205,7 +249,11 @@ export default function StyledMultiDropdown({
       {helperText && (
         <span
           className={classes.helperText}
-          style={{ color: error ? theme.colors.status.error : theme.colors.text.secondary }}
+          style={{
+            color: error
+              ? theme.colors.status.error
+              : theme.colors.text.secondary,
+          }}
         >
           {helperText}
         </span>

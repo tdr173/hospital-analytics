@@ -9,3 +9,7 @@ from .get_encounter_immunizations import *
 from .get_encounter_careplans import *
 from .get_encounter_allergies import *
 from .get_encounter import *
+from .create_encounter import *
+from .update_encounter import *
+from .delete_encounter import *
+from .subrecord_routes import *

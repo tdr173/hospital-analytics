@@ -30,7 +30,7 @@ export default function StyledDatePicker({
   required = false,
   fullWidth = false,
   width,
-  height,
+  height = 40,
 }: StyledDatePickerProps) {
   const displayLabel = required ? `${label} *` : label;
 
@@ -49,15 +49,15 @@ export default function StyledDatePicker({
         inputLabel: {
           shrink: true,
           sx: {
-            fontFamily: theme.typography.fontFamily,
+            fontFamily: '"Inter", sans-serif',
             fontSize: "0.75rem",
-            fontWeight: theme.typography.fontWeight.bold,
-            color: theme.colors.text.secondary,
+            fontWeight: 700,
+            color: "#6b7280",
             textTransform: "uppercase",
             letterSpacing: "0.5px",
             position: "relative",
             transform: "none",
-            marginBottom: "6px",
+            marginBottom: "2px",
           },
         },
         input: {

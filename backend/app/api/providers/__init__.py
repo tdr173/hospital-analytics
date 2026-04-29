@@ -3,3 +3,6 @@ from .get_providers_resources import *
 from .get_all_providers import *
 from .get_provider_encounters import *
 from .get_provider import *
+from .create_provider import *
+from .update_provider import *
+from .delete_provider import *

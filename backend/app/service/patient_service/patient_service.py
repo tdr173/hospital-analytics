@@ -43,3 +43,15 @@ class PatientService:
 
     def get_patient_resources(self):
         return self.repo.get_patient_resources()
+
+    def get_patient_observations(self, patient_id: str):
+        return self.repo.get_patient_observations(patient_id)
+
+    def create_patient(self, payload):
+        return self.repo.create_patient(payload)
+
+    def update_patient(self, patient_id: str, payload):
+        return self.repo.update_patient(patient_id, payload)
+
+    def delete_patient(self, patient_id: str):
+        return self.repo.delete_patient(patient_id)

@@ -32,8 +32,6 @@ export interface PatientDetail {
   marital: string | null;
   birthdate: string | null;
   deathdate: string | null;
-  latitude: number | null;
-  longitude: number | null;
   clusterLabel: number | null;
   clusterTitle: string | null;
   clusterColor: string | null;
@@ -55,6 +53,7 @@ export interface ConditionItem {
   conditionCode: string;
   startDate: string;
   endDate: string | null;
+  encounterId: string | null;
 }
 
 export interface MedicationItem {
@@ -65,6 +64,7 @@ export interface MedicationItem {
   endDate: string | null;
   durationDays: number | null;
   reasonDescription: string | null;
+  encounterId: string | null;
 }
 
 export interface ProcedureItem {
@@ -74,6 +74,7 @@ export interface ProcedureItem {
   startDate: string;
   endDate: string | null;
   reasonDescription: string | null;
+  encounterId: string | null;
 }
 
 export interface ImmunizationItem {
@@ -81,6 +82,7 @@ export interface ImmunizationItem {
   description: string;
   immunizationCode: string;
   date: string;
+  encounterId: string | null;
 }
 
 export interface AllergyItem {
@@ -89,6 +91,7 @@ export interface AllergyItem {
   allergyCode: string;
   startDate: string;
   endDate: string | null;
+  encounterId: string | null;
 }
 
 export interface EncounterItem {
@@ -111,6 +114,7 @@ export interface CarePlanItem {
   endDate: string | null;
   durationDays: number | null;
   reasonDescription: string | null;
+  encounterId: string | null;
 }
 
 export interface FilterOption {

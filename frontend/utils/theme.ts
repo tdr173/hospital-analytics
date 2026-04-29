@@ -65,6 +65,15 @@ export interface Theme {
       secondary: string;
       secondaryHover: string;
       secondaryActive: string;
+      add: string;
+      addHover: string;
+      addActive: string;
+      delete: string;
+      deleteHover: string;
+      deleteActive: string;
+      cancel: string;
+      cancelHover: string;
+      cancelActive: string;
     };
     gender: {
       male: string;
@@ -202,6 +211,15 @@ const theme: Theme = {
       secondary: "#f2f4f6",
       secondaryHover: "#e0e3e5",
       secondaryActive: "#c6c6cd",
+      add: "#10b981",
+      addHover: "#059669",
+      addActive: "#047857",
+      delete: "#DC2626",
+      deleteHover: "#B91C1C",
+      deleteActive: "#991B1B",
+      cancel: "#D97706",
+      cancelHover: "#B45309",
+      cancelActive: "#92400E",
     },
     gender: {
       male: "#2563eb",

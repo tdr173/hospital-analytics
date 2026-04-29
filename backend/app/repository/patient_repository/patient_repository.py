@@ -1,10 +1,11 @@
+import uuid
 from typing import Callable, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, cast, Numeric, literal
 
 from domain import (
     PatientModel, ClusterPatientModel, ClusterModel,
-    EncounterModel, ProviderModel, OrganizationModel,
+    EncounterModel, ProviderModel, OrganizationModel, PatientProviderModel,
     ConditionModel, MedicationModel, ProcedureModel, ImmunizationModel, AllergyModel,
     ObservationModel, CarePlanModel,
     PrefixSpanPatternModel, PrefixSpanPatientPatternModel,
@@ -12,6 +13,9 @@ from domain import (
     PatientSummaryResponse, ConditionItem, MedicationItem,
     ProcedureItem, ImmunizationItem, AllergyItem, CarePlanItem, EncounterItem,
     FilterOption, PatientResourcesResponse, SequenceListItem,
+)
+from domain.schemas.patient_schemas.patient_schema import (
+    PatientCreateRequest, PatientUpdateRequest, PatientObservationItem,
 )
 from repository._helpers import provider_name_col, clamp_page_size
 
@@ -47,10 +51,7 @@ _LIST_COLS = [
     PatientModel.deathdate,
 ]
 
-_DETAIL_COLS = _LIST_COLS + [
-    PatientModel.latitude,
-    PatientModel.longitude,
-]
+_DETAIL_COLS = _LIST_COLS
 
 
 class PatientRepository:
@@ -123,9 +124,8 @@ class PatientRepository:
             filters.append(PatientModel.patient_id == patient_id_scope)
         elif role_u == "DOCTOR" and provider_id_scope:
             panel = (
-                self.db.query(EncounterModel.patient_id)
-                .filter(EncounterModel.provider_id == provider_id_scope)
-                .distinct()
+                self.db.query(PatientProviderModel.patient_id)
+                .filter(PatientProviderModel.provider_id == provider_id_scope)
                 .subquery()
             )
             filters.append(PatientModel.patient_id.in_(panel))
@@ -298,6 +298,7 @@ class PatientRepository:
                 condition_code=str(r.condition_code),
                 start_date=r.start_date,
                 end_date=r.end_date,
+                encounter_id=r.encounter_id,
             )
             for r in rows
         ]
@@ -318,6 +319,7 @@ class PatientRepository:
                 end_date=r.end_date,
                 duration_days=r.duration_days,
                 reason_description=r.reason_description,
+                encounter_id=r.encounter_id,
             )
             for r in rows
         ]
@@ -337,6 +339,7 @@ class PatientRepository:
                 start_date=r.start_date,
                 end_date=r.end_date,
                 reason_description=r.reason_description,
+                encounter_id=r.encounter_id,
             )
             for r in rows
         ]
@@ -354,6 +357,7 @@ class PatientRepository:
                 description=r.description,
                 immunization_code=str(r.immunization_code),
                 date=r.date,
+                encounter_id=r.encounter_id,
             )
             for r in rows
         ]
@@ -374,6 +378,7 @@ class PatientRepository:
                 end_date=r.end_date,
                 duration_days=r.duration_days,
                 reason_description=r.reason_description,
+                encounter_id=r.encounter_id,
             )
             for r in rows
         ]
@@ -392,9 +397,74 @@ class PatientRepository:
                 allergy_code=str(r.allergy_code),
                 start_date=r.start_date,
                 end_date=r.end_date,
+                encounter_id=r.encounter_id,
             )
             for r in rows
         ]
+
+    def get_patient_observations(self, patient_id: str) -> list[PatientObservationItem]:
+        rows = (
+            self.db.query(ObservationModel)
+            .filter(ObservationModel.patient_id == patient_id)
+            .order_by(ObservationModel.date.desc())
+            .limit(500)
+            .all()
+        )
+        return [
+            PatientObservationItem(
+                id=r.id,
+                date=r.date,
+                observation_code=str(r.observation_code),
+                description=r.description,
+                value=r.value,
+                value_numeric=r.value_numeric,
+                units=r.units,
+                encounter_id=r.encounter_id,
+            )
+            for r in rows
+        ]
+
+    def create_patient(self, payload: PatientCreateRequest) -> PatientDetailResponse:
+        patient = PatientModel(
+            patient_id=uuid.uuid4().hex,
+            first_name=payload.first_name,
+            last_name=payload.last_name,
+            age=payload.age,
+            birthdate=payload.birthdate,
+            deathdate=payload.deathdate,
+            gender=payload.gender,
+            race=payload.race,
+            ethnicity=payload.ethnicity,
+            marital=payload.marital,
+            city=payload.city,
+        )
+        self.db.add(patient)
+        self.db.commit()
+        return self.get_patient(patient.patient_id)
+
+    def update_patient(self, patient_id: str, payload: PatientUpdateRequest) -> PatientDetailResponse:
+        patient = self.db.get(PatientModel, patient_id)
+        if not patient:
+            raise ValueError(f"Patient {patient_id} not found")
+        for field, value in payload.model_dump(exclude_unset=True).items():
+            setattr(patient, field, value)
+        self.db.add(patient)
+        self.db.commit()
+        return self.get_patient(patient_id)
+
+    def delete_patient(self, patient_id: str) -> None:
+        patient = self.db.get(PatientModel, patient_id)
+        if not patient:
+            raise ValueError(f"Patient {patient_id} not found")
+        encounter_count = (
+            self.db.query(func.count(EncounterModel.encounter_id))
+            .filter(EncounterModel.patient_id == patient_id)
+            .scalar() or 0
+        )
+        if encounter_count > 0:
+            raise ValueError(f"Patient has {encounter_count} encounters; cannot delete")
+        self.db.delete(patient)
+        self.db.commit()
 
     def get_patient_resources(self) -> PatientResourcesResponse:
         return PatientResourcesResponse(

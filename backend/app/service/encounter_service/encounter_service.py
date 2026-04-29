@@ -36,3 +36,21 @@ class EncounterService:
 
     def get_encounter_resources(self):
         return self.repo.get_encounter_resources()
+
+    def create_encounter(self, payload, provider_id_scope=None):
+        return self.repo.create_encounter(payload, provider_id_scope)
+
+    def update_encounter(self, encounter_id: str, payload, provider_id_scope=None):
+        return self.repo.update_encounter(encounter_id, payload, provider_id_scope)
+
+    def delete_encounter(self, encounter_id: str, provider_id_scope=None):
+        return self.repo.delete_encounter(encounter_id, provider_id_scope)
+
+    def create_subrecord(self, kind: str, encounter_id: str, payload, provider_id_scope=None):
+        return self.repo.create_subrecord(kind, encounter_id, payload, provider_id_scope)
+
+    def update_subrecord(self, kind: str, encounter_id: str, record_id: int, payload, provider_id_scope=None):
+        return self.repo.update_subrecord(kind, encounter_id, record_id, payload, provider_id_scope)
+
+    def delete_subrecord(self, kind: str, encounter_id: str, record_id: int, provider_id_scope=None):
+        return self.repo.delete_subrecord(kind, encounter_id, record_id, provider_id_scope)

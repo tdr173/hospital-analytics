@@ -4,15 +4,21 @@ import useClasses from "@/utils/useClasses";
 import { EncounterAllergyItem } from "@/models/generic/encounters";
 import { formatDate } from "@/utils/functions";
 import { AllergiesTabStyles } from "./AllergiesTabStyles";
+import RowActions from "@/components/generic_components/RowActions/RowActions";
 
-const COLS = "3fr 1fr 110px 80px";
+const BASE_COLS = "3fr 1fr 110px 80px";
 
 interface Props {
   data: EncounterAllergyItem[];
+  onEdit?: (item: EncounterAllergyItem) => void;
+  onDelete?: (item: EncounterAllergyItem) => void;
 }
 
-export default function AllergiesTab({ data }: Props) {
+export default function AllergiesTab({ data, onEdit, onDelete }: Props) {
   const classes = useClasses(AllergiesTabStyles, { name: "AllergiesTab" });
+  const showActions = !!(onEdit || onDelete);
+  const COLS = showActions ? `${BASE_COLS} 80px` : BASE_COLS;
+
   if (!data.length) {
     return <div className={classes.emptyState}>No allergies recorded.</div>;
   }
@@ -26,6 +32,7 @@ export default function AllergiesTab({ data }: Props) {
         <div>Code</div>
         <div>Recorded</div>
         <div>Status</div>
+        {showActions && <div>Actions</div>}
       </div>
       {data.map((r, i) => (
         <div
@@ -45,6 +52,7 @@ export default function AllergiesTab({ data }: Props) {
               <span className={classes.badgeWarning}>Active</span>
             )}
           </div>
+          {showActions && <RowActions item={r} onEdit={onEdit} onDelete={onDelete} />}
         </div>
       ))}
     </>

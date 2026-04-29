@@ -11,8 +11,18 @@ import { RootState, AppDispatch } from "@/store";
 import {
   fetchPatients,
   fetchPatientResources,
+  createPatient,
+  updatePatient,
+  deletePatient,
+  PatientCreatePayload,
 } from "@/store/slices/patients/thunks";
 import { PatientListItem } from "@/models/generic/patients";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import AddIcon from "@mui/icons-material/Add";
+import StyledButton from "@/components/generic_components/StyledButton/StyledButton";
+import PatientFormModal from "./components/PatientFormModal/PatientFormModal";
+import FormModal from "@/components/generic_components/FormModal/FormModal";
 
 import StyledTable, {
   StyledTableRow,
@@ -38,14 +48,13 @@ const COLUMNS = [
     label: "Age",
     sortable: true,
     width: 70,
-    align: "right" as const,
   },
   { key: "gender", label: "Gender", width: 100 },
   { key: "city", label: "City", sortable: true, width: 120 },
   { key: "race", label: "Race / Ethnicity", width: 120 },
   { key: "marital", label: "Marital Status", width: 100 },
   { key: "status", label: "Status", width: 80 },
-  { key: "cluster", label: "Group", width: 180 },
+  { key: "cluster", label: "Group", width: 60 },
   { key: "actions", label: "Actions", width: 80, align: "center" as const },
 ];
 
@@ -58,6 +67,14 @@ function PatientsPageContent() {
   const { items, total, loading, resources, resourcesLoading } = useSelector(
     (state: RootState) => state.patients,
   );
+  const role = useSelector((state: RootState) => state.auth.user?.role);
+  const canManagePatients = role === "MANAGER" || role === "DOCTOR";
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<PatientListItem | null>(null);
+  const [deleting, setDeleting] = useState<PatientListItem | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!resources) dispatch(fetchPatientResources());
@@ -146,6 +163,51 @@ function PatientsPageContent() {
     router.push(`/patients?${p.toString()}`);
   };
 
+  const refreshList = () =>
+    dispatch(
+      fetchPatients({
+        search: searchParams.get("search") || undefined,
+        gender: searchParams.get("gender")?.split(",").filter(Boolean),
+        ageGroup: searchParams.get("ageGroup")?.split(",").filter(Boolean),
+        status: searchParams.get("status")?.split(",").filter(Boolean),
+        race: searchParams.get("race")?.split(",").filter(Boolean),
+        marital: searchParams.get("marital")?.split(",").filter(Boolean),
+        page,
+        rows,
+        sortBy,
+        sortType,
+      }),
+    );
+
+  const handleSubmitPatient = async (payload: PatientCreatePayload) => {
+    setSubmitting(true);
+    setFormError(null);
+    const result = await (editing
+      ? dispatch(updatePatient({ patientId: editing.patientId, payload }))
+      : dispatch(createPatient(payload)));
+    setSubmitting(false);
+    if ((result as any).error) {
+      setFormError((result as any).payload?.message ?? "Save failed");
+      return;
+    }
+    setModalOpen(false);
+    setEditing(null);
+    if (!editing && page !== 1) {
+      const p = new URLSearchParams(searchParams.toString());
+      p.set("page", "1");
+      router.push(`/patients?${p.toString()}`);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleting) return;
+    setSubmitting(true);
+    const result = await dispatch(deletePatient(deleting.patientId));
+    setSubmitting(false);
+    setDeleting(null);
+    if (!(result as any).error) refreshList();
+  };
+
   const renderRow = (p: PatientListItem, i: number) => (
     <StyledTableRow key={p.patientId} index={i}>
       <TableCell
@@ -157,9 +219,7 @@ function PatientsPageContent() {
       >
         <TruncatedText text={clearName(p.firstName, p.lastName)} />
       </TableCell>
-      <TableCell sx={bodyCellSx} align="center">
-        {p.age}
-      </TableCell>
+      <TableCell sx={bodyCellSx}>{p.age}</TableCell>
       <TableCell sx={bodyCellSx}>
         <GenderBadge gender={p.gender} />
       </TableCell>
@@ -198,6 +258,38 @@ function PatientsPageContent() {
         >
           <VisibilityOutlinedIcon sx={{ fontSize: "1.05rem" }} />
         </IconButton>
+        {canManagePatients && (
+          <>
+            <IconButton
+              size="small"
+              onClick={() => {
+                setEditing(p);
+                setFormError(null);
+                setModalOpen(true);
+              }}
+              aria-label="Edit patient"
+              sx={{
+                padding: "4px",
+                color: theme.colors.text.secondary,
+                "&:hover": { backgroundColor: "rgba(0, 103, 128, 0.08)" },
+              }}
+            >
+              <EditOutlinedIcon sx={{ fontSize: "1.05rem" }} />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => setDeleting(p)}
+              aria-label="Delete patient"
+              sx={{
+                padding: "4px",
+                color: theme.colors.status.error,
+                "&:hover": { backgroundColor: "rgba(239, 68, 68, 0.08)" },
+              }}
+            >
+              <DeleteOutlineIcon sx={{ fontSize: "1.05rem" }} />
+            </IconButton>
+          </>
+        )}
       </TableCell>
     </StyledTableRow>
   );
@@ -206,8 +298,76 @@ function PatientsPageContent() {
     return <div className={classes.loading}>Loading...</div>;
   }
 
+  const addButton = () => {
+    return (
+      <StyledButton
+        onClick={() => {
+          setEditing(null);
+          setFormError(null);
+          setModalOpen(true);
+        }}
+        sx={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "4px",
+          height: "40px",
+          padding: "6px",
+          background: theme.colors.button.add,
+          boxShadow: "none",
+          border: "none",
+          color: "#ffffff",
+          "&:hover": {
+            background: theme.colors.button.addHover,
+            boxShadow: "none",
+            transform: "none",
+          },
+          "&:active": {
+            background: theme.colors.button.addActive,
+            boxShadow: "none",
+            transform: "none",
+          },
+        }}
+      >
+        Add patient
+      </StyledButton>
+    );
+  };
+
   return (
     <div className={classes.pageContainer}>
+      <PatientFormModal
+        open={modalOpen}
+        initial={editing}
+        resources={resources}
+        submitting={submitting}
+        errorMessage={formError}
+        onClose={() => {
+          setModalOpen(false);
+          setEditing(null);
+        }}
+        onSubmit={handleSubmitPatient}
+      />
+
+      <FormModal
+        open={!!deleting}
+        title="Delete patient"
+        submitLabel="Delete"
+        destructive
+        submitting={submitting}
+        onClose={() => setDeleting(null)}
+        onSubmit={handleConfirmDelete}
+        layout="single"
+      >
+        <div>
+          Delete{" "}
+          <strong>
+            {deleting?.firstName} {deleting?.lastName}
+          </strong>
+          ? This cannot be undone. Patients with linked encounters cannot be
+          deleted.
+        </div>
+      </FormModal>
+
       <PatientFilters
         resources={resources}
         search={search}
@@ -223,6 +383,8 @@ function PatientsPageContent() {
         onRaceChange={setRace}
         onMaritalChange={setMarital}
         onApply={applyFilters}
+        canManagePatients={canManagePatients}
+        addButton={canManagePatients ? addButton : undefined}
       />
 
       <div className={classes.tableArea}>

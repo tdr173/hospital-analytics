@@ -17,7 +17,7 @@ import PersonAddOutlinedIcon from "@mui/icons-material/PersonAddOutlined";
 
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "@/store/slices/auth/auth-slice";
@@ -98,14 +98,17 @@ const sidebarElements: SidebarElement[] = [
 
 export default function Sidebar() {
   const classes = useClasses(sidebarStyles, { name: "SidebarStyles" });
+  const [mounted, setMounted] = useState(false);
 
   const router = useRouter();
   const pathname = usePathname();
   const dispatch = useAppDispatch();
-  const role = useSelector((s: RootState) => s.auth.user?.role);
-  const visibleElements = role
-    ? sidebarElements.filter((el) => el.allowedRoles.includes(role))
-    : sidebarElements;
+  const role = useSelector((s: RootState) => s.auth.user?.role) || "MANAGER";
+  const visibleElements = sidebarElements.filter((el) => el.allowedRoles.includes(role));
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = () => {
     dispatch(logout());

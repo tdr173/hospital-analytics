@@ -11,7 +11,7 @@ A "care trajectory" is an ordered sequence of clinical events (conditions, proce
 
 IMPORTANT RULES:
 - Base every claim strictly on the numbers provided.
-- Interpret the sequence items by their prefixes: C: = Condition, P: = Procedure, M: = Medication, E: = Encounter type.
+- Interpret the sequence items by their prefixes: C: = Condition, M: = Medication, P: = Procedure, CP: = CarePlan.
 - Focus on the clinical narrative: what is the likely disease progression or care pathway this sequence represents?
 - Gender: describe as "balanced" if 40-60%, "more female/male" if 60-70%, "predominantly female/male" only if >70%.
 - Translate vitals into plain risk language (BMI >=30 = obese, glucose >=126 = diabetic range).

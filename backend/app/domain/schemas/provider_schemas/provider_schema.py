@@ -32,11 +32,25 @@ class ProviderDetailResponse(CamelModel):
     gender: Optional[str] = None
     speciality: Optional[str] = None
     city: Optional[str] = None
-    latitude: float
-    longitude: float
     encounters: int
     organization_id: str
     organization_name: Optional[str] = None
+
+
+class ProviderCreateRequest(CamelModel):
+    first_name: str
+    last_name: str
+    gender: Optional[str] = None
+    speciality: Optional[str] = None
+    city: Optional[str] = None
+
+
+class ProviderUpdateRequest(CamelModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    gender: Optional[str] = None
+    speciality: Optional[str] = None
+    city: Optional[str] = None
 
 
 class ProviderEncounterItem(CamelModel):
