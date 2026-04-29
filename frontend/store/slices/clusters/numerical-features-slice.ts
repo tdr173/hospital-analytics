@@ -10,7 +10,7 @@ interface NumericalFeaturesState {
 
 const initialState: NumericalFeaturesState = {
   data: null,
-  loading: true,
+  loading: false,
   error: null,
 };
 

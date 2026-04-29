@@ -1,13 +1,14 @@
 from pydantic import BaseModel
+from domain.schemas.camel_model import CamelModel
 
 
-class ChartEntry(BaseModel):
+class ChartEntry(CamelModel):
     name: str
     value: float
     tooltip: str
 
 
-class PatientStatisticsResponse(BaseModel):
+class PatientStatisticsResponse(CamelModel):
     total_patients: int
     age_groups: list[ChartEntry]
     gender: list[ChartEntry]

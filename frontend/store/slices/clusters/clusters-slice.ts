@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { ClustersResponse } from "@/models/generic/clusters";
-import { getClusterRuns } from "./thunks";
+import { getClustersOverview } from "./thunks";
 
 interface ClustersState {
   data: ClustersResponse | null;
@@ -20,21 +20,21 @@ const clustersSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(getClusterRuns.pending, (state) => {
+      .addCase(getClustersOverview.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(getClusterRuns.fulfilled, (state, action) => {
+      .addCase(getClustersOverview.fulfilled, (state, action) => {
         state.loading = false;
         const payload = action.payload;
-        const regular = payload.clusters.filter((c) => c.cluster_id !== -1);
-        const outliers = payload.clusters.filter((c) => c.cluster_id === -1);
+        const regular = payload.clusters.filter((c) => c.clusterId !== -1);
+        const outliers = payload.clusters.filter((c) => c.clusterId === -1);
         state.data = {
           ...payload,
           clusters: [...regular, ...outliers],
         };
       })
-      .addCase(getClusterRuns.rejected, (state, action) => {
+      .addCase(getClustersOverview.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload?.message ?? "Unknown error";
       });

@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import Depends, Query
 from sqlalchemy.orm import Session
 
 from db.db_connector import get_db
@@ -8,6 +8,9 @@ from domain.schemas.statistics_schemas.provider_schema import ProviderStatistics
 
 
 @statistics_router.get("/providers", response_model=ProviderStatisticsResponse)
-async def get_provider_statistics(db: Session = Depends(get_db)):
-    service = ProviderService(db)
+async def get_provider_statistics(
+    range: str = Query("all", pattern="^(all|week|month)$"),
+    db: Session = Depends(get_db),
+):
+    service = ProviderService(db, range)
     return service.get_provider_summary()

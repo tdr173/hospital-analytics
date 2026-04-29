@@ -6,5 +6,5 @@ from .procedure_repository import ProcedureRepository
 from .immunization_repository import ImmunizationRepository
 from .medication_repository import MedicationRepository
 from .allergy_repository import AllergyRepository
+from .careplan_repository import CarePlanRepository
 from .provider_repository import ProviderRepository
-from .organization_repository import OrganizationRepository

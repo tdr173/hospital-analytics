@@ -5,12 +5,14 @@ const conditionsTabStyles = (theme: Theme) => ({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    // CHANGE THIS:
+    flex: 1,
     height: "100%",
     width: "100%",
+    minHeight: "200px",
     color: theme.colors.text.secondary,
     fontFamily: theme.typography.fontFamily,
     fontSize: theme.typography.fontSize.sm,
+    fontStyle: "italic" as const,
   },
   tableContainer: {
     width: "100%",
@@ -26,8 +28,6 @@ const conditionsTabStyles = (theme: Theme) => ({
     height: "100%",
     border: `1px solid ${theme.colors.border.main}`,
 
-    // REMOVED padding: "12px" so the scrollbar goes to the edge
-    // and the text doesn't scroll "above" the sticky header!
   },
   gridRow: {
     display: "grid",
@@ -47,7 +47,6 @@ const conditionsTabStyles = (theme: Theme) => ({
     position: "sticky" as const,
     top: 0,
     zIndex: 1,
-    // Ensure header text aligns with data columns
     "& > div:not(:first-of-type)": {
       textAlign: "center" as const,
     },

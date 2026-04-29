@@ -10,23 +10,24 @@ from domain.schemas.statistics_schemas.medication_schema import (
 
 
 class MedicationService:
-    def __init__(self, db: Session):
-        self.repo = MedicationRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = MedicationRepository(db, range_str)
 
     def get_medication_summary(self) -> MedicationStatisticsResponse:
+        total = self.repo.get_total_medications()
         per_patient = self.repo.get_per_patient_stats()
         duration = self.repo.get_duration_stats()
 
         return MedicationStatisticsResponse(
-            total_medications=self.repo.get_total_medications(),
+            total_medications=total,
             unique_medications=self.repo.get_unique_medications(),
             per_patient=PerPatientStats(**per_patient),
             duration_stats=MedicationDurationStats(**duration),
             active_vs_ended=self._to_chart_entries(
-                self.repo.get_active_vs_ended(), "status"
+                self.repo.get_active_vs_ended(total), "status"
             ),
             top_medications=self._to_chart_entries(
-                self.repo.get_top_medications(), "medication"
+                self.repo.get_top_medications(total=total), "medication"
             ),
         )
 

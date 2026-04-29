@@ -1,22 +1,28 @@
-from typing import Optional
+from typing import Callable, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import func, and_, or_, cast, Numeric, literal
 
 from domain import (
+    PatientModel, ClusterPatientModel, ClusterModel,
+    EncounterModel, ProviderModel, OrganizationModel,
+    ConditionModel, MedicationModel, ProcedureModel, ImmunizationModel, AllergyModel,
+    ObservationModel, CarePlanModel,
+    PrefixSpanPatternModel, PrefixSpanPatientPatternModel,
     PatientListItem, PatientListResponse, PatientDetailResponse,
     PatientSummaryResponse, ConditionItem, MedicationItem,
-    ProcedureItem, ImmunizationItem, AllergyItem, EncounterItem,
-    FilterOption, PatientResourcesResponse,
+    ProcedureItem, ImmunizationItem, AllergyItem, CarePlanItem, EncounterItem,
+    FilterOption, PatientResourcesResponse, SequenceListItem,
 )
+from repository._helpers import provider_name_col, clamp_page_size
 
 SORT_COL_MAP = {
-    "last_name": "p.last_name",
-    "first_name": "p.first_name",
-    "age": "p.age",
-    "city": "p.city",
-    "gender": "p.gender",
-    "race": "p.race",
-    "marital": "p.marital",
+    "last_name": PatientModel.last_name,
+    "first_name": PatientModel.first_name,
+    "age": PatientModel.age,
+    "city": PatientModel.city,
+    "gender": PatientModel.gender,
+    "race": PatientModel.race,
+    "marital": PatientModel.marital,
 }
 
 AGE_GROUP_RANGES = {
@@ -27,17 +33,65 @@ AGE_GROUP_RANGES = {
     "elderly":      (70, 999),
 }
 
+_LIST_COLS = [
+    PatientModel.patient_id,
+    PatientModel.first_name,
+    PatientModel.last_name,
+    PatientModel.age,
+    PatientModel.gender,
+    PatientModel.city,
+    PatientModel.race,
+    PatientModel.ethnicity,
+    PatientModel.marital,
+    PatientModel.birthdate,
+    PatientModel.deathdate,
+]
+
+_DETAIL_COLS = _LIST_COLS + [
+    PatientModel.latitude,
+    PatientModel.longitude,
+]
+
 
 class PatientRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def _latest_run_id(self) -> Optional[int]:
-        return self.db.execute(text("SELECT MAX(id) FROM cluster_run")).scalar()
+    def _has_cluster_data(self) -> bool:
+        return self.db.query(ClusterPatientModel).count() > 0
 
-    # ------------------------------------------------------------------
-    # GET /patients
-    # ------------------------------------------------------------------
+    def _patient_query_with_cluster(self, base_cols: list):
+        if self._has_cluster_data():
+            return (
+                self.db.query(
+                    *base_cols,
+                    ClusterPatientModel.cluster_label,
+                    ClusterModel.title.label("cluster_title"),
+                    ClusterModel.color.label("cluster_color"),
+                )
+                .outerjoin(
+                    ClusterPatientModel,
+                    ClusterPatientModel.patient_id == PatientModel.patient_id,
+                )
+                .outerjoin(
+                    ClusterModel,
+                    ClusterModel.cluster_label == ClusterPatientModel.cluster_label,
+                )
+            )
+        return self.db.query(
+            *base_cols,
+            literal(None).label("cluster_label"),
+            literal(None).label("cluster_title"),
+            literal(None).label("cluster_color"),
+        )
+
+    @staticmethod
+    def _cached_or_scalar(features: dict, key: str, query_fn: Callable):
+        cached = features.get(key)
+        if cached is not None:
+            return cached
+        return query_fn()
+
     def get_patients(
         self,
         search: Optional[str],
@@ -51,270 +105,297 @@ class PatientRepository:
         rows: int,
         sort_by: str,
         sort_type: str,
+        role: Optional[str] = None,
+        patient_id_scope: Optional[str] = None,
+        provider_id_scope: Optional[str] = None,
     ) -> PatientListResponse:
-        sort_col = SORT_COL_MAP.get(sort_by, "p.last_name")
-        sort_dir = "ASC" if sort_type.lower() == "asc" else "DESC"
+        sort_col = SORT_COL_MAP.get(sort_by, PatientModel.last_name)
+        sort_expr = (
+            sort_col.asc().nulls_last()
+            if sort_type.lower() == "asc"
+            else sort_col.desc().nulls_last()
+        )
 
-        conditions: list[str] = []
-        params: dict = {}
+        filters = []
+
+        role_u = (role or "MANAGER").upper()
+        if role_u == "PATIENT" and patient_id_scope:
+            filters.append(PatientModel.patient_id == patient_id_scope)
+        elif role_u == "DOCTOR" and provider_id_scope:
+            panel = (
+                self.db.query(EncounterModel.patient_id)
+                .filter(EncounterModel.provider_id == provider_id_scope)
+                .distinct()
+                .subquery()
+            )
+            filters.append(PatientModel.patient_id.in_(panel))
 
         if search:
-            conditions.append(
-                "(p.first_name ILIKE :search OR p.last_name ILIKE :search OR p.city ILIKE :search)"
-            )
-            params["search"] = f"%{search}%"
+            filters.append(or_(
+                PatientModel.first_name.ilike(f"%{search}%"),
+                PatientModel.last_name.ilike(f"%{search}%"),
+                PatientModel.city.ilike(f"%{search}%"),
+            ))
 
         if gender:
             genders = [g.strip() for g in gender.split(",") if g.strip()]
             if genders:
-                placeholders = ", ".join(f":gender_{i}" for i in range(len(genders)))
-                conditions.append(f"p.gender IN ({placeholders})")
-                for i, g in enumerate(genders):
-                    params[f"gender_{i}"] = g
+                filters.append(PatientModel.gender.in_(genders))
 
         if age_group:
             groups = [g.strip() for g in age_group.split(",") if g.strip() and g.strip() in AGE_GROUP_RANGES]
             if groups:
                 age_parts = []
-                for i, g in enumerate(groups):
+                for g in groups:
                     lo, hi = AGE_GROUP_RANGES[g]
-                    age_parts.append(f"(p.age BETWEEN :age_lo_{i} AND :age_hi_{i})")
-                    params[f"age_lo_{i}"] = lo
-                    params[f"age_hi_{i}"] = hi
-                conditions.append(f"({' OR '.join(age_parts)})")
+                    age_parts.append(and_(PatientModel.age >= lo, PatientModel.age <= hi))
+                filters.append(or_(*age_parts))
 
         if status:
             statuses = {s.strip() for s in status.split(",") if s.strip()}
             has_alive = "alive" in statuses
             has_deceased = "deceased" in statuses
             if has_alive and not has_deceased:
-                conditions.append("p.deathdate IS NULL")
+                filters.append(PatientModel.deathdate.is_(None))
             elif has_deceased and not has_alive:
-                conditions.append("p.deathdate IS NOT NULL")
+                filters.append(PatientModel.deathdate.isnot(None))
 
         if race:
             races = [r.strip() for r in race.split(",") if r.strip()]
             if races:
-                placeholders = ", ".join(f":race_{i}" for i in range(len(races)))
-                conditions.append(f"p.race IN ({placeholders})")
-                for i, r in enumerate(races):
-                    params[f"race_{i}"] = r
+                filters.append(PatientModel.race.in_(races))
 
         if marital:
             maritals = [m.strip() for m in marital.split(",") if m.strip()]
             if maritals:
-                placeholders = ", ".join(f":marital_{i}" for i in range(len(maritals)))
-                conditions.append(f"p.marital IN ({placeholders})")
-                for i, m in enumerate(maritals):
-                    params[f"marital_{i}"] = m
+                filters.append(PatientModel.marital.in_(maritals))
 
         if city:
-            conditions.append("p.city ILIKE :city")
-            params["city"] = f"%{city}%"
+            filters.append(PatientModel.city.ilike(f"%{city}%"))
 
-        where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+        total = self.db.query(func.count(PatientModel.patient_id)).filter(*filters).scalar() or 0
 
-        # Cluster join (safe even when no run exists — LEFT JOIN returns NULLs)
-        latest_run_id = self._latest_run_id()
-        if latest_run_id:
-            cluster_select = ", cp.cluster_label, c.title AS cluster_title, c.color AS cluster_color"
-            cluster_join = (
-                "LEFT JOIN cluster_patient cp ON cp.patient_id = p.patient_id AND cp.run_id = :run_id "
-                "LEFT JOIN cluster c ON c.run_id = :run_id AND c.cluster_label = cp.cluster_label"
-            )
-            params["run_id"] = latest_run_id
-        else:
-            cluster_select = ", NULL::int AS cluster_label, NULL::varchar AS cluster_title, NULL::varchar AS cluster_color"
-            cluster_join = ""
-
-        # Total count
-        total = self.db.execute(
-            text(f"SELECT COUNT(*) FROM patient p {where}"), params
-        ).scalar() or 0
-
-        # Paginated data
+        rows = clamp_page_size(rows)
         offset = (page - 1) * rows
-        data_sql = f"""
-            SELECT
-                p.patient_id, p.first_name, p.last_name, p.age, p.gender,
-                p.city, p.race, p.ethnicity, p.marital, p.birthdate, p.deathdate
-                {cluster_select}
-            FROM patient p
-            {cluster_join}
-            {where}
-            ORDER BY {sort_col} {sort_dir} NULLS LAST
-            LIMIT :limit OFFSET :offset
-        """
-        params["limit"] = rows
-        params["offset"] = offset
-
-        rows_data = self.db.execute(text(data_sql), params).mappings().all()
-        items = [PatientListItem(**dict(row)) for row in rows_data]
-        return PatientListResponse(items=items, total=total)
-
-    # ------------------------------------------------------------------
-    # GET /patients/{id}
-    # ------------------------------------------------------------------
-    def get_patient(self, patient_id: str) -> PatientDetailResponse:
-        latest_run_id = self._latest_run_id()
-
-        if latest_run_id:
-            cluster_select = ", cp.cluster_label, c.title AS cluster_title, c.color AS cluster_color"
-            cluster_join = (
-                "LEFT JOIN cluster_patient cp ON cp.patient_id = p.patient_id AND cp.run_id = :run_id "
-                "LEFT JOIN cluster c ON c.run_id = :run_id AND c.cluster_label = cp.cluster_label"
-            )
-            params = {"pid": patient_id, "run_id": latest_run_id}
-        else:
-            cluster_select = ", NULL::int AS cluster_label, NULL::varchar AS cluster_title, NULL::varchar AS cluster_color"
-            cluster_join = ""
-            params = {"pid": patient_id}
-
-        row = self.db.execute(text(f"""
-            SELECT
-                p.patient_id, p.first_name, p.last_name, p.age, p.gender,
-                p.city, p.race, p.ethnicity, p.marital, p.birthdate, p.deathdate,
-                p.latitude, p.longitude
-                {cluster_select}
-            FROM patient p
-            {cluster_join}
-            WHERE p.patient_id = :pid
-        """), params).mappings().first()
-
-        if not row:
-            raise ValueError(f"Patient {patient_id} not found")
-
-        return PatientDetailResponse(**dict(row))
-
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/summary
-    # ------------------------------------------------------------------
-    def get_patient_summary(self, patient_id: str) -> PatientSummaryResponse:
-        latest_run_id = self._latest_run_id()
-
-        # Try pre-computed features from clustering
-        if latest_run_id:
-            feat_row = self.db.execute(text("""
-                SELECT features FROM cluster_patient
-                WHERE patient_id = :pid AND run_id = :rid
-            """), {"pid": patient_id, "rid": latest_run_id}).mappings().first()
-
-            if feat_row and feat_row["features"]:
-                f = feat_row["features"]
-                return PatientSummaryResponse(
-                    qaly=round(float(f["qaly"]), 2) if f.get("qaly") is not None else None,
-                    avg_bmi=round(float(f["avg_bmi"]), 1) if f.get("avg_bmi") is not None else None,
-                    active_conditions=int(f.get("active_conditions_count") or 0),
-                    total_medications=int(f.get("total_medications") or 0),
-                    total_procedures=int(f.get("total_procedures") or 0),
-                    emergency_visits=int(f.get("emergency_count") or 0),
-                    days_since_last_encounter=int(f.get("days_since_last_encounter") or 0),
-                )
-
-        # Fallback: compute directly from tables
-        row = self.db.execute(text("""
-            SELECT
-                (SELECT value_numeric FROM observation
-                 WHERE patient_id = :pid AND description = 'QALY'
-                 ORDER BY date DESC LIMIT 1) AS qaly,
-
-                (SELECT ROUND(AVG(value_numeric)::numeric, 1) FROM (
-                    SELECT value_numeric FROM observation
-                    WHERE patient_id = :pid AND description = 'Body Mass Index'
-                      AND value_numeric IS NOT NULL
-                    ORDER BY date DESC LIMIT 5
-                ) bmi_sub) AS avg_bmi,
-
-                (SELECT COUNT(*) FROM condition
-                 WHERE patient_id = :pid AND end_date IS NULL) AS active_conditions,
-
-                (SELECT COUNT(*) FROM medication
-                 WHERE patient_id = :pid) AS total_medications,
-
-                (SELECT COUNT(*) FROM "procedure"
-                 WHERE patient_id = :pid) AS total_procedures,
-
-                (SELECT COUNT(*) FROM encounter
-                 WHERE patient_id = :pid AND encounter_class = 'emergency') AS emergency_visits,
-
-                (SELECT EXTRACT(DAY FROM NOW() - MAX(start_date))::int FROM encounter
-                 WHERE patient_id = :pid) AS days_since_last_encounter
-        """), {"pid": patient_id}).mappings().first()
-
-        return PatientSummaryResponse(
-            qaly=round(float(row["qaly"]), 2) if row["qaly"] is not None else None,
-            avg_bmi=round(float(row["avg_bmi"]), 1) if row["avg_bmi"] is not None else None,
-            active_conditions=int(row["active_conditions"] or 0),
-            total_medications=int(row["total_medications"] or 0),
-            total_procedures=int(row["total_procedures"] or 0),
-            emergency_visits=int(row["emergency_visits"] or 0),
-            days_since_last_encounter=int(row["days_since_last_encounter"] or 0) if row["days_since_last_encounter"] is not None else None,
+        rows_data = (
+            self._patient_query_with_cluster(_LIST_COLS)
+            .filter(*filters)
+            .order_by(sort_expr)
+            .limit(rows)
+            .offset(offset)
+            .all()
         )
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/conditions
-    # ------------------------------------------------------------------
+        items = [PatientListItem(**row._asdict()) for row in rows_data]
+        return PatientListResponse(items=items, total=total)
+
+    def get_patient(self, patient_id: str) -> PatientDetailResponse:
+        row = (
+            self._patient_query_with_cluster(_DETAIL_COLS)
+            .filter(PatientModel.patient_id == patient_id)
+            .first()
+        )
+        if not row:
+            raise ValueError(f"Patient {patient_id} not found")
+        return PatientDetailResponse(**row._asdict())
+
+    def get_patient_summary(self, patient_id: str) -> PatientSummaryResponse:
+        cp = (
+            self.db.query(ClusterPatientModel)
+            .filter(ClusterPatientModel.patient_id == patient_id)
+            .first()
+        )
+        f = cp.features if cp and cp.features else {}
+
+        qaly = self._cached_or_scalar(f, "qaly", lambda: (
+            self.db.query(ObservationModel.value_numeric)
+            .filter(
+                ObservationModel.patient_id == patient_id,
+                ObservationModel.description == 'QALY',
+            )
+            .order_by(ObservationModel.date.desc())
+            .limit(1)
+            .scalar()
+        ))
+
+        def _avg_bmi():
+            bmi_subq = (
+                self.db.query(ObservationModel.value_numeric)
+                .filter(
+                    ObservationModel.patient_id == patient_id,
+                    ObservationModel.observation_code == '39156-5',
+                    ObservationModel.value_numeric.isnot(None),
+                )
+                .order_by(ObservationModel.date.desc())
+                .limit(5)
+                .subquery()
+            )
+            return self.db.query(
+                func.round(cast(func.avg(bmi_subq.c.value_numeric), Numeric), 1)
+            ).scalar()
+
+        avg_bmi = self._cached_or_scalar(f, "avg_bmi", _avg_bmi)
+
+        active_conditions = self._cached_or_scalar(f, "active_conditions_count", lambda: (
+            self.db.query(func.count(ConditionModel.id))
+            .filter(
+                ConditionModel.patient_id == patient_id,
+                ConditionModel.end_date.is_(None),
+            )
+            .scalar()
+        ))
+
+        total_medications = self._cached_or_scalar(f, "total_medications", lambda: (
+            self.db.query(func.count(MedicationModel.id))
+            .filter(MedicationModel.patient_id == patient_id)
+            .scalar()
+        ))
+
+        total_procedures = self._cached_or_scalar(f, "total_procedures", lambda: (
+            self.db.query(func.count(ProcedureModel.id))
+            .filter(ProcedureModel.patient_id == patient_id)
+            .scalar()
+        ))
+
+        emergency_visits = self._cached_or_scalar(f, "emergency_count", lambda: (
+            self.db.query(func.count(EncounterModel.encounter_id))
+            .filter(
+                EncounterModel.patient_id == patient_id,
+                EncounterModel.encounter_class == 'emergency',
+            )
+            .scalar()
+        ))
+
+        days_since_last_encounter = self._cached_or_scalar(f, "days_since_last_encounter", lambda: (
+            self.db.query(
+                func.extract('day', func.now() - func.max(EncounterModel.start_date))
+            )
+            .filter(EncounterModel.patient_id == patient_id)
+            .scalar()
+        ))
+
+        return PatientSummaryResponse(
+            qaly=round(float(qaly), 2) if qaly is not None else None,
+            avg_bmi=round(float(avg_bmi), 1) if avg_bmi is not None else None,
+            active_conditions=int(active_conditions or 0),
+            total_medications=int(total_medications or 0),
+            total_procedures=int(total_procedures or 0),
+            emergency_visits=int(emergency_visits or 0),
+            days_since_last_encounter=int(days_since_last_encounter or 0) if days_since_last_encounter is not None else None,
+        )
+
     def get_patient_conditions(self, patient_id: str) -> list[ConditionItem]:
-        rows = self.db.execute(text("""
-            SELECT id, description, condition_code::varchar, start_date, end_date
-            FROM condition
-            WHERE patient_id = :pid
-            ORDER BY start_date DESC
-        """), {"pid": patient_id}).mappings().all()
-        return [ConditionItem(**dict(r)) for r in rows]
+        rows = (
+            self.db.query(ConditionModel)
+            .filter(ConditionModel.patient_id == patient_id)
+            .order_by(ConditionModel.start_date.desc())
+            .all()
+        )
+        return [
+            ConditionItem(
+                id=r.id,
+                description=r.description,
+                condition_code=str(r.condition_code),
+                start_date=r.start_date,
+                end_date=r.end_date,
+            )
+            for r in rows
+        ]
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/medications
-    # ------------------------------------------------------------------
     def get_patient_medications(self, patient_id: str) -> list[MedicationItem]:
-        rows = self.db.execute(text("""
-            SELECT id, description, medication_code::varchar, start_date, end_date,
-                   duration_days, reason_description
-            FROM medication
-            WHERE patient_id = :pid
-            ORDER BY start_date DESC
-        """), {"pid": patient_id}).mappings().all()
-        return [MedicationItem(**dict(r)) for r in rows]
+        rows = (
+            self.db.query(MedicationModel)
+            .filter(MedicationModel.patient_id == patient_id)
+            .order_by(MedicationModel.start_date.desc())
+            .all()
+        )
+        return [
+            MedicationItem(
+                id=r.id,
+                description=r.description,
+                medication_code=str(r.medication_code),
+                start_date=r.start_date,
+                end_date=r.end_date,
+                duration_days=r.duration_days,
+                reason_description=r.reason_description,
+            )
+            for r in rows
+        ]
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/procedures
-    # ------------------------------------------------------------------
     def get_patient_procedures(self, patient_id: str) -> list[ProcedureItem]:
-        rows = self.db.execute(text("""
-            SELECT id, description, procedure_code::varchar, date, reason_description
-            FROM "procedure"
-            WHERE patient_id = :pid
-            ORDER BY date DESC
-        """), {"pid": patient_id}).mappings().all()
-        return [ProcedureItem(**dict(r)) for r in rows]
+        rows = (
+            self.db.query(ProcedureModel)
+            .filter(ProcedureModel.patient_id == patient_id)
+            .order_by(ProcedureModel.start_date.desc())
+            .all()
+        )
+        return [
+            ProcedureItem(
+                id=r.id,
+                description=r.description,
+                procedure_code=str(r.procedure_code),
+                start_date=r.start_date,
+                end_date=r.end_date,
+                reason_description=r.reason_description,
+            )
+            for r in rows
+        ]
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/immunizations
-    # ------------------------------------------------------------------
     def get_patient_immunizations(self, patient_id: str) -> list[ImmunizationItem]:
-        rows = self.db.execute(text("""
-            SELECT id, description, immunization_code::varchar, date
-            FROM immunization
-            WHERE patient_id = :pid
-            ORDER BY date DESC
-        """), {"pid": patient_id}).mappings().all()
-        return [ImmunizationItem(**dict(r)) for r in rows]
+        rows = (
+            self.db.query(ImmunizationModel)
+            .filter(ImmunizationModel.patient_id == patient_id)
+            .order_by(ImmunizationModel.date.desc())
+            .all()
+        )
+        return [
+            ImmunizationItem(
+                id=r.id,
+                description=r.description,
+                immunization_code=str(r.immunization_code),
+                date=r.date,
+            )
+            for r in rows
+        ]
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/allergies
-    # ------------------------------------------------------------------
+    def get_patient_careplans(self, patient_id: str) -> list[CarePlanItem]:
+        rows = (
+            self.db.query(CarePlanModel)
+            .filter(CarePlanModel.patient_id == patient_id)
+            .order_by(CarePlanModel.start_date.desc())
+            .all()
+        )
+        return [
+            CarePlanItem(
+                id=r.id,
+                description=r.description,
+                careplan_code=str(r.careplan_code),
+                start_date=r.start_date,
+                end_date=r.end_date,
+                duration_days=r.duration_days,
+                reason_description=r.reason_description,
+            )
+            for r in rows
+        ]
+
     def get_patient_allergies(self, patient_id: str) -> list[AllergyItem]:
-        rows = self.db.execute(text("""
-            SELECT id, description, allergy_code::varchar, start_date, end_date
-            FROM allergy
-            WHERE patient_id = :pid
-            ORDER BY start_date DESC
-        """), {"pid": patient_id}).mappings().all()
-        return [AllergyItem(**dict(r)) for r in rows]
+        rows = (
+            self.db.query(AllergyModel)
+            .filter(AllergyModel.patient_id == patient_id)
+            .order_by(AllergyModel.start_date.desc())
+            .all()
+        )
+        return [
+            AllergyItem(
+                id=r.id,
+                description=r.description,
+                allergy_code=str(r.allergy_code),
+                start_date=r.start_date,
+                end_date=r.end_date,
+            )
+            for r in rows
+        ]
 
-    # ------------------------------------------------------------------
-    # GET /patients/resources
-    # ------------------------------------------------------------------
     def get_patient_resources(self) -> PatientResourcesResponse:
         return PatientResourcesResponse(
             genders=[
@@ -348,20 +429,50 @@ class PatientRepository:
             ],
         )
 
-    # ------------------------------------------------------------------
-    # GET /patients/{id}/encounters
-    # ------------------------------------------------------------------
     def get_patient_encounters(self, patient_id: str) -> list[EncounterItem]:
-        rows = self.db.execute(text("""
-            SELECT
-                e.encounter_id, e.start_date, e.end_date, e.duration,
-                e.encounter_class, e.description, e.reason_description,
-                pr.first_name || ' ' || pr.last_name AS provider_name,
-                o.name AS organization_name
-            FROM encounter e
-            LEFT JOIN provider pr ON e.provider_id = pr.provider_id
-            LEFT JOIN organization o ON e.organization_id = o.organization_id
-            WHERE e.patient_id = :pid
-            ORDER BY e.start_date DESC
-        """), {"pid": patient_id}).mappings().all()
-        return [EncounterItem(**dict(r)) for r in rows]
+        rows = (
+            self.db.query(
+                EncounterModel.encounter_id,
+                EncounterModel.start_date,
+                EncounterModel.end_date,
+                EncounterModel.duration,
+                EncounterModel.encounter_class,
+                EncounterModel.description,
+                EncounterModel.reason_description,
+                provider_name_col(),
+                OrganizationModel.name.label("organization_name"),
+            )
+            .outerjoin(ProviderModel, EncounterModel.provider_id == ProviderModel.provider_id)
+            .outerjoin(OrganizationModel, EncounterModel.organization_id == OrganizationModel.organization_id)
+            .filter(EncounterModel.patient_id == patient_id)
+            .order_by(EncounterModel.start_date.desc())
+            .all()
+        )
+        return [EncounterItem(**row._asdict()) for row in rows]
+
+    def get_patient_sequences(self, patient_id: str) -> list[SequenceListItem]:
+        rows = (
+            self.db.query(PrefixSpanPatternModel)
+            .join(
+                PrefixSpanPatientPatternModel,
+                PrefixSpanPatientPatternModel.pattern_id == PrefixSpanPatternModel.id,
+            )
+            .filter(PrefixSpanPatientPatternModel.patient_id == patient_id)
+            .order_by(
+                PrefixSpanPatternModel.support_count.desc(),
+                PrefixSpanPatternModel.rank.asc(),
+            )
+            .all()
+        )
+        return [
+            SequenceListItem(
+                id=r.id,
+                rank=r.rank,
+                pattern_str=r.pattern_str,
+                length=r.length,
+                support_count=r.support_count,
+                support_pct=r.support_pct,
+                has_ai_analysis=r.ai_analysis is not None,
+            )
+            for r in rows
+        ]

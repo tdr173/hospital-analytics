@@ -1,12 +1,12 @@
 import { Theme } from "@/utils/theme";
 
 export const PatientDetailPageStyles = (theme: Theme) => ({
-  // ─── Layout ───────────────────────────────────────────────────────────────
+  // Layout
   pageContainer: {
     display: "flex",
     flexDirection: "column" as const,
     height: "100%",
-    overflow: "hidden", // CHANGED: Prevents the whole outer page from scrolling
+    overflow: "hidden",
     gap: theme.spacing.lg,
     padding: theme.spacing.lg,
     fontFamily: theme.typography.fontFamily,
@@ -16,6 +16,7 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     color: theme.colors.text.secondary,
   },
   pageError: {
@@ -23,10 +24,11 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     color: theme.colors.status.error,
   },
 
-  // ─── Identity card ────────────────────────────────────────────────────────
+  // Identity card
   identityCard: {
     backgroundColor: theme.colors.surface.containerLowest,
     borderRadius: theme.borderRadius.lg,
@@ -36,6 +38,13 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     flexWrap: "wrap" as const,
     gap: theme.spacing.lg,
     alignItems: "flex-start",
+  },
+  imageBlock: {
+    marginRight: "16px",
+  },
+  avatarImage: {
+    width: "78px",
+    height: "78px",
   },
   nameBlock: {
     flex: "1 1 280px",
@@ -89,6 +98,21 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     borderRadius: theme.borderRadius.full,
     padding: "3px 10px",
   },
+  idAgeBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "5px",
+    fontSize: "0.7rem",
+    fontWeight: theme.typography.fontWeight.semibold,
+    letterSpacing: "0.03em",
+    color: "#92400e",
+    backgroundColor: "#fef3c7",
+    borderRadius: theme.borderRadius.full,
+    padding: "3px 10px",
+  },
+  idAgeBadgeIcon: {
+    fontSize: "0.9rem !important",
+  },
   idClusterBadgeDot: {
     width: "7px",
     height: "7px",
@@ -116,46 +140,18 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     margin: 0,
   },
 
-  // ─── Metric box ───────────────────────────────────────────────────────────
+  // Metrics
   metricsRow: {
     backgroundColor: theme.colors.surface.containerLowest,
     borderRadius: theme.borderRadius.lg,
     boxShadow: theme.shadows.sm,
     padding: theme.spacing.md,
-    display: "flex",
-    flexWrap: "wrap" as const,
+    display: "grid",
+    gridTemplateColumns: "repeat(7, 1fr)",
     gap: theme.spacing.sm,
   },
-  metricBox: {
-    backgroundColor: theme.colors.surface.containerLow,
-    borderRadius: theme.borderRadius.md,
-    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-    flex: "1 1 130px",
-  },
-  metricLabel: {
-    fontSize: "0.65rem",
-    fontWeight: theme.typography.fontWeight.bold,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.06em",
-    color: theme.colors.text.secondary,
-    margin: "0 0 2px",
-  },
-  metricValue: {
-    fontSize: "1.25rem",
-    fontWeight: theme.typography.fontWeight.bold,
-    fontFamily: theme.typography.fontFamilyHeading,
-    color: theme.colors.text.primary,
-    margin: 0,
-    lineHeight: 1.2,
-  },
-  metricUnit: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.regular,
-    color: theme.colors.text.secondary,
-    marginLeft: "3px",
-  },
 
-  // ─── Tabs panel ───────────────────────────────────────────────────────────
+  // Tabs
   tabsPanel: {
     backgroundColor: theme.colors.surface.containerLowest,
     borderRadius: theme.borderRadius.lg,
@@ -172,7 +168,7 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     position: "relative" as const,
     flex: 1,
     minHeight: 0,
-    overflow: "hidden",
+    overflow: "auto",
     display: "flex",
     flexDirection: "column" as const,
   },
@@ -183,9 +179,10 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.sm,
     height: "100%",
+    width: "100%",
   },
 
-  // ─── Tab cell variants ────────────────────────────────────────────────────
+  // Tab cell variants
   ongoingBadge: {
     color: "#166534",
     fontSize: "0.75rem",

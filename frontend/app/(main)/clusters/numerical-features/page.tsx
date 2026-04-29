@@ -40,7 +40,7 @@ export default function NumericClusterFeaturesPage() {
               key={f.feature}
               feature={f.feature}
               data={f.data}
-              clusterColors={data.cluster_colors}
+              clusterColors={data.clusterColors}
             />
           ))}
         </div>

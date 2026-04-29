@@ -15,16 +15,17 @@ export default function ProvidersPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.providersStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(ProvidersPageStyles, { name: "ProvidersPage" });
 
   useEffect(() => {
-    dispatch(getProvidersStatistics());
-  }, [dispatch]);
+    dispatch(getProvidersStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading provider statistics...</div>
+      <div className={classes.loading}>Loading doctor data...</div>
     );
   }
 
@@ -40,21 +41,21 @@ export default function ProvidersPage() {
     <div className={classes.container}>
       <div className={classes.summaryRow}>
         <div className={classes.summaryCard}>
-          <div className={classes.summaryLabel}>Total Providers</div>
+          <div className={classes.summaryLabel}>Total Doctors</div>
           <div className={classes.summaryValue}>
-            {data.total_providers.toLocaleString()}
+            {data.totalProviders.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
-          <div className={classes.summaryLabel}>Unique Specialities</div>
+          <div className={classes.summaryLabel}>Unique Specialties</div>
           <div className={classes.summaryValue}>
-            {data.unique_specialities.toLocaleString()}
+            {data.uniqueSpecialities.toLocaleString()}
           </div>
         </div>
       </div>
 
       <div className={classes.utilizationCard}>
-        <h3 className={classes.utilizationTitle}>Utilization</h3>
+        <h3 className={classes.utilizationTitle}>Patient Load</h3>
         <div className={classes.utilizationStats}>
           <div>
             <div className={classes.utilizationStatLabel}>Min</div>
@@ -86,20 +87,10 @@ export default function ProvidersPage() {
       <div className={classes.grid}>
         <PieChartComponent data={data.gender} title="Gender Distribution" />
         <BarChartComponent
-          data={data.top_cities}
+          data={data.topCities}
           title="Top 10 Cities"
           color="#006780"
           bottomBorder={-20}
-        />
-      </div>
-
-      <div className={classes.chartContainer}>
-        <BarChartComponent
-          data={data.top_specialities}
-          title="Top 15 Specialities"
-          color="#006780"
-          showLabel
-          bottomBorder={0}
         />
       </div>
     </div>

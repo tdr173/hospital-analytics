@@ -6,23 +6,94 @@ import AddIcon from "@mui/icons-material/Add";
 import LogoutIcon from "@mui/icons-material/Logout";
 import StyledButton from "../StyledButton/StyledButton";
 
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import AnalyticsIcon from "@mui/icons-material/Analytics";
 import Groups3Icon from "@mui/icons-material/Groups3";
 import GroupIcon from "@mui/icons-material/Group";
+import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
+import EventNoteOutlinedIcon from "@mui/icons-material/EventNoteOutlined";
+import TimelineIcon from "@mui/icons-material/Timeline";
+import PersonAddOutlinedIcon from "@mui/icons-material/PersonAddOutlined";
+
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from "@/store/slices/auth/auth-slice";
+import type { AppDispatch, RootState } from "@/store";
+import type { UserRole } from "@/store/slices/auth/thunks";
 
-const sidebarElements = [
-  // { name: "Home", icon: DashboardIcon, forward: "/home" },
-  // { name: "Dashboard", icon: DashboardIcon, forward: "/dashboard" },
+const useAppDispatch = useDispatch.withTypes<AppDispatch>();
+
+type SidebarElement = {
+  name: string;
+  icon: React.ElementType;
+  forward: string;
+  allowedRoles: UserRole[];
+  labelByRole?: Partial<Record<UserRole, string>>;
+};
+
+const sidebarElements: SidebarElement[] = [
   {
-    name: "Dataset Statistics",
+    name: "Home",
+    icon: HomeOutlinedIcon,
+    forward: "/home",
+    allowedRoles: ["MANAGER", "DOCTOR", "PATIENT"],
+  },
+  {
+    name: "Statistics",
     icon: AnalyticsIcon,
     forward: "/statistics",
+    allowedRoles: ["MANAGER"],
   },
-  { name: "Clusters", icon: Groups3Icon, forward: "/clusters" },
-  { name: "Patients", icon: GroupIcon, forward: "/patients" },
+  {
+    name: "Patient Groups",
+    icon: Groups3Icon,
+    forward: "/clusters",
+    allowedRoles: ["MANAGER"],
+  },
+  {
+    name: "Care Sequences",
+    icon: TimelineIcon,
+    forward: "/sequences",
+    allowedRoles: ["MANAGER"],
+  },
+  {
+    name: "Patients",
+    icon: GroupIcon,
+    forward: "/patients",
+    allowedRoles: ["MANAGER", "DOCTOR"],
+  },
+  {
+    name: "Visits",
+    icon: EventNoteOutlinedIcon,
+    forward: "/encounters",
+    allowedRoles: ["MANAGER", "DOCTOR", "PATIENT"],
+    labelByRole: { PATIENT: "My Visits" },
+  },
+  {
+    name: "Doctors",
+    icon: BadgeOutlinedIcon,
+    forward: "/providers",
+    allowedRoles: ["MANAGER"],
+  },
+  {
+    name: "Ask",
+    icon: ChatBubbleOutlineIcon,
+    forward: "/ask",
+    allowedRoles: ["DOCTOR"],
+  },
+  {
+    name: "Add User",
+    icon: PersonAddOutlinedIcon,
+    forward: "/register-user",
+    allowedRoles: ["MANAGER", "DOCTOR", "PATIENT"],
+    labelByRole: {
+      DOCTOR: "Register Patient",
+      PATIENT: "Invite Family",
+    },
+  },
 ];
 
 export default function Sidebar() {
@@ -30,6 +101,16 @@ export default function Sidebar() {
 
   const router = useRouter();
   const pathname = usePathname();
+  const dispatch = useAppDispatch();
+  const role = useSelector((s: RootState) => s.auth.user?.role);
+  const visibleElements = role
+    ? sidebarElements.filter((el) => el.allowedRoles.includes(role))
+    : sidebarElements;
+
+  const handleLogout = () => {
+    dispatch(logout());
+    router.push("/login");
+  };
 
   const isRouteActive = (path: string) => {
     return pathname.startsWith(path);
@@ -80,8 +161,13 @@ export default function Sidebar() {
         </div>
       </div>
       <div className={classes.sidebarContent}>
-        {sidebarElements.map((element, index) =>
-          sidebarElement(index, element.icon, element.name, element.forward),
+        {visibleElements.map((element, index) =>
+          sidebarElement(
+            index,
+            element.icon,
+            (role && element.labelByRole?.[role]) || element.name,
+            element.forward,
+          ),
         )}
       </div>
       <div className={classes.sidebarFooter}>
@@ -99,7 +185,7 @@ export default function Sidebar() {
               color: "#EF4444",
             },
           }}
-          onClick={() => router.push("/login")}
+          onClick={handleLogout}
         >
           Logout
         </StyledButton>

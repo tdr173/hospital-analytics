@@ -1,15 +1,18 @@
+"use client";
+
 import useClasses from "@/utils/useClasses";
 import userTypeTagStyles from "./UserTypeTagStyles";
 import { hexToHexa } from "@/utils/functions";
+import type { UserRole } from "@/store/slices/auth/thunks";
 
-const rolesColorsMap: Record<string, string> = {
-  admin: "#E8674A",
-  doctor: "#5B8DB8",
-  patient: "#6AAF6A",
+const rolesColorsMap: Record<UserRole, string> = {
+  MANAGER: "#E8674A",
+  DOCTOR: "#5B8DB8",
+  PATIENT: "#6AAF6A",
 };
 
 interface userTypeTagProps {
-  userType: "admin" | "doctor" | "patient";
+  userType: UserRole;
 }
 
 export default function UserTypeTag({ userType }: userTypeTagProps) {
@@ -25,7 +28,7 @@ export default function UserTypeTag({ userType }: userTypeTagProps) {
       }}
     >
       <span className={classes.dot} style={{ backgroundColor: color }} />
-      {userType}
+      {userType.toLowerCase()}
     </div>
   );
 }

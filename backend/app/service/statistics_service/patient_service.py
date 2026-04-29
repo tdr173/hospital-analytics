@@ -8,21 +8,21 @@ from domain.schemas.statistics_schemas.patient_schema import (
 
 
 class PatientService:
-    def __init__(self, db: Session):
-        self.repo = PatientRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = PatientRepository(db, range_str)
 
     def get_patient_summary(self) -> PatientStatisticsResponse:
         total = self.repo.get_total_patients()
 
         return PatientStatisticsResponse(
             total_patients=total,
-            age_groups=self._to_chart_entries(self.repo.get_age_groups(), "age group"),
-            gender=self._to_chart_entries(self.repo.get_gender_distribution(), "gender"),
-            race=self._to_chart_entries(self.repo.get_race_distribution(), "race"),
-            ethnicity=self._to_chart_entries(self.repo.get_ethnicity_distribution(), "ethnicity"),
-            marital_status=self._to_chart_entries(self.repo.get_marital_status_distribution(), "marital status"),
-            vital_status=self._to_chart_entries(self.repo.get_vital_status(), "vital status"),
-            top_cities=self._to_chart_entries(self.repo.get_top_cities(), "city"),
+            age_groups=self._to_chart_entries(self.repo.get_age_groups(total), "age group"),
+            gender=self._to_chart_entries(self.repo.get_gender_distribution(total), "gender"),
+            race=self._to_chart_entries(self.repo.get_race_distribution(total), "race"),
+            ethnicity=self._to_chart_entries(self.repo.get_ethnicity_distribution(total), "ethnicity"),
+            marital_status=self._to_chart_entries(self.repo.get_marital_status_distribution(total), "marital status"),
+            vital_status=self._to_chart_entries(self.repo.get_vital_status(total), "vital status"),
+            top_cities=self._to_chart_entries(self.repo.get_top_cities(total), "city"),
         )
 
     @staticmethod

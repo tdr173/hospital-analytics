@@ -4,7 +4,9 @@ export const ProceduresPageStyles = (theme: Theme) => ({
   container: {
     padding: theme.spacing.lg,
     paddingBottom: `${theme.spacing.lg} !important`,
-    overflowX: "hidden" as const,
+    height: "100%",
+    minHeight: 0,
+    overflowY: "auto" as const,
   },
   summaryRow: {
     display: "grid",
@@ -72,6 +74,7 @@ export const ProceduresPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     fontFamily: theme.typography.fontFamily,
     fontSize: theme.typography.fontSize.lg,
     color: theme.colors.text.secondary,
@@ -81,6 +84,7 @@ export const ProceduresPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     fontFamily: theme.typography.fontFamily,
     color: theme.colors.status.error,
     textAlign: "center" as const,

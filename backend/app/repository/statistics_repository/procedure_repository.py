@@ -1,63 +1,50 @@
+from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, cast, Numeric
+from sqlalchemy import func
 
 from domain.models.procedure_model import ProcedureModel
+from repository.statistics_repository._common import (
+    compute_min_date, per_patient_stats, with_percentage,
+)
 
 
 class ProcedureRepository:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, range_str: str = "all"):
         self.db = db
+        min_date = compute_min_date(db, ProcedureModel.start_date, range_str)
+        self._filter = (
+            ProcedureModel.start_date >= min_date if min_date is not None else None
+        )
+
+    def _apply(self, q):
+        return q.filter(self._filter) if self._filter is not None else q
 
     def get_total_procedures(self) -> int:
-        return self.db.query(func.count(ProcedureModel.procedure_code)).scalar()
+        return self._apply(
+            self.db.query(func.count(ProcedureModel.procedure_code))
+        ).scalar()
 
     def get_unique_procedures(self) -> int:
-        return self.db.query(func.count(func.distinct(ProcedureModel.procedure_code))).scalar()
+        return self._apply(
+            self.db.query(func.count(func.distinct(ProcedureModel.procedure_code)))
+        ).scalar()
 
-    def get_top_procedures(self, limit: int = 20):
-        total = self.get_total_procedures()
+    def get_top_procedures(self, limit: int = 20, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_procedures()
 
-        rows = (
+        rows = self._apply(
             self.db.query(
                 ProcedureModel.description.label("label"),
                 func.count(ProcedureModel.procedure_code).label("count"),
             )
-            .group_by(ProcedureModel.description)
-            .order_by(func.count(ProcedureModel.procedure_code).desc())
-            .limit(limit)
-            .all()
-        )
-        return self._with_percentage(rows, total)
+        ).group_by(ProcedureModel.description).order_by(
+            func.count(ProcedureModel.procedure_code).desc()
+        ).limit(limit).all()
+        return with_percentage(rows, total)
 
     def get_per_patient_stats(self):
-        subquery = (
-            self.db.query(
-                ProcedureModel.patient_id,
-                func.count(ProcedureModel.procedure_code).label("cnt"),
-            )
-            .group_by(ProcedureModel.patient_id)
-            .subquery()
+        return per_patient_stats(
+            self.db, ProcedureModel, ProcedureModel.procedure_code,
+            filter_clause=self._filter,
         )
-
-        result = self.db.query(
-            func.round(cast(func.avg(subquery.c.cnt), Numeric), 2).label("avg"),
-            func.min(subquery.c.cnt).label("min"),
-            func.max(subquery.c.cnt).label("max"),
-        ).one()
-
-        return {
-            "avg": float(result.avg or 0),
-            "min": result.min or 0,
-            "max": result.max or 0,
-        }
-
-    @staticmethod
-    def _with_percentage(rows, total):
-        return [
-            {
-                "label": row.label,
-                "count": row.count,
-                "percentage": round(row.count * 100.0 / total, 2) if total else 0,
-            }
-            for row in rows
-        ]

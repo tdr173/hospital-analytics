@@ -2,7 +2,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from sqlalchemy import URL, create_engine, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 
 load_dotenv()
 
@@ -36,13 +36,12 @@ def get_db():
         db.close()
 
 
-def _db_retrieve(query_text: str) -> list[dict]:
+def _db_retrieve(db: Session, query_text: str) -> list[dict]:
     try:
-        with engine.connect() as connection:
-            result = connection.execute(text(query_text))
-            rows = result.fetchall()
-            columns = result.keys()
-            return [dict(zip(columns, row)) for row in rows]
+        result = db.execute(text(query_text))
+        rows = result.fetchall()
+        columns = result.keys()
+        return [dict(zip(columns, row)) for row in rows]
     except Exception as e:
         logger.error(f"Query failed: {e}\nSQL: {query_text}")
-        raise e
+        raise

@@ -1,8 +1,9 @@
 from pydantic import BaseModel
+from domain.schemas.camel_model import CamelModel
 from domain.schemas.statistics_schemas.patient_schema import ChartEntry
 
 
-class DurationStatsEntry(BaseModel):
+class DurationStatsEntry(CamelModel):
     name: str
     count: int
     min_duration: float
@@ -12,7 +13,7 @@ class DurationStatsEntry(BaseModel):
     tooltip: str
 
 
-class EncounterStatisticsResponse(BaseModel):
+class EncounterStatisticsResponse(CamelModel):
     total_encounters: int
     encounter_class: list[ChartEntry]
     duration_stats: list[DurationStatsEntry]

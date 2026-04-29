@@ -3,6 +3,7 @@
 import {
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -22,6 +23,7 @@ interface BarChartComponentProps {
   data: ChartEntry[];
   title: string;
   color?: string;
+  colors?: string[];
   showLabel?: boolean;
   bottomBorder?: number;
 }
@@ -68,6 +70,7 @@ export default function BarChartComponent({
   data,
   title,
   color = "#006780",
+  colors,
   showLabel = false,
   bottomBorder = 5,
 }: BarChartComponentProps) {
@@ -127,7 +130,16 @@ export default function BarChartComponent({
               return null;
             }}
           />
-          <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
+          <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]}>
+            {colors
+              ? data.map((_, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={colors[index % colors.length]}
+                  />
+                ))
+              : null}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

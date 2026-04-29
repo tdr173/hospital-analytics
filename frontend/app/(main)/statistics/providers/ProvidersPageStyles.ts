@@ -4,6 +4,9 @@ export const ProvidersPageStyles = (theme: Theme) => ({
   container: {
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
+    height: "100%",
+    minHeight: 0,
+    overflowY: "auto" as const,
   },
   summaryRow: {
     display: "grid",
@@ -67,16 +70,13 @@ export const ProvidersPageStyles = (theme: Theme) => ({
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
     gap: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-  },
-  chartContainer: {
-    marginTop: theme.spacing.lg,
   },
   loading: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     fontFamily: theme.typography.fontFamily,
     fontSize: theme.typography.fontSize.lg,
     color: theme.colors.text.secondary,
@@ -86,6 +86,7 @@ export const ProvidersPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     fontFamily: theme.typography.fontFamily,
     color: theme.colors.status.error,
     textAlign: "center" as const,

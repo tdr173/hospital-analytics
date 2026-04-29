@@ -8,6 +8,7 @@ import useClasses from "@/utils/useClasses";
 import { EncountersPageStyles } from "./EncountersPageStyles";
 import BarChartComponent from "@/components/generic_components/BarChartComponent/BarChartComponent";
 import PieChartComponent from "@/components/generic_components/PieChartComponent/PieChartComponent";
+import theme from "@/utils/theme";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
@@ -15,16 +16,17 @@ export default function EncountersPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.encountersStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(EncountersPageStyles, { name: "EncountersPage" });
 
   useEffect(() => {
-    dispatch(getEncountersStatistics());
-  }, [dispatch]);
+    dispatch(getEncountersStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading encounter statistics...</div>
+      <div className={classes.loading}>Loading visit data...</div>
     );
   }
 
@@ -39,40 +41,37 @@ export default function EncountersPage() {
   return (
     <div className={classes.container}>
       <div className={classes.totalCard}>
-        <div className={classes.totalLabel}>Total Encounters</div>
+        <div className={classes.totalLabel}>Total Visits</div>
         <div className={classes.totalValue}>
-          {data.total_encounters.toLocaleString()}
+          {data.totalEncounters.toLocaleString()}
         </div>
       </div>
 
       <div className={classes.grid}>
         <PieChartComponent
-          data={data.encounter_class}
-          title="Encounter Class Distribution"
-          colors={[
-            "#006780",
-            "#028fb0",
-            "#6cd3f7",
-            "#3a4555",
-            "#515f74",
-            "#b7eaff",
-          ]}
+          data={data.encounterClass}
+          title="Visit Type Distribution"
+          colors={data.encounterClass.map(
+            (d) =>
+              theme.colors.charts.encounterClass[d.name.toLowerCase()] ??
+              theme.colors.charts.encounterClass.other,
+          )}
         />
         <BarChartComponent
-          data={data.top_descriptions}
-          title="Top Descriptions"
-          color="#006780"
+          data={data.topDescriptions}
+          title="Top Visit Reasons"
+          color={theme.colors.primary.main}
           bottomBorder={-20}
         />
 
         <div className={classes.durationTable}>
           <h3 className={classes.durationTitle}>
-            Duration Stats per Encounter Class (minutes)
+            Visit Duration by Type (minutes)
           </h3>
           <table className={classes.table}>
             <thead>
               <tr>
-                <th className={classes.th}>Class</th>
+                <th className={classes.th}>Visit Type</th>
                 <th className={classes.th}>Count</th>
                 <th className={classes.th}>Min</th>
                 <th className={classes.th}>Max</th>
@@ -80,13 +79,13 @@ export default function EncountersPage() {
               </tr>
             </thead>
             <tbody>
-              {data.duration_stats.map((row) => (
+              {data.durationStats.map((row) => (
                 <tr key={row.name}>
                   <td className={classes.td}>{row.name}</td>
                   <td className={classes.td}>{row.count.toLocaleString()}</td>
-                  <td className={classes.td}>{row.min_duration}</td>
-                  <td className={classes.td}>{row.max_duration}</td>
-                  <td className={classes.td}>{row.avg_duration}</td>
+                  <td className={classes.td}>{row.minDuration}</td>
+                  <td className={classes.td}>{row.maxDuration}</td>
+                  <td className={classes.td}>{row.avgDuration}</td>
                 </tr>
               ))}
             </tbody>
@@ -96,9 +95,9 @@ export default function EncountersPage() {
 
       <div className={classes.fullWidthChart}>
         <BarChartComponent
-          data={data.top_reason_descriptions}
-          title="Top Reason Descriptions"
-          color="#028fb0"
+          data={data.topReasonDescriptions}
+          title="Top Visit Reasons"
+          color={theme.colors.primary.light}
           showLabel
           bottomBorder={-10}
         />

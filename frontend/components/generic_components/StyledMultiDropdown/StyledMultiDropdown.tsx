@@ -8,6 +8,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import theme from "@/utils/theme";
 import { DropdownOption } from "@/components/generic_components/StyledDropdown/StyledDropdown";
+import useClasses from "@/utils/useClasses";
+import { StyledMultiDropdownStyles } from "./StyledMultiDropdownStyles";
 
 interface StyledMultiDropdownProps {
   label: string;
@@ -22,19 +24,8 @@ interface StyledMultiDropdownProps {
   fullWidth?: boolean;
   width?: string | number;
   onClear?: () => void;
+  showSelectAll?: boolean;
 }
-
-const labelSx = {
-  fontFamily: theme.typography.fontFamily,
-  fontSize: "0.75rem",
-  fontWeight: theme.typography.fontWeight.bold,
-  color: theme.colors.text.secondary,
-  textTransform: "uppercase" as const,
-  letterSpacing: "0.5px",
-  margin: 0,
-  marginBottom: "6px",
-  display: "block",
-};
 
 const selectSx = {
   fontFamily: theme.typography.fontFamily,
@@ -96,6 +87,8 @@ const menuPaperSx = {
   },
 };
 
+const SELECT_ALL = "__select_all__";
+
 export default function StyledMultiDropdown({
   label,
   value,
@@ -109,32 +102,41 @@ export default function StyledMultiDropdown({
   fullWidth = false,
   width,
   onClear,
+  showSelectAll = true,
 }: StyledMultiDropdownProps) {
+  const classes = useClasses(StyledMultiDropdownStyles, { name: "StyledMultiDropdown" });
+
+  const allValues = options.map((o) => o.value);
+  const allSelected = allValues.length > 0 && allValues.every((v) => value.includes(v));
+  const someSelected = value.length > 0 && !allSelected;
+
   const handleChange = (e: SelectChangeEvent<(string | number)[]>) => {
-    const val = e.target.value;
-    onChange(typeof val === "string" ? val.split(",") : val);
+    const raw = e.target.value;
+    const val = typeof raw === "string" ? raw.split(",") : raw;
+    if (val.includes(SELECT_ALL)) {
+      onChange(allSelected ? [] : allValues);
+    } else {
+      onChange(val);
+    }
   };
 
   const renderValue = (selected: (string | number)[]) => {
     if (selected.length === 0) {
-      return <span style={{ color: theme.colors.text.secondary }}>{placeholder}</span>;
+      return <span className={classes.placeholderText}>{placeholder}</span>;
+    }
+    if (allSelected) {
+      return <span>All</span>;
     }
     if (selected.length === 1) {
       const opt = options.find((o) => o.value === selected[0]);
       return <span>{opt?.label ?? selected[0]}</span>;
     }
-    return <span style={{ color: theme.colors.text.secondary }}>+{selected.length}</span>;
+    return <span className={classes.countText}>+{selected.length}</span>;
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        width: width ?? (fullWidth ? "100%" : undefined),
-      }}
-    >
-      <span style={labelSx}>{required ? `${label} *` : label}</span>
+    <div className={classes.wrapper} style={{ width: width ?? (fullWidth ? "100%" : undefined) }}>
+      <span className={classes.label}>{required ? `${label} *` : label}</span>
 
       <Select
         multiple
@@ -162,6 +164,28 @@ export default function StyledMultiDropdown({
           )
         }
       >
+        {showSelectAll && (
+          <MenuItem
+            value={SELECT_ALL}
+            sx={{
+              borderBottom: `1px solid`,
+              borderColor: "divider",
+              fontWeight: 600,
+            }}
+          >
+            <Checkbox
+              checked={allSelected}
+              indeterminate={someSelected}
+              size="small"
+              sx={{
+                padding: 0,
+                color: theme.colors.grey[400],
+                "&.Mui-checked, &.MuiCheckbox-indeterminate": { color: theme.colors.primary.main },
+              }}
+            />
+            Select All
+          </MenuItem>
+        )}
         {options.map((opt) => (
           <MenuItem key={opt.value} value={opt.value}>
             <Checkbox
@@ -180,13 +204,8 @@ export default function StyledMultiDropdown({
 
       {helperText && (
         <span
-          style={{
-            fontFamily: theme.typography.fontFamily,
-            fontSize: "0.75rem",
-            margin: 0,
-            marginTop: "4px",
-            color: error ? theme.colors.status.error : theme.colors.text.secondary,
-          }}
+          className={classes.helperText}
+          style={{ color: error ? theme.colors.status.error : theme.colors.text.secondary }}
         >
           {helperText}
         </span>

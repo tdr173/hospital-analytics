@@ -7,11 +7,14 @@ load_dotenv()
 
 api_key = os.getenv("GPT_KEY")
 
-client = OpenAI(api_key=api_key)
+# 60s caps hung / slow requests. With max_retries=2 the client retries
+# transient network errors twice before propagating.
+client = OpenAI(api_key=api_key, timeout=60.0, max_retries=2)
 
-def ask_ai(prompt: str):
-    response = client.responses.create(
-        model="gpt-5.2",
-        input=prompt,
+
+def ask_ai(prompt: str) -> str:
+    response = client.chat.completions.create(
+        model="gpt-4.1",
+        messages=[{"role": "user", "content": prompt}],
     )
-    return response.output_text
+    return response.choices[0].message.content

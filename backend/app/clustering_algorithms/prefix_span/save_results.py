@@ -1,97 +1,53 @@
-import json
-from datetime import datetime
-
-from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 
-def save_sequence_results(db: Session, result: dict) -> int:
+def save_prefix_span_results(
+    db: Session,
+    patterns: list[dict],
+    patient_memberships: dict[int, list[str]],
+) -> None:
+    """Replace prefix_span_pattern + prefix_span_patient_pattern with fresh mined data.
+
+    `patterns` — each dict: {rank, pattern_str, length, support_count, support_pct}.
+    `patient_memberships` — {rank -> [patient_id, ...]} listing which patients contain each pattern.
+
+    Wipes both tables first (junction before parent to satisfy FK), then inserts fresh rows
+    and maps each (rank -> inserted id) so we can populate the junction with the correct
+    pattern_id. `ai_analysis` is left NULL on write; it is filled lazily by the LLM endpoint.
     """
-    Saves a PrefixSpan sequence mining run to the database.
+    db.execute(text("DELETE FROM prefix_span_patient_pattern"))
+    db.execute(text("DELETE FROM prefix_span_pattern"))
 
-    Tables used:
-        sequence_run       — one row per execution (metadata + params)
-        frequent_sequence  — one row per discovered frequent pattern
+    rank_to_id: dict[int, int] = {}
+    insert_pattern = text("""
+        INSERT INTO prefix_span_pattern (rank, pattern_str, length, support_count, support_pct)
+        VALUES (:rank, :pattern_str, :length, :support_count, :support_pct)
+        RETURNING id
+    """)
 
-    Returns the run_id.
-    """
+    for p in patterns:
+        pattern_id = db.execute(insert_pattern, p).scalar_one()
+        rank_to_id[p["rank"]] = pattern_id
 
-    # 1. ensure tables exist
-    db.execute(text("""
-        CREATE TABLE IF NOT EXISTS sequence_run (
-            id              SERIAL PRIMARY KEY,
-            created_at      TIMESTAMP NOT NULL,
-            sequence_type   VARCHAR NOT NULL,
-            n_patients      INTEGER NOT NULL,
-            min_support     FLOAT NOT NULL,
-            max_length      INTEGER NOT NULL,
-            closed_only     BOOLEAN NOT NULL DEFAULT TRUE,
-            n_patterns      INTEGER NOT NULL,
-            length_stats    JSONB
-        )
-    """))
-    db.execute(text("""
-        CREATE TABLE IF NOT EXISTS frequent_sequence (
-            id               SERIAL PRIMARY KEY,
-            run_id           INTEGER NOT NULL REFERENCES sequence_run(id),
-            pattern          JSONB NOT NULL,
-            pattern_length   INTEGER NOT NULL,
-            support_count    INTEGER NOT NULL,
-            support_fraction FLOAT NOT NULL
-        )
-    """))
-    db.execute(text(
-        "CREATE INDEX IF NOT EXISTS ix_frequent_sequence_run_id ON frequent_sequence(run_id)"
-    ))
+    junction_rows: list[dict] = []
+    for rank, patient_ids in patient_memberships.items():
+        pattern_id = rank_to_id.get(rank)
+        if pattern_id is None:
+            continue
+        for pid in patient_ids:
+            junction_rows.append({"pattern_id": pattern_id, "patient_id": pid})
 
-    # 2. insert run
-    row = db.execute(
-        text("""
-            INSERT INTO sequence_run
-                (created_at, sequence_type, n_patients, min_support, max_length,
-                 closed_only, n_patterns, length_stats)
-            VALUES
-                (:created_at, :sequence_type, :n_patients, :min_support, :max_length,
-                 :closed_only, :n_patterns, :length_stats)
-            RETURNING id
-        """),
-        {
-            "created_at": datetime.utcnow(),
-            "sequence_type": result["sequence_type"],
-            "n_patients": result["n_patients"],
-            "min_support": result["min_support"],
-            "max_length": result["max_length"],
-            "closed_only": result.get("closed_only", True),
-            "n_patterns": result["n_patterns"],
-            "length_stats": json.dumps(result["sequence_length_stats"]),
-        },
-    )
-    run_id = row.fetchone()[0]
-
-    # 3. insert frequent patterns
-    if result["patterns"]:
+    if junction_rows:
         db.execute(
             text("""
-                INSERT INTO frequent_sequence
-                    (run_id, pattern, pattern_length, support_count, support_fraction)
-                VALUES
-                    (:run_id, :pattern, :pattern_length, :support_count, :support_fraction)
+                INSERT INTO prefix_span_patient_pattern (pattern_id, patient_id)
+                VALUES (:pattern_id, :patient_id)
             """),
-            [
-                {
-                    "run_id": run_id,
-                    "pattern": json.dumps(p["pattern"]),
-                    "pattern_length": p["length"],
-                    "support_count": p["support_count"],
-                    "support_fraction": p["support_fraction"],
-                }
-                for p in result["patterns"]
-            ],
+            junction_rows,
         )
 
     db.commit()
     print(
-        f"Saved sequence run_id={run_id}: {result['n_patterns']} patterns "
-        f"({result['sequence_type']}, {result['n_patients']} patients)"
+        f"Saved: {len(patterns)} patterns + {len(junction_rows)} patient-pattern links"
     )
-    return run_id

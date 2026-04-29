@@ -14,16 +14,17 @@ export default function ProceduresPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.proceduresStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(ProceduresPageStyles, { name: "ProceduresPage" });
 
   useEffect(() => {
-    dispatch(getProceduresStatistics());
-  }, [dispatch]);
+    dispatch(getProceduresStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading procedure statistics...</div>
+      <div className={classes.loading}>Loading procedure data...</div>
     );
   }
 
@@ -41,18 +42,18 @@ export default function ProceduresPage() {
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Total Procedures</div>
           <div className={classes.summaryValue}>
-            {data.total_procedures.toLocaleString()}
+            {data.totalProcedures.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Unique Procedures</div>
           <div className={classes.summaryValue}>
-            {data.unique_procedures.toLocaleString()}
+            {data.uniqueProcedures.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Avg per Patient</div>
-          <div className={classes.summaryValue}>{data.per_patient.avg}</div>
+          <div className={classes.summaryValue}>{data.perPatient.avg}</div>
         </div>
       </div>
 
@@ -62,19 +63,19 @@ export default function ProceduresPage() {
           <div>
             <div className={classes.perPatientStatLabel}>Min</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.min}
+              {data.perPatient.min}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Avg</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.avg}
+              {data.perPatient.avg}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Max</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.max}
+              {data.perPatient.max}
             </div>
           </div>
         </div>
@@ -82,7 +83,7 @@ export default function ProceduresPage() {
 
       <div className={classes.chartContainer}>
         <BarChartComponent
-          data={data.top_procedures}
+          data={data.topProcedures}
           title="Top 20 Procedures"
           color="#006780"
           showLabel

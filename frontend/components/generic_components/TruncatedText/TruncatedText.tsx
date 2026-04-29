@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import StyledTooltip from "@/components/generic_components/StyledTooltip/StyledTooltip";
+import useClasses from "@/utils/useClasses";
+import { TruncatedTextStyles } from "./TruncatedTextStyles";
 
 interface TruncatedTextProps {
   text: string;
@@ -10,6 +12,7 @@ interface TruncatedTextProps {
 export default function TruncatedText({ text }: TruncatedTextProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const [overflowing, setOverflowing] = useState(false);
+  const classes = useClasses(TruncatedTextStyles, { name: "TruncatedText" });
 
   const checkOverflow = () => {
     if (ref.current) {
@@ -22,12 +25,7 @@ export default function TruncatedText({ text }: TruncatedTextProps) {
       <span
         ref={ref}
         onMouseEnter={checkOverflow}
-        style={{
-          display: "block",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
+        className={classes.text}
       >
         {text}
       </span>

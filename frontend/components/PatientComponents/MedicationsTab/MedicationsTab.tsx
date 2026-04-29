@@ -40,25 +40,25 @@ export default function MedicationsTab({ data }: { data: MedicationItem[] }) {
 
               {/* Column 2: Centered Start Date */}
               <div className={classes.centeredCell}>
-                {formatDate(r.start_date)}
+                {formatDate(r.startDate)}
               </div>
 
               {/* Column 3: Centered End Date */}
               <div className={classes.centeredCell}>
-                {r.end_date ? formatDate(r.end_date) : "—"}
+                {r.endDate ? formatDate(r.endDate) : "-"}
               </div>
 
               {/* Column 4: Centered Duration */}
               <div className={classes.centeredCell}>
-                {r.duration_days != null
-                  ? `${Math.round(r.duration_days)} d`
-                  : "—"}
+                {r.durationDays != null
+                  ? `${Math.round(r.durationDays)} d`
+                  : "-"}
               </div>
 
               {/* Column 5: Centered Reason */}
               <div className={classes.secondaryText}>
-                {r.reason_description ? (
-                  <TruncatedText text={r.reason_description} />
+                {r.reasonDescription ? (
+                  <TruncatedText text={r.reasonDescription} />
                 ) : (
                   "-"
                 )}

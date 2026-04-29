@@ -1,18 +1,33 @@
-# IDEs
-.idea
-.vscode
+# ── Claude ──────────────────────────────────────
+.claude/
+CLAUDE.md
 
-# Environment
+# ── IDEs / Editors ─────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── Environment / Secrets ──────────────────────
 .env
-.venv
+.env.*
+!.env.example
+.venv/
+venv/
 
-# Python
+# ── Python ─────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.Python
+.pytest_cache/
+.coverage
+htmlcov/
 
-# Claude
-.claude/
-
-# Clustering outputs
+# ── Clustering outputs ─────────────────────────
 app/clustering_algorithms/*/outputs/

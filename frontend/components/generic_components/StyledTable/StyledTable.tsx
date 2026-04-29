@@ -58,7 +58,7 @@ export const headerCellSx = {
   borderBottom: `1px solid ${theme.colors.border.main}`,
   whiteSpace: "nowrap" as const,
   userSelect: "none" as const,
-  zIndex: 2, // ADDED: Ensures header stays above the scrolling body rows
+  zIndex: 2,
 };
 
 export const bodyCellSx = {
@@ -117,7 +117,7 @@ export default function StyledTable<T = any>({
   onSort,
   loading = false,
   emptyMessage = "No data available.",
-  stickyHeader = true, // CHANGED: Defaulted to true
+  stickyHeader = true,
 }: StyledTableProps<T>) {
   const handleSort = (key: string) => {
     if (!onSort) return;
@@ -136,10 +136,26 @@ export default function StyledTable<T = any>({
         boxShadow: theme.shadows.sm,
         backgroundColor: theme.colors.surface.containerLowest,
         height: "100%",
+        position: "relative",
       }}
     >
-      {/* TableContainer height is already set correctly to allow for scrolling */}
-      <TableContainer sx={{ overflowX: "auto", height: "calc(100% - 52px)" }}>
+      {loading && (
+        <LinearProgress
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 2,
+            zIndex: 3,
+            backgroundColor: "transparent",
+            "& .MuiLinearProgress-bar": {
+              backgroundColor: theme.colors.primary.main,
+            },
+          }}
+        />
+      )}
+      <TableContainer sx={{ overflowX: "auto", height: "calc(100% - 52px)", position: "relative" }}>
         <Table
           stickyHeader={stickyHeader}
           size="small"
@@ -185,26 +201,31 @@ export default function StyledTable<T = any>({
           )}
 
           <TableBody>
-            {data.length === 0 && !loading ? (
-              <TableRow sx={{ height: "100% !important" }}>
-                <TableCell
-                  colSpan={columns.length}
-                  sx={{
-                    ...bodyCellSx,
-                    textAlign: "center",
-                    padding: "48px 16px",
-                    color: theme.colors.text.secondary,
-                    borderBottom: "none",
-                  }}
-                >
-                  {emptyMessage}
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((item, index) => renderRow(item, index))
-            )}
+            {data.map((item, index) => renderRow(item, index))}
           </TableBody>
         </Table>
+
+        {data.length === 0 && (
+          <div
+            style={{
+              position: "absolute",
+              top: showHeader ? 37 : 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: theme.typography.fontFamily,
+              fontSize: theme.typography.fontSize.sm,
+              color: theme.colors.text.secondary,
+              fontStyle: "italic",
+              pointerEvents: "none",
+            }}
+          >
+            {loading ? "Loading..." : emptyMessage}
+          </div>
+        )}
       </TableContainer>
 
       {showPagination && (

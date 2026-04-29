@@ -12,3 +12,6 @@ seaborn
 scikit-learn
 kmodes
 protobuf
+prince
+prefixspan
+umap-learn

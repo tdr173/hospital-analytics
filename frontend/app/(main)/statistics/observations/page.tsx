@@ -14,18 +14,19 @@ export default function ObservationsPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.observationsStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(ObservationsPageStyles, {
     name: "ObservationsPage",
   });
 
   useEffect(() => {
-    dispatch(getObservationsStatistics());
-  }, [dispatch]);
+    dispatch(getObservationsStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading observation statistics...</div>
+      <div className={classes.loading}>Loading test result data...</div>
     );
   }
 
@@ -41,42 +42,42 @@ export default function ObservationsPage() {
     <div className={classes.container}>
       <div className={classes.summaryRow}>
         <div className={classes.summaryCard}>
-          <div className={classes.summaryLabel}>Total Observations</div>
+          <div className={classes.summaryLabel}>Total Test Results</div>
           <div className={classes.summaryValue}>
-            {data.total_observations.toLocaleString()}
+            {data.totalObservations.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Unique Types</div>
           <div className={classes.summaryValue}>
-            {data.unique_observation_types.toLocaleString()}
+            {data.uniqueObservationTypes.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Avg per Patient</div>
-          <div className={classes.summaryValue}>{data.per_patient.avg}</div>
+          <div className={classes.summaryValue}>{data.perPatient.avg}</div>
         </div>
       </div>
 
       <div className={classes.perPatientCard}>
-        <h3 className={classes.perPatientTitle}>Observations per Patient</h3>
+        <h3 className={classes.perPatientTitle}>Test Results per Patient</h3>
         <div className={classes.perPatientStats}>
           <div>
             <div className={classes.perPatientStatLabel}>Min</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.min}
+              {data.perPatient.min}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Avg</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.avg}
+              {data.perPatient.avg}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Max</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.max}
+              {data.perPatient.max}
             </div>
           </div>
         </div>
@@ -84,8 +85,8 @@ export default function ObservationsPage() {
 
       <div className={classes.chartSection}>
         <BarChartComponent
-          data={data.top_observation_types}
-          title="Top Numeric Observation Types"
+          data={data.topObservationTypes}
+          title="Top Numeric Test Types"
           color="#006780"
           showLabel
           bottomBorder={-10}
@@ -95,12 +96,12 @@ export default function ObservationsPage() {
       <div className={classes.grid}>
         <div className={classes.numericTable}>
           <h3 className={classes.numericTitle}>
-            Numeric Stats per Observation Type
+            Numeric Stats per Test Type
           </h3>
           <table className={classes.table}>
             <thead>
               <tr>
-                <th className={classes.thFirst}>Observation</th>
+                <th className={classes.thFirst}>Test</th>
                 <th className={classes.th}>Records</th>
                 <th className={classes.th}>Patients</th>
                 <th className={classes.th}>Patient %</th>
@@ -111,17 +112,17 @@ export default function ObservationsPage() {
               </tr>
             </thead>
             <tbody>
-              {data.numeric_stats.map((row) => (
+              {data.numericStats.map((row) => (
                 <tr key={row.name}>
                   <td className={classes.tdFirst}>{row.name}</td>
                   <td className={classes.td}>{row.count.toLocaleString()}</td>
                   <td className={classes.td}>
-                    {row.patient_count.toLocaleString()}
+                    {row.patientCount.toLocaleString()}
                   </td>
                   <td className={classes.td}>{row.percentage}%</td>
-                  <td className={classes.td}>{row.min_value}</td>
-                  <td className={classes.td}>{row.max_value}</td>
-                  <td className={classes.td}>{row.avg_value}</td>
+                  <td className={classes.td}>{row.minValue}</td>
+                  <td className={classes.td}>{row.maxValue}</td>
+                  <td className={classes.td}>{row.avgValue}</td>
                   <td className={classes.td}>{row.units}</td>
                 </tr>
               ))}
@@ -130,14 +131,14 @@ export default function ObservationsPage() {
         </div>
       </div>
 
-      {data.categorical_stats && data.categorical_stats.length > 0 && (
+      {data.categoricalStats && data.categoricalStats.length > 0 && (
         <div className={classes.gridWithMargin}>
           <div className={classes.numericTable}>
-            <h3 className={classes.numericTitle}>Categorical Observations</h3>
+            <h3 className={classes.numericTitle}>Categorical Test Results</h3>
             <table className={classes.table}>
               <thead>
                 <tr>
-                  <th className={classes.thFirst}>Observation</th>
+                  <th className={classes.thFirst}>Test</th>
                   <th className={classes.th}>Records</th>
                   <th className={classes.th}>Patients</th>
                   <th className={classes.th}>Patient %</th>
@@ -145,17 +146,17 @@ export default function ObservationsPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.categorical_stats.map((row) => (
+                {data.categoricalStats.map((row) => (
                   <tr key={row.name}>
                     <td className={classes.tdFirst}>{row.name}</td>
                     <td className={classes.td}>
                       {row.count?.toLocaleString()}
                     </td>
                     <td className={classes.td}>
-                      {row.patient_count?.toLocaleString()}
+                      {row.patientCount?.toLocaleString()}
                     </td>
                     <td className={classes.td}>{row.percentage}%</td>
-                    <td className={classes.td}>{row.distinct_values}</td>
+                    <td className={classes.td}>{row.distinctValues}</td>
                   </tr>
                 ))}
               </tbody>

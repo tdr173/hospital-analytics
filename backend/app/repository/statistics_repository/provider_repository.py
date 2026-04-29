@@ -1,75 +1,100 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Numeric
 
 from domain.models.provider_model import ProviderModel
+from domain.models.encounter_model import EncounterModel
+from repository.statistics_repository._common import (
+    compute_min_date, with_percentage,
+)
 
 
 class ProviderRepository:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, range_str: str = "all"):
         self.db = db
+        # Providers have no intrinsic date column — range narrows to the set
+        # of providers who had encounters within the window.
+        min_date = compute_min_date(db, EncounterModel.start_date, range_str)
+        if min_date is not None:
+            active_ids = (
+                db.query(EncounterModel.provider_id)
+                .filter(EncounterModel.start_date >= min_date)
+                .distinct()
+                .subquery()
+            )
+            self._filter = ProviderModel.provider_id.in_(active_ids)
+        else:
+            self._filter = None
+
+    def _apply(self, q):
+        return q.filter(self._filter) if self._filter is not None else q
 
     def get_total_providers(self) -> int:
-        return self.db.query(func.count(ProviderModel.provider_id)).scalar()
+        return self._apply(
+            self.db.query(func.count(ProviderModel.provider_id))
+        ).scalar()
 
     def get_unique_specialities(self) -> int:
-        return self.db.query(func.count(func.distinct(ProviderModel.speciality))).scalar()
+        return self._apply(
+            self.db.query(func.count(func.distinct(ProviderModel.speciality)))
+        ).scalar()
 
-    def get_gender_distribution(self):
-        total = self.get_total_providers()
+    def get_gender_distribution(self, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_providers()
 
-        rows = (
+        rows = self._apply(
             self.db.query(
                 ProviderModel.gender.label("label"),
                 func.count(ProviderModel.provider_id).label("count"),
             )
-            .group_by(ProviderModel.gender)
-            .order_by(func.count(ProviderModel.provider_id).desc())
-            .all()
-        )
-        return self._with_percentage(rows, total)
+        ).group_by(ProviderModel.gender).order_by(
+            func.count(ProviderModel.provider_id).desc()
+        ).all()
+        return with_percentage(rows, total)
 
-    def get_top_specialities(self, limit: int = 15):
-        total = self.get_total_providers()
+    def get_top_specialities(self, limit: int = 15, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_providers()
 
-        rows = (
+        rows = self._apply(
             self.db.query(
                 ProviderModel.speciality.label("label"),
                 func.count(ProviderModel.provider_id).label("count"),
             )
-            .group_by(ProviderModel.speciality)
-            .order_by(func.count(ProviderModel.provider_id).desc())
-            .limit(limit)
-            .all()
-        )
-        return self._with_percentage(rows, total)
+        ).group_by(ProviderModel.speciality).order_by(
+            func.count(ProviderModel.provider_id).desc()
+        ).limit(limit).all()
+        return with_percentage(rows, total)
 
-    def get_top_cities(self, limit: int = 10):
-        total = self.get_total_providers()
+    def get_top_cities(self, limit: int = 10, total: Optional[int] = None):
+        if total is None:
+            total = self.get_total_providers()
 
-        rows = (
+        rows = self._apply(
             self.db.query(
                 ProviderModel.city.label("label"),
                 func.count(ProviderModel.provider_id).label("count"),
             )
-            .group_by(ProviderModel.city)
-            .order_by(func.count(ProviderModel.provider_id).desc())
-            .limit(limit)
-            .all()
-        )
-        return self._with_percentage(rows, total)
+        ).group_by(ProviderModel.city).order_by(
+            func.count(ProviderModel.provider_id).desc()
+        ).limit(limit).all()
+        return with_percentage(rows, total)
 
     def get_utilization_stats(self):
-        result = self.db.query(
-            func.min(ProviderModel.utilization).label("min"),
-            func.max(ProviderModel.utilization).label("max"),
-            func.round(cast(func.avg(ProviderModel.utilization), Numeric), 2).label("avg"),
-            func.round(
-                cast(
-                    func.percentile_cont(0.5).within_group(ProviderModel.utilization),
-                    Numeric,
-                ),
-                2,
-            ).label("median"),
+        result = self._apply(
+            self.db.query(
+                func.min(ProviderModel.encounters).label("min"),
+                func.max(ProviderModel.encounters).label("max"),
+                func.round(cast(func.avg(ProviderModel.encounters), Numeric), 2).label("avg"),
+                func.round(
+                    cast(
+                        func.percentile_cont(0.5).within_group(ProviderModel.encounters),
+                        Numeric,
+                    ),
+                    2,
+                ).label("median"),
+            )
         ).one()
 
         return {
@@ -78,14 +103,3 @@ class ProviderRepository:
             "avg": float(result.avg or 0),
             "median": float(result.median or 0),
         }
-
-    @staticmethod
-    def _with_percentage(rows, total):
-        return [
-            {
-                "label": row.label,
-                "count": row.count,
-                "percentage": round(row.count * 100.0 / total, 2) if total else 0,
-            }
-            for row in rows
-        ]

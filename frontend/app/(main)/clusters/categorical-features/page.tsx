@@ -15,7 +15,9 @@ export default function CategoricalClusterFeaturesPage() {
     (state: RootState) => state.categoricalFeatures,
   );
   const dispatch = useAppDispatch();
-  const classes = useClasses(CategoricalFeaturesPageStyles, { name: "CategoricalFeaturesPage" });
+  const classes = useClasses(CategoricalFeaturesPageStyles, {
+    name: "CategoricalFeaturesPage",
+  });
 
   useEffect(() => {
     if (!data) dispatch(getCategoricalFeaturesStatistics());
@@ -24,15 +26,9 @@ export default function CategoricalClusterFeaturesPage() {
   return (
     <div className={classes.container}>
       {loading && (
-        <div className={classes.loading}>
-          Loading categorical features...
-        </div>
+        <div className={classes.loading}>Loading categorical features...</div>
       )}
-      {error && (
-        <div className={classes.error}>
-          {error}
-        </div>
-      )}
+      {error && <div className={classes.error}>{error}</div>}
       {data && (
         <div className={classes.grid}>
           {data.features.map((f) => (

@@ -9,24 +9,25 @@ from domain.schemas.statistics_schemas.provider_schema import (
 
 
 class ProviderService:
-    def __init__(self, db: Session):
-        self.repo = ProviderRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = ProviderRepository(db, range_str)
 
     def get_provider_summary(self) -> ProviderStatisticsResponse:
+        total = self.repo.get_total_providers()
         utilization = self.repo.get_utilization_stats()
 
         return ProviderStatisticsResponse(
-            total_providers=self.repo.get_total_providers(),
+            total_providers=total,
             unique_specialities=self.repo.get_unique_specialities(),
             utilization=UtilizationStats(**utilization),
             gender=self._to_chart_entries(
-                self.repo.get_gender_distribution(), "gender"
+                self.repo.get_gender_distribution(total), "gender"
             ),
             top_specialities=self._to_chart_entries(
-                self.repo.get_top_specialities(), "speciality"
+                self.repo.get_top_specialities(total=total), "speciality"
             ),
             top_cities=self._to_chart_entries(
-                self.repo.get_top_cities(), "city"
+                self.repo.get_top_cities(total=total), "city"
             ),
         )
 

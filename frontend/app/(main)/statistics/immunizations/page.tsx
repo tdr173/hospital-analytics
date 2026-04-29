@@ -14,18 +14,19 @@ export default function ImmunizationsPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.immunizationsStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(ImmunizationsPageStyles, {
     name: "ImmunizationsPage",
   });
 
   useEffect(() => {
-    dispatch(getImmunizationsStatistics());
-  }, [dispatch]);
+    dispatch(getImmunizationsStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
     return (
-      <div className={classes.loading}>Loading immunization statistics...</div>
+      <div className={classes.loading}>Loading vaccination data...</div>
     );
   }
 
@@ -41,42 +42,42 @@ export default function ImmunizationsPage() {
     <div className={classes.container}>
       <div className={classes.summaryRow}>
         <div className={classes.summaryCard}>
-          <div className={classes.summaryLabel}>Total Immunizations</div>
+          <div className={classes.summaryLabel}>Total Vaccinations</div>
           <div className={classes.summaryValue}>
-            {data.total_immunizations.toLocaleString()}
+            {data.totalImmunizations.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
-          <div className={classes.summaryLabel}>Unique Immunizations</div>
+          <div className={classes.summaryLabel}>Unique Vaccinations</div>
           <div className={classes.summaryValue}>
-            {data.unique_immunizations.toLocaleString()}
+            {data.uniqueImmunizations.toLocaleString()}
           </div>
         </div>
         <div className={classes.summaryCard}>
           <div className={classes.summaryLabel}>Avg per Patient</div>
-          <div className={classes.summaryValue}>{data.per_patient.avg}</div>
+          <div className={classes.summaryValue}>{data.perPatient.avg}</div>
         </div>
       </div>
 
       <div className={classes.perPatientCard}>
-        <h3 className={classes.perPatientTitle}>Immunizations per Patient</h3>
+        <h3 className={classes.perPatientTitle}>Vaccinations per Patient</h3>
         <div className={classes.perPatientStats}>
           <div>
             <div className={classes.perPatientStatLabel}>Min</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.min}
+              {data.perPatient.min}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Avg</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.avg}
+              {data.perPatient.avg}
             </div>
           </div>
           <div>
             <div className={classes.perPatientStatLabel}>Max</div>
             <div className={classes.perPatientStatValue}>
-              {data.per_patient.max}
+              {data.perPatient.max}
             </div>
           </div>
         </div>
@@ -84,8 +85,8 @@ export default function ImmunizationsPage() {
 
       <div className={classes.chartContainer}>
         <BarChartComponent
-          data={data.top_immunizations}
-          title="Top 15 Immunizations"
+          data={data.topImmunizations}
+          title="Top 15 Vaccinations"
           color="#006780"
           showLabel
           bottomBorder={-8}

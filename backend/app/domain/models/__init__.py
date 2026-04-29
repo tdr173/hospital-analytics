@@ -7,6 +7,10 @@ from .procedure_model import ProcedureModel
 from .medication_model import MedicationModel
 from .immunization_model import ImmunizationModel
 from .condition_model import ConditionModel
-from .cluster_run_model import ClusterRunModel
+from .observation_model import ObservationModel
+from .careplan_model import CarePlanModel
+from .cluster_meta_model import ClusterMetaModel
 from .cluster_patient_model import ClusterPatientModel
 from .cluster_model import ClusterModel
+from .prefix_span_pattern_model import PrefixSpanPatternModel
+from .prefix_span_patient_pattern_model import PrefixSpanPatientPatternModel

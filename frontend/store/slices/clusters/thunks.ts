@@ -1,15 +1,17 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
+import type { RootState } from "@/store";
 import {
   ClustersResponse,
   PcaScatterResponse,
   NumericalFeaturesResponse,
   CategoricalFeaturesResponse,
   AiAnalysisResponse,
+  ClusterDetailResponse,
 } from "@/models/generic/clusters";
 import { ErrorResponse } from "@/models/generic/generic";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "http://127.0.0.1:8000";
 
 const defaultHeaders: Record<string, string> = {
   "ngrok-skip-browser-warning": "true",
@@ -20,7 +22,7 @@ export { API_BASE };
 export const getClusterStatistics = createAsyncThunk<
   PcaScatterResponse,
   void,
-  { rejectValue: ErrorResponse }
+  { state: RootState; rejectValue: ErrorResponse }
 >("getClusterStatistics", async (_, thunkAPI) => {
   try {
     const response = await fetch(`${API_BASE}/clusters/statistics`, {
@@ -43,12 +45,14 @@ export const getClusterStatistics = createAsyncThunk<
       message: "Failed to fetch cluster statistics",
     });
   }
+}, {
+  condition: (_, { getState }) => !getState().pcaScatter.loading,
 });
 
 export const getNumericalFeaturesStatistics = createAsyncThunk<
   NumericalFeaturesResponse,
   void,
-  { rejectValue: ErrorResponse }
+  { state: RootState; rejectValue: ErrorResponse }
 >("getNumericalFeaturesStatistics", async (_, thunkAPI) => {
   try {
     const response = await fetch(`${API_BASE}/clusters/numerical-features-statistics`, {
@@ -63,12 +67,14 @@ export const getNumericalFeaturesStatistics = createAsyncThunk<
     toast.error("Failed to load numerical features", { toastId: "numerical-features" });
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch numerical features" });
   }
+}, {
+  condition: (_, { getState }) => !getState().numericalFeatures.loading,
 });
 
 export const getCategoricalFeaturesStatistics = createAsyncThunk<
   CategoricalFeaturesResponse,
   void,
-  { rejectValue: ErrorResponse }
+  { state: RootState; rejectValue: ErrorResponse }
 >("getCategoricalFeaturesStatistics", async (_, thunkAPI) => {
   try {
     const response = await fetch(`${API_BASE}/clusters/categorical-features-statistics`, {
@@ -83,12 +89,14 @@ export const getCategoricalFeaturesStatistics = createAsyncThunk<
     toast.error("Failed to load categorical features", { toastId: "categorical-features" });
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch categorical features" });
   }
+}, {
+  condition: (_, { getState }) => !getState().categoricalFeatures.loading,
 });
 
 export const getAiAnalysis = createAsyncThunk<
   AiAnalysisResponse,
   number,
-  { rejectValue: ErrorResponse }
+  { state: RootState; rejectValue: ErrorResponse }
 >("getAiAnalysis", async (clusterId, thunkAPI) => {
   try {
     const response = await fetch(`${API_BASE}/clusters/ai-analysis/${clusterId}`, {
@@ -103,13 +111,47 @@ export const getAiAnalysis = createAsyncThunk<
     toast.error("Failed to generate AI analysis", { toastId: "ai-analysis" });
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to generate AI analysis" });
   }
+}, {
+  condition: (clusterId, { getState }) => {
+    const { cache, loading, currentClusterId } = getState().aiAnalysis;
+    if (cache[clusterId]) return false;
+    return !(loading && currentClusterId === clusterId);
+  },
 });
 
-export const getClusterRuns = createAsyncThunk<
+export const getClusterDetail = createAsyncThunk<
+  ClusterDetailResponse,
+  number,
+  { state: RootState; rejectValue: ErrorResponse }
+>("getClusterDetail", async (clusterId, thunkAPI) => {
+  try {
+    const response = await fetch(`${API_BASE}/clusters/detail/${clusterId}`, {
+      headers: defaultHeaders,
+    });
+    if (!response.ok) {
+      toast.error("Failed to load cluster details", { toastId: "cluster-detail" });
+      return thunkAPI.rejectWithValue({
+        error: true,
+        message: "Failed to fetch cluster detail",
+      });
+    }
+    return (await response.json()) as ClusterDetailResponse;
+  } catch {
+    toast.error("Failed to load cluster details", { toastId: "cluster-detail" });
+    return thunkAPI.rejectWithValue({
+      error: true,
+      message: "Failed to fetch cluster detail",
+    });
+  }
+}, {
+  condition: (_, { getState }) => !getState().clusterDetail.loading,
+});
+
+export const getClustersOverview = createAsyncThunk<
   ClustersResponse,
   void,
-  { rejectValue: ErrorResponse }
->("getClusterRuns", async (_, thunkAPI) => {
+  { state: RootState; rejectValue: ErrorResponse }
+>("getClustersOverview", async (_, thunkAPI) => {
   try {
     const response = await fetch(`${API_BASE}/clusters`, {
       headers: defaultHeaders,
@@ -131,4 +173,6 @@ export const getClusterRuns = createAsyncThunk<
       message: "Failed to fetch cluster data",
     });
   }
+}, {
+  condition: (_, { getState }) => !getState().clusters.loading,
 });

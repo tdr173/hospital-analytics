@@ -12,9 +12,9 @@ import { ClusterFeaturesPageStyles } from "./styles";
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
 const clusterTabs = [
-  { name: "CLUSTER SUMMARIES", forward: "/clusters/summaries" },
-  { name: "CLUSTER STATISTICS", forward: "/clusters/statistics" },
-  { name: "CLUSTER FEATURES", forward: "/clusters/features" },
+  { name: "PATIENT GROUPS", forward: "/clusters/summaries" },
+  { name: "GROUP STATISTICS", forward: "/clusters/statistics" },
+  { name: "GROUP FEATURES", forward: "/clusters/features" },
 ];
 
 export default function ClusterFeaturesPage() {
@@ -37,7 +37,7 @@ export default function ClusterFeaturesPage() {
       <div className={classes.content}>
         {loading && (
           <div className={classes.loading}>
-            Loading feature statistics...
+            Loading group features...
           </div>
         )}
         {error && (

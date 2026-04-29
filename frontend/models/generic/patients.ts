@@ -1,7 +1,7 @@
 export interface PatientListItem {
-  patient_id: string;
-  first_name: string;
-  last_name: string;
+  patientId: string;
+  firstName: string;
+  lastName: string;
   age: number;
   gender: string | null;
   city: string | null;
@@ -10,9 +10,9 @@ export interface PatientListItem {
   marital: string | null;
   birthdate: string | null;
   deathdate: string | null;
-  cluster_label: number | null;
-  cluster_title: string | null;
-  cluster_color: string | null;
+  clusterLabel: number | null;
+  clusterTitle: string | null;
+  clusterColor: string | null;
 }
 
 export interface PatientListResponse {
@@ -21,9 +21,9 @@ export interface PatientListResponse {
 }
 
 export interface PatientDetail {
-  patient_id: string;
-  first_name: string;
-  last_name: string;
+  patientId: string;
+  firstName: string;
+  lastName: string;
   age: number;
   gender: string | null;
   city: string | null;
@@ -34,72 +34,83 @@ export interface PatientDetail {
   deathdate: string | null;
   latitude: number | null;
   longitude: number | null;
-  cluster_label: number | null;
-  cluster_title: string | null;
-  cluster_color: string | null;
+  clusterLabel: number | null;
+  clusterTitle: string | null;
+  clusterColor: string | null;
 }
 
 export interface PatientSummary {
   qaly: number | null;
-  avg_bmi: number | null;
-  active_conditions: number | null;
-  total_medications: number | null;
-  total_procedures: number | null;
-  emergency_visits: number | null;
-  days_since_last_encounter: number | null;
+  avgBmi: number | null;
+  activeConditions: number | null;
+  totalMedications: number | null;
+  totalProcedures: number | null;
+  emergencyVisits: number | null;
+  daysSinceLastEncounter: number | null;
 }
 
 export interface ConditionItem {
   id: number;
   description: string;
-  condition_code: string;
-  start_date: string;
-  end_date: string | null;
+  conditionCode: string;
+  startDate: string;
+  endDate: string | null;
 }
 
 export interface MedicationItem {
   id: number;
   description: string;
-  medication_code: string;
-  start_date: string;
-  end_date: string | null;
-  duration_days: number | null;
-  reason_description: string | null;
+  medicationCode: string;
+  startDate: string;
+  endDate: string | null;
+  durationDays: number | null;
+  reasonDescription: string | null;
 }
 
 export interface ProcedureItem {
   id: number;
   description: string;
-  procedure_code: string;
-  date: string;
-  reason_description: string | null;
+  procedureCode: string;
+  startDate: string;
+  endDate: string | null;
+  reasonDescription: string | null;
 }
 
 export interface ImmunizationItem {
   id: number;
   description: string;
-  immunization_code: string;
+  immunizationCode: string;
   date: string;
 }
 
 export interface AllergyItem {
   id: number;
   description: string;
-  allergy_code: string;
-  start_date: string;
-  end_date: string | null;
+  allergyCode: string;
+  startDate: string;
+  endDate: string | null;
 }
 
 export interface EncounterItem {
-  encounter_id: string;
-  start_date: string;
-  end_date: string;
+  encounterId: string;
+  startDate: string;
+  endDate: string;
   duration: number | null;
-  encounter_class: string;
+  encounterClass: string;
   description: string;
-  reason_description: string | null;
-  provider_name: string | null;
-  organization_name: string | null;
+  reasonDescription: string | null;
+  providerName: string | null;
+  organizationName: string | null;
+}
+
+export interface CarePlanItem {
+  id: number;
+  description: string;
+  careplanCode: string;
+  startDate: string;
+  endDate: string | null;
+  durationDays: number | null;
+  reasonDescription: string | null;
 }
 
 export interface FilterOption {
@@ -109,22 +120,22 @@ export interface FilterOption {
 
 export interface PatientResources {
   genders: FilterOption[];
-  age_groups: FilterOption[];
+  ageGroups: FilterOption[];
   statuses: FilterOption[];
   races: FilterOption[];
-  marital_statuses: FilterOption[];
+  maritalStatuses: FilterOption[];
 }
 
 export interface FetchPatientsArgs {
   search?: string;
   gender?: string[];
-  age_group?: string[];
+  ageGroup?: string[];
   status?: string[];
   race?: string[];
   marital?: string[];
   city?: string;
   page: number;
   rows: number;
-  sort_by: string;
-  sort_type: string;
+  sortBy: string;
+  sortType: string;
 }

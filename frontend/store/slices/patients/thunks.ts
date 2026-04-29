@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
+import type { RootState } from "@/store";
 import {
   PatientListResponse,
   PatientDetail,
@@ -9,19 +10,23 @@ import {
   ProcedureItem,
   ImmunizationItem,
   AllergyItem,
+  CarePlanItem,
   EncounterItem,
   FetchPatientsArgs,
   PatientResources,
 } from "@/models/generic/patients";
 import { ErrorResponse } from "@/models/generic/generic";
+import { SequenceListItem } from "@/models/generic/sequences";
 import { API_BASE } from "@/store/slices/clusters/thunks";
+import { appendScopeToUrl } from "@/utils/authScope";
 
 const defaultHeaders: Record<string, string> = {
   "ngrok-skip-browser-warning": "true",
 };
 
 async function get<T>(url: string, label: string): Promise<T> {
-  const res = await fetch(url, { headers: defaultHeaders });
+  const scoped = appendScopeToUrl(url);
+  const res = await fetch(scoped, { headers: defaultHeaders });
   if (!res.ok) {
     toast.error(`Failed to load ${label}`, { toastId: `fetch-${label}` });
     throw new Error(`${res.status}`);
@@ -32,13 +37,18 @@ async function get<T>(url: string, label: string): Promise<T> {
 export const fetchPatientResources = createAsyncThunk<
   PatientResources,
   void,
-  { rejectValue: ErrorResponse }
+  { state: RootState; rejectValue: ErrorResponse }
 >("patients/fetchPatientResources", async (_, thunkAPI) => {
   try {
     return await get<PatientResources>(`${API_BASE}/patients/resources`, "patient resources");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patient resources" });
   }
+}, {
+  condition: (_, { getState }) => {
+    const s = getState().patients;
+    return !s.resourcesLoading && s.resources === null;
+  },
 });
 
 export const fetchPatients = createAsyncThunk<
@@ -50,15 +60,15 @@ export const fetchPatients = createAsyncThunk<
     const q = new URLSearchParams();
     if (args.search) q.set("search", args.search);
     if (args.gender?.length) q.set("gender", args.gender.join(","));
-    if (args.age_group?.length) q.set("age_group", args.age_group.join(","));
+    if (args.ageGroup?.length) q.set("ageGroup", args.ageGroup.join(","));
     if (args.status?.length) q.set("status", args.status.join(","));
     if (args.race?.length) q.set("race", args.race.join(","));
     if (args.marital?.length) q.set("marital", args.marital.join(","));
     if (args.city) q.set("city", args.city);
     q.set("page", args.page.toString());
     q.set("rows", args.rows.toString());
-    q.set("sort_by", args.sort_by);
-    q.set("sort_type", args.sort_type);
+    q.set("sortBy", args.sortBy);
+    q.set("sortType", args.sortType);
     return await get<PatientListResponse>(`${API_BASE}/patients?${q}`, "patients");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patients" });
@@ -149,6 +159,18 @@ export const fetchPatientAllergies = createAsyncThunk<
   }
 });
 
+export const fetchPatientCareplans = createAsyncThunk<
+  CarePlanItem[],
+  string,
+  { rejectValue: ErrorResponse }
+>("patients/fetchPatientCareplans", async (patientId, thunkAPI) => {
+  try {
+    return await get<CarePlanItem[]>(`${API_BASE}/patients/${patientId}/careplans`, "careplans");
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch careplans" });
+  }
+});
+
 export const fetchPatientEncounters = createAsyncThunk<
   EncounterItem[],
   string,
@@ -158,5 +180,17 @@ export const fetchPatientEncounters = createAsyncThunk<
     return await get<EncounterItem[]>(`${API_BASE}/patients/${patientId}/encounters`, "encounters");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch encounters" });
+  }
+});
+
+export const fetchPatientSequences = createAsyncThunk<
+  SequenceListItem[],
+  string,
+  { rejectValue: ErrorResponse }
+>("patients/fetchPatientSequences", async (patientId, thunkAPI) => {
+  try {
+    return await get<SequenceListItem[]>(`${API_BASE}/patients/${patientId}/sequences`, "patient sequences");
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patient sequences" });
   }
 });

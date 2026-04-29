@@ -1,36 +1,65 @@
-# IDEs
-.idea
-.vscode
+# ── Claude ──────────────────────────────────────
+.claude/
+CLAUDE.md
 
-# Environment
+# ── IDEs / Editors ─────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ── OS ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+._*
+
+# ── Environment / Secrets ──────────────────────
 .env
 .env.*
-.venv
+!.env.example
+.venv/
+venv/
 
-# Python
+# ── Python ─────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.Python
 
-# Node
+# ── Node / Next.js ─────────────────────────────
 node_modules/
 package-lock.json
-
-# Next.js
 .next/
 out/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
 
-# Claude
-.claude/
+# ── Logs ───────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Notes
+# ── Notes / Scratch ────────────────────────────
 sketch-description.txt
 de_scris_despre.txt
 
-# Clustering outputs
+# ── Clustering outputs ─────────────────────────
 backend/app/clustering_algorithms/*/outputs/
 conclusions/
+
+# ── Large dataset files ────────────────────────
+dataset/cleaned/*.csv
+dataset/raw/

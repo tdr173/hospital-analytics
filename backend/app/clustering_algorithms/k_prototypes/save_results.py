@@ -21,29 +21,25 @@ def save_cluster_results(
     pca_coords_clustered: np.ndarray | None = None,
     pca_coords_outliers: np.ndarray | None = None,
     heatmap_bytes: bytes | None = None,
-) -> int:
-    """
-    Saves a clustering run, patient results, and cluster summaries to the database.
+    pca_image_bytes: bytes | None = None,
+    extra_feature_cols: list[str] | None = None,
+) -> None:
+    db.execute(text("DELETE FROM cluster_patient"))
+    db.execute(text("DELETE FROM cluster"))
+    db.execute(text("TRUNCATE cluster_meta RESTART IDENTITY"))
 
-    df_clustered     - DataFrame with 'cluster' column and all features
-    df_outliers      - DataFrame of outlier patients (cluster_label = -1)
-    cluster_summaries - raw Gemini response string, pipe-separated per cluster
-    Returns the run_id of the saved run.
-    """
-
-    # 1. Insert cluster_run
-    result = db.execute(
+    db.execute(
         text("""
-            INSERT INTO cluster_run
-                (created_at, algorithm, n_clusters, n_patients, n_outliers,
-                 numerical_features, categorical_features, params, metrics, heatmap)
+            INSERT INTO cluster_meta
+                (id, created_at, algorithm, n_clusters, n_patients, n_outliers,
+                 numerical_features, categorical_features, params, metrics, heatmap, pca_image)
             VALUES
-                (:created_at, :algorithm, :n_clusters, :n_patients, :n_outliers,
-                 :numerical_features, :categorical_features, :params, :metrics, :heatmap)
-            RETURNING id
+                (:id, :created_at, :algorithm, :n_clusters, :n_patients, :n_outliers,
+                 :numerical_features, :categorical_features, :params, :metrics, :heatmap, :pca_image)
         """),
         {
-            "created_at": datetime.utcnow(),
+            "id": 1,
+            "created_at": datetime.now(),
             "algorithm": algorithm,
             "n_clusters": n_clusters,
             "n_patients": len(df_clustered),
@@ -53,12 +49,11 @@ def save_cluster_results(
             "params": json.dumps(params),
             "metrics": json.dumps({k: (float(v) if v is not None else None) for k, v in metrics.items()}),
             "heatmap": heatmap_bytes,
+            "pca_image": pca_image_bytes,
         }
     )
-    run_id = result.fetchone()[0]
 
-    # 2. Insert cluster_patient rows
-    all_features = numerical_features + categorical_features
+    all_features = numerical_features + categorical_features + (extra_feature_cols or [])
 
     def build_rows(
         df: pd.DataFrame,
@@ -73,7 +68,6 @@ def save_cluster_results(
             pca_x = float(pca_coords[i, 0]) if pca_coords is not None else None
             pca_y = float(pca_coords[i, 1]) if pca_coords is not None else None
             rows.append({
-                "run_id": run_id,
                 "patient_id": str(row["patient_id"]),
                 "cluster_label": cluster_label,
                 "is_outlier": is_outlier,
@@ -84,8 +78,8 @@ def save_cluster_results(
         return rows
 
     insert_patient_sql = text("""
-        INSERT INTO cluster_patient (run_id, patient_id, cluster_label, is_outlier, pca_x, pca_y, features)
-        VALUES (:run_id, :patient_id, :cluster_label, :is_outlier, :pca_x, :pca_y, :features)
+        INSERT INTO cluster_patient (patient_id, cluster_label, is_outlier, pca_x, pca_y, features)
+        VALUES (:patient_id, :cluster_label, :is_outlier, :pca_x, :pca_y, :features)
     """)
 
     clustered_rows = build_rows(df_clustered, "cluster", is_outlier=False, pca_coords=pca_coords_clustered)
@@ -96,27 +90,33 @@ def save_cluster_results(
     if outlier_rows:
         db.execute(insert_patient_sql, outlier_rows)
 
-    # 3. Parse and insert cluster summaries
     parsed = _parse_cluster_summaries(cluster_summaries)
+    # Deduplicate by cluster_label - keep first occurrence in case the LLM repeats a label
+    _seen_labels: set[int] = set()
+    _deduped = []
+    for row in parsed:
+        if row["cluster_label"] not in _seen_labels:
+            _seen_labels.add(row["cluster_label"])
+            _deduped.append(row)
+    parsed = _deduped
+
     if parsed:
         db.execute(
             text("""
-                INSERT INTO cluster (run_id, cluster_label, color, title, description, insight, recommendation)
-                VALUES (:run_id, :cluster_label, :color, :title, :description, :insight, :recommendation)
+                INSERT INTO cluster (cluster_label, color, title, description, insight, recommendation)
+                VALUES (:cluster_label, :color, :title, :description, :insight, :recommendation)
             """),
-            [{"run_id": run_id, **row} for row in parsed],
+            parsed,
         )
 
     db.commit()
-    print(f"Saved run_id={run_id}: {len(df_clustered)} patients + {len(df_outliers)} outliers + {len(parsed)} cluster summaries")
-    return run_id
+    print(f"Saved: {len(df_clustered)} patients + {len(df_outliers)} outliers + {len(parsed)} cluster summaries")
 
 
 def _parse_cluster_summaries(text_response: str) -> list[dict]:
-    """
-    Parses Gemini's pipe-separated response into a list of dicts.
-    Expected line format: [cluster_id] | Title | Description | Insight | Recommendation
-    """
+    # Parses Gemini's pipe-separated response into a list of dicts.
+    # Expected line format: [cluster_id] | Title | Description | Insight | Recommendation
+
     rows = []
     for line in text_response.splitlines():
         line = line.strip()
@@ -141,7 +141,7 @@ def _parse_cluster_summaries(text_response: str) -> list[dict]:
 
 
 def _serialize(val):
-    """Convert numpy/pandas types to plain Python for JSON storage."""
+    # Convert numpy/pandas types to plain Python for JSON storage
     if hasattr(val, "item"):
         return val.item()
     if isinstance(val, float) and pd.isna(val):

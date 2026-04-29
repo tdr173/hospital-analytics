@@ -15,11 +15,11 @@ interface Props {
 
 function mergeMediaQuery(obj: StyleObject): StyleObject {
   for (const [key, value] of Object.entries(obj)) {
-    if (key.startsWith('@media') && typeof value === 'object') {
-      for (const [innerKey, innerValue] of Object.entries(value)) {
+    if (key.startsWith('@media') && value && typeof value === 'object') {
+      for (const [innerKey, innerValue] of Object.entries(value as StyleObject)) {
         obj[innerKey] = {
           ...obj[innerKey],
-          [key]: { ...(innerValue as any) },
+          [key]: { ...(innerValue as StyleObject) },
         };
       }
       delete obj[key];

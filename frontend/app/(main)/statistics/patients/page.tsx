@@ -8,6 +8,7 @@ import useClasses from "@/utils/useClasses";
 import { PatientsPageStyles } from "./PatientsPageStyles";
 import BarChartComponent from "@/components/generic_components/BarChartComponent/BarChartComponent";
 import PieChartComponent from "@/components/generic_components/PieChartComponent/PieChartComponent";
+import theme from "@/utils/theme";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
@@ -15,15 +16,16 @@ export default function PatientsPage() {
   const { data, loading, error } = useSelector(
     (state: RootState) => state.patientsStatistics,
   );
+  const range = useSelector((state: RootState) => state.statisticsRange.range);
   const dispatch = useAppDispatch();
   const classes = useClasses(PatientsPageStyles, { name: "PatientsPage" });
 
   useEffect(() => {
-    dispatch(getPatientsStatistics());
-  }, [dispatch]);
+    dispatch(getPatientsStatistics(range));
+  }, [dispatch, range]);
 
   if (loading) {
-    return <div className={classes.loading}>Loading patient statistics...</div>;
+    return <div className={classes.loading}>Loading patient data...</div>;
   }
 
   if (error) {
@@ -39,20 +41,26 @@ export default function PatientsPage() {
       <div className={classes.totalCard}>
         <div className={classes.totalLabel}>Total Patients</div>
         <div className={classes.totalValue}>
-          {data.total_patients.toLocaleString()}
+          {data.totalPatients.toLocaleString()}
         </div>
       </div>
 
       <div className={classes.grid}>
         <BarChartComponent
-          data={data.age_groups}
+          data={data.ageGroups}
           title="Age Groups"
           color="#006780"
         />
         <PieChartComponent
           data={data.gender}
           title="Gender Distribution"
-          colors={["#006780", "#b7eaff"]}
+          colors={data.gender.map((d) =>
+            d.name === "M"
+              ? theme.colors.gender.male
+              : d.name === "F"
+                ? theme.colors.gender.female
+                : theme.colors.primary.main,
+          )}
         />
         <PieChartComponent data={data.race} title="Race Distribution" />
         <PieChartComponent
@@ -61,12 +69,12 @@ export default function PatientsPage() {
           colors={["#006780", "#028fb0", "#6cd3f7"]}
         />
         <PieChartComponent
-          data={data.marital_status}
+          data={data.maritalStatus}
           title="Marital Status"
           colors={["#006780", "#028fb0", "#6cd3f7", "#515f74"]}
         />
         <PieChartComponent
-          data={data.vital_status}
+          data={data.vitalStatus}
           title="Vital Status"
           colors={["#028fb0", "#515f74"]}
         />
@@ -74,7 +82,7 @@ export default function PatientsPage() {
 
       <div className={classes.fullWidthChart}>
         <BarChartComponent
-          data={data.top_cities}
+          data={data.topCities}
           title="Top Cities"
           color="#515f74"
           showLabel

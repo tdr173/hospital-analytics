@@ -7,18 +7,19 @@ from domain.schemas.statistics_schemas.immunization_schema import ImmunizationSt
 
 
 class ImmunizationService:
-    def __init__(self, db: Session):
-        self.repo = ImmunizationRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = ImmunizationRepository(db, range_str)
 
     def get_immunization_summary(self) -> ImmunizationStatisticsResponse:
+        total = self.repo.get_total_immunizations()
         per_patient = self.repo.get_per_patient_stats()
 
         return ImmunizationStatisticsResponse(
-            total_immunizations=self.repo.get_total_immunizations(),
+            total_immunizations=total,
             unique_immunizations=self.repo.get_unique_immunizations(),
             per_patient=PerPatientStats(**per_patient),
             top_immunizations=self._to_chart_entries(
-                self.repo.get_top_immunizations(), "immunization"
+                self.repo.get_top_immunizations(total=total), "immunization"
             ),
         )
 

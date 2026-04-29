@@ -9,8 +9,8 @@ from domain.schemas.statistics_schemas.encounter_schema import (
 
 
 class EncounterService:
-    def __init__(self, db: Session):
-        self.repo = EncounterRepository(db)
+    def __init__(self, db: Session, range_str: str = "all"):
+        self.repo = EncounterRepository(db, range_str)
 
     def get_encounter_summary(self) -> EncounterStatisticsResponse:
         total = self.repo.get_total_encounters()
@@ -18,13 +18,13 @@ class EncounterService:
         return EncounterStatisticsResponse(
             total_encounters=total,
             encounter_class=self._to_chart_entries(
-                self.repo.get_encounter_class_distribution(), "encounter class"
+                self.repo.get_encounter_class_distribution(total), "encounter class"
             ),
             duration_stats=self._to_duration_entries(
                 self.repo.get_duration_stats_per_class()
             ),
             top_descriptions=self._to_chart_entries(
-                self.repo.get_top_descriptions(), "description"
+                self.repo.get_top_descriptions(total=total), "description"
             ),
             top_reason_descriptions=self._to_chart_entries(
                 self.repo.get_top_reason_descriptions(), "reason"

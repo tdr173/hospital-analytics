@@ -15,6 +15,7 @@ interface StyledDatePickerProps {
   required?: boolean;
   fullWidth?: boolean;
   width?: string | number;
+  height?: string | number;
 }
 
 export default function StyledDatePicker({
@@ -29,6 +30,7 @@ export default function StyledDatePicker({
   required = false,
   fullWidth = false,
   width,
+  height,
 }: StyledDatePickerProps) {
   const displayLabel = required ? `${label} *` : label;
 
@@ -77,6 +79,7 @@ export default function StyledDatePicker({
             : theme.colors.surface.containerLow,
           borderRadius: theme.borderRadius.md,
           padding: "10px 14px",
+          ...(height !== undefined && { height, boxSizing: "border-box" as const }),
           transition: "box-shadow 0.15s ease, background-color 0.15s ease",
           "&:hover": {
             backgroundColor: theme.colors.surface.containerHighest,

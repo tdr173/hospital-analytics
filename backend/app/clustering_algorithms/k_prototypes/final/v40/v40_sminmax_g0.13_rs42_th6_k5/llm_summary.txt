@@ -1,0 +1,11 @@
+[-1] | #9CA3AF | Unusual Cases | Patients with very high care needs and a wide range of complex issues. | 88% have complex oncology and palliative care, with super-utilizer readmission rates at 76%. | Review each case individually and prioritize coordinated care.
+
+[0] | #F59E42 | Working Age, Minor Needs | Adults mostly needing short-term care for injuries or infections. | 41% treated for trauma or surgery, with very low chronic disease rates. | Focus on injury prevention and support quick recovery.
+
+[1] | #38BDF8 | Children and Teens | Mostly young patients with few health problems and routine wellness visits. | 97% have no hospital readmissions and no chronic conditions. | Keep up with regular checkups and preventive care.
+
+[2] | #DC2626 | Older Adults, Many Conditions | Seniors with high rates of diabetes, heart issues, and many daily medications. | 76% have polypharmacy and an average 17.5 conditions. | Schedule frequent medication reviews and streamline care coordination.
+
+[3] | #818CF8 | Middle-Aged Women, Mixed Needs | Women with moderate chronic illness, some with maternal or surgery needs. | 31% take many medications, with 24% facing heart conditions. | Provide ongoing medication checks and chronic care monitoring.
+
+[4] | #14B8A6 | Young Women, Maternity Focus | Young women mostly using maternity and prenatal care services. | 62% are in maternal or antenatal care with near-zero rates of major disease. | Enhance maternal support and schedule routine follow-ups.

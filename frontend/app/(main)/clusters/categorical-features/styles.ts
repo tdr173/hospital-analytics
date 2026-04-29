@@ -11,6 +11,7 @@ export const CategoricalFeaturesPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     color: theme.colors.text.secondary,
   },
   error: {
@@ -18,11 +19,13 @@ export const CategoricalFeaturesPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
+    width: "100%",
     color: theme.colors.status.error,
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
+    gridTemplateColumns: "repeat(1, 1fr)",
     gap: "24px",
+    height: "1500px",
   },
 });
