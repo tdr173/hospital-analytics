@@ -15,7 +15,5 @@ class ProviderModel(SQLModel, table=True):
     speciality: Optional[str] = Field(index=True)
     city: Optional[str] = None
 
-    latitude: float
-    longitude: float
     encounters: int = Field(default=0)
     procedures: int = Field(default=0)

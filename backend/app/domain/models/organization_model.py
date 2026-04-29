@@ -9,7 +9,5 @@ class OrganizationModel(SQLModel, table=True):
 
     name: str = Field(index=True, nullable=False)
     city: Optional[str] = None
-    latitude: float
-    longitude: float
     phone: Optional[str] = None
     utilization: int = Field(default=0)

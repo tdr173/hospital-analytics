@@ -112,8 +112,6 @@ class ProviderRepository:
                 ProviderModel.gender,
                 ProviderModel.speciality,
                 ProviderModel.city,
-                ProviderModel.latitude,
-                ProviderModel.longitude,
                 func.count(EncounterModel.encounter_id).label("encounters"),
                 ProviderModel.organization_id,
                 OrganizationModel.name.label("organization_name"),
@@ -128,8 +126,6 @@ class ProviderRepository:
                 ProviderModel.gender,
                 ProviderModel.speciality,
                 ProviderModel.city,
-                ProviderModel.latitude,
-                ProviderModel.longitude,
                 ProviderModel.organization_id,
                 OrganizationModel.name,
             )
@@ -177,8 +173,6 @@ class ProviderRepository:
             gender=payload.gender,
             speciality=payload.speciality,
             city=payload.city or org.city,
-            latitude=payload.latitude if payload.latitude is not None else org.latitude,
-            longitude=payload.longitude if payload.longitude is not None else org.longitude,
         )
         self.db.add(provider)
         self.db.commit()

@@ -34,8 +34,6 @@ def load_patients(engine):
         "RACE": "race",
         "ETHNICITY": "ethnicity",
         "CITY": "city",
-        "LAT": "latitude",
-        "LON": "longitude",
     }
 
     patients_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
@@ -53,10 +51,6 @@ def load_patients(engine):
         if patients_df[col].isnull().any():
             patients_df[col] = patients_df[col].fillna(patients_df[col].mode()[0])
 
-    numerical_cols = ["latitude", "longitude"]
-    for col in numerical_cols:
-        if patients_df[col].isnull().any():
-            patients_df[col] = patients_df[col].fillna(patients_df[col].mode()[0])
 
     clear_existing_cleaned_csv("cleaned_patients.csv")
     patients_df.to_csv(cleaned_path / "cleaned_patients.csv", index=False)
@@ -80,8 +74,6 @@ def load_providers(engine):
         "GENDER": "gender",
         "SPECIALITY": "speciality",
         "CITY": "city",
-        "LAT": "latitude",
-        "LON": "longitude",
         "ENCOUNTERS": "encounters",
         "PROCEDURES": "procedures",
     }
@@ -98,7 +90,7 @@ def load_providers(engine):
         if providers_df[col].isnull().any():
             providers_df[col] = providers_df[col].fillna(providers_df[col].mode()[0])
 
-    numerical_cols = ["latitude", "longitude", "encounters", "procedures"]
+    numerical_cols = ["encounters", "procedures"]
     for col in numerical_cols:
         if providers_df[col].isnull().any():
             providers_df[col] = providers_df[col].fillna(providers_df[col].median())
@@ -173,6 +165,14 @@ def load_encounters(engine):
         index=False,
     )
     print(f"Loaded {len(encounters_df)} encounters.")
+
+
+def load_patient_providers(engine):
+    print("Loading patient-provider relationships...")
+    enc = pd.read_csv(cleaned_path / "cleaned_encounters.csv", usecols=["patient_id", "provider_id"])
+    pp = enc.drop_duplicates().dropna()
+    pp.to_sql("patient_provider", con=engine, if_exists="append", index=False)
+    print(f"  {len(pp)} patient-provider pairs loaded.")
 
 
 def load_allergies(engine):
@@ -439,6 +439,7 @@ def _truncate_all_tables(engine):
     tables = [
         "observation", "condition", "careplan", "immunization",
         "medication", "procedure", "allergy", "encounter",
+        "patient_provider",
         "patient", "provider", "organization",
     ]
     from sqlalchemy import text
@@ -454,6 +455,7 @@ def run_etl(engine):
     # load_patients(engine)
     # load_providers(engine)
     # load_encounters(engine)
+    # load_patient_providers(engine)
     # load_allergies(engine)
     # load_procedures(engine)
     # load_medications(engine)

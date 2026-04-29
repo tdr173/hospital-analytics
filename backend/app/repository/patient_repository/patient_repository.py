@@ -5,7 +5,7 @@ from sqlalchemy import func, and_, or_, cast, Numeric, literal
 
 from domain import (
     PatientModel, ClusterPatientModel, ClusterModel,
-    EncounterModel, ProviderModel, OrganizationModel,
+    EncounterModel, ProviderModel, OrganizationModel, PatientProviderModel,
     ConditionModel, MedicationModel, ProcedureModel, ImmunizationModel, AllergyModel,
     ObservationModel, CarePlanModel,
     PrefixSpanPatternModel, PrefixSpanPatientPatternModel,
@@ -51,10 +51,7 @@ _LIST_COLS = [
     PatientModel.deathdate,
 ]
 
-_DETAIL_COLS = _LIST_COLS + [
-    PatientModel.latitude,
-    PatientModel.longitude,
-]
+_DETAIL_COLS = _LIST_COLS
 
 
 class PatientRepository:
@@ -127,9 +124,8 @@ class PatientRepository:
             filters.append(PatientModel.patient_id == patient_id_scope)
         elif role_u == "DOCTOR" and provider_id_scope:
             panel = (
-                self.db.query(EncounterModel.patient_id)
-                .filter(EncounterModel.provider_id == provider_id_scope)
-                .distinct()
+                self.db.query(PatientProviderModel.patient_id)
+                .filter(PatientProviderModel.provider_id == provider_id_scope)
                 .subquery()
             )
             filters.append(PatientModel.patient_id.in_(panel))
@@ -441,8 +437,6 @@ class PatientRepository:
             ethnicity=payload.ethnicity,
             marital=payload.marital,
             city=payload.city,
-            latitude=payload.latitude,
-            longitude=payload.longitude,
         )
         self.db.add(patient)
         self.db.commit()

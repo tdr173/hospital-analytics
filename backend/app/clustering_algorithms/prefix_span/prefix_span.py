@@ -93,10 +93,13 @@ def _load_events(engine) -> pd.DataFrame:
 
     frames = []
     for prefix, q in queries.items():
+        print(f"  Querying {prefix} events...")
         df = pd.read_sql(q, con=engine)
         if df.empty:
+            print(f"    (no rows)")
             continue
         df["item"] = prefix + ":" + df["description"].astype(str).str.strip()
+        print(f"    {len(df):,} rows, {df['patient_id'].nunique():,} patients")
         frames.append(df[["patient_id", "event_date", "item"]])
 
     if not frames:
@@ -138,7 +141,10 @@ def build_sequences(engine) -> tuple[list[list[str]], list[str]]:
 
     sequences: list[list[str]] = []
     patient_ids: list[str] = []
-    for pid, group in events.groupby("patient_id", sort=False):
+    all_pids = list(events.groupby("patient_id", sort=False).groups.keys())
+    total = len(all_pids)
+    print(f"  Building sequences for {total:,} patients...")
+    for i, (pid, group) in enumerate(events.groupby("patient_id", sort=False), start=1):
         seq = group["item"].tolist()
         # Collapse runs of identical items (e.g. same med re-prescribed daily) to a single step.
         deduped: list[str] = []
@@ -150,6 +156,8 @@ def build_sequences(engine) -> tuple[list[list[str]], list[str]]:
         if deduped:
             sequences.append(deduped)
             patient_ids.append(str(pid))
+        if i % 5000 == 0 or i == total:
+            print(f"    {i:,}/{total:,} patients processed")
 
     return sequences, patient_ids
 
@@ -180,10 +188,12 @@ def mine_patterns(
     ps.minlen = min_pattern_length
     ps.maxlen = max_pattern_length
 
+    print(f"  Running PrefixSpan (n={n_patients:,}, abs_minsup={abs_minsup}, minlen={min_pattern_length}, maxlen={max_pattern_length}, top_k={top_k}, closed=True)...")
     # `topk` respects `minlen`/`maxlen` and uses `closed=True` to drop patterns that are
     # strict sub-patterns of another pattern with the same support — this collapses a lot
     # of noise (e.g. "C:A" subsumed by "C:A -> M:B" when they have identical support).
     mined: list[tuple[int, list[str]]] = ps.topk(top_k, closed=True)
+    print(f"  PrefixSpan returned {len(mined)} patterns (before length/support filter)")
 
     # Extra safety filter: the library's `minlen` respects the constraint, but `closed=True`
     # can occasionally surface a shorter closed pattern — enforce minlen again defensively.
@@ -200,6 +210,7 @@ def attribute_patients(
 ) -> dict[int, list[str]]:
     """For each mined pattern (keyed by rank = 1..N), list patients whose sequence contains it."""
     memberships: dict[int, list[str]] = {}
+    total = len(mined)
     for rank, (_support, pattern) in enumerate(mined, start=1):
         contained = [
             patient_ids[i]
@@ -207,6 +218,8 @@ def attribute_patients(
             if _is_subsequence(pattern, seq)
         ]
         memberships[rank] = contained
+        if rank % 20 == 0 or rank == total:
+            print(f"  Attributed {rank}/{total} patterns (last: {len(contained)} patients matched)")
     return memberships
 
 

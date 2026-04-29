@@ -19,5 +19,3 @@ class PatientModel(SQLModel, table=True):
     ethnicity: Optional[str]
     gender: Optional[str]
     city: Optional[str]
-    latitude: Optional[float]
-    longitude: Optional[float]

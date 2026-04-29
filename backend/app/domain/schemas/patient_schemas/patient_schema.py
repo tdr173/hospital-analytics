@@ -51,8 +51,6 @@ class PatientDetailResponse(CamelModel):
     marital: Optional[str] = None
     birthdate: Optional[date] = None
     deathdate: Optional[date] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
     cluster_label: Optional[int] = None
     cluster_title: Optional[str] = None
     cluster_color: Optional[str] = None
@@ -137,8 +135,6 @@ class PatientCreateRequest(CamelModel):
     ethnicity: Optional[str] = None
     marital: Optional[str] = None
     city: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
 
 
 class PatientUpdateRequest(CamelModel):
@@ -152,8 +148,6 @@ class PatientUpdateRequest(CamelModel):
     ethnicity: Optional[str] = None
     marital: Optional[str] = None
     city: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
 
 
 class PatientObservationItem(CamelModel):
