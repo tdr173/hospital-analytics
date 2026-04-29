@@ -65,6 +65,35 @@ def load_patients(engine):
     print(f"Loaded {len(patients_df)} patients.")
 
 
+def _pick_single_org() -> dict:
+    """Return the single organization row with highest utilization."""
+    df = pd.read_csv(dataset_path / "organizations.csv")
+    row = df.loc[df["UTILIZATION"].idxmax()]
+    return {
+        "organization_id": row["Id"],
+        "name": row["NAME"],
+        "city": row["CITY"],
+        "latitude": row["LAT"],
+        "longitude": row["LON"],
+        "phone": str(row["PHONE"]),
+        "utilization": int(row["UTILIZATION"]),
+    }
+
+
+def _pick_top_provider_ids(max_providers: int = 300) -> list[str]:
+    """Return up to max_providers provider IDs ranked by encounter frequency."""
+    enc_df = pd.read_csv(dataset_path / "encounters.csv", usecols=["PROVIDER"])
+    counts = enc_df["PROVIDER"].value_counts()
+    return counts.head(max_providers).index.tolist()
+
+
+def load_organizations(engine):
+    org = _pick_single_org()
+    orgs_df = pd.DataFrame([org])
+    orgs_df.to_sql(name="organization", con=engine, if_exists="append", index=False)
+    print(f"Loaded 1 organization: {org['name']} (utilization={org['utilization']}).")
+
+
 def load_providers(engine):
     df = pd.read_csv(dataset_path / "providers.csv")
 
@@ -80,6 +109,10 @@ def load_providers(engine):
     }
 
     providers_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
+
+    kept_ids = set(_pick_top_provider_ids())
+    providers_df = providers_df[providers_df["provider_id"].isin(kept_ids)].copy()
+    providers_df["organization_id"] = _pick_single_org()["organization_id"]
 
     name_parts = providers_df["name"].str.rsplit(" ", n=1)
     providers_df["first_name"] = name_parts.str[0].apply(_strip_digits)
@@ -111,6 +144,26 @@ def load_providers(engine):
 def load_encounters(engine):
     df = pd.read_csv(dataset_path / "encounters.csv")
 
+    kept_ids = set(_pick_top_provider_ids())
+    single_org_id = _pick_single_org()["organization_id"]
+
+    # Build year → ordered list of kept providers (most active first) for redistribution
+    enc_year = pd.to_datetime(df["START"], utc=True).dt.year
+    kept_mask = df["PROVIDER"].isin(kept_ids)
+    year_provider_counts = (
+        df[kept_mask]
+        .assign(year=enc_year[kept_mask])
+        .groupby(["year", "PROVIDER"])
+        .size()
+        .reset_index(name="cnt")
+        .sort_values(["year", "cnt"], ascending=[True, False])
+    )
+    year_to_providers: dict[int, list[str]] = {
+        yr: grp["PROVIDER"].tolist()
+        for yr, grp in year_provider_counts.groupby("year")
+    }
+    global_fallback = year_provider_counts.groupby("PROVIDER")["cnt"].sum().idxmax()
+
     keep_cols = {
         "Id": "encounter_id",
         "PATIENT": "patient_id",
@@ -124,6 +177,17 @@ def load_encounters(engine):
     }
 
     encounters_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
+
+    encounters_df["organization_id"] = single_org_id
+
+    # Redistribute encounters from dropped providers to the most-active kept provider that year
+    dropped_mask = ~encounters_df["provider_id"].isin(kept_ids)
+    if dropped_mask.any():
+        years = pd.to_datetime(encounters_df.loc[dropped_mask, "start_date"], utc=True).dt.year
+        encounters_df.loc[dropped_mask, "provider_id"] = years.map(
+            lambda y: year_to_providers[y][0] if y in year_to_providers else global_fallback
+        )
+        print(f"Redistributed {dropped_mask.sum():,} encounters from dropped providers.")
 
     today = pd.Timestamp.now(tz="UTC").normalize()
 

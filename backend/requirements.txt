@@ -14,3 +14,4 @@ kmodes
 protobuf
 prince
 prefixspan
+umap-learn

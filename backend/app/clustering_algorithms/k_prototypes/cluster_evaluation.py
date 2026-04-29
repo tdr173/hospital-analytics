@@ -65,7 +65,7 @@ def _fast_gower_matrix(df, numerical_cols, categorical_cols):
     return dist
 
 
-def compute_gower_silhouette(df, numerical_cols, categorical_cols, clusters, max_sample=3000, random_state=42):
+def compute_gower_silhouette(df, numerical_cols, categorical_cols, clusters, max_sample=23000, random_state=42):
     # silhouette on gower distance matrix (mixed numerical + categorical).
     # Gower is O(n^2) in memory and time; for n > max_sample we stratified-
     # subsample across clusters so each cluster keeps its proportion and the
@@ -98,7 +98,7 @@ def compute_gower_silhouette(df, numerical_cols, categorical_cols, clusters, max
     return round(sil, 4)
 
 
-def compute_gower_mixed_metrics(df, numerical_cols, categorical_cols, clusters, max_sample=3000, random_state=42):
+def compute_gower_mixed_metrics(df, numerical_cols, categorical_cols, clusters, max_sample=23000, random_state=42):
     # Compute Gower-based silhouette (global) and per-cluster silhouette from a
     # single shared distance matrix. Stratified-subsampled exactly like
     # compute_gower_silhouette so cost stays O(max_sample^2).
@@ -254,7 +254,6 @@ def compute_feature_importance(df, numerical_cols, categorical_cols, clusters):
 
 
 def full_evaluation_report(df, X_numerical_scaled, clusters, numerical_cols, categorical_cols):
-
     lines = []
     lines.append("Cluster Evaluation Report\n")
 
@@ -297,4 +296,14 @@ def full_evaluation_report(df, X_numerical_scaled, clusters, numerical_cols, cat
 
     report = "\n".join(lines)
     print(report)
-    return report
+
+    metrics = {
+        "silhouette_score": sil,
+        "gower_silhouette": gower_sil,
+        "silhouette_per_cluster": per_cluster_sil,
+        "calinski_harabasz_score": ch,
+        "calinski_harabasz_famd": ch_famd,
+        "davies_bouldin_score": db,
+        "davies_bouldin_famd": db_famd,
+    }
+    return report, metrics

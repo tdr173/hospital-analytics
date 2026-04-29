@@ -1,0 +1,18 @@
+version: v40
+k range: 4..6
+
+numerical (4):
+  - age
+  - active_conditions_count
+  - total_medications
+  - lifetime_medication_days
+
+categorical (8):
+  - gender
+  - pregnancy_history
+  - has_heart_disease
+  - has_diabetes
+  - has_hypertension
+  - condition_burden
+  - bmi_type
+  - cholesterol_risk_category
