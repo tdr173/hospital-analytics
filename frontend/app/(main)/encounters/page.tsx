@@ -48,15 +48,14 @@ const COLUMNS = [
   { key: "patientName", label: "Patient", width: 160 },
   { key: "providerName", label: "Doctor", width: 160 },
   { key: "organizationName", label: "Facility", width: 180 },
-  { key: "description", label: "Description", width: 180 },
+  { key: "description", label: "Description", width: 200 },
   {
     key: "duration",
     label: "Duration",
     sortable: true,
-    width: 140,
-    align: "center" as const,
+    width: 100,
   },
-  { key: "actions", label: "Actions", width: 110, align: "center" as const },
+  { key: "actions", label: "Actions", width: 100, align: "center" as const },
 ];
 
 function EncountersPageContent() {
@@ -69,7 +68,7 @@ function EncountersPageContent() {
     (state: RootState) => state.encounters,
   );
   const role = useSelector((state: RootState) => state.auth.user?.role);
-  const canManage = role === "MANAGER" || role === "DOCTOR";
+  const canManage = role === "DOCTOR";
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EncounterListItem | null>(null);
@@ -223,10 +222,10 @@ function EncountersPageContent() {
       <TableCell sx={bodyCellSx}>
         <TruncatedText text={e.description} />
       </TableCell>
-      <TableCell sx={bodyCellSx} align="center">
+      <TableCell sx={bodyCellSx}>
         {e.duration != null ? `${Math.round(e.duration)} min` : "-"}
       </TableCell>
-      <TableCell sx={bodyCellSx} align="center">
+      <TableCell sx={bodyCellSx}>
         <IconButton
           size="small"
           onClick={() => router.push(`/encounters/${e.encounterId}`)}
@@ -286,27 +285,6 @@ function EncountersPageContent() {
 
   return (
     <div className={classes.pageContainer}>
-      {canManage && (
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <StyledButton
-            onClick={() => {
-              setEditing(null);
-              setFormError(null);
-              setModalOpen(true);
-            }}
-            sx={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              height: "40px",
-            }}
-          >
-            <AddIcon sx={{ fontSize: "1.05rem" }} />
-            Add visit
-          </StyledButton>
-        </div>
-      )}
-
       <EncounterFormModal
         open={modalOpen}
         showPatientId={!editing}
@@ -352,7 +330,7 @@ function EncountersPageContent() {
         </div>
       </FormModal>
 
-      <div className={classes.filterBar}>
+      <div className={canManage ? classes.filterBarWithAdd : classes.filterBar}>
         <StyledInput
           label="Search"
           value={search}
@@ -416,6 +394,30 @@ function EncountersPageContent() {
         >
           Search
         </StyledButton>
+        {canManage && (
+          <StyledButton
+            onClick={() => {
+              setEditing(null);
+              setFormError(null);
+              setModalOpen(true);
+            }}
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              height: "40px",
+              background: theme.colors.button.add,
+              "&:hover": {
+                background: theme.colors.button.addHover,
+              },
+              "&:active": {
+                background: theme.colors.button.addActive,
+              },
+            }}
+          >
+            Add visit
+          </StyledButton>
+        )}
       </div>
 
       <div className={classes.tableArea}>

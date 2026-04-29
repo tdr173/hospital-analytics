@@ -17,6 +17,15 @@ export const EncountersPageStyles = (theme: Theme) => ({
     gap: theme.spacing.sm,
     alignItems: "flex-end",
   },
+  filterBarWithAdd: {
+    padding: `${theme.spacing.md} ${theme.spacing.lg}`,
+    borderBottom: `1px solid ${theme.colors.border.main}`,
+    backgroundColor: theme.colors.surface.containerLowest,
+    display: "grid",
+    gridTemplateColumns: "3fr 1fr 1fr 1fr 1fr 1fr",
+    gap: theme.spacing.sm,
+    alignItems: "flex-end",
+  },
   tableArea: {
     flex: 1,
     overflow: "auto",
