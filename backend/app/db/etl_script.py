@@ -5,7 +5,8 @@ from pathlib import Path
 
 from db import engine as db_engine
 
-dataset_path = Path(__file__).parent.parent.parent.parent / "dataset" / "hospital"
+dataset_path = Path(__file__).parent.parent.parent.parent.parent / "synthea" / "output" / "csv"
+print(dataset_path)
 cleaned_path = Path(__file__).parent.parent.parent.parent / "dataset" / "cleaned"
 
 
