@@ -90,6 +90,10 @@ def _pick_top_provider_ids(max_providers: int = 300) -> list[str]:
 def load_organizations(engine):
     org = _pick_single_org()
     orgs_df = pd.DataFrame([org])
+
+    cols_to_drop = ["latitude", "longitude"]
+    orgs_df = orgs_df.drop(columns=[col for col in cols_to_drop if col in orgs_df.columns])
+
     orgs_df.to_sql(name="organization", con=engine, if_exists="append", index=False)
     print(f"Loaded 1 organization: {org['name']} (utilization={org['utilization']}).")
 
@@ -516,17 +520,18 @@ def _truncate_all_tables(engine):
 
 
 def run_etl(engine):
-    # _truncate_all_tables(engine)
-    # load_patients(engine)
-    # load_providers(engine)
-    # load_encounters(engine)
-    # load_patient_providers(engine)
-    # load_allergies(engine)
-    # load_procedures(engine)
-    # load_medications(engine)
-    # load_immunizations(engine)
-    # load_careplans(engine)
-    # load_conditions(engine)
+    _truncate_all_tables(engine)
+    load_patients(engine)
+    load_organizations(engine)  # <--- Added this line
+    load_providers(engine)
+    load_encounters(engine)
+    load_patient_providers(engine)
+    load_allergies(engine)
+    load_procedures(engine)
+    load_medications(engine)
+    load_immunizations(engine)
+    load_careplans(engine)
+    load_conditions(engine)
     load_observations(engine)
     _refresh_observation_views(engine)
 

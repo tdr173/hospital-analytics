@@ -79,10 +79,11 @@ export default function EncounterFormModal({
   }, [open, initial]);
 
   const errors = {
-    patientId: showPatientId && !patientId.trim() ? "Required" : undefined,
-    startDate: !startDate ? "Required" : undefined,
-    endDate: !endDate ? "Required" : undefined,
-    description: !description.trim() ? "Required" : undefined,
+    patientId:
+      showPatientId && !patientId.trim() ? "This field is required" : undefined,
+    startDate: !startDate ? "This field is required" : undefined,
+    endDate: !endDate ? "This field is required" : undefined,
+    description: !description.trim() ? "This field is required" : undefined,
   };
   const hasError = Object.values(errors).some(Boolean);
 
@@ -120,7 +121,16 @@ export default function EncounterFormModal({
           placeholder="Enter patient ID"
         />
       )}
-      {showPatientId && <div />}
+      {showPatientId && (
+        <StyledDropdown
+          label="Type"
+          required
+          value={encounterClass}
+          onChange={(v) => setEncounterClass(String(v))}
+          options={ENCOUNTER_CLASSES}
+          onClear={() => setEncounterClass("")}
+        />
+      )}
       <StyledDatePicker
         label="Start (date)"
         required
@@ -133,8 +143,11 @@ export default function EncounterFormModal({
       <StyledInput
         label="Start (time)"
         type="text"
+        required
         value={startDate.slice(11) || ""}
-        onChange={(e) => setStartDate(`${startDate.slice(0, 10) || ""}T${e.target.value}`)}
+        onChange={(e) =>
+          setStartDate(`${startDate.slice(0, 10) || ""}T${e.target.value}`)
+        }
         placeholder="HH:MM"
       />
       <StyledDatePicker
@@ -150,17 +163,11 @@ export default function EncounterFormModal({
         label="End (time)"
         type="text"
         value={endDate.slice(11) || ""}
-        onChange={(e) => setEndDate(`${endDate.slice(0, 10) || ""}T${e.target.value}`)}
+        onChange={(e) =>
+          setEndDate(`${endDate.slice(0, 10) || ""}T${e.target.value}`)
+        }
         placeholder="HH:MM"
       />
-      <StyledDropdown
-        label="Type"
-        required
-        value={encounterClass}
-        onChange={(v) => setEncounterClass(String(v))}
-        options={ENCOUNTER_CLASSES}
-      />
-      <div />
       <StyledInput
         label="Description"
         required
@@ -174,6 +181,18 @@ export default function EncounterFormModal({
         value={reason}
         onChange={(e) => setReason(e.target.value)}
       />
+      {!showPatientId && (
+        <StyledDropdown
+          label="Type"
+          required
+          value={encounterClass}
+          onChange={(v) => setEncounterClass(String(v))}
+          options={ENCOUNTER_CLASSES}
+          onClear={() => setEncounterClass("")}
+        />
+      )}
+
+      <div />
     </FormModal>
   );
 }

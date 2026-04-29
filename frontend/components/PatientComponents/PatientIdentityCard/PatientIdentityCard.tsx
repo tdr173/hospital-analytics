@@ -1,3 +1,4 @@
+import React from "react"; // Make sure React is imported for React.Fragment
 import CakeOutlinedIcon from "@mui/icons-material/CakeOutlined";
 import { PatientDetail } from "@/models/generic/patients";
 import theme from "@/utils/theme";
@@ -20,9 +21,11 @@ const GENDER_LABELS: Record<string, string> = {
 export default function IdentityCard({
   patient,
   classes,
+  addButton,
 }: {
   patient: PatientDetail;
   classes: any;
+  addButton?: React.ReactNode;
 }) {
   if (!patient) return null;
 
@@ -31,6 +34,10 @@ export default function IdentityCard({
   const details = [
     { label: "Gender", value: GENDER_LABELS[patient?.gender ?? ""] },
     { label: "Date of Birth", value: formatDate(patient?.birthdate) },
+    {
+      label: "Death Date",
+      value: patient.deathdate ? formatDate(patient.deathdate) : "N/A",
+    },
     { label: "Race", value: patient?.race },
     { label: "Ethnicity", value: patient?.ethnicity },
     {
@@ -38,6 +45,7 @@ export default function IdentityCard({
       value: MARITAL_LABELS[patient?.marital ?? ""] || patient?.marital,
     },
     { label: "City", value: patient?.city },
+    { label: "action-button", type: "button", content: addButton },
   ];
 
   return (
@@ -92,12 +100,32 @@ export default function IdentityCard({
       </div>
 
       <div className={classes.detailsGrid}>
-        {details.map(({ label, value }) => (
-          <div key={label}>
-            <p className={classes.detailLabel}>{label}</p>
-            <p className={classes.detailValue}>{value}</p>
-          </div>
-        ))}
+        {details.map(({ label, value, type, content }) =>
+          type === "button" ? (
+            <div
+              key={label}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
+              {content}
+            </div>
+          ) : (
+            <div
+              key={label}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
+              <p className={classes.detailLabel}>{label}</p>
+              <p className={classes.detailValue}>{value}</p>
+            </div>
+          ),
+        )}
       </div>
     </div>
   );

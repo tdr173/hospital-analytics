@@ -6,6 +6,7 @@ import useClasses from "@/utils/useClasses";
 import medicationsTabStyles from "./MedicationsTabStyles";
 import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
 import RowActions from "@/components/generic_components/RowActions/RowActions";
+import StyledTooltip from "@/components/generic_components/StyledTooltip/StyledTooltip";
 
 interface MedicationsTabProps {
   data: MedicationItem[];
@@ -13,7 +14,11 @@ interface MedicationsTabProps {
   onDelete?: (item: MedicationItem) => void;
 }
 
-export default function MedicationsTab({ data, onEdit, onDelete }: MedicationsTabProps) {
+export default function MedicationsTab({
+  data,
+  onEdit,
+  onDelete,
+}: MedicationsTabProps) {
   const classes = useClasses(medicationsTabStyles, {
     name: "MedicationsTabStyles",
   });
@@ -29,7 +34,10 @@ export default function MedicationsTab({ data, onEdit, onDelete }: MedicationsTa
   return (
     <div className={classes.tableContainer}>
       <div className={classes.scrollWrapper}>
-        <div className={`${classes.gridRow} ${classes.headerRow}`} style={{ gridTemplateColumns: gridTemplate }}>
+        <div
+          className={`${classes.gridRow} ${classes.headerRow}`}
+          style={{ gridTemplateColumns: gridTemplate }}
+        >
           <div>Medication</div>
           <div>Start Date</div>
           <div>End Date</div>

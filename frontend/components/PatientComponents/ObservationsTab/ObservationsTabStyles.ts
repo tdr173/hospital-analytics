@@ -49,14 +49,19 @@ const observationsTabStyles = (theme: Theme) => ({
   dataRow: {
     borderBottom: `1px solid ${theme.colors.border.light}`,
     color: theme.colors.text.primary,
-    "&:last-child": { borderBottom: "none" },
+    "&:last-child": {
+      borderBottom: "none",
+    },
+    "& > *": {
+      minWidth: 0,
+    },
   },
   rowEven: { backgroundColor: "#ffffff" },
   rowOdd: { backgroundColor: "#f4f6f8" },
-  centeredCell: {
+  leftCell: {
     textAlign: "center" as const,
     display: "flex",
-    justifyContent: "center",
+    justifyContent: "left",
   },
   snomedCode: {
     fontFamily: "monospace",

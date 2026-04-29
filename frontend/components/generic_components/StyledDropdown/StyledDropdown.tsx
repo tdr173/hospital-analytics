@@ -2,9 +2,13 @@
 
 import Select, { SelectChangeEvent } from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
+import IconButton from "@mui/material/IconButton";
+import CloseIcon from "@mui/icons-material/Close";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import theme from "@/utils/theme";
 import useClasses from "@/utils/useClasses";
 import { StyledDropdownStyles } from "./StyledDropdownStyles";
+import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
 
 export interface DropdownOption {
   value: string | number;
@@ -24,6 +28,7 @@ interface StyledDropdownProps {
   fullWidth?: boolean;
   width?: string | number;
   height?: string | number;
+  onClear?: () => void;
 }
 
 const selectSx = {
@@ -36,6 +41,8 @@ const selectSx = {
   "& .MuiSelect-select": {
     padding: "10px 14px",
     paddingRight: "36px !important",
+    overflow: "hidden",
+    minWidth: 0, // CRITICAL: Forces flex items to allow truncation
   },
   "& .MuiOutlinedInput-notchedOutline": {
     border: "none",
@@ -60,7 +67,10 @@ const selectSx = {
   },
   "& .MuiSelect-icon": {
     color: theme.colors.text.secondary,
-    right: "10px",
+    right: "6px",
+    top: "50%",
+    transform: "translateY(-50%)",
+    position: "absolute",
   },
 };
 
@@ -101,11 +111,37 @@ export default function StyledDropdown({
   fullWidth = false,
   width,
   height = 40,
+  onClear,
 }: StyledDropdownProps) {
   const classes = useClasses(StyledDropdownStyles, { name: "StyledDropdown" });
 
   const handleChange = (e: SelectChangeEvent<string | number | "">) => {
     onChange(e.target.value as string | number | "");
+  };
+
+  const renderValue = (selected: string | number | "") => {
+    if (selected === "") {
+      return (
+        <div
+          style={{
+            color: theme.colors.text.secondary,
+            width: "100%",
+            overflow: "hidden",
+          }}
+        >
+          <TruncatedText text={placeholder || ""} />
+        </div>
+      );
+    }
+    const opt = options.find((o) => o.value === selected);
+    const displayLabel = opt?.label ?? String(selected);
+
+    // Bounding the TruncatedText ensures it knows when to trigger the tooltip
+    return (
+      <div style={{ width: "100%", overflow: "hidden" }}>
+        <TruncatedText text={displayLabel} />
+      </div>
+    );
   };
 
   return (
@@ -125,6 +161,7 @@ export default function StyledDropdown({
         error={error}
         fullWidth={fullWidth || !!width}
         variant="outlined"
+        renderValue={renderValue}
         sx={{
           ...selectSx,
           ...(height !== undefined && {
@@ -138,10 +175,42 @@ export default function StyledDropdown({
               alignItems: "center",
               height: "100%",
               boxSizing: "border-box",
+              overflow: "hidden",
+              minWidth: 0, // CRITICAL
             },
           }),
         }}
         MenuProps={{ PaperProps: { sx: menuPaperSx } }}
+        IconComponent={() =>
+          value !== "" && onClear && !disabled ? (
+            <IconButton
+              size="small"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onClear();
+              }}
+              sx={{
+                position: "absolute",
+                right: "4px",
+                padding: "3px",
+                color: theme.colors.text.secondary,
+              }}
+            >
+              <CloseIcon sx={{ fontSize: "1rem" }} />
+            </IconButton>
+          ) : (
+            <ExpandMoreIcon
+              sx={{
+                fontSize: "1.25rem",
+                color: theme.colors.text.secondary,
+                position: "absolute",
+                right: "8px",
+                pointerEvents: "none",
+              }}
+            />
+          )
+        }
       >
         {placeholder && (
           <MenuItem

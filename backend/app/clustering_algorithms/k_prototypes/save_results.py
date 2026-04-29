@@ -47,7 +47,7 @@ def save_cluster_results(
             "numerical_features": json.dumps(numerical_features),
             "categorical_features": json.dumps(categorical_features),
             "params": json.dumps(params),
-            "metrics": json.dumps({k: (float(v) if v is not None else None) for k, v in metrics.items()}),
+            "metrics": json.dumps({k: (v if (v is None or isinstance(v, (dict, list))) else float(v)) for k, v in metrics.items()}),
             "heatmap": heatmap_bytes,
             "pca_image": pca_image_bytes,
         }

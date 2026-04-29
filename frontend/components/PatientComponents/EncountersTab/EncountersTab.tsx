@@ -6,14 +6,7 @@ import useClasses from "@/utils/useClasses";
 import encountersTabStyles from "./EncountersTabStyles";
 import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
 import RowActions from "@/components/generic_components/RowActions/RowActions";
-
-const ENCOUNTER_CLASS_LABELS: Record<string, string> = {
-  inpatient: "Inpatient",
-  ambulatory: "Ambulatory",
-  wellness: "Wellness",
-  emergency: "Emergency",
-  urgentcare: "Urgent Care",
-};
+import EncounterTag from "@/components/generic_components/EncounterTag/EncounterTag";
 
 interface EncountersTabProps {
   data: EncounterItem[];
@@ -50,8 +43,6 @@ export default function EncountersTab({ data, onEdit, onDelete }: EncountersTabP
             {data.map((r, index) => {
               const rowColorClass =
                 index % 2 === 0 ? classes.rowEven : classes.rowOdd;
-              const typeLabel =
-                ENCOUNTER_CLASS_LABELS[r.encounterClass] ?? r.encounterClass;
 
               return (
                 <div
@@ -64,9 +55,7 @@ export default function EncountersTab({ data, onEdit, onDelete }: EncountersTabP
                   </div>
 
                   <div className={classes.centeredCell}>
-                    <span className={classes.encounterTypeBadge}>
-                      {typeLabel}
-                    </span>
+                    <EncounterTag type={r.encounterClass} />
                   </div>
 
                   <div className={classes.truncatedCell}>

@@ -57,6 +57,9 @@ const allergiesTabStyles = (theme: Theme) => ({
     "&:last-child": {
       borderBottom: "none",
     },
+    "& > *": {
+      minWidth: 0,
+    },
   },
   rowEven: {
     backgroundColor: "#ffffff",

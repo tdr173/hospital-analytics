@@ -52,7 +52,7 @@ const COLUMNS = [
     width: 100,
     align: "right" as const,
   },
-  { key: "actions", label: "Actions", width: 80, align: "center" as const },
+  { key: "actions", label: "Actions", width: 110, align: "center" as const },
 ];
 
 function GenderBadge({
@@ -293,27 +293,6 @@ function ProvidersPageContent() {
 
   return (
     <div className={classes.pageContainer}>
-      {canManageDoctors && (
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <StyledButton
-            onClick={() => {
-              setEditing(null);
-              setFormError(null);
-              setModalOpen(true);
-            }}
-            sx={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              height: "40px",
-            }}
-          >
-            <AddIcon sx={{ fontSize: "1.05rem" }} />
-            Add doctor
-          </StyledButton>
-        </div>
-      )}
-
       <DoctorFormModal
         open={modalOpen}
         initial={initialForModal}
@@ -390,7 +369,7 @@ function ProvidersPageContent() {
             boxShadow: "none",
             border: "none",
             color: "#ffffff",
-            height: "36px !important",
+            height: "40px !important",
             "&:hover": {
               background: theme.colors.button.primaryHover,
               boxShadow: "none",
@@ -404,6 +383,37 @@ function ProvidersPageContent() {
           }}
         >
           Search
+        </StyledButton>
+        <StyledButton
+          onClick={() => {
+            setEditing(null);
+            setFormError(null);
+            setModalOpen(true);
+          }}
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "4px",
+            height: "40px",
+            padding: "6px",
+            background: theme.colors.button.add,
+            boxShadow: "none",
+            border: "none",
+            color: "#ffffff",
+            "&:hover": {
+              background: theme.colors.button.addHover,
+              boxShadow: "none",
+              transform: "none",
+            },
+            "&:active": {
+              background: theme.colors.button.addActive,
+              boxShadow: "none",
+              transform: "none",
+            },
+          }}
+        >
+          <AddIcon sx={{ fontSize: "1.05rem" }} />
+          Add doctor
         </StyledButton>
       </div>
 

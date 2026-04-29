@@ -44,8 +44,8 @@ export default function DoctorFormModal({
   }, [open, initial]);
 
   const errors = {
-    firstName: !firstName.trim() ? "Required" : undefined,
-    lastName: !lastName.trim() ? "Required" : undefined,
+    firstName: !firstName.trim() ? "This field is required" : undefined,
+    lastName: !lastName.trim() ? "This field is required" : undefined,
   };
   const hasError = Object.values(errors).some(Boolean);
 
@@ -98,13 +98,19 @@ export default function DoctorFormModal({
           { value: "F", label: "Female" },
         ]}
         placeholder="Select"
+        onClear={() => setGender("")}
       />
       <StyledDropdown
         label="Specialty"
         value={speciality}
         onChange={(v) => setSpeciality(String(v))}
-        options={specialityOptions.length ? specialityOptions : [{ value: "GENERAL PRACTICE", label: "GENERAL PRACTICE" }]}
+        options={
+          specialityOptions.length
+            ? specialityOptions
+            : [{ value: "GENERAL PRACTICE", label: "GENERAL PRACTICE" }]
+        }
         placeholder="Select"
+        onClear={() => setSpeciality("")}
       />
       <StyledInput
         label="City"

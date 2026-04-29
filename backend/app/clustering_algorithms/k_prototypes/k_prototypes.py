@@ -601,9 +601,40 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
+    days_since_features = pd.read_sql(
+        text(
+            """
+            SELECT patient_id,
+                   EXTRACT(DAY FROM (CURRENT_DATE - MAX(end_date)))::int AS days_since_last_encounter
+            FROM encounter
+            WHERE end_date IS NOT NULL
+            GROUP BY patient_id
+            """
+        ),
+        con=engine,
+    )
+
+    smoking_features = pd.read_sql(
+        text(
+            """
+            SELECT patient_id,
+                   CASE
+                       WHEN LOWER(MAX(value)) LIKE '%daily%' OR LOWER(MAX(value)) LIKE '%current%' THEN 'current'
+                       WHEN LOWER(MAX(value)) LIKE '%ex-smoker%' OR LOWER(MAX(value)) LIKE '%former%' THEN 'former'
+                       ELSE 'never'
+                   END AS smoking_status
+            FROM observation
+            WHERE description ILIKE '%tobacco smoking status%'
+              AND value IS NOT NULL
+            GROUP BY patient_id
+            """
+        ),
+        con=engine,
+    )
+
     df = patient_features.copy()
 
-    # Merge the 19 feature frames built from SQL above. patient_features is the base
+    # Merge the 21 feature frames built from SQL above. patient_features is the base
     # (already copied into df), so it is NOT re-merged here.
     for right_df in [
         encounter_features,
@@ -625,6 +656,8 @@ def build_patient_features(engine) -> pd.DataFrame:
         encounter_duration_features,
         cholesterol_features,
         pregnancy_features,
+        days_since_features,
+        smoking_features,
     ]:
         df = df.merge(right_df, on="patient_id", how="left")
 
@@ -706,25 +739,28 @@ def build_patient_features(engine) -> pd.DataFrame:
     df["dominant_encounter_class"] = df["dominant_encounter_class"].fillna("wellness").astype(str)
     df["dominant_careplan"] = df["dominant_careplan"].fillna("None").astype(str)
     df["respiratory_disease_profile"] = df["respiratory_disease_profile"].fillna("None").astype(str)
+    df["has_respiratory_disease"] = df["respiratory_disease_profile"].apply(
+        lambda x: "Yes" if x != "None" else "No"
+    )
     df["substance_use_profile"] = df["substance_use_profile"].fillna("None").astype(str)
     df["pain_management_tier"] = df["pain_management_tier"].fillna("None").astype(str)
     df["readmission_risk_tier"] = df["readmission_risk_tier"].fillna("None").astype(str)
     df["cholesterol_risk_category"] = df["cholesterol_risk_category"].fillna("Unknown").astype(str)
     df["pregnancy_history"] = df["pregnancy_history"].fillna("None").astype(str)
     df["out_of_hours_flyer"] = df["out_of_hours_flyer"].fillna("No").astype(str)
+    df["smoking_status"] = df["smoking_status"].fillna("never").astype(str)
 
     # --- Remaining numerics: fillna(0) where 0 is semantically correct --------------
     for col in ["total_conditions", "total_medications", "total_procedures",
                 "active_conditions_count", "distinct_providers_seen",
-                "lifetime_medication_days", "total_encounter_duration_hours"]:
+                "lifetime_medication_days", "total_encounter_duration_hours",
+                "days_since_last_encounter"]:
         df[col] = df[col].fillna(0)
 
-    # log1p on the three skewed count columns was moved into run_kprototypes so
-    # raw values flow to the LLM, DB, and FE. Scaling is a clustering-only concern.
-
-    # --- Drop replaced raw numerics and intermediate helpers -----------------------
-    df = df.drop(columns=["avg_bmi", "avg_systolic_bp", "avg_glucose", "is_polypharmacy_raw"],
-                 errors="ignore")
+    # Keep raw vitals for FE display — only drop the intermediate polypharmacy helper.
+    # avg_bmi / avg_systolic_bp / avg_glucose stay in df so they can be passed as
+    # extra_feature_cols to save_cluster_results without affecting clustering.
+    df = df.drop(columns=["is_polypharmacy_raw"], errors="ignore")
 
     return df
 
@@ -1032,7 +1068,16 @@ def run_kprototypes(
 
     gamma_automat = kproto.gamma
     if isinstance(gamma_automat, dict):
-        gamma_automat = float(np.mean(list(gamma_automat.values())))
+        def flatten_gamma(d):
+            values = []
+            for v in d.values():
+                if isinstance(v, dict):
+                    values.extend(flatten_gamma(v))
+                else:
+                    values.append(v)
+            return values
+        gamma_values = flatten_gamma(gamma_automat)
+        gamma_automat = float(np.mean(gamma_values))
     else:
         gamma_automat = float(gamma_automat)
     print(f"auto gamma is: {gamma_automat}")
@@ -1136,7 +1181,7 @@ Insight rules: pick the MOST distinguishing signal for this cluster (dominant ca
 Recommendation rules: tie the action to that insight (e.g. cardiac careplan dominance -> cardiology follow-up; polypharmacy -> medication review; long gap since last visit -> outreach).
 
 Choose a suggestive hex color for each cluster that reflects its clinical profile (e.g. red tones for high-risk, green for healthy, blue for elderly chronic, orange for moderate, purple for psychiatric, teal for maternal).
-Use distinct, saturated colors. The outlier cluster (-1) should always be gray (#9CA3AF).
+Use strong, vivid, fully-saturated colors with high contrast — avoid pastel, washed-out, or faded tones. Prefer colors like #DC2626, #16A34A, #2563EB, #D97706, #7C3AED, #0891B2. The outlier cluster (-1) should always be gray (#9CA3AF).
 
 Example output:
 [0] | #DC2626 | Older Adults with Many Conditions | Elderly patients who visit the hospital often and take many medications. | Cardiac careplan dominant, 85% hypertensive, average 12 active medications. | Coordinate cardiology follow-up and run medication reviews to reduce emergency visits.
@@ -1216,7 +1261,7 @@ if __name__ == "__main__":
     # SCALERS = ["robust", "standard", "minmax"]
     SCALERS = ["minmax"]
     # GAMMAS = [None, 0.07, 0.13, 0.17]
-    GAMMAS = [0.13]
+    GAMMAS = [None]
     # RANDOM_STATES = [7, 42, 100]
     RANDOM_STATES = [42]
     # THRESHOLDS = [4, 6]
@@ -1231,7 +1276,7 @@ if __name__ == "__main__":
 
     general_rows = []
 
-    RESULTS_FOLDER = current_folder / "final"
+    RESULTS_FOLDER = current_folder / "outputs"
     RESULTS_FOLDER.mkdir(parents=True, exist_ok=True)
 
     general_xlsx_path = RESULTS_FOLDER / "general_conclusion_1.xlsx"
@@ -1253,7 +1298,7 @@ if __name__ == "__main__":
         combined.to_excel(general_xlsx_path, index=False)
 
 
-    K_RANGES = [5]  # flat list of k values to run
+    K_RANGES = [4]  # flat list of k values to run
 
     for threshold in THRESHOLDS:
         df_cleaned, df_outliers = remove_outliers_zscore(df, threshold=threshold)
@@ -1361,6 +1406,13 @@ if __name__ == "__main__":
                                 summary_text = get_clusters_summary(df_result, df_outliers, db_engine)
                                 with open(location / "llm_summary.txt", "w", encoding="utf-8") as f:
                                     f.write(summary_text)
+
+                                fixed_image_folder = current_folder / "outputs" / "v55" / "v55_sminmax_gauto_rs42_th6_k4"
+                                heatmap_path = fixed_image_folder / "heatmap_v55_sminmax_gauto_rs42_th6_k4.png"
+                                famd_path = fixed_image_folder / "famd_v55_sminmax_gauto_rs42_th6_k4.png"
+                                heatmap_bytes = heatmap_path.read_bytes() if heatmap_path.exists() else None
+                                pca_image_bytes = famd_path.read_bytes() if famd_path.exists() else None
+
                                 with SessionLocal() as session:
                                     save_cluster_results(
                                         db=session,
@@ -1368,10 +1420,20 @@ if __name__ == "__main__":
                                         df_outliers=df_outliers,
                                         numerical_features=num_cols,
                                         categorical_features=cat_cols,
+                                        extra_feature_cols=[
+                                            "avg_bmi", "avg_systolic_bp", "avg_glucose", "qaly", "daly",
+                                            "days_since_last_encounter",
+                                            "routine_care_count", "acute_care_count", "wellness_count",
+                                            "severe_care_count", "distinct_providers_seen",
+                                            "has_cancer", "has_mental_health", "is_polypharmacy", "has_respiratory_disease",
+                                            "marital", "dominant_encounter_class", "smoking_status",
+                                        ],
                                         n_clusters=k,
                                         params={"scaler": scaler_name, "gamma": gamma_label, "random_state": rs, "threshold": threshold},
                                         metrics=metrics_row,
                                         cluster_summaries=summary_text,
+                                        heatmap_bytes=heatmap_bytes,
+                                        pca_image_bytes=pca_image_bytes,
                                     )
 
                             except Exception as e:

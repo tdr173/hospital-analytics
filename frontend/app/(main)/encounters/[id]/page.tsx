@@ -35,6 +35,7 @@ import { formatDate } from "@/utils/functions";
 import theme from "@/utils/theme";
 
 import StyledButton from "@/components/generic_components/StyledButton/StyledButton";
+import EncounterTag from "@/components/generic_components/EncounterTag/EncounterTag";
 import FormModal from "@/components/generic_components/FormModal/FormModal";
 import EncounterFormModal, {
   EncounterFormValue,
@@ -180,7 +181,9 @@ export default function EncounterDetailPage() {
     if (!id) return;
     setSubmitting(true);
     setFormError(null);
-    const result = await dispatch(updateEncounter({ encounterId: id, payload: value }));
+    const result = await dispatch(
+      updateEncounter({ encounterId: id, payload: value }),
+    );
     setSubmitting(false);
     if ((result as any).error) {
       setFormError((result as any).payload?.message ?? "Save failed");
@@ -226,13 +229,25 @@ export default function EncounterDetailPage() {
     setSubModalOpen(true);
   };
 
-  const handleSubSubmit = async (encounterId: string, payload: Record<string, unknown>) => {
+  const handleSubSubmit = async (
+    encounterId: string,
+    payload: Record<string, unknown>,
+  ) => {
     setSubmitting(true);
     setFormError(null);
     const recordId = subInitial?._recordId as number | undefined;
     const result = await (recordId
-      ? dispatch(updateEncounterSubRecord({ kind: subKind, encounterId, recordId, payload }))
-      : dispatch(createEncounterSubRecord({ kind: subKind, encounterId, payload })));
+      ? dispatch(
+          updateEncounterSubRecord({
+            kind: subKind,
+            encounterId,
+            recordId,
+            payload,
+          }),
+        )
+      : dispatch(
+          createEncounterSubRecord({ kind: subKind, encounterId, payload }),
+        ));
     setSubmitting(false);
     if ((result as any).error) {
       setFormError((result as any).payload?.message ?? "Save failed");
@@ -258,9 +273,12 @@ export default function EncounterDetailPage() {
     if (!(result as any).error) refreshTabData(tab);
   };
 
-  if (loading) return <div className={classes.pageLoading}>Loading visit details...</div>;
+  if (loading)
+    return <div className={classes.pageLoading}>Loading visit details...</div>;
   if (error || !encounter)
-    return <div className={classes.pageError}>{error ?? "Visit not found."}</div>;
+    return (
+      <div className={classes.pageError}>{error ?? "Visit not found."}</div>
+    );
 
   const encounterForPicker = [encounter as any];
 
@@ -268,50 +286,123 @@ export default function EncounterDetailPage() {
     0: (
       <ObservationsTab
         data={observations}
-        onEdit={canManage ? (item) => openSubEdit("observation", item) : undefined}
-        onDelete={canManage ? (item) => setSubDeleting({ kind: "observation", encounterId: id, recordId: item.id }) : undefined}
+        onEdit={
+          canManage ? (item) => openSubEdit("observation", item) : undefined
+        }
+        onDelete={
+          canManage
+            ? (item) =>
+                setSubDeleting({
+                  kind: "observation",
+                  encounterId: id,
+                  recordId: item.id,
+                })
+            : undefined
+        }
       />
     ),
     1: (
       <ConditionsTab
         data={conditions}
-        onEdit={canManage ? (item) => openSubEdit("condition", item) : undefined}
-        onDelete={canManage ? (item) => setSubDeleting({ kind: "condition", encounterId: id, recordId: item.id }) : undefined}
+        onEdit={
+          canManage ? (item) => openSubEdit("condition", item) : undefined
+        }
+        onDelete={
+          canManage
+            ? (item) =>
+                setSubDeleting({
+                  kind: "condition",
+                  encounterId: id,
+                  recordId: item.id,
+                })
+            : undefined
+        }
       />
     ),
     2: (
       <MedicationsTab
         data={medications}
-        onEdit={canManage ? (item) => openSubEdit("medication", item) : undefined}
-        onDelete={canManage ? (item) => setSubDeleting({ kind: "medication", encounterId: id, recordId: item.id }) : undefined}
+        onEdit={
+          canManage ? (item) => openSubEdit("medication", item) : undefined
+        }
+        onDelete={
+          canManage
+            ? (item) =>
+                setSubDeleting({
+                  kind: "medication",
+                  encounterId: id,
+                  recordId: item.id,
+                })
+            : undefined
+        }
       />
     ),
     3: (
       <ProceduresTab
         data={procedures}
-        onEdit={canManage ? (item) => openSubEdit("procedure", item) : undefined}
-        onDelete={canManage ? (item) => setSubDeleting({ kind: "procedure", encounterId: id, recordId: item.id }) : undefined}
+        onEdit={
+          canManage ? (item) => openSubEdit("procedure", item) : undefined
+        }
+        onDelete={
+          canManage
+            ? (item) =>
+                setSubDeleting({
+                  kind: "procedure",
+                  encounterId: id,
+                  recordId: item.id,
+                })
+            : undefined
+        }
       />
     ),
     4: (
       <ImmunizationsTab
         data={immunizations}
-        onEdit={canManage ? (item) => openSubEdit("immunization", item) : undefined}
-        onDelete={canManage ? (item) => setSubDeleting({ kind: "immunization", encounterId: id, recordId: item.id }) : undefined}
+        onEdit={
+          canManage ? (item) => openSubEdit("immunization", item) : undefined
+        }
+        onDelete={
+          canManage
+            ? (item) =>
+                setSubDeleting({
+                  kind: "immunization",
+                  encounterId: id,
+                  recordId: item.id,
+                })
+            : undefined
+        }
       />
     ),
     5: (
       <AllergiesTab
         data={allergies}
         onEdit={canManage ? (item) => openSubEdit("allergy", item) : undefined}
-        onDelete={canManage ? (item) => setSubDeleting({ kind: "allergy", encounterId: id, recordId: item.id }) : undefined}
+        onDelete={
+          canManage
+            ? (item) =>
+                setSubDeleting({
+                  kind: "allergy",
+                  encounterId: id,
+                  recordId: item.id,
+                })
+            : undefined
+        }
       />
     ),
     6: (
       <CarePlansTab
         data={careplans}
         onEdit={canManage ? (item) => openSubEdit("careplan", item) : undefined}
-        onDelete={canManage ? (item) => setSubDeleting({ kind: "careplan", encounterId: id, recordId: item.id }) : undefined}
+        onDelete={
+          canManage
+            ? (item) =>
+                setSubDeleting({
+                  kind: "careplan",
+                  encounterId: id,
+                  recordId: item.id,
+                })
+            : undefined
+        }
       />
     ),
   };
@@ -324,7 +415,10 @@ export default function EncounterDetailPage() {
         initial={encounter}
         submitting={submitting}
         errorMessage={formError}
-        onClose={() => { setEncModalOpen(false); setFormError(null); }}
+        onClose={() => {
+          setEncModalOpen(false);
+          setFormError(null);
+        }}
         onSubmit={handleEncSubmit}
       />
 
@@ -339,8 +433,8 @@ export default function EncounterDetailPage() {
         layout="single"
       >
         <div>
-          Delete <strong>{encounter.description}</strong>? This cannot be undone.
-          Visits with linked records cannot be deleted.
+          Delete <strong>{encounter.description}</strong>? This cannot be
+          undone. Visits with linked records cannot be deleted.
         </div>
       </FormModal>
 
@@ -352,7 +446,11 @@ export default function EncounterDetailPage() {
         initial={subInitial}
         submitting={submitting}
         errorMessage={formError}
-        onClose={() => { setSubModalOpen(false); setSubInitial(null); setFormError(null); }}
+        onClose={() => {
+          setSubModalOpen(false);
+          setSubInitial(null);
+          setFormError(null);
+        }}
         onSubmit={handleSubSubmit}
       />
 
@@ -374,60 +472,140 @@ export default function EncounterDetailPage() {
           <p className={classes.profileLabel}>Visit Record</p>
           <h1 className={classes.encounterTitle}>{encounter.description}</h1>
           {encounter.reasonDescription && (
-            <p className={classes.encounterReason}>Reason: {encounter.reasonDescription}</p>
+            <p className={classes.encounterReason}>
+              Reason: {encounter.reasonDescription}
+            </p>
           )}
           <div className={classes.metaRow}>
-            <span className={classes.classBadge}>{encounter.encounterClass}</span>
+            <EncounterTag type={encounter.encounterClass} />
             {encounter.duration != null && (
               <span className={classes.durationBadge}>
                 {Math.round(encounter.duration)} min
               </span>
             )}
             <span className={classes.dateText}>
-              {formatDate(encounter.startDate)} → {formatDate(encounter.endDate)}
+              {formatDate(encounter.startDate)} →{" "}
+              {formatDate(encounter.endDate)}
             </span>
           </div>
         </div>
 
         <div className={classes.cardRight}>
-          <div
-            className={classes.entityChip}
-            onClick={() => router.push(`/patients/${encounter.patientId}`)}
-          >
-            <span className={classes.entityChipLabel}>Patient</span>
-            <span className={classes.entityChipValue}>{encounter.patientName}</span>
+          <div className={classes.up}>
+            <div
+              className={classes.entityChip}
+              onClick={() => router.push(`/patients/${encounter.patientId}`)}
+            >
+              <span className={classes.entityChipLabel}>Patient</span>
+              <span className={classes.entityChipValue}>
+                {encounter.patientName}
+              </span>
+            </div>
+            <div
+              className={classes.entityChip}
+              onClick={() => router.push(`/providers/${encounter.providerId}`)}
+            >
+              <span className={classes.entityChipLabel}>Doctor</span>
+              <span className={classes.entityChipValue}>
+                {encounter.providerName}
+              </span>
+            </div>
           </div>
-          <div
-            className={classes.entityChip}
-            onClick={() => router.push(`/providers/${encounter.providerId}`)}
-          >
-            <span className={classes.entityChipLabel}>Doctor</span>
-            <span className={classes.entityChipValue}>{encounter.providerName}</span>
-          </div>
+
           {canManage && (
-            <div style={{ display: "flex", gap: theme.spacing.sm, alignItems: "center" }}>
-              <IconButton
-                size="small"
-                onClick={() => { setFormError(null); setEncModalOpen(true); }}
-                aria-label="Edit visit"
-                sx={{
-                  color: theme.colors.text.secondary,
-                  "&:hover": { backgroundColor: "rgba(0, 103, 128, 0.08)" },
-                }}
-              >
-                <EditOutlinedIcon sx={{ fontSize: "1.1rem" }} />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => setEncDeleting(true)}
-                aria-label="Delete visit"
-                sx={{
-                  color: theme.colors.status.error,
-                  "&:hover": { backgroundColor: "rgba(239, 68, 68, 0.08)" },
-                }}
-              >
-                <DeleteOutlineIcon sx={{ fontSize: "1.1rem" }} />
-              </IconButton>
+            <div className={classes.down}>
+              {canManage && TAB_TO_KIND[tab] && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    marginBottom: theme.spacing.sm,
+                  }}
+                >
+                  <StyledButton
+                    onClick={() => openSubAdd(TAB_TO_KIND[tab])}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-around",
+                      height: "40px",
+                      minWidth: "160px",
+                      background: theme.colors.button.add,
+                      boxShadow: "none",
+                      border: "none",
+                      padding: "0 !important",
+                      color: "#ffffff",
+
+                      animation: "pulseEffect 2.0s infinite ease-in-out",
+
+                      "@keyframes pulseEffect": {
+                        "0%": {
+                          transform: "scale(1)",
+                        },
+                        "50%": {
+                          transform: "scale(1.02)",
+                        },
+                        "100%": {
+                          transform: "scale(1)",
+                        },
+                      },
+
+                      "&:hover": {
+                        background: theme.colors.button.addHover,
+                        boxShadow: "none",
+                        transform: "none",
+                        animation: "none",
+                      },
+                      "&:active": {
+                        background: theme.colors.button.addActive,
+                        boxShadow: "none",
+                        transform: "none",
+                      },
+                    }}
+                  >
+                    {ADD_LABEL[tab]}
+                  </StyledButton>
+                </div>
+              )}
+              {canManage && (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: theme.spacing.sm,
+                    alignItems: "center",
+                    minWidth: "160px",
+                    justifyContent: "center",
+                    borderRadius: "6px",
+                    height: "40px",
+                  }}
+                >
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setFormError(null);
+                      setEncModalOpen(true);
+                    }}
+                    aria-label="Edit visit"
+                    sx={{
+                      color: theme.colors.text.secondary,
+                      "&:hover": { backgroundColor: "rgba(0, 103, 128, 0.08)" },
+                    }}
+                  >
+                    <EditOutlinedIcon sx={{ fontSize: "1.1rem" }} />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => setEncDeleting(true)}
+                    aria-label="Delete visit"
+                    sx={{
+                      color: theme.colors.status.error,
+                      "&:hover": { backgroundColor: "rgba(239, 68, 68, 0.08)" },
+                    }}
+                  >
+                    <DeleteOutlineIcon sx={{ fontSize: "1.1rem" }} />
+                  </IconButton>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -467,26 +645,7 @@ export default function EncounterDetailPage() {
           {!loadedTabs.includes(tab) ? (
             <div className={classes.tabLoading}>Loading...</div>
           ) : (
-            <>
-              {canManage && TAB_TO_KIND[tab] && (
-                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: theme.spacing.sm }}>
-                  <StyledButton
-                    onClick={() => openSubAdd(TAB_TO_KIND[tab])}
-                    sx={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      height: "30px",
-                      fontSize: "0.75rem",
-                    }}
-                  >
-                    <AddIcon sx={{ fontSize: "0.95rem" }} />
-                    {ADD_LABEL[tab]}
-                  </StyledButton>
-                </div>
-              )}
-              {tabContent[tab]}
-            </>
+            <>{tabContent[tab]}</>
           )}
         </div>
       </div>

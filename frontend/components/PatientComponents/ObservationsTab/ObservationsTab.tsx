@@ -13,7 +13,11 @@ interface ObservationsTabProps {
   onDelete?: (item: PatientObservationItem) => void;
 }
 
-export default function ObservationsTab({ data, onEdit, onDelete }: ObservationsTabProps) {
+export default function ObservationsTab({
+  data,
+  onEdit,
+  onDelete,
+}: ObservationsTabProps) {
   const classes = useClasses(observationsTabStyles, {
     name: "ObservationsTabStyles",
   });
@@ -27,7 +31,10 @@ export default function ObservationsTab({ data, onEdit, onDelete }: Observations
   return (
     <div className={classes.tableContainer}>
       <div className={classes.scrollWrapper}>
-        <div className={`${classes.gridRow} ${classes.headerRow}`} style={{ gridTemplateColumns: gridTemplate }}>
+        <div
+          className={`${classes.gridRow} ${classes.headerRow}`}
+          style={{ gridTemplateColumns: gridTemplate }}
+        >
           <div>Date</div>
           <div>Description</div>
           <div>Code</div>
@@ -43,12 +50,14 @@ export default function ObservationsTab({ data, onEdit, onDelete }: Observations
               className={`${classes.gridRow} ${classes.dataRow} ${rowColorClass}`}
               style={{ gridTemplateColumns: gridTemplate }}
             >
-              <div className={classes.centeredCell}>{formatDate(r.date)}</div>
+              <div className={classes.leftCell}>{formatDate(r.date)}</div>
               <TruncatedText text={r.description} />
               <div className={classes.snomedCode}>{r.observationCode}</div>
               <div>
                 {r.value}
-                {r.units ? <span className={classes.unitsText}>{r.units}</span> : null}
+                {r.units ? (
+                  <span className={classes.unitsText}>{r.units}</span>
+                ) : null}
               </div>
               {showActions && (
                 <RowActions item={r} onEdit={onEdit} onDelete={onDelete} />

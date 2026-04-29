@@ -77,7 +77,11 @@ function MetricsRow({ s, classes }: { s: PatientSummary; classes: any }) {
       <MetricComponent label="Total Medications" value={s.totalMedications} />
       <MetricComponent label="Total Procedures" value={s.totalProcedures} />
       <MetricComponent label="Emergency Visits" value={s.emergencyVisits} />
-      <MetricComponent label="Days Since Last Visit" value={s.daysSinceLastEncounter} unit="days" />
+      <MetricComponent
+        label="Days Since Last Visit"
+        value={s.daysSinceLastEncounter}
+        unit="days"
+      />
     </div>
   );
 }
@@ -90,7 +94,7 @@ const TAB_LABELS = [
   "Allergies",
   "Care Plans",
   "Visits",
-  "Care Sequences",
+  "Sequences",
   "Observations",
 ];
 
@@ -159,6 +163,7 @@ export default function PatientDetailPage() {
     loadedTabs,
   } = useSelector((state: RootState) => state.currentPatient);
   const role = useSelector((state: RootState) => state.auth.user?.role);
+  const chatOpen = useSelector((state: RootState) => state.ui.chatOpen);
   const canManage = role === "MANAGER" || role === "DOCTOR";
 
   const [tab, setTab] = useState(0);
@@ -208,11 +213,7 @@ export default function PatientDetailPage() {
     setSubModalOpen(true);
   };
 
-  const openSubEdit = (
-    kind: SubRecordKind,
-    record: any,
-    codeField: string,
-  ) => {
+  const openSubEdit = (kind: SubRecordKind, record: any, codeField: string) => {
     if (!record.encounterId) {
       setFormError("Cannot edit: missing encounter link");
       return;
@@ -243,8 +244,17 @@ export default function PatientDetailPage() {
     setFormError(null);
     const recordId = subInitial?._recordId as number | undefined;
     const result = await (recordId
-      ? dispatch(updateEncounterSubRecord({ kind: subKind, encounterId, recordId, payload }))
-      : dispatch(createEncounterSubRecord({ kind: subKind, encounterId, payload })));
+      ? dispatch(
+          updateEncounterSubRecord({
+            kind: subKind,
+            encounterId,
+            recordId,
+            payload,
+          }),
+        )
+      : dispatch(
+          createEncounterSubRecord({ kind: subKind, encounterId, payload }),
+        ));
     setSubmitting(false);
     if ((result as any).error) {
       setFormError((result as any).payload?.message ?? "Save failed");
@@ -275,7 +285,12 @@ export default function PatientDetailPage() {
     setSubmitting(true);
     setFormError(null);
     const result = await (encEditing
-      ? dispatch(updateEncounter({ encounterId: encEditing.encounterId, payload: value }))
+      ? dispatch(
+          updateEncounter({
+            encounterId: encEditing.encounterId,
+            payload: value,
+          }),
+        )
       : dispatch(createEncounter({ patientId: id, ...value })));
     setSubmitting(false);
     if ((result as any).error) {
@@ -297,7 +312,9 @@ export default function PatientDetailPage() {
   };
 
   if (loading) {
-    return <div className={classes.pageLoading}>Loading patient profile...</div>;
+    return (
+      <div className={classes.pageLoading}>Loading patient profile...</div>
+    );
   }
 
   if (error || !patient) {
@@ -309,57 +326,176 @@ export default function PatientDetailPage() {
   const renderConditions = () => (
     <ConditionsTab
       data={conditions}
-      onEdit={canManage ? (item: ConditionItem) => openSubEdit("condition", item, "conditionCode") : undefined}
-      onDelete={canManage ? (item: ConditionItem) => item.encounterId && setSubDeleting({ kind: "condition", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+      onEdit={
+        canManage
+          ? (item: ConditionItem) =>
+              openSubEdit("condition", item, "conditionCode")
+          : undefined
+      }
+      onDelete={
+        canManage
+          ? (item: ConditionItem) =>
+              item.encounterId &&
+              setSubDeleting({
+                kind: "condition",
+                encounterId: item.encounterId,
+                recordId: item.id,
+                initial: item,
+              })
+          : undefined
+      }
     />
   );
   const renderMedications = () => (
     <MedicationsTab
       data={medications}
-      onEdit={canManage ? (item: MedicationItem) => openSubEdit("medication", item, "medicationCode") : undefined}
-      onDelete={canManage ? (item: MedicationItem) => item.encounterId && setSubDeleting({ kind: "medication", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+      onEdit={
+        canManage
+          ? (item: MedicationItem) =>
+              openSubEdit("medication", item, "medicationCode")
+          : undefined
+      }
+      onDelete={
+        canManage
+          ? (item: MedicationItem) =>
+              item.encounterId &&
+              setSubDeleting({
+                kind: "medication",
+                encounterId: item.encounterId,
+                recordId: item.id,
+                initial: item,
+              })
+          : undefined
+      }
     />
   );
   const renderProcedures = () => (
     <ProceduresTab
       data={procedures}
-      onEdit={canManage ? (item: ProcedureItem) => openSubEdit("procedure", item, "procedureCode") : undefined}
-      onDelete={canManage ? (item: ProcedureItem) => item.encounterId && setSubDeleting({ kind: "procedure", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+      onEdit={
+        canManage
+          ? (item: ProcedureItem) =>
+              openSubEdit("procedure", item, "procedureCode")
+          : undefined
+      }
+      onDelete={
+        canManage
+          ? (item: ProcedureItem) =>
+              item.encounterId &&
+              setSubDeleting({
+                kind: "procedure",
+                encounterId: item.encounterId,
+                recordId: item.id,
+                initial: item,
+              })
+          : undefined
+      }
     />
   );
   const renderImmunizations = () => (
     <ImmunizationsTab
       data={immunizations}
-      onEdit={canManage ? (item: ImmunizationItem) => openSubEdit("immunization", item, "immunizationCode") : undefined}
-      onDelete={canManage ? (item: ImmunizationItem) => item.encounterId && setSubDeleting({ kind: "immunization", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+      onEdit={
+        canManage
+          ? (item: ImmunizationItem) =>
+              openSubEdit("immunization", item, "immunizationCode")
+          : undefined
+      }
+      onDelete={
+        canManage
+          ? (item: ImmunizationItem) =>
+              item.encounterId &&
+              setSubDeleting({
+                kind: "immunization",
+                encounterId: item.encounterId,
+                recordId: item.id,
+                initial: item,
+              })
+          : undefined
+      }
     />
   );
   const renderAllergies = () => (
     <AllergiesTab
       data={allergies}
-      onEdit={canManage ? (item: AllergyItem) => openSubEdit("allergy", item, "allergyCode") : undefined}
-      onDelete={canManage ? (item: AllergyItem) => item.encounterId && setSubDeleting({ kind: "allergy", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+      onEdit={
+        canManage
+          ? (item: AllergyItem) => openSubEdit("allergy", item, "allergyCode")
+          : undefined
+      }
+      onDelete={
+        canManage
+          ? (item: AllergyItem) =>
+              item.encounterId &&
+              setSubDeleting({
+                kind: "allergy",
+                encounterId: item.encounterId,
+                recordId: item.id,
+                initial: item,
+              })
+          : undefined
+      }
     />
   );
   const renderCareplans = () => (
     <CarePlansTab
       data={careplans}
-      onEdit={canManage ? (item: CarePlanItem) => openSubEdit("careplan", item, "careplanCode") : undefined}
-      onDelete={canManage ? (item: CarePlanItem) => item.encounterId && setSubDeleting({ kind: "careplan", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+      onEdit={
+        canManage
+          ? (item: CarePlanItem) =>
+              openSubEdit("careplan", item, "careplanCode")
+          : undefined
+      }
+      onDelete={
+        canManage
+          ? (item: CarePlanItem) =>
+              item.encounterId &&
+              setSubDeleting({
+                kind: "careplan",
+                encounterId: item.encounterId,
+                recordId: item.id,
+                initial: item,
+              })
+          : undefined
+      }
     />
   );
   const renderEncounters = () => (
     <EncountersTab
       data={encounters}
-      onEdit={canManage ? (item) => { setEncEditing(item); setFormError(null); setEncModalOpen(true); } : undefined}
+      onEdit={
+        canManage
+          ? (item) => {
+              setEncEditing(item);
+              setFormError(null);
+              setEncModalOpen(true);
+            }
+          : undefined
+      }
       onDelete={canManage ? (item) => setEncDeleting(item) : undefined}
     />
   );
   const renderObservations = () => (
     <ObservationsTab
       data={observations}
-      onEdit={canManage ? (item: PatientObservationItem) => openSubEdit("observation", item, "observationCode") : undefined}
-      onDelete={canManage ? (item: PatientObservationItem) => item.encounterId && setSubDeleting({ kind: "observation", encounterId: item.encounterId, recordId: item.id, initial: item }) : undefined}
+      onEdit={
+        canManage
+          ? (item: PatientObservationItem) =>
+              openSubEdit("observation", item, "observationCode")
+          : undefined
+      }
+      onDelete={
+        canManage
+          ? (item: PatientObservationItem) =>
+              item.encounterId &&
+              setSubDeleting({
+                kind: "observation",
+                encounterId: item.encounterId,
+                recordId: item.id,
+                initial: item,
+              })
+          : undefined
+      }
     />
   );
 
@@ -386,11 +522,62 @@ export default function PatientDetailPage() {
     if (kind) openSubAdd(kind);
   };
 
-  const showAddButton = canManage && (tab === 6 || !!TAB_TO_KIND[tab]);
+  const showAddButton =
+    canManage && (tab === 6 || !!TAB_TO_KIND[tab]) && !chatOpen;
 
   return (
     <div className={classes.pageContainer}>
-      <IdentityCard patient={patient} classes={classes} />
+      <IdentityCard
+        patient={patient}
+        classes={classes}
+        addButton={
+          showAddButton && (
+            <StyledButton
+              onClick={handleAddClick}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-around",
+                height: "32px",
+                background: theme.colors.button.add,
+                boxShadow: "none",
+                border: "none",
+                padding: "0 !important",
+                minWidth: "0 !important",
+                color: "#ffffff",
+
+                animation: "pulseEffect 2.0s infinite ease-in-out",
+
+                "@keyframes pulseEffect": {
+                  "0%": {
+                    transform: "scale(1)",
+                  },
+                  "50%": {
+                    transform: "scale(1.02)",
+                  },
+                  "100%": {
+                    transform: "scale(1)",
+                  },
+                },
+
+                "&:hover": {
+                  background: theme.colors.button.addHover,
+                  boxShadow: "none",
+                  transform: "none",
+                  animation: "none",
+                },
+                "&:active": {
+                  background: theme.colors.button.addActive,
+                  boxShadow: "none",
+                  transform: "none",
+                },
+              }}
+            >
+              {ADD_LABEL[tab]}
+            </StyledButton>
+          )
+        }
+      />
 
       {summary && <MetricsRow s={summary} classes={classes} />}
 
@@ -424,30 +611,6 @@ export default function PatientDetailPage() {
             <Tab key={label} label={label} disableRipple />
           ))}
         </Tabs>
-
-        {showAddButton && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              padding: "8px 16px 0",
-            }}
-          >
-            <StyledButton
-              onClick={handleAddClick}
-              sx={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                height: "32px",
-                fontSize: "0.8rem",
-              }}
-            >
-              <AddIcon sx={{ fontSize: "1rem" }} />
-              {ADD_LABEL[tab]}
-            </StyledButton>
-          </div>
-        )}
 
         <div className={classes.tabContentPadding}>
           {!loadedTabs.includes(tab) ? (
@@ -509,7 +672,9 @@ export default function PatientDetailPage() {
         onSubmit={confirmSubDelete}
         layout="single"
       >
-        <div>Delete this {subDeleting?.kind} record? This cannot be undone.</div>
+        <div>
+          Delete this {subDeleting?.kind} record? This cannot be undone.
+        </div>
       </FormModal>
     </div>
   );

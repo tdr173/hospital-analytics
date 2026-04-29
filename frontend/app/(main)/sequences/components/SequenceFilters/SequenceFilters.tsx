@@ -80,6 +80,7 @@ export default function SequenceFilters({
           options={lengthOptions}
           width={140}
           height={"40px"}
+          onClear={() => onMinLengthChange(minLen)}
         />
       </div>
 
@@ -92,6 +93,7 @@ export default function SequenceFilters({
           options={sortOptions}
           width={180}
           height={"40px"}
+          onClear={() => onSortByChange("")}
         />
       </div>
 

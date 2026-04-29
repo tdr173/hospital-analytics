@@ -1,4 +1,5 @@
 import base64
+from pathlib import Path
 from sqlalchemy import func, case, cast, Numeric, text
 from sqlalchemy.orm import Session
 
@@ -23,6 +24,32 @@ from repository.cluster_repository.cluster_feature_helpers import (
     get_condition_burden_distribution,
     get_population_stats,
 )
+
+
+_OUTPUTS_DIR = (
+    Path(__file__).resolve().parent.parent.parent
+    / "clustering_algorithms" / "k_prototypes" / "outputs"
+)
+
+
+def _read_latest_images() -> tuple[str | None, str | None]:
+    """Read heatmap + FAMD PNGs: outputs -> first version dir -> first run dir."""
+    try:
+        version_dirs = sorted(d for d in _OUTPUTS_DIR.iterdir() if d.is_dir())
+        if not version_dirs:
+            return None, None
+        run_dirs = sorted(d for d in version_dirs[0].iterdir() if d.is_dir())
+        if not run_dirs:
+            return None, None
+        run_dir = run_dirs[0]
+
+        def _b64(pattern: str) -> str | None:
+            p = next(run_dir.glob(pattern), None)
+            return base64.b64encode(p.read_bytes()).decode() if p else None
+
+        return _b64("heatmap_*.png"), _b64("famd_*.png")
+    except Exception:
+        return None, None
 
 
 class ClusterRepository:
@@ -109,17 +136,12 @@ class ClusterRepository:
             .all()
         )
 
-        if not rows:
-            return GetClusterStatistics(points=[])
-
         points = [
             PcaPoint(x=row.pca_x, y=row.pca_y, cluster=row.cluster_label, is_outlier=row.is_outlier)
             for row in rows
         ]
 
-        meta = self._get_meta()
-        heatmap_b64 = base64.b64encode(meta.heatmap).decode() if meta and meta.heatmap else None
-        pca_image_b64 = base64.b64encode(meta.pca_image).decode() if meta and meta.pca_image else None
+        heatmap_b64, pca_image_b64 = _read_latest_images()
         cluster_colors = self._get_cluster_colors()
 
         return GetClusterStatistics(

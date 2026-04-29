@@ -21,6 +21,7 @@ const FormModalStyles = {
     display: "flex",
     flexDirection: "column" as const,
     overflow: "hidden" as const,
+    transition: "max-width 0.2s ease", // Smooth transition if it changes
   },
   header: {
     display: "flex",
@@ -49,7 +50,14 @@ const FormModalStyles = {
     padding: theme.spacing.lg,
     overflowY: "auto" as const,
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "1fr 1fr", // 2 Columns
+    gap: theme.spacing.md,
+  },
+  bodyThree: {
+    padding: theme.spacing.lg,
+    overflowY: "auto" as const,
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1fr", // 3 Columns
     gap: theme.spacing.md,
   },
   bodySingle: {

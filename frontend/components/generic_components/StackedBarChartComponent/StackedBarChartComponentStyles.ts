@@ -6,6 +6,10 @@ export const StackedBarChartComponentStyles = (theme: Theme) => ({
     borderRadius: theme.borderRadius.lg,
     boxShadow: theme.shadows.sm,
     padding: theme.spacing.md,
+    height: "100%",
+    boxSizing: "border-box" as const,
+    display: "flex",
+    flexDirection: "column" as const,
   },
   title: {
     fontFamily: theme.typography.fontFamily,

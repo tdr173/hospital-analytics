@@ -16,6 +16,7 @@ interface FormModalProps {
   onSubmit: () => void;
   children: ReactNode;
   layout?: "grid" | "single";
+  type?: "two" | "three"; // <-- Added type prop here
   destructive?: boolean;
   errorMessage?: string | null;
 }
@@ -30,6 +31,7 @@ export default function FormModal({
   onSubmit,
   children,
   layout = "grid",
+  type = "two", // <-- Defaulting to "two"
   destructive = false,
   errorMessage,
 }: FormModalProps) {
@@ -54,9 +56,23 @@ export default function FormModal({
 
   if (!open) return null;
 
+  // Helper to figure out the right CSS class
+  const getBodyClass = () => {
+    if (layout === "single") return classes.bodySingle;
+    if (type === "three") return classes.bodyThree;
+    return classes.body; // Defaults to the 2-column grid
+  };
+
+  // Optional: If 3 columns feel too squished, we can slightly widen the modal
+  const modalStyle = type === "three" ? { maxWidth: "800px" } : {};
+
   return (
     <div className={classes.overlay} onClick={onClose}>
-      <div className={classes.modal} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={classes.modal}
+        onClick={(e) => e.stopPropagation()}
+        style={modalStyle} // Applies wider max-width if 3 columns
+      >
         <div className={classes.header}>
           <div className={classes.title}>{title}</div>
           <button
@@ -68,9 +84,7 @@ export default function FormModal({
           </button>
         </div>
 
-        <div className={layout === "grid" ? classes.body : classes.bodySingle}>
-          {children}
-        </div>
+        <div className={getBodyClass()}>{children}</div>
 
         {errorMessage ? (
           <div className={classes.errorText}>{errorMessage}</div>

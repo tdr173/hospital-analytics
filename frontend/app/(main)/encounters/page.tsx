@@ -30,6 +30,7 @@ import StyledMultiDropdown from "@/components/generic_components/StyledMultiDrop
 import StyledDatePicker from "@/components/generic_components/StyledDatePicker/StyledDatePicker";
 import StyledButton from "@/components/generic_components/StyledButton/StyledButton";
 import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
+import EncounterTag from "@/components/generic_components/EncounterTag/EncounterTag";
 import FormModal from "@/components/generic_components/FormModal/FormModal";
 import useClasses from "@/utils/useClasses";
 import { EncountersPageStyles } from "./styles";
@@ -68,7 +69,7 @@ function EncountersPageContent() {
     (state: RootState) => state.encounters,
   );
   const role = useSelector((state: RootState) => state.auth.user?.role);
-  const canManage = role === "DOCTOR";
+  const canManage = role === "DOCTOR" || role === "MANAGER";
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EncounterListItem | null>(null);
@@ -202,7 +203,7 @@ function EncountersPageContent() {
         {formatDate(e.startDate)}
       </TableCell>
       <TableCell sx={bodyCellSx}>
-        <span className={classes.encounterTypeBadge}>{e.encounterClass}</span>
+        <EncounterTag type={e.encounterClass} />
       </TableCell>
       <TableCell
         sx={{

@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import { Tooltip } from "@mui/material";
 import { RootState, AppDispatch } from "@/store";
 import { getAiAnalysis } from "@/store/slices/clusters/thunks";
 import { openAnalysis } from "@/store/slices/clusters/ai-analysis-slice";
@@ -59,7 +60,9 @@ export default function ClusterCard({ cluster }: Props) {
         </div>
       </div>
 
-      <p className={classes.description}>{cluster.description}</p>
+      <Tooltip title={cluster.description} arrow>
+        <p className={classes.description}>{cluster.description}</p>
+      </Tooltip>
 
       <div className={classes.statsGrid}>
         <div className={classes.statBox}>
@@ -96,20 +99,30 @@ export default function ClusterCard({ cluster }: Props) {
             className={classes.footerIcon}
             style={{ color }}
           />
-          <span>
-            <span className={classes.footerLabel}>Clinical Insights: </span>
-            {cluster.insight}
-          </span>
+          <Tooltip
+            title={`Clinical Insights: ${cluster.insight}`}
+            arrow
+          >
+            <span className={classes.footerRowContent}>
+              <span className={classes.footerLabel}>Clinical Insights: </span>
+              {cluster.insight}
+            </span>
+          </Tooltip>
         </div>
         <div className={classes.footerRow}>
           <AssignmentOutlinedIcon
             className={classes.footerIcon}
             style={{ color }}
           />
-          <span>
-            <span className={classes.footerLabel}>Recommendation: </span>
-            {cluster.recommendation}
-          </span>
+          <Tooltip
+            title={`Recommendation: ${cluster.recommendation}`}
+            arrow
+          >
+            <span className={classes.footerRowContent}>
+              <span className={classes.footerLabel}>Recommendation: </span>
+              {cluster.recommendation}
+            </span>
+          </Tooltip>
         </div>
       </div>
 

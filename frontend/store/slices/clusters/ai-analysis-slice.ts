@@ -3,7 +3,7 @@ import { AiAnalysisResponse } from "@/models/generic/clusters";
 import { getAiAnalysis } from "./thunks";
 
 interface AiAnalysisState {
-  cache: Record<number, AiAnalysisResponse>;   // cluster_id → cached result
+  cache: Record<number, AiAnalysisResponse>; // cluster_id → cached result
   currentClusterId: number | null;
   loading: boolean;
   error: string | null;
@@ -28,6 +28,9 @@ const aiAnalysisSlice = createSlice({
       state.currentClusterId = null;
       state.error = null;
     },
+    clearAnalysisCache: (state) => {
+      state.cache = {};
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -48,5 +51,6 @@ const aiAnalysisSlice = createSlice({
   },
 });
 
-export const { openAnalysis, closeAnalysis } = aiAnalysisSlice.actions;
+export const { openAnalysis, closeAnalysis, clearAnalysisCache } =
+  aiAnalysisSlice.actions;
 export default aiAnalysisSlice.reducer;

@@ -26,7 +26,11 @@ const HAS_END_DATE = new Set<SubRecordKind>([
   "careplan",
   "allergy",
 ]);
-const HAS_REASON = new Set<SubRecordKind>(["medication", "procedure", "careplan"]);
+const HAS_REASON = new Set<SubRecordKind>([
+  "medication",
+  "procedure",
+  "careplan",
+]);
 const HAS_VALUE = new Set<SubRecordKind>(["observation"]);
 const SINGLE_DATE = new Set<SubRecordKind>(["observation", "immunization"]);
 
@@ -89,7 +93,9 @@ export default function SubRecordFormModal({
     setEndDate(toDateInput(initial?.endDate));
     setReason(initial?.reasonDescription ?? "");
     setValue(initial?.value ?? "");
-    setValueNumeric(initial?.valueNumeric != null ? String(initial.valueNumeric) : "");
+    setValueNumeric(
+      initial?.valueNumeric != null ? String(initial.valueNumeric) : "",
+    );
     setUnits(initial?.units ?? "");
     setTouched(false);
   }, [open, initial]);
@@ -104,11 +110,14 @@ export default function SubRecordFormModal({
   );
 
   const errors = {
-    encounterId: !encounterId ? "Required" : undefined,
-    code: !code.trim() ? "Required" : undefined,
-    description: !description.trim() ? "Required" : undefined,
-    startDate: !startDate ? "Required" : undefined,
-    value: HAS_VALUE.has(kind) && !value.trim() ? "Required" : undefined,
+    encounterId: !encounterId ? "This field is required" : undefined,
+    code: !code.trim() ? "This field is required" : undefined,
+    description: !description.trim() ? "This field is required" : undefined,
+    startDate: !startDate ? "This field is required" : undefined,
+    value:
+      HAS_VALUE.has(kind) && !value.trim()
+        ? "This field is required"
+        : undefined,
   };
   const hasError = Object.values(errors).some(Boolean);
   const isEditing = !!initial?.encounterId;
@@ -116,7 +125,9 @@ export default function SubRecordFormModal({
   const handleSubmit = () => {
     setTouched(true);
     if (hasError) return;
-    const payload: Record<string, unknown> = { description: description.trim() };
+    const payload: Record<string, unknown> = {
+      description: description.trim(),
+    };
 
     if (HAS_VALUE.has(kind)) {
       payload.observationCode = code.trim();
@@ -158,10 +169,13 @@ export default function SubRecordFormModal({
         value={encounterId}
         onChange={(v) => setEncounterId(String(v))}
         options={encounterOptions}
-        placeholder={encounters.length ? "Select a visit" : "No visits available"}
+        placeholder={
+          encounters.length ? "Select a visit" : "No visits available"
+        }
         disabled={isEditing}
         error={touched && !!errors.encounterId}
         helperText={touched ? errors.encounterId : undefined}
+        onClear={() => setEncounterId("")}
       />
       <StyledInput
         label="Code"
@@ -170,14 +184,6 @@ export default function SubRecordFormModal({
         onChange={(e) => setCode(e.target.value)}
         error={touched && !!errors.code}
         helperText={touched ? errors.code : undefined}
-      />
-      <StyledInput
-        label="Description"
-        required
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        error={touched && !!errors.description}
-        helperText={touched ? errors.description : undefined}
       />
       <StyledDatePicker
         label={SINGLE_DATE.has(kind) ? "Date" : "Start date"}
@@ -196,6 +202,14 @@ export default function SubRecordFormModal({
           fullWidth
         />
       )}
+      <StyledInput
+        label="Description"
+        required
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        error={touched && !!errors.description}
+        helperText={touched ? errors.description : undefined}
+      />
       {HAS_REASON.has(kind) && (
         <StyledInput
           label="Reason"

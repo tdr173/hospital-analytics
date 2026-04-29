@@ -905,27 +905,27 @@ CONFIGS = [
 #     },
 #
 # #     # v40 — Severity-only — drop all utilization signals ############### GOOD
-    {
-        "version": 40,
-        "preferred_k": 5,
-        "description": "Severity-only — drop all utilization signals",
-        "numerical": [
-            "age",
-            "active_conditions_count",
-            "total_medications",
-            "lifetime_medication_days",
-        ],
-        "categorical": [
-            "gender",
-            "pregnancy_history",
-            "has_heart_disease",
-            "has_diabetes",
-            "has_hypertension",
-            "condition_burden",
-            "bmi_type",
-            "cholesterol_risk_category",
-        ],
-    },
+#     {
+#         "version": 40,
+#         "preferred_k": 5,
+#         "description": "Severity-only — drop all utilization signals",
+#         "numerical": [
+#             "age",
+#             "active_conditions_count",
+#             "total_medications",
+#             "lifetime_medication_days",
+#         ],
+#         "categorical": [
+#             "gender",
+#             "pregnancy_history",
+#             "has_heart_disease",
+#             "has_diabetes",
+#             "has_hypertension",
+#             "condition_burden",
+#             "bmi_type",
+#             "cholesterol_risk_category",
+#         ],
+#     },
 #
 #     # v41 — Utilization-only — drop severity/chronicity signals
 #     {
@@ -1214,27 +1214,27 @@ CONFIGS = [
 #         "pain_management_tier"
 #     ]
 # } ######################################### GOOOD
-#     {
-#         "version": 55,
-#         "preferred_k": 4,
-#         "numerical": [
-#             "age",
-#             "active_conditions_count",
-#             "total_medications",
-#             "total_procedures",
-#             "preventive_to_reactive_ratio"
-#         ],
-#         "categorical": [
-#             "gender",
-#             "pregnancy_history",
-#             "has_heart_disease",
-#             "has_diabetes",
-#             "has_hypertension",
-#             "condition_burden",
-#             "bmi_type",
-#             "dominant_careplan"
-#         ],
-#     },
+    {
+        "version": 55,
+        "preferred_k": 4,
+        "numerical": [
+            "age",
+            "active_conditions_count",
+            "total_medications",
+            "total_procedures",
+            "preventive_to_reactive_ratio"
+        ],
+        "categorical": [
+            "gender",
+            "pregnancy_history",
+            "has_heart_disease",
+            "has_diabetes",
+            "has_hypertension",
+            "condition_burden",
+            "bmi_type",
+            "dominant_careplan"
+        ],
+    },
 #     {
 #         "version": 56,
 #         "numerical": [

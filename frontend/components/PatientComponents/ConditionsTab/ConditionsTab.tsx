@@ -13,12 +13,16 @@ interface ConditionsTabProps {
   onDelete?: (item: ConditionItem) => void;
 }
 
-export default function ConditionsTab({ data, onEdit, onDelete }: ConditionsTabProps) {
+export default function ConditionsTab({
+  data,
+  onEdit,
+  onDelete,
+}: ConditionsTabProps) {
   const classes = useClasses(conditionsTabStyles, {
     name: "ConditionsTabStyles",
   });
   const showActions = !!(onEdit || onDelete);
-  const gridTemplate = showActions ? "3fr 1fr 1fr 1fr 80px" : "3fr 1fr 1fr 1fr";
+  const gridTemplate = showActions ? "2fr 1fr 1fr 1fr 80px" : "3fr 1fr 1fr 1fr";
 
   if (!data || data.length === 0) {
     return <div className={classes.emptyState}>No conditions recorded.</div>;
@@ -27,7 +31,10 @@ export default function ConditionsTab({ data, onEdit, onDelete }: ConditionsTabP
   return (
     <div className={classes.tableContainer}>
       <div className={classes.scrollWrapper}>
-        <div className={`${classes.gridRow} ${classes.headerRow}`} style={{ gridTemplateColumns: gridTemplate }}>
+        <div
+          className={`${classes.gridRow} ${classes.headerRow}`}
+          style={{ gridTemplateColumns: gridTemplate }}
+        >
           <div>Condition</div>
           <div>Condition Code</div>
           <div>Start Date</div>

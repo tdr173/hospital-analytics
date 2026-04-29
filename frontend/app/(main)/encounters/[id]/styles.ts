@@ -100,8 +100,22 @@ export const EncounterDetailPageStyles = (theme: Theme) => ({
   cardRight: {
     display: "flex",
     gap: theme.spacing.md,
-    flexWrap: "wrap" as const,
-    alignItems: "flex-start",
+    flexDirection: "column" as const,
+    justifyContent: "space-around",
+    alignItems: "center",
+    width: "auto",
+    height: "auto",
+  },
+  up: {
+    display: "flex",
+    flexDirection: "row" as const,
+    gap: theme.spacing.md,
+  },
+  down: {
+    display: "flex",
+    flexDirection: "row" as const,
+    gap: theme.spacing.md,
+    height: "40px !important",
   },
   entityChip: {
     display: "flex",
@@ -111,7 +125,7 @@ export const EncounterDetailPageStyles = (theme: Theme) => ({
     backgroundColor: theme.colors.surface.containerLow,
     borderRadius: theme.borderRadius.md,
     cursor: "pointer",
-    minWidth: "140px",
+    minWidth: "160px",
     transition: "box-shadow 0.15s",
     "&:hover": {
       boxShadow: theme.shadows.sm,

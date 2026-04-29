@@ -1,5 +1,8 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { SequenceAiAnalysisResponse, SequenceListItem } from "@/models/generic/sequences";
+import {
+  SequenceAiAnalysisResponse,
+  SequenceListItem,
+} from "@/models/generic/sequences";
 import { getSequenceAiAnalysis } from "./thunks";
 
 interface SequenceAiState {
@@ -32,6 +35,9 @@ const sequenceAiSlice = createSlice({
       state.currentSequence = null;
       state.error = null;
     },
+    clearSequenceCache: (state) => {
+      state.cache = {};
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -52,6 +58,9 @@ const sequenceAiSlice = createSlice({
   },
 });
 
-export const { openSequenceAnalysis, closeSequenceAnalysis } =
-  sequenceAiSlice.actions;
+export const {
+  openSequenceAnalysis,
+  closeSequenceAnalysis,
+  clearSequenceCache,
+} = sequenceAiSlice.actions;
 export default sequenceAiSlice.reducer;

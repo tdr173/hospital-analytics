@@ -1,52 +1,72 @@
 "use client";
 
-import useClasses from "@/utils/useClasses";
 import { EncounterImmunizationItem } from "@/models/generic/encounters";
 import { formatDate } from "@/utils/functions";
-import { ImmunizationsTabStyles } from "./ImmunizationsTabStyles";
+import useClasses from "@/utils/useClasses";
+import immunizationsTabStyles from "./ImmunizationsTabStyles";
+import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
 import RowActions from "@/components/generic_components/RowActions/RowActions";
 
-const BASE_COLS = "3fr 1fr 120px";
-
-interface Props {
+interface ImmunizationsTabProps {
   data: EncounterImmunizationItem[];
   onEdit?: (item: EncounterImmunizationItem) => void;
   onDelete?: (item: EncounterImmunizationItem) => void;
 }
 
-export default function ImmunizationsTab({ data, onEdit, onDelete }: Props) {
-  const classes = useClasses(ImmunizationsTabStyles, { name: "ImmunizationsTab" });
+export default function ImmunizationsTab({
+  data,
+  onEdit,
+  onDelete,
+}: ImmunizationsTabProps) {
+  const classes = useClasses(immunizationsTabStyles, {
+    name: "ImmunizationsTabStyles",
+  });
   const showActions = !!(onEdit || onDelete);
-  const COLS = showActions ? `${BASE_COLS} 80px` : BASE_COLS;
+  // Using 3fr for description, 1fr for code, and 1fr for date
+  const gridTemplate = showActions ? "3fr 1fr 1fr 80px" : "3fr 1fr 1fr";
 
-  if (!data.length) {
+  if (!data || data.length === 0) {
     return <div className={classes.emptyState}>No immunizations recorded.</div>;
   }
+
   return (
-    <>
-      <div
-        className={`${classes.gridRow} ${classes.headerRow}`}
-        style={{ gridTemplateColumns: COLS }}
-      >
-        <div>Description</div>
-        <div>Code</div>
-        <div>Date</div>
-        {showActions && <div>Actions</div>}
-      </div>
-      {data.map((r, i) => (
+    <div className={classes.tableContainer}>
+      <div className={classes.scrollWrapper}>
         <div
-          key={r.id}
-          className={`${classes.gridRow} ${classes.dataRow} ${
-            i % 2 === 0 ? classes.rowEven : classes.rowOdd
-          }`}
-          style={{ gridTemplateColumns: COLS }}
+          className={`${classes.gridRow} ${classes.headerRow}`}
+          style={{ gridTemplateColumns: gridTemplate }}
         >
-          <div className={classes.cellPrimary}>{r.description}</div>
-          <div className={classes.cellCode}>{r.immunizationCode}</div>
-          <div className={classes.cellSecondary}>{formatDate(r.date)}</div>
-          {showActions && <RowActions item={r} onEdit={onEdit} onDelete={onDelete} />}
+          <div>Description</div>
+          <div>Code</div>
+          <div>Date</div>
+          {showActions && <div>Actions</div>}
         </div>
-      ))}
-    </>
+
+        {data.map((r, index) => {
+          const rowColorClass =
+            index % 2 === 0 ? classes.rowEven : classes.rowOdd;
+
+          return (
+            <div
+              key={r.id}
+              className={`${classes.gridRow} ${classes.dataRow} ${rowColorClass}`}
+              style={{ gridTemplateColumns: gridTemplate }}
+            >
+              <TruncatedText text={r.description} />
+
+              <div className={classes.immunizationCode}>
+                {r.immunizationCode}
+              </div>
+
+              <div className={classes.centeredCell}>{formatDate(r.date)}</div>
+
+              {showActions && (
+                <RowActions item={r} onEdit={onEdit} onDelete={onDelete} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

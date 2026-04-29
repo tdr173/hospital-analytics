@@ -27,7 +27,6 @@ const conditionsTabStyles = (theme: Theme) => ({
     overflowY: "auto" as const,
     height: "100%",
     border: `1px solid ${theme.colors.border.main}`,
-
   },
   gridRow: {
     display: "grid",
@@ -56,6 +55,9 @@ const conditionsTabStyles = (theme: Theme) => ({
     color: theme.colors.text.primary,
     "&:last-child": {
       borderBottom: "none",
+    },
+    "& > *": {
+      minWidth: 0,
     },
   },
   rowEven: {

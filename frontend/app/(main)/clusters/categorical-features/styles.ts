@@ -2,16 +2,19 @@ import { Theme } from "@/utils/theme";
 
 export const CategoricalFeaturesPageStyles = (theme: Theme) => ({
   container: {
-    padding: "24px 16px",
+    display: "flex",
+    flexDirection: "column" as const,
+    padding: "24px 16px 16px",
     fontFamily: theme.typography.fontFamily,
     height: "100%",
+    boxSizing: "border-box" as const,
+    overflow: "hidden",
   },
   loading: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
-    width: "100%",
     color: theme.colors.text.secondary,
   },
   error: {
@@ -19,13 +22,60 @@ export const CategoricalFeaturesPageStyles = (theme: Theme) => ({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
-    width: "100%",
     color: theme.colors.status.error,
   },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(1, 1fr)",
-    gap: "24px",
-    height: "1500px",
+  header: {
+    display: "flex",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    marginBottom: "12px",
+    flexShrink: 0,
+  },
+  featureTitle: {
+    margin: 0,
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.primary,
+  },
+  counter: {
+    margin: 0,
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
+  },
+  chartArea: {
+    display: "flex",
+    alignItems: "center",
+    flex: 1,
+    minHeight: 0,
+    gap: "8px",
+  },
+  arrow: {
+    flexShrink: 0,
+    width: "40px",
+    height: "40px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "none",
+    border: `1px solid ${theme.colors.border.default}`,
+    borderRadius: theme.borderRadius.sm,
+    cursor: "pointer",
+    fontSize: "24px",
+    color: theme.colors.text.secondary,
+    lineHeight: 1,
+    transition: "color 0.15s, border-color 0.15s",
+    "&:hover:not(:disabled)": {
+      color: theme.colors.primary.main,
+      borderColor: theme.colors.primary.main,
+    },
+    "&:disabled": {
+      opacity: 0.3,
+      cursor: "default",
+    },
+  },
+  chartWrapper: {
+    flex: 1,
+    minWidth: 0,
+    height: "100%",
   },
 });

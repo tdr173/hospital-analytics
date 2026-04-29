@@ -6,6 +6,7 @@ import useClasses from "@/utils/useClasses";
 import { formatDate } from "@/utils/functions";
 import { RecentEncounterItem } from "@/models/generic/dashboard";
 import { RecentEncountersTableStyles } from "./RecentEncountersTableStyles";
+import EncounterTag from "@/components/generic_components/EncounterTag/EncounterTag";
 
 interface Props {
   data: RecentEncounterItem[];
@@ -49,7 +50,7 @@ export default function RecentEncountersTable({
           <div className={classes.secondary}>{r.organizationName ?? "-"}</div>
           <div className={classes.secondary}>{formatDate(r.startDate)}</div>
           <div>
-            <span className={classes.classBadge}>{r.encounterClass}</span>
+            <EncounterTag type={r.encounterClass} />
           </div>
           <div className={classes.secondary}>{r.description}</div>
           <div className={classes.actionsCell}>

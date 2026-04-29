@@ -19,16 +19,9 @@ import { ProviderDetailPageStyles } from "./styles";
 import { clearName, formatDate } from "@/utils/functions";
 import manImage from "@/public/man_icon.svg";
 import womanImage from "@/public/woman_icon.svg";
+import EncounterTag from "@/components/generic_components/EncounterTag/EncounterTag";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
-
-const ENCOUNTER_CLASS_LABELS: Record<string, string> = {
-  inpatient: "Inpatient",
-  ambulatory: "Ambulatory",
-  wellness: "Wellness",
-  emergency: "Emergency",
-  urgentcare: "Urgent Care",
-};
 
 const GENDER_LABELS: Record<string, string> = {
   M: "Male",
@@ -80,9 +73,7 @@ function EncountersTable({
           </div>
           <div className={classes.secondaryText}>{formatDate(r.startDate)}</div>
           <div>
-            <span className={classes.encounterTypeBadge}>
-              {ENCOUNTER_CLASS_LABELS[r.encounterClass] ?? r.encounterClass}
-            </span>
+            <EncounterTag type={r.encounterClass} />
           </div>
           <div className={classes.secondaryText}>{r.description}</div>
           <div className={classes.secondaryText}>

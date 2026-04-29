@@ -120,6 +120,7 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     flexShrink: 0,
   },
   detailsGrid: {
+    height: "100%",
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
     gap: `${theme.spacing.sm} ${theme.spacing.lg}`,
@@ -135,7 +136,7 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
   },
   detailValue: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
     margin: 0,
   },

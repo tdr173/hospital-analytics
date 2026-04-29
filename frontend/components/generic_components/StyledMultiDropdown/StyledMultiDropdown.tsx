@@ -10,6 +10,7 @@ import theme from "@/utils/theme";
 import { DropdownOption } from "@/components/generic_components/StyledDropdown/StyledDropdown";
 import useClasses from "@/utils/useClasses";
 import { StyledMultiDropdownStyles } from "./StyledMultiDropdownStyles";
+import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
 
 interface StyledMultiDropdownProps {
   label: string;
@@ -39,6 +40,8 @@ const selectSx = {
     padding: "8px 14px",
     paddingRight: "36px !important",
     minHeight: "unset !important",
+    overflow: "hidden",
+    minWidth: 0, // CRITICAL
   },
   "& .MuiOutlinedInput-notchedOutline": { border: "none" },
   "&:hover": {
@@ -127,16 +130,39 @@ export default function StyledMultiDropdown({
 
   const renderValue = (selected: (string | number)[]) => {
     if (selected.length === 0) {
-      return <span className={classes.placeholderText}>{placeholder}</span>;
+      return (
+        <div
+          className={classes.placeholderText}
+          style={{ width: "100%", overflow: "hidden" }}
+        >
+          <TruncatedText text={placeholder} />
+        </div>
+      );
     }
     if (allSelected) {
-      return <span>All</span>;
+      return (
+        <div style={{ width: "100%", overflow: "hidden" }}>
+          <TruncatedText text="All" />
+        </div>
+      );
     }
     if (selected.length === 1) {
       const opt = options.find((o) => o.value === selected[0]);
-      return <span>{opt?.label ?? selected[0]}</span>;
+      const displayLabel = opt?.label ?? String(selected[0]);
+      return (
+        <div style={{ width: "100%", overflow: "hidden" }}>
+          <TruncatedText text={displayLabel} />
+        </div>
+      );
     }
-    return <span className={classes.countText}>+{selected.length}</span>;
+    return (
+      <span
+        className={classes.countText}
+        style={{ width: "100%", overflow: "hidden", display: "block" }}
+      >
+        <TruncatedText text={`+${selected.length}`} />
+      </span>
+    );
   };
 
   return (
@@ -171,12 +197,14 @@ export default function StyledMultiDropdown({
               alignItems: "center",
               height: "100%",
               boxSizing: "border-box",
+              overflow: "hidden",
+              minWidth: 0, // CRITICAL
             },
           }),
         }}
         MenuProps={{ PaperProps: { sx: menuPaperSx } }}
         IconComponent={() =>
-          value.length > 0 && onClear ? (
+          value.length > 0 && onClear && !disabled ? (
             <IconButton
               size="small"
               onMouseDown={(e) => {

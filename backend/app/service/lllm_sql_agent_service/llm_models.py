@@ -14,7 +14,7 @@ client = OpenAI(api_key=api_key, timeout=60.0, max_retries=2)
 
 def ask_ai(prompt: str) -> str:
     response = client.chat.completions.create(
-        model="gpt-4.1",
+        model="gpt-5.4",
         messages=[{"role": "user", "content": prompt}],
     )
     return response.choices[0].message.content

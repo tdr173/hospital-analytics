@@ -62,6 +62,9 @@ const encountersTabStyles = (theme: Theme) => ({
     "&:last-child": {
       borderBottom: "none",
     },
+    "& > *": {
+      minWidth: 0,
+    },
   },
   rowEven: { backgroundColor: "#ffffff" },
   rowOdd: { backgroundColor: "#f4f6f8" },
@@ -78,16 +81,6 @@ const encountersTabStyles = (theme: Theme) => ({
     color: theme.colors.text.secondary,
     minWidth: 0,
     overflow: "hidden",
-  },
-  encounterTypeBadge: {
-    fontSize: "0.7rem",
-    fontWeight: 600,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.04em",
-    color: theme.colors.primary.main,
-    backgroundColor: theme.colors.secondary.light,
-    borderRadius: theme.borderRadius.sm,
-    padding: "2px 7px",
   },
 });
 

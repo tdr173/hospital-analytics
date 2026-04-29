@@ -67,9 +67,9 @@ export default function EncounterFormModal({
   }, [open, initial]);
 
   const errors = {
-    startDate: !startDate ? "Required" : undefined,
-    endDate: !endDate ? "Required" : undefined,
-    description: !description.trim() ? "Required" : undefined,
+    startDate: !startDate ? "This field is required" : undefined,
+    endDate: !endDate ? "This field is required" : undefined,
+    description: !description.trim() ? "This field is required" : undefined,
   };
   const hasError = Object.values(errors).some(Boolean);
 
@@ -99,42 +99,38 @@ export default function EncounterFormModal({
         label="Start (date)"
         required
         value={startDate.slice(0, 10)}
-        onChange={(v) => setStartDate(`${v}T${(startDate.slice(11) || "09:00")}`)}
+        onChange={(v) => setStartDate(`${v}T${startDate.slice(11) || "09:00"}`)}
         error={touched && !!errors.startDate}
         helperText={touched ? errors.startDate : undefined}
+        fullWidth
+      />
+      <StyledDatePicker
+        label="End (date)"
+        required
+        value={endDate.slice(0, 10)}
+        onChange={(v) => setEndDate(`${v}T${endDate.slice(11) || "10:00"}`)}
+        error={touched && !!errors.endDate}
+        helperText={touched ? errors.endDate : undefined}
         fullWidth
       />
       <StyledInput
         label="Start (time)"
         type="text"
         value={startDate.slice(11) || ""}
-        onChange={(e) => setStartDate(`${(startDate.slice(0, 10) || "")}T${e.target.value}`)}
+        onChange={(e) =>
+          setStartDate(`${startDate.slice(0, 10) || ""}T${e.target.value}`)
+        }
         placeholder="HH:MM"
-      />
-      <StyledDatePicker
-        label="End (date)"
-        required
-        value={endDate.slice(0, 10)}
-        onChange={(v) => setEndDate(`${v}T${(endDate.slice(11) || "10:00")}`)}
-        error={touched && !!errors.endDate}
-        helperText={touched ? errors.endDate : undefined}
-        fullWidth
       />
       <StyledInput
         label="End (time)"
         type="text"
         value={endDate.slice(11) || ""}
-        onChange={(e) => setEndDate(`${(endDate.slice(0, 10) || "")}T${e.target.value}`)}
+        onChange={(e) =>
+          setEndDate(`${endDate.slice(0, 10) || ""}T${e.target.value}`)
+        }
         placeholder="HH:MM"
       />
-      <StyledDropdown
-        label="Type"
-        required
-        value={encounterClass}
-        onChange={(v) => setEncounterClass(String(v))}
-        options={ENCOUNTER_CLASSES}
-      />
-      <div />
       <StyledInput
         label="Description"
         required
@@ -148,6 +144,15 @@ export default function EncounterFormModal({
         value={reason}
         onChange={(e) => setReason(e.target.value)}
       />
+      <StyledDropdown
+        label="Type"
+        required
+        value={encounterClass}
+        onChange={(v) => setEncounterClass(String(v))}
+        options={ENCOUNTER_CLASSES}
+        onClear={() => setEncounterClass("")}
+      />
+      <div />
     </FormModal>
   );
 }

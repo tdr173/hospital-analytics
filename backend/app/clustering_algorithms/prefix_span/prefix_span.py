@@ -37,21 +37,25 @@ from save_results import save_prefix_span_results
 
 # Lower bound on how many patients must share a pattern before it is worth keeping.
 # Expressed as a fraction of the patient count; the absolute minsup is derived at runtime.
-MIN_SUPPORT_PCT = 0.03  # 3% of patients
+MIN_SUPPORT_PCT = 0.06  # 6% of patients — raised from 3% for speed
 
 # Shortest mined pattern we persist. 1-event "patterns" are trivial.
 MIN_PATTERN_LENGTH = 2
 
 # Longest pattern the miner is allowed to emit — caps combinatorial blow-up on dense timelines.
-MAX_PATTERN_LENGTH = 7
+MAX_PATTERN_LENGTH = 5  # lowered from 7 for speed
 
 # Cap per-patient timeline length (most recent events kept). Long Synthea histories otherwise
 # dominate the projected databases and inflate runtime without adding pattern signal.
-MAX_EVENTS_PER_PATIENT = 250
+MAX_EVENTS_PER_PATIENT = 80  # lowered from 250 for speed
 
-# Top-K mined patterns to keep after filtering by length/support. Matches the FE's pagination
-# headroom (default page size 8, so 200 patterns = 25 pages, plenty).
-TOP_K = 200
+# Final number of patterns to persist and print.
+TOP_K = 100
+
+# Rolling window (days) applied per patient. Only events within this span before the
+# patient's most recent event are included — keeps sequences temporally coherent and
+# dramatically shrinks the projected databases for long histories.
+WINDOW_DAYS = 365  # 1 year
 
 
 # ------------------------ data loading -----------------------------------------------
@@ -143,8 +147,12 @@ def build_sequences(engine) -> tuple[list[list[str]], list[str]]:
     patient_ids: list[str] = []
     all_pids = list(events.groupby("patient_id", sort=False).groups.keys())
     total = len(all_pids)
-    print(f"  Building sequences for {total:,} patients...")
+    print(f"  Building sequences for {total:,} patients (1-year window)...")
+    window = pd.Timedelta(days=WINDOW_DAYS)
     for i, (pid, group) in enumerate(events.groupby("patient_id", sort=False), start=1):
+        # Restrict to events within 1 year of the patient's most recent event.
+        cutoff = group["event_date"].max() - window
+        group = group[group["event_date"] >= cutoff]
         seq = group["item"].tolist()
         # Collapse runs of identical items (e.g. same med re-prescribed daily) to a single step.
         deduped: list[str] = []
@@ -188,18 +196,48 @@ def mine_patterns(
     ps.minlen = min_pattern_length
     ps.maxlen = max_pattern_length
 
-    print(f"  Running PrefixSpan (n={n_patients:,}, abs_minsup={abs_minsup}, minlen={min_pattern_length}, maxlen={max_pattern_length}, top_k={top_k}, closed=True)...")
-    # `topk` respects `minlen`/`maxlen` and uses `closed=True` to drop patterns that are
-    # strict sub-patterns of another pattern with the same support — this collapses a lot
-    # of noise (e.g. "C:A" subsumed by "C:A -> M:B" when they have identical support).
-    mined: list[tuple[int, list[str]]] = ps.topk(top_k, closed=True)
-    print(f"  PrefixSpan returned {len(mined)} patterns (before length/support filter)")
+    # Mine ALL patterns meeting abs_minsup so the same-type-consecutive filter has the
+    # full population to work with — topk would miss diverse cross-type patterns that
+    # rank below the P->P-dominated top.
+    print(f"  Running PrefixSpan (n={n_patients:,}, abs_minsup={abs_minsup}, minlen={min_pattern_length}, maxlen={max_pattern_length})...")
+    mined: list[tuple[int, list[str]]] = ps.frequent(abs_minsup)
+    print(f"  PrefixSpan returned {len(mined)} patterns (before filtering)")
 
-    # Extra safety filter: the library's `minlen` respects the constraint, but `closed=True`
-    # can occasionally surface a shorter closed pattern — enforce minlen again defensively.
-    mined = [(sup, pat) for sup, pat in mined if len(pat) >= min_pattern_length and sup >= abs_minsup]
+    # Enforce minlen and minsup defensively.
+    filtered_length = []
+    for sup, pat in mined:
+        if len(pat) >= min_pattern_length and sup >= abs_minsup:
+            filtered_length.append((sup, pat))
+    mined = filtered_length
 
-    # `topk` returns support-sorted DESC already; keep that as the rank ordering.
+    # Drop patterns where any two consecutive items share the same event-type prefix
+    # (e.g. P:Appendectomy -> P:Colonoscopy is disallowed).
+    filtered_type = []
+    for sup, pat in mined:
+        has_same_type = False
+        for i in range(len(pat) - 1):
+            type_a = pat[i].split(":")[0]
+            type_b = pat[i + 1].split(":")[0]
+            if type_a == type_b:
+                has_same_type = True
+                break
+        if not has_same_type:
+            filtered_type.append((sup, pat))
+    mined = filtered_type
+    print(f"  {len(mined)} patterns after same-type-consecutive filter")
+
+    # Sort by support descending and keep the top_k survivors.
+    # Tuples sort by their first element by default, so (support, pattern) sorts by support.
+    mined.sort(reverse=True)
+    mined = mined[:top_k]
+
+    print(f"\n--- Top {len(mined)} patterns ---")
+    for rank, (sup, pat) in enumerate(mined, start=1):
+        pct = 100.0 * sup / n_patients
+        print(f"  {rank:3}. [{sup:5} pts, {pct:5.1f}%] {pattern_to_str(pat)}")
+    print("--- end of pattern list ---\n")
+
+    # Support-sorted DESC; rank ordering follows position.
     return mined
 
 

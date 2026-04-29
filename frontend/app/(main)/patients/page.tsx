@@ -47,15 +47,15 @@ const COLUMNS = [
     key: "age",
     label: "Age",
     sortable: true,
-    width: 70,
+    width: 50,
   },
   { key: "gender", label: "Gender", width: 100 },
   { key: "city", label: "City", sortable: true, width: 120 },
-  { key: "race", label: "Race / Ethnicity", width: 120 },
-  { key: "marital", label: "Marital Status", width: 100 },
-  { key: "status", label: "Status", width: 80 },
-  { key: "cluster", label: "Group", width: 60 },
-  { key: "actions", label: "Actions", width: 80, align: "center" as const },
+  { key: "race", label: "Race / Ethnicity", width: 140 },
+  { key: "marital", label: "Marital Status", width: 110 },
+  { key: "status", label: "Status", width: 90 },
+  { key: "cluster", label: "Group", width: 240 },
+  { key: "actions", label: "Actions", width: 110, align: "center" as const },
 ];
 
 function PatientsPageContent() {
