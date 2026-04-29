@@ -182,7 +182,11 @@ function ProvidersPageContent() {
     }
     setModalOpen(false);
     setEditing(null);
-    refreshList();
+    if (!editing && page !== 1) {
+      const p = new URLSearchParams(searchParams.toString());
+      p.set("page", "1");
+      router.push(`/providers?${p.toString()}`);
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -281,8 +285,6 @@ function ProvidersPageContent() {
         gender: editing.gender,
         speciality: editing.speciality,
         city: editing.city,
-        latitude: 0,
-        longitude: 0,
         encounters: editing.encounters,
         organizationId: "",
         organizationName: editing.organizationName,
@@ -303,7 +305,7 @@ function ProvidersPageContent() {
               display: "inline-flex",
               alignItems: "center",
               gap: "6px",
-              height: "36px",
+              height: "40px",
             }}
           >
             <AddIcon sx={{ fontSize: "1.05rem" }} />
@@ -336,8 +338,12 @@ function ProvidersPageContent() {
         layout="single"
       >
         <div>
-          Delete <strong>{deleting?.firstName} {deleting?.lastName}</strong>? This
-          cannot be undone. Doctors with linked encounters cannot be deleted.
+          Delete{" "}
+          <strong>
+            {deleting?.firstName} {deleting?.lastName}
+          </strong>
+          ? This cannot be undone. Doctors with linked encounters cannot be
+          deleted.
         </div>
       </FormModal>
 
@@ -352,7 +358,7 @@ function ProvidersPageContent() {
           }
           clearIcon
           onClear={() => setSearch("")}
-          height={36}
+          height={"40px"}
         />
 
         <StyledMultiDropdown

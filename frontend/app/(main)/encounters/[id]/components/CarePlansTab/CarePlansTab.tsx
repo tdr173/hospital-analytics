@@ -4,15 +4,21 @@ import useClasses from "@/utils/useClasses";
 import { EncounterCarePlanItem } from "@/models/generic/encounters";
 import { formatDate } from "@/utils/functions";
 import { CarePlansTabStyles } from "./CarePlansTabStyles";
+import RowActions from "@/components/generic_components/RowActions/RowActions";
 
-const COLS = "2.5fr 1fr 110px 2fr";
+const BASE_COLS = "2.5fr 1fr 110px 2fr";
 
 interface Props {
   data: EncounterCarePlanItem[];
+  onEdit?: (item: EncounterCarePlanItem) => void;
+  onDelete?: (item: EncounterCarePlanItem) => void;
 }
 
-export default function CarePlansTab({ data }: Props) {
+export default function CarePlansTab({ data, onEdit, onDelete }: Props) {
   const classes = useClasses(CarePlansTabStyles, { name: "CarePlansTab" });
+  const showActions = !!(onEdit || onDelete);
+  const COLS = showActions ? `${BASE_COLS} 80px` : BASE_COLS;
+
   if (!data.length) {
     return <div className={classes.emptyState}>No care plans recorded.</div>;
   }
@@ -26,6 +32,7 @@ export default function CarePlansTab({ data }: Props) {
         <div>Code</div>
         <div>Date</div>
         <div>Reason</div>
+        {showActions && <div>Actions</div>}
       </div>
       {data.map((r, i) => (
         <div
@@ -41,6 +48,7 @@ export default function CarePlansTab({ data }: Props) {
           <div className={classes.cellSecondary}>
             {r.reasonDescription ?? "-"}
           </div>
+          {showActions && <RowActions item={r} onEdit={onEdit} onDelete={onDelete} />}
         </div>
       ))}
     </>

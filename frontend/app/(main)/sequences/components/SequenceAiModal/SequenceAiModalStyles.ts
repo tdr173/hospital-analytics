@@ -162,8 +162,8 @@ export const SequenceAiModalStyles = (theme: Theme) => ({
     fontSize: theme.typography.fontSize.sm,
   },
   spinner: {
-    width: "36px",
-    height: "36px",
+    width: "40px",
+    height: "40px",
     border: `3px solid ${theme.colors.border.light}`,
     borderTopColor: theme.colors.primary.main,
     borderRadius: "50%",

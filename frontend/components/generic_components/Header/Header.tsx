@@ -22,7 +22,7 @@ function capitalize(str: string) {
 export default function Header() {
   const classes = useClasses(headerStyles, { name: "HeaderStyles" });
   const pathname = usePathname();
-  const role = useSelector((s: RootState) => s.auth.user?.role);
+  const role = useSelector((s: RootState) => s.auth.user?.role) || "MANAGER";
 
   const matchedKey = Object.keys(ROUTE_TITLES)
     .sort((a, b) => b.length - a.length)
@@ -35,7 +35,7 @@ export default function Header() {
   return (
     <div className={classes.headerContainer}>
       <span className={classes.pageTitle}>{title}</span>
-      {role && <UserTypeTag userType={role} />}
+      <UserTypeTag userType={role} />
     </div>
   );
 }

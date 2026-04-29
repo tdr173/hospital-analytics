@@ -32,8 +32,6 @@ export interface PatientDetail {
   marital: string | null;
   birthdate: string | null;
   deathdate: string | null;
-  latitude: number | null;
-  longitude: number | null;
   clusterLabel: number | null;
   clusterTitle: string | null;
   clusterColor: string | null;

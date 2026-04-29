@@ -49,48 +49,86 @@ export default function PatientFormModal({
   const [ethnicity, setEthnicity] = useState("");
   const [marital, setMarital] = useState("");
   const [city, setCity] = useState("");
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
   const [touched, setTouched] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+
+    let raceValue = initial?.race ?? "";
+    // Try to find matching race in resources (case-insensitive)
+    if (raceValue && resources?.races) {
+      const matchedRace = resources.races.find(
+        (r) => r.value.toString().toLowerCase() === raceValue.toLowerCase()
+      );
+      raceValue = matchedRace?.value.toString() ?? raceValue;
+    }
+
+    let maritalValue = initial?.marital ?? "";
+    // Try to find matching marital in resources (case-insensitive)
+    if (maritalValue && resources?.maritalStatuses) {
+      const matchedMarital = resources.maritalStatuses.find(
+        (m) => m.value.toString().toLowerCase() === maritalValue.toLowerCase()
+      );
+      maritalValue = matchedMarital?.value.toString() ?? maritalValue;
+    }
+
+    let genderValue = initial?.gender ?? "";
+    // Try to find matching gender in resources (case-insensitive)
+    if (genderValue && resources?.genders) {
+      const matchedGender = resources.genders.find(
+        (g) => g.value.toString().toLowerCase() === genderValue.toLowerCase()
+      );
+      genderValue = matchedGender?.value.toString() ?? genderValue;
+    }
+
     setFirstName(initial?.firstName ?? "");
     setLastName(initial?.lastName ?? "");
     setBirthdate(initial?.birthdate ?? "");
-    setGender(initial?.gender ?? "");
-    setRace(initial?.race ?? "");
+    setGender(genderValue);
+    setRace(raceValue);
     setEthnicity(initial?.ethnicity ?? "");
-    setMarital(initial?.marital ?? "");
+    setMarital(maritalValue);
     setCity(initial?.city ?? "");
-    const det = initial as PatientDetail | undefined;
-    setLatitude(det?.latitude != null ? String(det.latitude) : "");
-    setLongitude(det?.longitude != null ? String(det.longitude) : "");
     setTouched(false);
-  }, [open, initial]);
+  }, [open, initial, resources]);
 
   const errors = {
     firstName: !firstName.trim() ? "Required" : undefined,
     lastName: !lastName.trim() ? "Required" : undefined,
     birthdate: !birthdate ? "Required" : undefined,
+    gender: !gender ? "Required" : undefined,
+    race: !race ? "Required" : undefined,
+    ethnicity: !ethnicity.trim() ? "Required" : undefined,
+    marital: !marital ? "Required" : undefined,
+    city: !city.trim() ? "Required" : undefined,
   };
   const hasError = Object.values(errors).some(Boolean);
+  const isResourcesLoaded = resources && resources.races && resources.races.length > 0;
 
   const handleSubmit = () => {
     setTouched(true);
-    if (hasError) return;
+    // Re-evaluate errors after setting touched
+    const newErrors = {
+      firstName: !firstName.trim() ? "Required" : undefined,
+      lastName: !lastName.trim() ? "Required" : undefined,
+      birthdate: !birthdate ? "Required" : undefined,
+      gender: !gender ? "Required" : undefined,
+      race: !race ? "Required" : undefined,
+      ethnicity: !ethnicity.trim() ? "Required" : undefined,
+      marital: !marital ? "Required" : undefined,
+      city: !city.trim() ? "Required" : undefined,
+    };
+    if (Object.values(newErrors).some(Boolean)) return;
     onSubmit({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       age: deriveAge(birthdate),
       birthdate: birthdate || null,
-      gender: gender || null,
-      race: race || null,
-      ethnicity: ethnicity || null,
-      marital: marital || null,
-      city: city.trim() || null,
-      latitude: latitude ? Number(latitude) : null,
-      longitude: longitude ? Number(longitude) : null,
+      gender,
+      race,
+      ethnicity: ethnicity.trim(),
+      marital,
+      city: city.trim(),
     });
   };
 
@@ -99,10 +137,10 @@ export default function PatientFormModal({
       open={open}
       title={initial ? "Edit patient" : "Add patient"}
       submitLabel={initial ? "Save changes" : "Create patient"}
-      submitting={submitting}
+      submitting={submitting || !isResourcesLoaded}
       onClose={onClose}
       onSubmit={handleSubmit}
-      errorMessage={errorMessage}
+      errorMessage={errorMessage || (!isResourcesLoaded ? "Loading form data..." : null)}
     >
       <StyledInput
         label="First name"
@@ -111,6 +149,7 @@ export default function PatientFormModal({
         onChange={(e) => setFirstName(e.target.value)}
         error={touched && !!errors.firstName}
         helperText={touched ? errors.firstName : undefined}
+        height={"40px"}
       />
       <StyledInput
         label="Last name"
@@ -119,6 +158,7 @@ export default function PatientFormModal({
         onChange={(e) => setLastName(e.target.value)}
         error={touched && !!errors.lastName}
         helperText={touched ? errors.lastName : undefined}
+        height={"40px"}
       />
       <StyledDatePicker
         label="Birthdate"
@@ -128,49 +168,58 @@ export default function PatientFormModal({
         error={touched && !!errors.birthdate}
         helperText={touched ? errors.birthdate : undefined}
         fullWidth
+        height={"40px"}
       />
       <StyledDropdown
         label="Gender"
+        required
         value={gender}
         onChange={(v) => setGender(String(v))}
         options={resources?.genders ?? []}
         placeholder="Select"
+        error={touched && !!errors.gender}
+        helperText={touched ? errors.gender : undefined}
+        height={"40px"}
       />
       <StyledDropdown
         label="Race"
+        required
         value={race}
         onChange={(v) => setRace(String(v))}
         options={resources?.races ?? []}
         placeholder="Select"
+        error={touched && !!errors.race}
+        helperText={touched ? errors.race : undefined}
+        height={"40px"}
       />
       <StyledInput
         label="Ethnicity"
+        required
         value={ethnicity}
         onChange={(e) => setEthnicity(e.target.value)}
+        error={touched && !!errors.ethnicity}
+        helperText={touched ? errors.ethnicity : undefined}
+        height={"40px"}
       />
       <StyledDropdown
         label="Marital status"
+        required
         value={marital}
         onChange={(v) => setMarital(String(v))}
         options={resources?.maritalStatuses ?? []}
         placeholder="Select"
+        error={touched && !!errors.marital}
+        helperText={touched ? errors.marital : undefined}
+        height={"40px"}
       />
       <StyledInput
         label="City"
+        required
         value={city}
         onChange={(e) => setCity(e.target.value)}
-      />
-      <StyledInput
-        label="Latitude"
-        type="number"
-        value={latitude}
-        onChange={(e) => setLatitude(e.target.value)}
-      />
-      <StyledInput
-        label="Longitude"
-        type="number"
-        value={longitude}
-        onChange={(e) => setLongitude(e.target.value)}
+        error={touched && !!errors.city}
+        helperText={touched ? errors.city : undefined}
+        height={"40px"}
       />
     </FormModal>
   );

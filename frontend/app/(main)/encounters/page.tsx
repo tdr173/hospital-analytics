@@ -6,11 +6,17 @@ import { useSearchParams, useRouter } from "next/navigation";
 import TableCell from "@mui/material/TableCell";
 import IconButton from "@mui/material/IconButton";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import AddIcon from "@mui/icons-material/Add";
 
 import { RootState, AppDispatch } from "@/store";
 import {
   fetchEncounters,
   fetchEncounterResources,
+  createEncounter,
+  updateEncounter,
+  deleteEncounter,
 } from "@/store/slices/encounters/thunks";
 import { EncounterListItem } from "@/models/generic/encounters";
 
@@ -22,12 +28,17 @@ import StyledInput from "@/components/generic_components/StyledInput/StyledInput
 import SearchIcon from "@mui/icons-material/Search";
 import StyledMultiDropdown from "@/components/generic_components/StyledMultiDropdown/StyledMultiDropdown";
 import StyledDatePicker from "@/components/generic_components/StyledDatePicker/StyledDatePicker";
-import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
 import StyledButton from "@/components/generic_components/StyledButton/StyledButton";
+import TruncatedText from "@/components/generic_components/TruncatedText/TruncatedText";
+import FormModal from "@/components/generic_components/FormModal/FormModal";
 import useClasses from "@/utils/useClasses";
 import { EncountersPageStyles } from "./styles";
 import theme from "@/utils/theme";
 import { formatDate } from "@/utils/functions";
+
+import EncounterFormModal, {
+  EncounterFormValue,
+} from "./components/EncounterFormModal/EncounterFormModal";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
@@ -45,7 +56,7 @@ const COLUMNS = [
     width: 140,
     align: "center" as const,
   },
-  { key: "actions", label: "Actions", width: 80, align: "center" as const },
+  { key: "actions", label: "Actions", width: 110, align: "center" as const },
 ];
 
 function EncountersPageContent() {
@@ -57,6 +68,14 @@ function EncountersPageContent() {
   const { items, total, loading, resources, resourcesLoading } = useSelector(
     (state: RootState) => state.encounters,
   );
+  const role = useSelector((state: RootState) => state.auth.user?.role);
+  const canManage = role === "MANAGER" || role === "DOCTOR";
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<EncounterListItem | null>(null);
+  const [deleting, setDeleting] = useState<EncounterListItem | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!resources) dispatch(fetchEncounterResources());
@@ -129,6 +148,55 @@ function EncountersPageContent() {
     router.push(`/encounters?${p.toString()}`);
   };
 
+  const refreshList = () =>
+    dispatch(
+      fetchEncounters({
+        search: searchParams.get("search") || undefined,
+        encounterClass: searchParams
+          .get("encounterClass")
+          ?.split(",")
+          .filter(Boolean),
+        dateFrom: searchParams.get("dateFrom") || undefined,
+        dateTo: searchParams.get("dateTo") || undefined,
+        page,
+        rows,
+        sortBy,
+        sortType,
+      }),
+    );
+
+  const handleSubmit = async (value: EncounterFormValue) => {
+    setSubmitting(true);
+    setFormError(null);
+    const { patientId: pid, ...rest } = value;
+    const result = await (editing
+      ? dispatch(
+          updateEncounter({ encounterId: editing.encounterId, payload: rest }),
+        )
+      : dispatch(createEncounter({ patientId: pid!, ...rest })));
+    setSubmitting(false);
+    if ((result as any).error) {
+      setFormError((result as any).payload?.message ?? "Save failed");
+      return;
+    }
+    setModalOpen(false);
+    setEditing(null);
+    if (!editing && page !== 1) {
+      const p = new URLSearchParams(searchParams.toString());
+      p.set("page", "1");
+      router.push(`/encounters?${p.toString()}`);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleting) return;
+    setSubmitting(true);
+    const result = await dispatch(deleteEncounter(deleting.encounterId));
+    setSubmitting(false);
+    setDeleting(null);
+    if (!(result as any).error) refreshList();
+  };
+
   const renderRow = (e: EncounterListItem, i: number) => (
     <StyledTableRow key={e.encounterId} index={i}>
       <TableCell sx={{ ...bodyCellSx, color: theme.colors.text.secondary }}>
@@ -171,6 +239,38 @@ function EncountersPageContent() {
         >
           <VisibilityOutlinedIcon sx={{ fontSize: "1.05rem" }} />
         </IconButton>
+        {canManage && (
+          <>
+            <IconButton
+              size="small"
+              onClick={() => {
+                setEditing(e);
+                setFormError(null);
+                setModalOpen(true);
+              }}
+              aria-label="Edit visit"
+              sx={{
+                padding: "4px",
+                color: theme.colors.text.secondary,
+                "&:hover": { backgroundColor: "rgba(0, 103, 128, 0.08)" },
+              }}
+            >
+              <EditOutlinedIcon sx={{ fontSize: "1.05rem" }} />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => setDeleting(e)}
+              aria-label="Delete visit"
+              sx={{
+                padding: "4px",
+                color: theme.colors.status.error,
+                "&:hover": { backgroundColor: "rgba(239, 68, 68, 0.08)" },
+              }}
+            >
+              <DeleteOutlineIcon sx={{ fontSize: "1.05rem" }} />
+            </IconButton>
+          </>
+        )}
       </TableCell>
     </StyledTableRow>
   );
@@ -186,6 +286,72 @@ function EncountersPageContent() {
 
   return (
     <div className={classes.pageContainer}>
+      {canManage && (
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <StyledButton
+            onClick={() => {
+              setEditing(null);
+              setFormError(null);
+              setModalOpen(true);
+            }}
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              height: "40px",
+            }}
+          >
+            <AddIcon sx={{ fontSize: "1.05rem" }} />
+            Add visit
+          </StyledButton>
+        </div>
+      )}
+
+      <EncounterFormModal
+        open={modalOpen}
+        showPatientId={!editing}
+        initial={
+          editing
+            ? {
+                startDate: editing.startDate,
+                endDate:
+                  editing.duration != null
+                    ? new Date(
+                        new Date(editing.startDate).getTime() +
+                          editing.duration * 60 * 1000,
+                      ).toISOString()
+                    : undefined,
+                encounterClass: editing.encounterClass,
+                description: editing.description,
+                reasonDescription: editing.reasonDescription,
+              }
+            : null
+        }
+        submitting={submitting}
+        errorMessage={formError}
+        onClose={() => {
+          setModalOpen(false);
+          setEditing(null);
+        }}
+        onSubmit={handleSubmit}
+      />
+
+      <FormModal
+        open={!!deleting}
+        title="Delete visit"
+        submitLabel="Delete"
+        destructive
+        submitting={submitting}
+        onClose={() => setDeleting(null)}
+        onSubmit={handleConfirmDelete}
+        layout="single"
+      >
+        <div>
+          Delete visit <strong>{deleting?.description}</strong>? This cannot be
+          undone. Visits with linked records cannot be deleted.
+        </div>
+      </FormModal>
+
       <div className={classes.filterBar}>
         <StyledInput
           label="Search"
@@ -197,7 +363,7 @@ function EncountersPageContent() {
           }
           clearIcon
           onClear={() => setSearch("")}
-          height={36}
+          height={"40px"}
         />
 
         <StyledMultiDropdown
@@ -215,7 +381,7 @@ function EncountersPageContent() {
           value={dateFrom}
           onChange={setDateFrom}
           fullWidth
-          height={36}
+          height={"40px"}
         />
 
         <StyledDatePicker
@@ -223,7 +389,7 @@ function EncountersPageContent() {
           value={dateTo}
           onChange={setDateTo}
           fullWidth
-          height={36}
+          height={"40px"}
         />
 
         <StyledButton
@@ -234,7 +400,7 @@ function EncountersPageContent() {
             boxShadow: "none",
             border: "none",
             color: "#ffffff",
-            height: "36px !important",
+            height: "40px !important",
             whiteSpace: "nowrap",
             "&:hover": {
               background: theme.colors.button.primaryHover,

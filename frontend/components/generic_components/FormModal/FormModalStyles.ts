@@ -62,9 +62,14 @@ const FormModalStyles = {
   fieldFull: {
     gridColumn: "1 / -1",
   },
-  footer: {
+  field: {
     display: "flex",
-    justifyContent: "flex-end",
+    flexDirection: "column" as const,
+    minHeight: "80px",
+  },
+  footer: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1fr 1fr",
     gap: theme.spacing.sm,
     padding: `${theme.spacing.md} ${theme.spacing.lg}`,
     borderTop: `1px solid ${theme.colors.border.main}`,

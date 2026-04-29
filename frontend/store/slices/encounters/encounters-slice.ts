@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { EncounterListItem, EncounterResources } from "@/models/generic/encounters";
-import { fetchEncounters, fetchEncounterResources } from "./thunks";
+import { fetchEncounters, fetchEncounterResources, createEncounter, updateEncounter } from "./thunks";
 
 interface EncountersState {
   items: EncounterListItem[];
@@ -48,6 +48,14 @@ const encountersSlice = createSlice({
       })
       .addCase(fetchEncounterResources.rejected, (state) => {
         state.resourcesLoading = false;
+      })
+      .addCase(createEncounter.fulfilled, (state, action) => {
+        state.items.unshift(action.payload as unknown as EncounterListItem);
+        state.total += 1;
+      })
+      .addCase(updateEncounter.fulfilled, (state, action) => {
+        const i = state.items.findIndex(e => e.encounterId === action.payload.encounterId);
+        if (i !== -1) state.items[i] = action.payload as unknown as EncounterListItem;
       });
   },
 });

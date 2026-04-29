@@ -4,17 +4,23 @@ import useClasses from "@/utils/useClasses";
 import { EncounterObservationItem } from "@/models/generic/encounters";
 import { formatDate } from "@/utils/functions";
 import { ObservationsTabStyles } from "./ObservationsTabStyles";
+import RowActions from "@/components/generic_components/RowActions/RowActions";
 
-const COLS = "2fr 1.5fr 80px 110px";
+const BASE_COLS = "2fr 1.5fr 80px 110px";
 
 interface Props {
   data: EncounterObservationItem[];
+  onEdit?: (item: EncounterObservationItem) => void;
+  onDelete?: (item: EncounterObservationItem) => void;
 }
 
-export default function ObservationsTab({ data }: Props) {
+export default function ObservationsTab({ data, onEdit, onDelete }: Props) {
   const classes = useClasses(ObservationsTabStyles, {
     name: "ObservationsTab",
   });
+  const showActions = !!(onEdit || onDelete);
+  const COLS = showActions ? `${BASE_COLS} 80px` : BASE_COLS;
+
   if (!data.length) {
     return <div className={classes.emptyState}>No test results recorded.</div>;
   }
@@ -31,6 +37,7 @@ export default function ObservationsTab({ data }: Props) {
         <div>Value</div>
         <div>Units</div>
         <div>Date</div>
+        {showActions && <div>Actions</div>}
       </div>
       {data.map((r, i) => (
         <div
@@ -58,6 +65,7 @@ export default function ObservationsTab({ data }: Props) {
           </div>
           <div className={classes.cellSecondary}>{r.units ?? "-"}</div>
           <div className={classes.cellSecondary}>{formatDate(r.date)}</div>
+          {showActions && <RowActions item={r} onEdit={onEdit} onDelete={onDelete} />}
         </div>
       ))}
     </>

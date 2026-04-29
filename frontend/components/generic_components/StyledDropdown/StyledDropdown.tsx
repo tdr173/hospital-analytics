@@ -100,7 +100,7 @@ export default function StyledDropdown({
   required = false,
   fullWidth = false,
   width,
-  height,
+  height = 40,
 }: StyledDropdownProps) {
   const classes = useClasses(StyledDropdownStyles, { name: "StyledDropdown" });
 
@@ -113,7 +113,9 @@ export default function StyledDropdown({
       className={classes.wrapper}
       style={{ width: width ?? (fullWidth ? "100%" : undefined) }}
     >
-      <span className={classes.label}>{required ? `${label} *` : label}</span>
+      <span className={classes.label} style={{ marginBottom: "6px" }}>
+        {required ? `${label} *` : label}
+      </span>
 
       <Select
         value={value}

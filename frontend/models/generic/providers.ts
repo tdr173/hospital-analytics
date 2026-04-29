@@ -23,8 +23,6 @@ export interface ProviderDetail {
   gender: string | null;
   speciality: string | null;
   city: string | null;
-  latitude: number;
-  longitude: number;
   encounters: number;
   organizationId: string;
   organizationName: string | null;

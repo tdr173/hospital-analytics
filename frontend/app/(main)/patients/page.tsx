@@ -48,14 +48,13 @@ const COLUMNS = [
     label: "Age",
     sortable: true,
     width: 70,
-    align: "right" as const,
   },
   { key: "gender", label: "Gender", width: 100 },
   { key: "city", label: "City", sortable: true, width: 120 },
   { key: "race", label: "Race / Ethnicity", width: 120 },
   { key: "marital", label: "Marital Status", width: 100 },
   { key: "status", label: "Status", width: 80 },
-  { key: "cluster", label: "Group", width: 180 },
+  { key: "cluster", label: "Group", width: 60 },
   { key: "actions", label: "Actions", width: 80, align: "center" as const },
 ];
 
@@ -193,7 +192,11 @@ function PatientsPageContent() {
     }
     setModalOpen(false);
     setEditing(null);
-    refreshList();
+    if (!editing && page !== 1) {
+      const p = new URLSearchParams(searchParams.toString());
+      p.set("page", "1");
+      router.push(`/patients?${p.toString()}`);
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -216,9 +219,7 @@ function PatientsPageContent() {
       >
         <TruncatedText text={clearName(p.firstName, p.lastName)} />
       </TableCell>
-      <TableCell sx={bodyCellSx} align="center">
-        {p.age}
-      </TableCell>
+      <TableCell sx={bodyCellSx}>{p.age}</TableCell>
       <TableCell sx={bodyCellSx}>
         <GenderBadge gender={p.gender} />
       </TableCell>
@@ -297,29 +298,43 @@ function PatientsPageContent() {
     return <div className={classes.loading}>Loading...</div>;
   }
 
+  const addButton = () => {
+    return (
+      <StyledButton
+        onClick={() => {
+          setEditing(null);
+          setFormError(null);
+          setModalOpen(true);
+        }}
+        sx={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "4px",
+          height: "40px",
+          padding: "6px",
+          background: theme.colors.button.add,
+          boxShadow: "none",
+          border: "none",
+          color: "#ffffff",
+          "&:hover": {
+            background: theme.colors.button.addHover,
+            boxShadow: "none",
+            transform: "none",
+          },
+          "&:active": {
+            background: theme.colors.button.addActive,
+            boxShadow: "none",
+            transform: "none",
+          },
+        }}
+      >
+        Add patient
+      </StyledButton>
+    );
+  };
+
   return (
     <div className={classes.pageContainer}>
-      {canManagePatients && (
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <StyledButton
-            onClick={() => {
-              setEditing(null);
-              setFormError(null);
-              setModalOpen(true);
-            }}
-            sx={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              height: "36px",
-            }}
-          >
-            <AddIcon sx={{ fontSize: "1.05rem" }} />
-            Add patient
-          </StyledButton>
-        </div>
-      )}
-
       <PatientFormModal
         open={modalOpen}
         initial={editing}
@@ -344,8 +359,12 @@ function PatientsPageContent() {
         layout="single"
       >
         <div>
-          Delete <strong>{deleting?.firstName} {deleting?.lastName}</strong>? This
-          cannot be undone. Patients with linked encounters cannot be deleted.
+          Delete{" "}
+          <strong>
+            {deleting?.firstName} {deleting?.lastName}
+          </strong>
+          ? This cannot be undone. Patients with linked encounters cannot be
+          deleted.
         </div>
       </FormModal>
 
@@ -364,6 +383,8 @@ function PatientsPageContent() {
         onRaceChange={setRace}
         onMaritalChange={setMarital}
         onApply={applyFilters}
+        canManagePatients={canManagePatients}
+        addButton={canManagePatients ? addButton : undefined}
       />
 
       <div className={classes.tableArea}>

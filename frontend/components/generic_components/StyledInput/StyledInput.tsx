@@ -8,6 +8,8 @@ import IconButton from "@mui/material/IconButton";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import ClearIcon from "@mui/icons-material/Clear";
+import useClasses from "@/utils/useClasses";
+import { StyledInputStyles } from "./StyledInputStyles";
 
 interface StyledInputProps extends Omit<
   TextFieldProps,
@@ -35,7 +37,7 @@ export default function StyledInput({
   startIcon,
   clearIcon,
   onClear,
-  height,
+  height = 40,
   sx,
   ...props
 }: StyledInputProps) {
@@ -44,6 +46,7 @@ export default function StyledInput({
   const isPassword = type === "password";
   const inputType = isPassword && showPassword ? "text" : type;
 
+  const classes = useClasses(StyledInputStyles, { name: "StyledInput" });
   const displayLabel = required ? `${label} *` : label;
 
   const endAdornment = isPassword ? (
@@ -78,77 +81,67 @@ export default function StyledInput({
   ) : undefined;
 
   return (
-    <TextField
-      fullWidth
-      variant="standard"
-      label={displayLabel}
-      type={inputType}
-      error={error}
-      helperText={helperText}
-      disabled={disabled}
-      slotProps={{
-        input: {
-          disableUnderline: true,
-          startAdornment: startIcon ? (
-            <InputAdornment position="start" sx={{ mr: "8px" }}>
-              {startIcon}
-            </InputAdornment>
-          ) : undefined,
-          endAdornment,
-        },
-        inputLabel: {
-          shrink: true,
-          sx: {
+    <div className={classes.wrapper}>
+      <span className={classes.label} style={{ marginBottom: "6px" }}>
+        {displayLabel}
+      </span>
+      <TextField
+        fullWidth
+        variant="standard"
+        type={inputType}
+        error={error}
+        helperText={helperText}
+        disabled={disabled}
+        slotProps={{
+          input: {
+            disableUnderline: true,
+            startAdornment: startIcon ? (
+              <InputAdornment position="start" sx={{ mr: "8px" }}>
+                {startIcon}
+              </InputAdornment>
+            ) : undefined,
+            endAdornment,
+          },
+        }}
+        sx={{
+          "& .MuiInput-root": {
+            fontFamily: '"Inter", sans-serif',
+            fontSize: "0.875rem",
+            color: "#191c1e",
+            backgroundColor: "#f2f4f6",
+            borderRadius: "6px",
+            padding: "10px 14px",
+            ...(height !== undefined && {
+              height,
+              boxSizing: "border-box" as const,
+            }),
+            transition: "box-shadow 0.15s ease",
+            "&:hover": {
+              backgroundColor: "#edf0f2",
+            },
+            "&.Mui-focused": {
+              boxShadow: "0 0 0 2px rgba(0, 103, 128, 0.25)",
+              backgroundColor: "#ffffff",
+            },
+            "&.Mui-error": {
+              boxShadow: "0 0 0 2px rgba(239, 68, 68, 0.25)",
+            },
+            "&.Mui-disabled": {
+              backgroundColor: "#e0e3e5",
+              color: "#9ca3af",
+              cursor: "not-allowed",
+            },
+          },
+          "& .MuiFormHelperText-root": {
             fontFamily: '"Inter", sans-serif',
             fontSize: "0.75rem",
-            fontWeight: 700,
-            color: "#6b7280",
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-            position: "relative",
-            transform: "none",
-            marginBottom: "6px",
+            marginTop: "4px",
+            marginLeft: 0,
           },
-        },
-      }}
-      sx={{
-        "& .MuiInputLabel-root + .MuiInput-root": {
-          marginTop: "0px",
-        },
-        "& .MuiInput-root": {
-          fontFamily: '"Inter", sans-serif',
-          fontSize: "0.875rem",
-          color: "#191c1e",
-          backgroundColor: "#f2f4f6",
-          borderRadius: "6px",
-          padding: "10px 14px",
-          ...(height !== undefined && { height, boxSizing: "border-box" as const }),
-          transition: "box-shadow 0.15s ease",
-          "&:hover": {
-            backgroundColor: "#edf0f2",
-          },
-          "&.Mui-focused": {
-            boxShadow: "0 0 0 2px rgba(0, 103, 128, 0.25)",
-            backgroundColor: "#ffffff",
-          },
-          "&.Mui-error": {
-            boxShadow: "0 0 0 2px rgba(239, 68, 68, 0.25)",
-          },
-          "&.Mui-disabled": {
-            backgroundColor: "#e0e3e5",
-            color: "#9ca3af",
-            cursor: "not-allowed",
-          },
-        },
-        "& .MuiFormHelperText-root": {
-          fontFamily: '"Inter", sans-serif',
-          fontSize: "0.75rem",
-          marginTop: "4px",
-          marginLeft: 0,
-        },
-        ...sx,
-      }}
-      {...props}
-    />
+          ...sx,
+        }}
+        {...props}
+      />
+    </div>
   );
 }

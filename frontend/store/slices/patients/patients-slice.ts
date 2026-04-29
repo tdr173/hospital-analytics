@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { PatientListItem, PatientResources } from "@/models/generic/patients";
-import { fetchPatients, fetchPatientResources } from "./thunks";
+import { fetchPatients, fetchPatientResources, createPatient, updatePatient } from "./thunks";
 
 interface PatientsState {
   items: PatientListItem[];
@@ -48,6 +48,14 @@ const patientsSlice = createSlice({
       })
       .addCase(fetchPatientResources.rejected, (state) => {
         state.resourcesLoading = false;
+      })
+      .addCase(createPatient.fulfilled, (state, action) => {
+        state.items.unshift(action.payload as unknown as PatientListItem);
+        state.total += 1;
+      })
+      .addCase(updatePatient.fulfilled, (state, action) => {
+        const i = state.items.findIndex(p => p.patientId === action.payload.patientId);
+        if (i !== -1) state.items[i] = action.payload as unknown as PatientListItem;
       });
   },
 });

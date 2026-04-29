@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { ProviderListItem, ProviderResources } from "@/models/generic/providers";
-import { fetchProviders, fetchProviderResources } from "./thunks";
+import { fetchProviders, fetchProviderResources, createProvider, updateProvider } from "./thunks";
 
 interface ProvidersState {
   items: ProviderListItem[];
@@ -48,6 +48,14 @@ const providersSlice = createSlice({
       })
       .addCase(fetchProviderResources.rejected, (state) => {
         state.resourcesLoading = false;
+      })
+      .addCase(createProvider.fulfilled, (state, action) => {
+        state.items.unshift(action.payload as unknown as ProviderListItem);
+        state.total += 1;
+      })
+      .addCase(updateProvider.fulfilled, (state, action) => {
+        const i = state.items.findIndex(p => p.providerId === action.payload.providerId);
+        if (i !== -1) state.items[i] = action.payload as unknown as ProviderListItem;
       });
   },
 });

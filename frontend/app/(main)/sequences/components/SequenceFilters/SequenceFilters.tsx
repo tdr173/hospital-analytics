@@ -66,7 +66,7 @@ export default function SequenceFilters({
           startIcon={<SearchIcon fontSize="small" />}
           clearIcon={search.length > 0}
           onClear={() => onSearchChange("")}
-          height={36}
+          height={"40px"}
           fullWidth
         />
       </div>
@@ -79,7 +79,7 @@ export default function SequenceFilters({
           onChange={(v) => onMinLengthChange(Number(v))}
           options={lengthOptions}
           width={140}
-          height={36}
+          height={"40px"}
         />
       </div>
 
@@ -91,7 +91,7 @@ export default function SequenceFilters({
           onChange={(v) => onSortByChange(String(v))}
           options={sortOptions}
           width={180}
-          height={36}
+          height={"40px"}
         />
       </div>
 
@@ -102,7 +102,7 @@ export default function SequenceFilters({
           className={classes.sortDirectionButton}
           onClick={() => onSortTypeChange(sortType === "desc" ? "asc" : "desc")}
           title={sortType === "desc" ? "Descending" : "Ascending"}
-          style={{ height: 36 }}
+          style={{ height: "40px" }}
         >
           {sortType === "desc" ? (
             <>

@@ -19,8 +19,6 @@ export interface ProviderCreatePayload {
   gender?: string | null;
   speciality?: string | null;
   city?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
 }
 
 export type ProviderUpdatePayload = Partial<ProviderCreatePayload>;

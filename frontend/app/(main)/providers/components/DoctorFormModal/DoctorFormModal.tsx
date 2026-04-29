@@ -31,8 +31,6 @@ export default function DoctorFormModal({
   const [gender, setGender] = useState<string>("");
   const [speciality, setSpeciality] = useState<string>("");
   const [city, setCity] = useState("");
-  const [latitude, setLatitude] = useState<string>("");
-  const [longitude, setLongitude] = useState<string>("");
   const [touched, setTouched] = useState(false);
 
   useEffect(() => {
@@ -42,8 +40,6 @@ export default function DoctorFormModal({
     setGender(initial?.gender ?? "");
     setSpeciality(initial?.speciality ?? "");
     setCity(initial?.city ?? "");
-    setLatitude(initial?.latitude != null ? String(initial.latitude) : "");
-    setLongitude(initial?.longitude != null ? String(initial.longitude) : "");
     setTouched(false);
   }, [open, initial]);
 
@@ -62,8 +58,6 @@ export default function DoctorFormModal({
       gender: gender || null,
       speciality: speciality.trim() || null,
       city: city.trim() || null,
-      latitude: latitude ? Number(latitude) : null,
-      longitude: longitude ? Number(longitude) : null,
     });
   };
 
@@ -116,18 +110,6 @@ export default function DoctorFormModal({
         label="City"
         value={city}
         onChange={(e) => setCity(e.target.value)}
-      />
-      <StyledInput
-        label="Latitude"
-        type="number"
-        value={latitude}
-        onChange={(e) => setLatitude(e.target.value)}
-      />
-      <StyledInput
-        label="Longitude"
-        type="number"
-        value={longitude}
-        onChange={(e) => setLongitude(e.target.value)}
       />
     </FormModal>
   );

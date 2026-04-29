@@ -43,8 +43,6 @@ export interface PatientCreatePayload {
   ethnicity?: string | null;
   marital?: string | null;
   city?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
 }
 
 export type PatientUpdatePayload = Partial<PatientCreatePayload>;
