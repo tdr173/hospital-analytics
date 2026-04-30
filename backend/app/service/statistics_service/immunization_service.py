@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 
 from repository.statistics_repository.immunization_repository import ImmunizationRepository
@@ -7,8 +8,8 @@ from domain.schemas.statistics_schemas.immunization_schema import ImmunizationSt
 
 
 class ImmunizationService:
-    def __init__(self, db: Session, range_str: str = "all"):
-        self.repo = ImmunizationRepository(db, range_str)
+    def __init__(self, db: Session, range_str: str = "all", provider_id: Optional[str] = None):
+        self.repo = ImmunizationRepository(db, range_str, provider_id)
 
     def get_immunization_summary(self) -> ImmunizationStatisticsResponse:
         total = self.repo.get_total_immunizations()

@@ -12,10 +12,7 @@ import Groups3Icon from "@mui/icons-material/Groups3";
 import GroupIcon from "@mui/icons-material/Group";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import EventNoteOutlinedIcon from "@mui/icons-material/EventNoteOutlined";
-import TimelineIcon from "@mui/icons-material/Timeline";
 import PersonAddOutlinedIcon from "@mui/icons-material/PersonAddOutlined";
-
-import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 
 import React, { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -45,18 +42,12 @@ const sidebarElements: SidebarElement[] = [
     name: "Statistics",
     icon: AnalyticsIcon,
     forward: "/statistics",
-    allowedRoles: ["MANAGER"],
+    allowedRoles: ["MANAGER", "DOCTOR"],
   },
   {
     name: "Patient Groups",
     icon: Groups3Icon,
     forward: "/clusters",
-    allowedRoles: ["MANAGER"],
-  },
-  {
-    name: "Care Sequences",
-    icon: TimelineIcon,
-    forward: "/sequences",
     allowedRoles: ["MANAGER"],
   },
   {
@@ -76,22 +67,15 @@ const sidebarElements: SidebarElement[] = [
     name: "Doctors",
     icon: BadgeOutlinedIcon,
     forward: "/providers",
-    allowedRoles: ["MANAGER"],
-  },
-  {
-    name: "Ask",
-    icon: ChatBubbleOutlineIcon,
-    forward: "/ask",
-    allowedRoles: ["DOCTOR"],
+    allowedRoles: ["MANAGER", "PATIENT"],
   },
   {
     name: "Add User",
     icon: PersonAddOutlinedIcon,
     forward: "/register-user",
-    allowedRoles: ["MANAGER", "DOCTOR", "PATIENT"],
+    allowedRoles: ["MANAGER", "DOCTOR"],
     labelByRole: {
       DOCTOR: "Register Patient",
-      PATIENT: "Invite Family",
     },
   },
 ];

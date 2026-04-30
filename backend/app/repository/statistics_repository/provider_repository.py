@@ -10,8 +10,9 @@ from repository.statistics_repository._common import (
 
 
 class ProviderRepository:
-    def __init__(self, db: Session, range_str: str = "all"):
+    def __init__(self, db: Session, range_str: str = "all", provider_id: Optional[str] = None):
         self.db = db
+        self._filters = []
         # Providers have no intrinsic date column — range narrows to the set
         # of providers who had encounters within the window.
         min_date = compute_min_date(db, EncounterModel.start_date, range_str)
@@ -22,12 +23,14 @@ class ProviderRepository:
                 .distinct()
                 .subquery()
             )
-            self._filter = ProviderModel.provider_id.in_(active_ids)
-        else:
-            self._filter = None
+            self._filters.append(ProviderModel.provider_id.in_(active_ids))
+        if provider_id:
+            self._filters.append(ProviderModel.provider_id == provider_id)
 
     def _apply(self, q):
-        return q.filter(self._filter) if self._filter is not None else q
+        for f in self._filters:
+            q = q.filter(f)
+        return q
 
     def get_total_providers(self) -> int:
         return self._apply(

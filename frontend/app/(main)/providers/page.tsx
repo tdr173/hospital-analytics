@@ -384,37 +384,39 @@ function ProvidersPageContent() {
         >
           Search
         </StyledButton>
-        <StyledButton
-          onClick={() => {
-            setEditing(null);
-            setFormError(null);
-            setModalOpen(true);
-          }}
-          sx={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "4px",
-            height: "40px",
-            padding: "6px",
-            background: theme.colors.button.add,
-            boxShadow: "none",
-            border: "none",
-            color: "#ffffff",
-            "&:hover": {
-              background: theme.colors.button.addHover,
+        {canManageDoctors && (
+          <StyledButton
+            onClick={() => {
+              setEditing(null);
+              setFormError(null);
+              setModalOpen(true);
+            }}
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              height: "40px",
+              padding: "6px",
+              background: theme.colors.button.add,
               boxShadow: "none",
-              transform: "none",
-            },
-            "&:active": {
-              background: theme.colors.button.addActive,
-              boxShadow: "none",
-              transform: "none",
-            },
-          }}
-        >
-          <AddIcon sx={{ fontSize: "1.05rem" }} />
-          Add doctor
-        </StyledButton>
+              border: "none",
+              color: "#ffffff",
+              "&:hover": {
+                background: theme.colors.button.addHover,
+                boxShadow: "none",
+                transform: "none",
+              },
+              "&:active": {
+                background: theme.colors.button.addActive,
+                boxShadow: "none",
+                transform: "none",
+              },
+            }}
+          >
+            <AddIcon sx={{ fontSize: "1.05rem" }} />
+            Add doctor
+          </StyledButton>
+        )}
       </div>
 
       <div className={classes.tableArea}>

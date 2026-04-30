@@ -4,20 +4,25 @@ from sqlalchemy import func
 
 from domain.models.immunization_model import ImmunizationModel
 from repository.statistics_repository._common import (
-    compute_min_date, per_patient_stats, with_percentage,
+    compute_min_date, per_patient_stats, provider_patient_subq, with_percentage,
 )
 
 
 class ImmunizationRepository:
-    def __init__(self, db: Session, range_str: str = "all"):
+    def __init__(self, db: Session, range_str: str = "all", provider_id: Optional[str] = None):
         self.db = db
+        self._filters = []
         min_date = compute_min_date(db, ImmunizationModel.date, range_str)
-        self._filter = (
-            ImmunizationModel.date >= min_date if min_date is not None else None
-        )
+        if min_date is not None:
+            self._filters.append(ImmunizationModel.date >= min_date)
+        if provider_id:
+            subq = provider_patient_subq(db, provider_id)
+            self._filters.append(ImmunizationModel.patient_id.in_(subq))
 
     def _apply(self, q):
-        return q.filter(self._filter) if self._filter is not None else q
+        for f in self._filters:
+            q = q.filter(f)
+        return q
 
     def get_total_immunizations(self) -> int:
         return self._apply(
@@ -46,5 +51,5 @@ class ImmunizationRepository:
     def get_per_patient_stats(self):
         return per_patient_stats(
             self.db, ImmunizationModel, ImmunizationModel.immunization_code,
-            filter_clause=self._filter,
+            filters=self._filters,
         )

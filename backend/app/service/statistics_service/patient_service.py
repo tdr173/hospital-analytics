@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 
 from repository.statistics_repository.patient_repository import PatientRepository
@@ -8,8 +9,8 @@ from domain.schemas.statistics_schemas.patient_schema import (
 
 
 class PatientService:
-    def __init__(self, db: Session, range_str: str = "all"):
-        self.repo = PatientRepository(db, range_str)
+    def __init__(self, db: Session, range_str: str = "all", provider_id: Optional[str] = None):
+        self.repo = PatientRepository(db, range_str, provider_id)
 
     def get_patient_summary(self) -> PatientStatisticsResponse:
         total = self.repo.get_total_patients()

@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 
 from repository.statistics_repository.procedure_repository import ProcedureRepository
@@ -7,8 +8,8 @@ from domain.schemas.statistics_schemas.procedure_schema import ProcedureStatisti
 
 
 class ProcedureService:
-    def __init__(self, db: Session, range_str: str = "all"):
-        self.repo = ProcedureRepository(db, range_str)
+    def __init__(self, db: Session, range_str: str = "all", provider_id: Optional[str] = None):
+        self.repo = ProcedureRepository(db, range_str, provider_id)
 
     def get_procedure_summary(self) -> ProcedureStatisticsResponse:
         total = self.repo.get_total_procedures()

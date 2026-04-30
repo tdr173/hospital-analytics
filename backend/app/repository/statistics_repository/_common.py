@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, List
 
 from sqlalchemy import func, cast, Numeric
 from sqlalchemy.orm import Session
@@ -25,6 +25,16 @@ def compute_min_date(db: Session, date_col, range_str: str):
     return max_date - delta
 
 
+def provider_patient_subq(db: Session, provider_id: str):
+    from domain.models.encounter_model import EncounterModel
+    return (
+        db.query(EncounterModel.patient_id)
+        .filter(EncounterModel.provider_id == provider_id)
+        .distinct()
+        .subquery()
+    )
+
+
 def with_percentage(rows, total):
     return [
         {
@@ -36,13 +46,13 @@ def with_percentage(rows, total):
     ]
 
 
-def per_patient_stats(db: Session, model, code_col, filter_clause=None):
+def per_patient_stats(db: Session, model, code_col, filters: Optional[List] = None):
     q = db.query(
         model.patient_id,
         func.count(code_col).label("cnt"),
     )
-    if filter_clause is not None:
-        q = q.filter(filter_clause)
+    for f in (filters or []):
+        q = q.filter(f)
     subquery = q.group_by(model.patient_id).subquery()
 
     result = db.query(

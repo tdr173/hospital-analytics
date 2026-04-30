@@ -29,34 +29,3 @@ export async function registerUser(_payload: RegisterUserPayload): Promise<void>
   void API_BASE;
 }
 
-const defaultHeaders: Record<string, string> = {
-  "ngrok-skip-browser-warning": "true",
-};
-
-export async function fetchDemoPatientId(): Promise<string | undefined> {
-  try {
-    const res = await fetch(`${API_BASE}/patients?rows=1&page=1`, {
-      headers: defaultHeaders,
-    });
-    if (!res.ok) return undefined;
-    const data = await res.json();
-    const first = data?.items?.[0] ?? data?.[0];
-    return first?.patient_id ?? first?.patientId;
-  } catch {
-    return undefined;
-  }
-}
-
-export async function fetchDemoProviderId(): Promise<string | undefined> {
-  try {
-    const res = await fetch(`${API_BASE}/providers?rows=1&page=1`, {
-      headers: defaultHeaders,
-    });
-    if (!res.ok) return undefined;
-    const data = await res.json();
-    const first = data?.items?.[0] ?? data?.[0];
-    return first?.provider_id ?? first?.providerId;
-  } catch {
-    return undefined;
-  }
-}

@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 
 from repository.statistics_repository.encounter_repository import EncounterRepository
@@ -9,8 +10,8 @@ from domain.schemas.statistics_schemas.encounter_schema import (
 
 
 class EncounterService:
-    def __init__(self, db: Session, range_str: str = "all"):
-        self.repo = EncounterRepository(db, range_str)
+    def __init__(self, db: Session, range_str: str = "all", provider_id: Optional[str] = None):
+        self.repo = EncounterRepository(db, range_str, provider_id)
 
     def get_encounter_summary(self) -> EncounterStatisticsResponse:
         total = self.repo.get_total_encounters()

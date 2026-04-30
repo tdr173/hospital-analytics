@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 
 from repository.statistics_repository.provider_repository import ProviderRepository
@@ -9,8 +10,8 @@ from domain.schemas.statistics_schemas.provider_schema import (
 
 
 class ProviderService:
-    def __init__(self, db: Session, range_str: str = "all"):
-        self.repo = ProviderRepository(db, range_str)
+    def __init__(self, db: Session, range_str: str = "all", provider_id: Optional[str] = None):
+        self.repo = ProviderRepository(db, range_str, provider_id)
 
     def get_provider_summary(self) -> ProviderStatisticsResponse:
         total = self.repo.get_total_providers()

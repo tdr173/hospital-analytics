@@ -7,15 +7,19 @@ from repository.statistics_repository._common import compute_min_date, with_perc
 
 
 class EncounterRepository:
-    def __init__(self, db: Session, range_str: str = "all"):
+    def __init__(self, db: Session, range_str: str = "all", provider_id: Optional[str] = None):
         self.db = db
+        self._filters = []
         min_date = compute_min_date(db, EncounterModel.start_date, range_str)
-        self._filter = (
-            EncounterModel.start_date >= min_date if min_date is not None else None
-        )
+        if min_date is not None:
+            self._filters.append(EncounterModel.start_date >= min_date)
+        if provider_id:
+            self._filters.append(EncounterModel.provider_id == provider_id)
 
     def _apply(self, q):
-        return q.filter(self._filter) if self._filter is not None else q
+        for f in self._filters:
+            q = q.filter(f)
+        return q
 
     def get_total_encounters(self) -> int:
         return self._apply(self.db.query(func.count(EncounterModel.encounter_id))).scalar()
@@ -75,7 +79,9 @@ class EncounterRepository:
         total_q = self.db.query(func.count(EncounterModel.encounter_id)).filter(
             EncounterModel.reason_description.isnot(None)
         )
-        total = self._apply(total_q).scalar()
+        for f in self._filters:
+            total_q = total_q.filter(f)
+        total = total_q.scalar()
 
         rows = self._apply(
             self.db.query(

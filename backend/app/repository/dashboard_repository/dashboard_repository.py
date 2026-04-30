@@ -1,6 +1,7 @@
 from datetime import timedelta
+from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, case, text, Date, cast
+from sqlalchemy import func, case, text, Date, cast, Numeric
 
 from domain import (
     PatientModel, ProviderModel, OrganizationModel, EncounterModel,
@@ -9,6 +10,8 @@ from domain import (
     DailyEncounterItem, RecentEncounterItem, DashboardResponse,
     TopConditionItem, ClusterDistributionItem,
 )
+from domain.models.careplan_model import CarePlanModel
+from domain.models.procedure_model import ProcedureModel
 from repository._helpers import patient_name_col, provider_name_col
 
 AGE_GROUP_CASE = case(
@@ -26,7 +29,204 @@ class DashboardRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_dashboard(self) -> DashboardResponse:
+    def get_dashboard(self, scope=None) -> DashboardResponse:
+        provider_id: Optional[str] = None
+        if scope is not None and scope.is_doctor:
+            provider_id = scope.provider_id
+
+        if provider_id:
+            return self._get_dashboard_scoped(provider_id)
+        return self._get_dashboard_all()
+
+    # ----------------------------------------------------------------- scoped
+
+    def _get_dashboard_scoped(self, provider_id: str) -> DashboardResponse:
+        provider_patients_subq = (
+            self.db.query(EncounterModel.patient_id)
+            .filter(EncounterModel.provider_id == provider_id)
+            .distinct()
+            .subquery()
+        )
+        pat_filter = PatientModel.patient_id.in_(provider_patients_subq)
+        enc_filter = EncounterModel.provider_id == provider_id
+
+        total_patients = (
+            self.db.query(func.count(PatientModel.patient_id))
+            .filter(pat_filter)
+            .scalar() or 0
+        )
+        active_patients = (
+            self.db.query(func.count(PatientModel.patient_id))
+            .filter(pat_filter, PatientModel.deathdate.is_(None))
+            .scalar() or 0
+        )
+        total_encounters = (
+            self.db.query(func.count(EncounterModel.encounter_id))
+            .filter(enc_filter)
+            .scalar() or 0
+        )
+        total_conditions = (
+            self.db.query(func.count(ConditionModel.id))
+            .filter(ConditionModel.patient_id.in_(provider_patients_subq))
+            .scalar() or 0
+        )
+        total_careplans = (
+            self.db.query(func.count(CarePlanModel.careplan_code))
+            .filter(CarePlanModel.patient_id.in_(provider_patients_subq))
+            .scalar() or 0
+        )
+        total_procedures = (
+            self.db.query(func.count(ProcedureModel.procedure_code))
+            .filter(ProcedureModel.patient_id.in_(provider_patients_subq))
+            .scalar() or 0
+        )
+        active_careplans = (
+            self.db.query(func.count(CarePlanModel.careplan_code))
+            .filter(
+                CarePlanModel.patient_id.in_(provider_patients_subq),
+                (CarePlanModel.end_date.is_(None)),
+            )
+            .scalar() or 0
+        )
+        avg_enc = round(total_encounters / total_patients, 2) if total_patients else 0.0
+        avg_age_row = (
+            self.db.query(func.round(cast(func.avg(PatientModel.age), Numeric), 1))
+            .filter(pat_filter)
+            .scalar()
+        )
+
+        new_patients_last_30_days = 0
+        max_encounter_date = (
+            self.db.query(func.max(EncounterModel.start_date))
+            .filter(enc_filter)
+            .scalar()
+        )
+        if max_encounter_date is not None:
+            cutoff = max_encounter_date - timedelta(days=30)
+            new_patients_last_30_days = (
+                self.db.query(func.count(func.distinct(EncounterModel.patient_id)))
+                .filter(
+                    enc_filter,
+                    EncounterModel.start_date >= cutoff,
+                )
+                .scalar() or 0
+            )
+
+        kpis = KpiCards(
+            total_patients=total_patients,
+            active_patients=active_patients,
+            total_providers=1,
+            total_organizations=0,
+            total_encounters=total_encounters,
+            total_conditions=total_conditions,
+            total_careplans=total_careplans,
+            total_procedures=total_procedures,
+            avg_encounters_per_patient=avg_enc,
+            active_careplans=active_careplans,
+            new_patients_last_30_days=new_patients_last_30_days,
+            avg_patient_age=float(avg_age_row or 0),
+        )
+
+        last_week_encounter_by_class: list[EncounterClassItem] = []
+        if max_encounter_date is not None:
+            week_cutoff = max_encounter_date - timedelta(days=7)
+            encounter_rows = (
+                self.db.query(
+                    EncounterModel.encounter_class,
+                    func.count(EncounterModel.encounter_id).label("count"),
+                )
+                .filter(enc_filter, EncounterModel.start_date >= week_cutoff)
+                .group_by(EncounterModel.encounter_class)
+                .order_by(func.count(EncounterModel.encounter_id).desc())
+                .all()
+            )
+            last_week_encounter_by_class = [
+                EncounterClassItem(encounter_class=r.encounter_class, count=r.count)
+                for r in encounter_rows
+            ]
+
+        gender_rows = (
+            self.db.query(
+                PatientModel.gender,
+                func.count(PatientModel.patient_id).label("count"),
+            )
+            .filter(pat_filter, PatientModel.gender.isnot(None))
+            .group_by(PatientModel.gender)
+            .all()
+        )
+        gender_distribution = [
+            GenderDistributionItem(gender=r.gender, count=r.count)
+            for r in gender_rows
+        ]
+
+        age_group_rows = (
+            self.db.query(
+                AGE_GROUP_CASE.label("age_group"),
+                func.count(PatientModel.patient_id).label("count"),
+            )
+            .filter(pat_filter)
+            .group_by(AGE_GROUP_CASE)
+            .all()
+        )
+        age_group_map = {r.age_group: r.count for r in age_group_rows}
+        age_groups = [
+            AgeGroupItem(age_group=g, count=age_group_map.get(g, 0))
+            for g in AGE_GROUP_ORDER
+        ]
+
+        last_month_encounters: list[DailyEncounterItem] = []
+        if max_encounter_date is not None:
+            month_cutoff = max_encounter_date - timedelta(days=30)
+            daily_rows = (
+                self.db.query(
+                    func.to_char(cast(EncounterModel.start_date, Date), "YYYY-MM-DD").label("day"),
+                    func.count(EncounterModel.encounter_id).label("count"),
+                )
+                .filter(enc_filter, EncounterModel.start_date >= month_cutoff)
+                .group_by(cast(EncounterModel.start_date, Date))
+                .order_by(cast(EncounterModel.start_date, Date).asc())
+                .all()
+            )
+            last_month_encounters = [
+                DailyEncounterItem(day=r.day, count=r.count)
+                for r in daily_rows
+            ]
+
+        recent_rows = (
+            self.db.query(
+                EncounterModel.encounter_id,
+                EncounterModel.patient_id,
+                patient_name_col(),
+                provider_name_col(),
+                OrganizationModel.name.label("organization_name"),
+                EncounterModel.start_date,
+                EncounterModel.encounter_class,
+                EncounterModel.description,
+            )
+            .outerjoin(PatientModel, EncounterModel.patient_id == PatientModel.patient_id)
+            .outerjoin(ProviderModel, EncounterModel.provider_id == ProviderModel.provider_id)
+            .outerjoin(OrganizationModel, EncounterModel.organization_id == OrganizationModel.organization_id)
+            .filter(enc_filter)
+            .order_by(EncounterModel.start_date.desc())
+            .limit(10)
+            .all()
+        )
+        recent_encounters = [RecentEncounterItem(**r._asdict()) for r in recent_rows]
+
+        return DashboardResponse(
+            kpis=kpis,
+            last_week_encounter_by_class=last_week_encounter_by_class,
+            top_conditions_last_week=[],
+            cluster_distribution=[],
+            gender_distribution=gender_distribution,
+            age_groups=age_groups,
+            last_month_encounters=last_month_encounters,
+            recent_encounters=recent_encounters,
+        )
+
+    # -------------------------------------------------------------------- all
+
+    def _get_dashboard_all(self) -> DashboardResponse:
         kpi_row = self.db.execute(text("""
             SELECT
                 (SELECT count(*) FROM patient)                                                 AS total_patients,
@@ -45,7 +245,6 @@ class DashboardRepository:
                  WHERE end_date IS NULL OR end_date > CURRENT_DATE)                            AS active_careplans
         """)).first()
 
-        # "last" = max date in data, not today
         max_encounter_date = self.db.query(func.max(EncounterModel.start_date)).scalar()
         max_condition_date = self.db.query(func.max(ConditionModel.start_date)).scalar()
 

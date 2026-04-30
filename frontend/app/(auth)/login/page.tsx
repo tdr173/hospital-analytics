@@ -12,11 +12,10 @@ import useClasses from "@/utils/useClasses";
 import { LoginPageStyles } from "./styles";
 import { AppDispatch } from "@/store";
 import { login } from "@/store/slices/auth/auth-slice";
-import {
-  SEEDED_USERS,
-  fetchDemoPatientId,
-  fetchDemoProviderId,
-} from "@/store/slices/auth/thunks";
+import { SEEDED_USERS } from "@/store/slices/auth/thunks";
+
+const DEMO_PATIENT_ID = "00980d6a-5c9a-ffd4-2593-aa051e598fdc";
+const DEMO_PROVIDER_ID = "3a136a03-5edd-310d-9dab-180ce0557708";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
@@ -67,13 +66,8 @@ export default function LoginPage() {
       return;
     }
 
-    let patientId: string | undefined;
-    let providerId: string | undefined;
-    if (role === "PATIENT") {
-      patientId = await fetchDemoPatientId();
-    } else if (role === "DOCTOR") {
-      providerId = await fetchDemoProviderId();
-    }
+    const patientId = role === "PATIENT" ? DEMO_PATIENT_ID : undefined;
+    const providerId = role === "DOCTOR" ? DEMO_PROVIDER_ID : undefined;
 
     dispatch(login({ email: normalizedEmail, role, patientId, providerId }));
     router.push("/home");

@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 
 from repository.statistics_repository.allergy_repository import AllergyRepository
@@ -7,8 +8,8 @@ from domain.schemas.statistics_schemas.allergy_schema import AllergyStatisticsRe
 
 
 class AllergyService:
-    def __init__(self, db: Session, range_str: str = "all"):
-        self.repo = AllergyRepository(db, range_str)
+    def __init__(self, db: Session, range_str: str = "all", provider_id: Optional[str] = None):
+        self.repo = AllergyRepository(db, range_str, provider_id)
 
     def get_allergy_summary(self) -> AllergyStatisticsResponse:
         total = self.repo.get_total_allergies()

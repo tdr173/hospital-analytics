@@ -5,13 +5,14 @@ from sqlalchemy import func, case
 from domain.models.patient_model import PatientModel
 from domain.models.encounter_model import EncounterModel
 from repository.statistics_repository._common import (
-    compute_min_date, with_percentage,
+    compute_min_date, provider_patient_subq, with_percentage,
 )
 
 
 class PatientRepository:
-    def __init__(self, db: Session, range_str: str = "all"):
+    def __init__(self, db: Session, range_str: str = "all", provider_id: Optional[str] = None):
         self.db = db
+        self._filters = []
         # Patients have no intrinsic date column — range filters down to the set
         # of patients who had encounters within the window.
         min_date = compute_min_date(db, EncounterModel.start_date, range_str)
@@ -22,12 +23,15 @@ class PatientRepository:
                 .distinct()
                 .subquery()
             )
-            self._filter = PatientModel.patient_id.in_(active_ids)
-        else:
-            self._filter = None
+            self._filters.append(PatientModel.patient_id.in_(active_ids))
+        if provider_id:
+            subq = provider_patient_subq(db, provider_id)
+            self._filters.append(PatientModel.patient_id.in_(subq))
 
     def _apply(self, q):
-        return q.filter(self._filter) if self._filter is not None else q
+        for f in self._filters:
+            q = q.filter(f)
+        return q
 
     def get_total_patients(self) -> int:
         return self._apply(

@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 
 from repository import ObservationRepository
@@ -11,8 +12,8 @@ from domain.schemas.statistics_schemas.observation_schema import (
 
 
 class ObservationService:
-    def __init__(self, db: Session, range_str: str = "all"):
-        self.repo = ObservationRepository(db, range_str)
+    def __init__(self, db: Session, range_str: str = "all", provider_id: Optional[str] = None):
+        self.repo = ObservationRepository(db, range_str, provider_id)
 
     def get_observation_summary(self) -> ObservationStatisticsResponse:
         total_observations = self.repo.get_total_observations()

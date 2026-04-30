@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 
 from repository.statistics_repository.condition_repository import ConditionRepository
@@ -9,8 +10,8 @@ from domain.schemas.statistics_schemas.condition_schema import (
 
 
 class ConditionService:
-    def __init__(self, db: Session, range_str: str = "all"):
-        self.repo = ConditionRepository(db, range_str)
+    def __init__(self, db: Session, range_str: str = "all", provider_id: Optional[str] = None):
+        self.repo = ConditionRepository(db, range_str, provider_id)
 
     def get_condition_summary(self) -> ConditionStatisticsResponse:
         total = self.repo.get_total_conditions()
