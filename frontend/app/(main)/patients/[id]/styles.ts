@@ -208,4 +208,26 @@ export const PatientDetailPageStyles = (theme: Theme) => ({
     borderRadius: theme.borderRadius.sm,
     padding: "2px 7px",
   },
+  loadMoreRow: {
+    display: "flex",
+    justifyContent: "center",
+    padding: `${theme.spacing.md} 0`,
+  },
+  loadMoreButton: {
+    padding: `${theme.spacing.xs} ${theme.spacing.lg}`,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.primary.main,
+    backgroundColor: "transparent",
+    border: `1px solid ${theme.colors.primary.main}`,
+    borderRadius: theme.borderRadius.sm,
+    cursor: "pointer",
+    "&:hover": {
+      backgroundColor: theme.colors.secondary.light,
+    },
+    "&:disabled": {
+      opacity: 0.5,
+      cursor: "default",
+    },
+  },
 });

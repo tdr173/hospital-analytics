@@ -5,16 +5,22 @@ import { fetchProviderDetail, fetchProviderEncounters } from "./thunks";
 interface CurrentProviderState {
   provider: ProviderDetail | null;
   encounters: ProviderEncounterItem[];
+  encPage: number;
+  encHasMore: boolean;
   loading: boolean;
   encloading: boolean;
+  encLoadingMore: boolean;
   error: string | null;
 }
 
 const initialState: CurrentProviderState = {
   provider: null,
   encounters: [],
+  encPage: 1,
+  encHasMore: false,
   loading: false,
   encloading: false,
+  encLoadingMore: false,
   error: null,
 };
 
@@ -40,15 +46,25 @@ const currentProviderSlice = createSlice({
         state.loading = false;
         state.error = action.payload?.message ?? "Failed to load provider";
       })
-      .addCase(fetchProviderEncounters.pending, (state) => {
-        state.encloading = true;
+      .addCase(fetchProviderEncounters.pending, (state, action) => {
+        if (action.meta.arg.page === 1) {
+          state.encloading = true;
+        } else {
+          state.encLoadingMore = true;
+        }
       })
       .addCase(fetchProviderEncounters.fulfilled, (state, action) => {
+        const { items, hasMore } = action.payload;
+        const page = action.meta.arg.page;
         state.encloading = false;
-        state.encounters = action.payload;
+        state.encLoadingMore = false;
+        state.encounters = page === 1 ? items : [...state.encounters, ...items];
+        state.encPage = page;
+        state.encHasMore = hasMore;
       })
       .addCase(fetchProviderEncounters.rejected, (state) => {
         state.encloading = false;
+        state.encLoadingMore = false;
       });
   },
 });

@@ -157,14 +157,19 @@ class EncounterRepository:
             raise ValueError(f"Encounter {encounter_id} not found")
         return EncounterDetailResponse(**row._asdict())
 
-    def get_encounter_observations(self, encounter_id: str) -> list[EncounterObservationItem]:
-        rows = (
+    def _paginate(self, query, page: int, page_size: int):
+        rows = query.offset((page - 1) * page_size).limit(page_size + 1).all()
+        has_more = len(rows) > page_size
+        return rows[:page_size], has_more
+
+    def get_encounter_observations(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(ObservationModel)
             .filter(ObservationModel.encounter_id == encounter_id)
             .order_by(ObservationModel.date.asc())
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             EncounterObservationItem(
                 id=r.id,
                 date=r.date,
@@ -176,15 +181,16 @@ class EncounterRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
-    def get_encounter_conditions(self, encounter_id: str) -> list[EncounterConditionItem]:
-        rows = (
+    def get_encounter_conditions(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(ConditionModel)
             .filter(ConditionModel.encounter_id == encounter_id)
             .order_by(ConditionModel.start_date.asc())
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             EncounterConditionItem(
                 id=r.id,
                 condition_code=str(r.condition_code),
@@ -194,15 +200,16 @@ class EncounterRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
-    def get_encounter_medications(self, encounter_id: str) -> list[EncounterMedicationItem]:
-        rows = (
+    def get_encounter_medications(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(MedicationModel)
             .filter(MedicationModel.encounter_id == encounter_id)
             .order_by(MedicationModel.start_date.asc())
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             EncounterMedicationItem(
                 id=r.id,
                 medication_code=str(r.medication_code),
@@ -214,15 +221,16 @@ class EncounterRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
-    def get_encounter_procedures(self, encounter_id: str) -> list[EncounterProcedureItem]:
-        rows = (
+    def get_encounter_procedures(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(ProcedureModel)
             .filter(ProcedureModel.encounter_id == encounter_id)
             .order_by(ProcedureModel.start_date.asc())
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             EncounterProcedureItem(
                 id=r.id,
                 procedure_code=str(r.procedure_code),
@@ -233,15 +241,16 @@ class EncounterRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
-    def get_encounter_immunizations(self, encounter_id: str) -> list[EncounterImmunizationItem]:
-        rows = (
+    def get_encounter_immunizations(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(ImmunizationModel)
             .filter(ImmunizationModel.encounter_id == encounter_id)
             .order_by(ImmunizationModel.date.asc())
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             EncounterImmunizationItem(
                 id=r.id,
                 immunization_code=str(r.immunization_code),
@@ -250,15 +259,16 @@ class EncounterRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
-    def get_encounter_careplans(self, encounter_id: str) -> list[EncounterCarePlanItem]:
-        rows = (
+    def get_encounter_careplans(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(CarePlanModel)
             .filter(CarePlanModel.encounter_id == encounter_id)
             .order_by(CarePlanModel.start_date.asc())
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             EncounterCarePlanItem(
                 id=r.id,
                 careplan_code=str(r.careplan_code),
@@ -269,15 +279,16 @@ class EncounterRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
-    def get_encounter_allergies(self, encounter_id: str) -> list[EncounterAllergyItem]:
-        rows = (
+    def get_encounter_allergies(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(AllergyModel)
             .filter(AllergyModel.encounter_id == encounter_id)
             .order_by(AllergyModel.start_date.asc())
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             EncounterAllergyItem(
                 id=r.id,
                 allergy_code=str(r.allergy_code),
@@ -287,6 +298,7 @@ class EncounterRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
     def _resolve_default_org_id(self) -> str:
         org = self.db.query(OrganizationModel).first()
@@ -342,13 +354,7 @@ class EncounterRepository:
     def delete_encounter(self, encounter_id: str, provider_id_scope: Optional[str]) -> None:
         enc = self._ensure_encounter(encounter_id, provider_id_scope)
         for model in SUBRECORD_MODELS.values():
-            count = (
-                self.db.query(func.count(model.id))
-                .filter(model.encounter_id == encounter_id)
-                .scalar() or 0
-            )
-            if count > 0:
-                raise ValueError(f"Encounter has dependent {model.__tablename__} rows; cannot delete")
+            self.db.query(model).filter(model.encounter_id == encounter_id).delete(synchronize_session=False)
         self.db.delete(enc)
         self.db.commit()
 

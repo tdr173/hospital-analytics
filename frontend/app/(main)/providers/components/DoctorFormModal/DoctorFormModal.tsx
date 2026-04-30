@@ -46,6 +46,9 @@ export default function DoctorFormModal({
   const errors = {
     firstName: !firstName.trim() ? "This field is required" : undefined,
     lastName: !lastName.trim() ? "This field is required" : undefined,
+    gender: !gender ? "This field is required" : undefined,
+    speciality: !speciality ? "This field is required" : undefined,
+    city: !city.trim() ? "This field is required" : undefined,
   };
   const hasError = Object.values(errors).some(Boolean);
 
@@ -91,6 +94,7 @@ export default function DoctorFormModal({
       />
       <StyledDropdown
         label="Gender"
+        required
         value={gender}
         onChange={(v) => setGender(String(v))}
         options={[
@@ -99,9 +103,12 @@ export default function DoctorFormModal({
         ]}
         placeholder="Select"
         onClear={() => setGender("")}
+        error={touched && !!errors.gender}
+        helperText={touched ? errors.gender : undefined}
       />
       <StyledDropdown
         label="Specialty"
+        required
         value={speciality}
         onChange={(v) => setSpeciality(String(v))}
         options={
@@ -111,11 +118,16 @@ export default function DoctorFormModal({
         }
         placeholder="Select"
         onClear={() => setSpeciality("")}
+        error={touched && !!errors.speciality}
+        helperText={touched ? errors.speciality : undefined}
       />
       <StyledInput
         label="City"
+        required
         value={city}
         onChange={(e) => setCity(e.target.value)}
+        error={touched && !!errors.city}
+        helperText={touched ? errors.city : undefined}
       />
     </FormModal>
   );

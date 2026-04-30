@@ -13,26 +13,26 @@ class EncounterService:
     def get_encounter(self, encounter_id: str):
         return self.repo.get_encounter(encounter_id)
 
-    def get_encounter_observations(self, encounter_id: str):
-        return self.repo.get_encounter_observations(encounter_id)
+    def get_encounter_observations(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_encounter_observations(encounter_id, page, page_size)
 
-    def get_encounter_conditions(self, encounter_id: str):
-        return self.repo.get_encounter_conditions(encounter_id)
+    def get_encounter_conditions(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_encounter_conditions(encounter_id, page, page_size)
 
-    def get_encounter_medications(self, encounter_id: str):
-        return self.repo.get_encounter_medications(encounter_id)
+    def get_encounter_medications(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_encounter_medications(encounter_id, page, page_size)
 
-    def get_encounter_procedures(self, encounter_id: str):
-        return self.repo.get_encounter_procedures(encounter_id)
+    def get_encounter_procedures(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_encounter_procedures(encounter_id, page, page_size)
 
-    def get_encounter_immunizations(self, encounter_id: str):
-        return self.repo.get_encounter_immunizations(encounter_id)
+    def get_encounter_immunizations(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_encounter_immunizations(encounter_id, page, page_size)
 
-    def get_encounter_careplans(self, encounter_id: str):
-        return self.repo.get_encounter_careplans(encounter_id)
+    def get_encounter_careplans(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_encounter_careplans(encounter_id, page, page_size)
 
-    def get_encounter_allergies(self, encounter_id: str):
-        return self.repo.get_encounter_allergies(encounter_id)
+    def get_encounter_allergies(self, encounter_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_encounter_allergies(encounter_id, page, page_size)
 
     def get_encounter_resources(self):
         return self.repo.get_encounter_resources()

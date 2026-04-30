@@ -14,6 +14,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/clusters": "Patient Groups",
   "/register-user": "Add User",
   "/providers": "Doctors",
+  "/encounters": "Visits",
 };
 
 function capitalize(str: string) {

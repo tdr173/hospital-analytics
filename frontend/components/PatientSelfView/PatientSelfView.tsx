@@ -64,16 +64,6 @@ const TAB_LABELS = [
   "Care Sequences",
 ];
 
-const TAB_FETCHERS: Record<number, (id: string) => any> = {
-  1: fetchPatientMedications,
-  2: fetchPatientProcedures,
-  3: fetchPatientImmunizations,
-  4: fetchPatientAllergies,
-  5: fetchPatientCareplans,
-  6: fetchPatientEncounters,
-  7: fetchPatientSequences,
-};
-
 export default function PatientSelfView() {
   const dispatch = useAppDispatch();
   const classes = useClasses(PatientDetailPageStyles, { name: "PatientSelfView" });
@@ -102,13 +92,20 @@ export default function PatientSelfView() {
     dispatch(resetCurrentPatient());
     dispatch(fetchPatientDetail(patientId));
     dispatch(fetchPatientSummary(patientId));
-    dispatch(fetchPatientConditions(patientId));
+    dispatch(fetchPatientConditions({ patientId, page: 1 }));
   }, [patientId, dispatch]);
 
   useEffect(() => {
     if (!patientId || tab === 0 || loadedTabs.includes(tab)) return;
-    const fetcher = TAB_FETCHERS[tab];
-    if (fetcher) dispatch(fetcher(patientId));
+    switch (tab) {
+      case 1: dispatch(fetchPatientMedications({ patientId, page: 1 })); break;
+      case 2: dispatch(fetchPatientProcedures({ patientId, page: 1 })); break;
+      case 3: dispatch(fetchPatientImmunizations({ patientId, page: 1 })); break;
+      case 4: dispatch(fetchPatientAllergies({ patientId, page: 1 })); break;
+      case 5: dispatch(fetchPatientCareplans({ patientId, page: 1 })); break;
+      case 6: dispatch(fetchPatientEncounters({ patientId, page: 1 })); break;
+      case 7: dispatch(fetchPatientSequences({ patientId, page: 1 })); break;
+    }
   }, [tab, patientId, dispatch, loadedTabs]);
 
   if (!patientId) {
@@ -122,14 +119,14 @@ export default function PatientSelfView() {
   }
 
   const tabContent: Record<number, React.ReactNode> = {
-    0: <ConditionsTab data={conditions} />,
-    1: <MedicationsTab data={medications} />,
-    2: <ProceduresTab data={procedures} />,
-    3: <ImmunizationsTab data={immunizations} />,
-    4: <AllergiesTab data={allergies} />,
-    5: <CarePlansTab data={careplans} />,
-    6: <EncountersTab data={encounters} />,
-    7: <SequencesTab data={sequences} />,
+    0: <ConditionsTab data={conditions.items} />,
+    1: <MedicationsTab data={medications.items} />,
+    2: <ProceduresTab data={procedures.items} />,
+    3: <ImmunizationsTab data={immunizations.items} />,
+    4: <AllergiesTab data={allergies.items} />,
+    5: <CarePlansTab data={careplans.items} />,
+    6: <EncountersTab data={encounters.items} />,
+    7: <SequencesTab data={sequences.items} />,
   };
 
   return (

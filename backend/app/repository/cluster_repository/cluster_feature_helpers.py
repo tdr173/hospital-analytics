@@ -339,7 +339,7 @@ def get_marital_distribution(db: Session, cluster_id: int) -> dict:
 def get_smoking_distribution(db: Session, cluster_id: int) -> dict:
     sql = text(f"""
         WITH cluster_pts AS (
-            SELECT patient_id FROM cluster_patient WHERE {_where(cluster_id)}
+            SELECT patient_id FROM cluster_patient cp WHERE {_where(cluster_id)}
         ),
         patient_smoking AS (
             SELECT patient_id,

@@ -31,15 +31,21 @@ const GENDER_LABELS: Record<string, string> = {
 function EncountersTable({
   data,
   encloading,
+  encLoadingMore,
+  encHasMore,
   classes,
   onPatientClick,
   onEncounterClick,
+  onLoadMore,
 }: {
   data: ProviderEncounterItem[];
   encloading: boolean;
+  encLoadingMore: boolean;
+  encHasMore: boolean;
   classes: any;
   onPatientClick: (id: string) => void;
   onEncounterClick: (id: string) => void;
+  onLoadMore: () => void;
 }) {
   if (encloading) {
     return (
@@ -94,6 +100,17 @@ function EncountersTable({
           </div>
         </div>
       ))}
+      {encHasMore && (
+        <div className={classes.loadMoreRow}>
+          <button
+            className={classes.loadMoreButton}
+            onClick={onLoadMore}
+            disabled={encLoadingMore}
+          >
+            {encLoadingMore ? "Loading..." : "Load more"}
+          </button>
+        </div>
+      )}
     </>
   );
 }
@@ -106,7 +123,7 @@ export default function ProviderDetailPage() {
     name: "ProviderDetailPage",
   });
 
-  const { provider, encounters, loading, encloading, error } = useSelector(
+  const { provider, encounters, loading, encloading, encLoadingMore, encHasMore, encPage, error } = useSelector(
     (state: RootState) => state.currentProvider,
   );
 
@@ -114,7 +131,7 @@ export default function ProviderDetailPage() {
     if (!id) return;
     dispatch(resetCurrentProvider());
     dispatch(fetchProviderDetail(id));
-    dispatch(fetchProviderEncounters(id));
+    dispatch(fetchProviderEncounters({ providerId: id, page: 1 }));
   }, [id, dispatch]);
 
   if (loading) {
@@ -187,12 +204,17 @@ export default function ProviderDetailPage() {
           <EncountersTable
             data={encounters}
             encloading={encloading}
+            encLoadingMore={encLoadingMore}
+            encHasMore={encHasMore}
             classes={classes}
             onPatientClick={(patientId) =>
               router.push(`/patients/${patientId}`)
             }
             onEncounterClick={(encounterId) =>
               router.push(`/encounters/${encounterId}`)
+            }
+            onLoadMore={() =>
+              dispatch(fetchProviderEncounters({ providerId: id, page: encPage + 1 }))
             }
           />
         </div>

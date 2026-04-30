@@ -17,35 +17,35 @@ class PatientService:
     def get_patient_summary(self, patient_id: str):
         return self.repo.get_patient_summary(patient_id)
 
-    def get_patient_conditions(self, patient_id: str):
-        return self.repo.get_patient_conditions(patient_id)
+    def get_patient_conditions(self, patient_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_patient_conditions(patient_id, page, page_size)
 
-    def get_patient_medications(self, patient_id: str):
-        return self.repo.get_patient_medications(patient_id)
+    def get_patient_medications(self, patient_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_patient_medications(patient_id, page, page_size)
 
-    def get_patient_procedures(self, patient_id: str):
-        return self.repo.get_patient_procedures(patient_id)
+    def get_patient_procedures(self, patient_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_patient_procedures(patient_id, page, page_size)
 
-    def get_patient_immunizations(self, patient_id: str):
-        return self.repo.get_patient_immunizations(patient_id)
+    def get_patient_immunizations(self, patient_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_patient_immunizations(patient_id, page, page_size)
 
-    def get_patient_careplans(self, patient_id: str):
-        return self.repo.get_patient_careplans(patient_id)
+    def get_patient_careplans(self, patient_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_patient_careplans(patient_id, page, page_size)
 
-    def get_patient_allergies(self, patient_id: str):
-        return self.repo.get_patient_allergies(patient_id)
+    def get_patient_allergies(self, patient_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_patient_allergies(patient_id, page, page_size)
 
-    def get_patient_encounters(self, patient_id: str):
-        return self.repo.get_patient_encounters(patient_id)
+    def get_patient_encounters(self, patient_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_patient_encounters(patient_id, page, page_size)
 
-    def get_patient_sequences(self, patient_id: str):
-        return self.repo.get_patient_sequences(patient_id)
+    def get_patient_sequences(self, patient_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_patient_sequences(patient_id, page, page_size)
 
     def get_patient_resources(self):
         return self.repo.get_patient_resources()
 
-    def get_patient_observations(self, patient_id: str):
-        return self.repo.get_patient_observations(patient_id)
+    def get_patient_observations(self, patient_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_patient_observations(patient_id, page, page_size)
 
     def create_patient(self, payload):
         return self.repo.create_patient(payload)

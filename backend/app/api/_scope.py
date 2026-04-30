@@ -23,12 +23,15 @@ class Scope:
         return self.role is not None and self.role.upper() == "PATIENT"
 
 
+DEFAULT_PROVIDER_ID = "21ac7fa4-a452-3556-b812-f84c92369a6c"
+
+
 def scope_dep(
     role: Optional[str] = Query(None),
     patientId: Optional[str] = Query(None),
     providerId: Optional[str] = Query(None),
 ) -> Scope:
-    return Scope(role=role, patient_id=patientId, provider_id=providerId)
+    return Scope(role=role, patient_id=patientId, provider_id=providerId or DEFAULT_PROVIDER_ID)
 
 
 def require_manager(scope: Scope) -> None:

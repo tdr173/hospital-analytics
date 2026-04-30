@@ -4,7 +4,7 @@ import type { RootState } from "@/store";
 import {
   ProviderListResponse,
   ProviderDetail,
-  ProviderEncounterItem,
+  ProviderEncounterPageResponse,
   ProviderResources,
   FetchProvidersArgs,
 } from "@/models/generic/providers";
@@ -125,13 +125,13 @@ export const deleteProvider = createAsyncThunk<
 });
 
 export const fetchProviderEncounters = createAsyncThunk<
-  ProviderEncounterItem[],
-  string,
+  ProviderEncounterPageResponse,
+  { providerId: string; page: number },
   { rejectValue: ErrorResponse }
->("providers/fetchProviderEncounters", async (providerId, thunkAPI) => {
+>("providers/fetchProviderEncounters", async ({ providerId, page }, thunkAPI) => {
   try {
-    return await get<ProviderEncounterItem[]>(
-      `${API_BASE}/providers/${providerId}/encounters`,
+    return await get<ProviderEncounterPageResponse>(
+      `${API_BASE}/providers/${providerId}/encounters?page=${page}`,
       "provider encounters"
     );
   } catch {

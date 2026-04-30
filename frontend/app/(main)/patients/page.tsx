@@ -51,7 +51,7 @@ const COLUMNS = [
   },
   { key: "gender", label: "Gender", width: 100 },
   { key: "city", label: "City", sortable: true, width: 120 },
-  { key: "race", label: "Race / Ethnicity", width: 140 },
+  { key: "race", label: "Race / Ethnicity", width: 150 },
   { key: "marital", label: "Marital Status", width: 110 },
   { key: "status", label: "Status", width: 90 },
   { key: "cluster", label: "Group", width: 240 },

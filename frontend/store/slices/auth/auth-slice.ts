@@ -27,7 +27,7 @@ function hydrate(): AuthState {
       return { user: parsed, isAuthenticated: true };
     }
   } catch {
-    // malformed json — ignore
+    // malformed json - ignore
   }
   return { user: null, isAuthenticated: false };
 }
@@ -40,7 +40,10 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.isAuthenticated = true;
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(action.payload));
+        window.localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(action.payload),
+        );
       }
     },
     logout(state) {

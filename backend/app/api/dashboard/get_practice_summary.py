@@ -1,4 +1,5 @@
 from fastapi import Depends, Query
+from api._scope import DEFAULT_PROVIDER_ID
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
@@ -10,7 +11,7 @@ from .dashboard_router import dashboard_router
 
 @dashboard_router.get("/practice-summary")
 async def get_practice_summary(
-    providerId: str = Query(...),
+    providerId: str = Query(DEFAULT_PROVIDER_ID),
     db: Session = Depends(get_db),
 ):
     panel_size = (

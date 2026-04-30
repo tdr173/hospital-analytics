@@ -137,7 +137,8 @@ class ProviderRepository:
 
         return ProviderDetailResponse(**row._asdict())
 
-    def get_provider_encounters(self, provider_id: str) -> list[ProviderEncounterItem]:
+    def get_provider_encounters(self, provider_id: str, page: int = 1, page_size: int = 20):
+        offset = (page - 1) * page_size
         rows = (
             self.db.query(
                 EncounterModel.encounter_id,
@@ -153,9 +154,13 @@ class ProviderRepository:
             .outerjoin(PatientModel, EncounterModel.patient_id == PatientModel.patient_id)
             .filter(EncounterModel.provider_id == provider_id)
             .order_by(EncounterModel.start_date.desc())
+            .offset(offset)
+            .limit(page_size + 1)
             .all()
         )
-        return [ProviderEncounterItem(**row._asdict()) for row in rows]
+        has_more = len(rows) > page_size
+        items = [ProviderEncounterItem(**row._asdict()) for row in rows[:page_size]]
+        return items, has_more
 
     def _resolve_default_org(self) -> OrganizationModel:
         org = self.db.query(OrganizationModel).first()

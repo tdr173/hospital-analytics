@@ -63,3 +63,8 @@ class ProviderEncounterItem(CamelModel):
     encounter_class: str
     description: str
     reason_description: Optional[str] = None
+
+
+class ProviderEncounterPageResponse(CamelModel):
+    items: List[ProviderEncounterItem]
+    has_more: bool

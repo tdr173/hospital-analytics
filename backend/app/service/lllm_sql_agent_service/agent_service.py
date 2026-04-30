@@ -13,6 +13,7 @@ load_dotenv()
 MAX_RETRIES = 3
 MAX_RESULT_ROWS = 100
 MAX_RESULT_CHARS = 3000
+MAX_HISTORY_TURNS = 5
 
 DANGEROUS_KEYWORDS = re.compile(
     r"\b(DROP|DELETE|TRUNCATE|ALTER|INSERT|UPDATE|CREATE|GRANT|REVOKE|EXEC|EXECUTE)\b",
@@ -23,8 +24,11 @@ DANGEROUS_KEYWORDS = re.compile(
 class AgentState(TypedDict):
     db: Any  # SQLAlchemy Session - passed through, never serialized
     user_prompt: str
+    original_prompt: str  # raw user question, no injected scope
     chat_history: str
+    scope_clause: str  # role-based scope restriction injected into SQL steps
     translated_prompt: str
+    general_answer: str  # set when the question is medical but needs no DB query
     sql_query: str
     query_result: str
     error_message: str
@@ -34,22 +38,49 @@ class AgentState(TypedDict):
 
 
 PROMPT_TRANSLATE = """
-You rewrite user questions into standalone English data-retrieval prompts for a hospital analytics database.
+You classify and rewrite user messages for a hospital analytics assistant.
 
-User Prompt: "{initial_prompt}"
+User message: "{initial_prompt}"
 
 {chat_context}
 
-Schema reference (for term disambiguation only, do NOT copy it into the output):
+Schema reference (for term disambiguation only, do NOT copy into output):
 {db_schema}
 
-Rules:
-1. Resolve references to prior turns ("what about...", "same but for...", "and those", "how many of them") using the conversation history. The rewritten prompt MUST be standalone and understandable with zero history.
-2. Translate to English if the user wrote in another language.
-3. Keep it a single precise sentence describing what data to retrieve. Preserve specific entities (names, ids, numbers, date ranges) exactly.
-4. If the input is NOT a data-retrieval request (greetings, opinions, commands to modify data, small talk), return exactly: NOT_RETRIEVAL
+Classification rules — return EXACTLY one of the three outputs below:
 
-Output: the rewritten prompt OR the literal token NOT_RETRIEVAL. No quotes, no markdown, no explanations.
+1. DB_RETRIEVAL  — the user is asking for data that exists in the hospital database (patient counts,
+   encounter stats, medications, conditions, clusters, sequences, provider info, etc.).
+   Output: a single standalone English sentence describing what data to retrieve.
+   - Resolve any references to prior turns so the sentence is self-contained with no history needed.
+   - Preserve specific entities (names, ids, numbers, date ranges) exactly.
+
+2. MEDICAL_GENERAL — the user is asking a general medical/health question that does NOT require
+   querying the database (e.g. "what is diabetes?", "how is hypertension treated?",
+   "what are symptoms of COVID-19?", "explain BMI", medical advice questions, etc.).
+   Output the literal token followed by a colon and the standalone question in English:
+   MEDICAL_GENERAL: <question>
+
+3. NOT_MEDICAL — the input is completely unrelated to medicine or the hospital database
+   (greetings, small talk, coding help, math, opinions, commands to modify data, etc.).
+   Output the literal token: NOT_MEDICAL
+
+Output ONLY the chosen output. No markdown, no quotes, no extra explanation.
+"""
+
+PROMPT_MEDICAL_ANSWER = """
+You are a medical assistant for a hospital analytics platform. Answer the following medical question.
+
+{chat_context}
+
+Question: {question}
+
+Rules:
+- Reply in the SAME language the user wrote in (English, Romanian, etc.).
+- Be accurate and concise: 2-5 sentences or a short bulleted list.
+- Do not invent treatments, statistics, or diagnoses that are not medically established.
+- If the question implies a personal health situation, add one short sentence advising the user to consult a doctor.
+- Never mention SQL, databases, or technical system internals.
 """
 
 PROMPT_GENERATE_SQL = """
@@ -60,7 +91,7 @@ Question: "{prompt}"
 Schema:
 {db_schema}
 
-{retry_context}
+{scope_clause}{retry_context}
 
 Output rules:
 1. Return ONLY the raw SQL. No markdown, no prose, no trailing semicolon required.
@@ -105,6 +136,8 @@ Generated SQL: {sql_query}
 Schema:
 {db_schema}
 
+{scope_clause}
+
 Validation checklist (reject if ANY item fails):
 1. Must be a single SELECT or WITH ... SELECT. Reject anything that writes data (INSERT/UPDATE/DELETE/DROP/ALTER/TRUNCATE/GRANT/REVOKE/EXEC).
 2. Every referenced table and column must exist in the schema above.
@@ -112,6 +145,7 @@ Validation checklist (reject if ANY item fails):
 4. Query logic must answer THIS specific question (right table, right filter, right aggregation). Querying 'patient' when the user asked about 'providers' = NO.
 5. For cluster questions: reject if it forgot `NOT is_outlier` (unless the user asked about outliers) or mixed cluster_patient.features with raw clinical tables.
 6. For counts of patients/providers across clinical tables: reject if it uses COUNT(*) instead of COUNT(DISTINCT patient_id) when duplicates are likely.
+7. If a MANDATORY ROLE SCOPE is present above: reject if the query does not include the required provider_id filter exactly as specified.
 
 Do NOT flag:
 - ILIKE vs = (both valid).
@@ -172,21 +206,38 @@ def format_chat_context(history: str) -> str:
 
 
 def process_input(state: AgentState):
+    scope_prefix = state.get('scope_clause') or ""
+    full_prompt = (scope_prefix + "\n\nUser question: " + state['user_prompt']) if scope_prefix else state['user_prompt']
+
     prompt = PROMPT_TRANSLATE.format(
-        initial_prompt=state['user_prompt'],
+        initial_prompt=full_prompt,
         db_schema=DB_SCHEMA,
         chat_context=format_chat_context(state.get('chat_history', ''))
     )
     result = ask_ai(prompt).strip()
 
-    if "NOT_RETRIEVAL" in result:
-        return {"error_message": "NOT_RETRIEVAL"}
+    if result.startswith("MEDICAL_GENERAL:"):
+        question = result[len("MEDICAL_GENERAL:"):].strip()
+        return {"translated_prompt": question, "error_message": "MEDICAL_GENERAL"}
+
+    if "NOT_MEDICAL" in result:
+        return {"error_message": "NOT_MEDICAL"}
 
     return {
         "translated_prompt": result,
         "retry_count": 0,
         "feedback": ""
     }
+
+
+def answer_general(state: AgentState):
+    prompt = PROMPT_MEDICAL_ANSWER.format(
+        question=state['translated_prompt'],
+        chat_context=format_chat_context(state.get('chat_history', ''))
+    )
+    response = ask_ai(prompt)
+    print(f"[SQL Agent] General medical answer returned.\n")
+    return {"general_answer": response}
 
 
 def generate_query(state: AgentState):
@@ -199,9 +250,14 @@ def generate_query(state: AgentState):
             f"Fix the issue and generate a corrected query."
         )
 
+    scope_clause = state.get('scope_clause') or ""
+    if scope_clause:
+        scope_clause = scope_clause + "\n\n"
+
     prompt = PROMPT_GENERATE_SQL.format(
         prompt=state['translated_prompt'],
         db_schema=DB_SCHEMA,
+        scope_clause=scope_clause,
         retry_context=retry_context,
         max_rows=MAX_RESULT_ROWS,
     )
@@ -225,10 +281,13 @@ def validate_query(state: AgentState):
             "retry_count": state["retry_count"] + 1
         }
 
+    scope_clause = state.get('scope_clause') or ""
+
     prompt = PROMPT_VALIDATE_SQL.format(
         prompt=state['translated_prompt'],
         sql_query=sql,
-        db_schema=DB_SCHEMA
+        db_schema=DB_SCHEMA,
+        scope_clause=scope_clause,
     )
 
     response = ask_ai(prompt)
@@ -265,8 +324,11 @@ def execute_query(state: AgentState):
 
 
 def route_input(state: AgentState):
-    if state.get("error_message") == "NOT_RETRIEVAL":
-        return "END"
+    error = state.get("error_message", "")
+    if error == "NOT_MEDICAL":
+        return "NOT_MEDICAL"
+    if error == "MEDICAL_GENERAL":
+        return "MEDICAL"
     return "GENERATE"
 
 
@@ -291,6 +353,7 @@ def route_execution(state: AgentState):
 builder = StateGraph(AgentState)
 
 builder.add_node("process_input", process_input)
+builder.add_node("answer_general", answer_general)
 builder.add_node("generate_query", generate_query)
 builder.add_node("validate_query", validate_query)
 builder.add_node("execute_query", execute_query)
@@ -302,9 +365,12 @@ builder.add_conditional_edges(
     route_input,
     {
         "GENERATE": "generate_query",
-        "END": END
+        "MEDICAL": "answer_general",
+        "NOT_MEDICAL": END,
     }
 )
+
+builder.add_edge("answer_general", END)
 
 builder.add_edge("generate_query", "validate_query")
 
@@ -329,9 +395,7 @@ builder.add_conditional_edges(
 
 
 graph = builder.compile()
-
-
-MAX_HISTORY_TURNS = 3
+graph.get_graph().draw_mermaid_png(output_file_path="diagram.png")
 
 
 def build_history_string(history: list[dict]) -> str:
@@ -355,19 +419,18 @@ MANDATORY ROLE SCOPE — DOCTOR (provider_id = '{provider_id}'):
 
 
 def run_agent(db: Session, prompt: str, history=None, role: str = None, provider_id: str = None):
-    user_prompt = prompt
+    scope_clause = ""
     if role and role.upper() == "DOCTOR" and provider_id:
-        user_prompt = (
-            DOCTOR_SCOPE_CLAUSE.format(provider_id=provider_id)
-            + "\n\nUser question: "
-            + prompt
-        )
+        scope_clause = DOCTOR_SCOPE_CLAUSE.format(provider_id=provider_id)
 
     initial_state = {
         "db": db,
-        "user_prompt": user_prompt,
+        "user_prompt": prompt,
+        "original_prompt": prompt,
         "chat_history": build_history_string(history or []),
+        "scope_clause": scope_clause,
         "translated_prompt": "",
+        "general_answer": "",
         "sql_query": "",
         "query_result": "",
         "error_message": "",
@@ -378,20 +441,23 @@ def run_agent(db: Session, prompt: str, history=None, role: str = None, provider
 
     final_state = graph.invoke(initial_state, {"recursion_limit": 20})
 
-    if role and role.upper() == "DOCTOR" and provider_id:
+    if final_state.get("general_answer"):
+        return {"response": final_state["general_answer"]}
+
+    if final_state.get("error_message") == "NOT_MEDICAL":
+        return {"response": "I can only help with medical and hospital data questions. Please ask something related to medicine or the hospital database."}
+
+    if scope_clause:
         sql = final_state.get("sql_query", "") or ""
         if provider_id not in sql:
             return {
                 "response": "Unable to answer under doctor scope — the generated query did not reference your provider id. Try rephrasing.",
             }
 
-    if final_state.get("error_message") == "NOT_RETRIEVAL":
-        return {"response": "I can only help with data retrieval questions. Please ask something about the database."}
-
     if final_state.get("query_result"):
         response = ask_ai(
             PROMPT_RESULT.format(
-                initial_prompt=final_state["user_prompt"],
+                initial_prompt=final_state["original_prompt"],
                 result=final_state["query_result"]
             )
         )
@@ -401,5 +467,3 @@ def run_agent(db: Session, prompt: str, history=None, role: str = None, provider
         return {"response": "I tried multiple times but couldn't build a valid query. Try simplifying your question."}
 
     return {"response": "Sorry, I couldn't generate a valid result. Please try rephrasing your question."}
-
-

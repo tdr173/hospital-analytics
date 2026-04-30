@@ -23,13 +23,11 @@ TABLE: patient
   - ethnicity (str) - Values: 'Hispanic', 'Non-Hispanic'.
   - gender (str) - Values: 'M' (Male), 'F' (Female). Do NOT use 'Male'/'Female' in queries.
   - city (str) - City of residence.
-  - latitude (float), longitude (float) - Geographic coordinates.
 
 TABLE: organization
   - organization_id (str, PK) - UUID.
   - name (str) - Hospital or clinic name (e.g. 'General Hospital').
   - city (str) - City location.
-  - latitude (float), longitude (float) - Geographic coordinates.
   - phone (str, nullable) - Contact phone number.
   - utilization (int) - Total number of patient encounters handled.
 
@@ -40,8 +38,8 @@ TABLE: provider
   - gender (str, nullable) - Provider gender.
   - speciality (str) - Medical specialty (e.g. 'General Practice', 'Cardiology', 'Internal Medicine', 'Surgery').
   - city (str, nullable) - City location.
-  - latitude (float), longitude (float) - Geographic coordinates.
-  - utilization (int) - Number of encounters performed.
+  - encounters (int) - Total number of encounters performed by this provider.
+  - procedures (int) - Total number of procedures performed by this provider.
 
 TABLE: encounter
   PURPOSE: Represents a patient visit/interaction with the healthcare system.
@@ -105,7 +103,8 @@ TABLE: procedure
   - id (int, PK).
   - patient_id (str, FK → patient).
   - encounter_id (str, FK → encounter).
-  - date (datetime) - When the procedure was performed.
+  - start_date (datetime) - When the procedure was performed.
+  - end_date (datetime, nullable) - When the procedure ended.
   - procedure_code (str) - SNOMED-CT code.
   - description (str) - Procedure name (e.g. 'Appendectomy', 'Colonoscopy', 'X-ray'). Use ILIKE.
   - reason_description (str, nullable) - Clinical reason for the procedure.
@@ -172,6 +171,7 @@ TABLE: cluster_meta
   - params (JSONB) - Algorithm parameters: scaler, gamma, init method, random_state, outlier_threshold.
   - metrics (JSONB) - Quality scores: silhouette, gower_silhouette, calinski_harabasz, davies_bouldin.
   - heatmap (bytes, nullable) - PNG image of cluster heatmap (binary, not useful for SQL queries).
+  - pca_image (bytes, nullable) - PNG image of PCA/FAMD scatter plot (binary, not useful for SQL queries).
   - ai_analysis (JSONB, nullable) - Cached AI-generated population analysis (not useful for SQL queries).
 
 TABLE: cluster

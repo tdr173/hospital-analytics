@@ -184,13 +184,18 @@ def load_encounters(engine):
 
     encounters_df["organization_id"] = single_org_id
 
-    # Redistribute encounters from dropped providers to the most-active kept provider that year
+    # Redistribute encounters from dropped providers round-robin across kept providers that year
     dropped_mask = ~encounters_df["provider_id"].isin(kept_ids)
     if dropped_mask.any():
         years = pd.to_datetime(encounters_df.loc[dropped_mask, "start_date"], utc=True).dt.year
-        encounters_df.loc[dropped_mask, "provider_id"] = years.map(
-            lambda y: year_to_providers[y][0] if y in year_to_providers else global_fallback
-        )
+        year_counters: dict[int, int] = {}
+        new_providers = []
+        for y in years:
+            providers = year_to_providers.get(y, [global_fallback])
+            idx = year_counters.get(y, 0)
+            year_counters[y] = idx + 1
+            new_providers.append(providers[idx % len(providers)])
+        encounters_df.loc[dropped_mask, "provider_id"] = new_providers
         print(f"Redistributed {dropped_mask.sum():,} encounters from dropped providers.")
 
     today = pd.Timestamp.now(tz="UTC").normalize()

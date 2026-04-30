@@ -11,8 +11,8 @@ class ProviderService:
     def get_provider(self, provider_id: str):
         return self.repo.get_provider(provider_id)
 
-    def get_provider_encounters(self, provider_id: str):
-        return self.repo.get_provider_encounters(provider_id)
+    def get_provider_encounters(self, provider_id: str, page: int = 1, page_size: int = 20):
+        return self.repo.get_provider_encounters(provider_id, page, page_size)
 
     def get_provider_resources(self):
         return self.repo.get_provider_resources()

@@ -104,7 +104,7 @@ export default function SubRecordFormModal({
     () =>
       encounters.map((e) => ({
         value: e.encounterId,
-        label: `${formatDate(e.startDate)} — ${e.description}`,
+        label: `${formatDate(e.startDate)} - ${e.description}`,
       })),
     [encounters],
   );

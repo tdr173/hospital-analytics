@@ -62,24 +62,6 @@ const TAB_LABELS = [
   "Care Plans",
 ];
 
-const TAB_FETCHERS: Record<number, (id: string) => any> = {
-  2: fetchEncounterMedications,
-  3: fetchEncounterProcedures,
-  4: fetchEncounterImmunizations,
-  5: fetchEncounterAllergies,
-  6: fetchEncounterCareplans,
-};
-
-const ALL_FETCHERS: Record<number, (id: string) => any> = {
-  0: fetchEncounterObservations,
-  1: fetchEncounterConditions,
-  2: fetchEncounterMedications,
-  3: fetchEncounterProcedures,
-  4: fetchEncounterImmunizations,
-  5: fetchEncounterAllergies,
-  6: fetchEncounterCareplans,
-};
-
 const TAB_TO_KIND: Record<number, SubRecordKind> = {
   0: "observation",
   1: "condition",
@@ -143,11 +125,9 @@ export default function EncounterDetailPage() {
 
   const [tab, setTab] = useState(0);
 
-  // Encounter-level edit/delete state
   const [encModalOpen, setEncModalOpen] = useState(false);
   const [encDeleting, setEncDeleting] = useState(false);
 
-  // Sub-record CRUD state
   const [subModalOpen, setSubModalOpen] = useState(false);
   const [subKind, setSubKind] = useState<SubRecordKind>("condition");
   const [subInitial, setSubInitial] = useState<any | null>(null);
@@ -160,23 +140,50 @@ export default function EncounterDetailPage() {
     if (!id) return;
     dispatch(resetCurrentEncounter());
     dispatch(fetchEncounterDetail(id));
-    dispatch(fetchEncounterObservations(id));
-    dispatch(fetchEncounterConditions(id));
+    dispatch(fetchEncounterObservations({ encounterId: id, page: 1 }));
+    dispatch(fetchEncounterConditions({ encounterId: id, page: 1 }));
   }, [id, dispatch]);
 
   useEffect(() => {
     if (!id || tab <= 1 || loadedTabs.includes(tab)) return;
-    const fetcher = TAB_FETCHERS[tab];
-    if (fetcher) dispatch(fetcher(id));
+    switch (tab) {
+      case 2: dispatch(fetchEncounterMedications({ encounterId: id, page: 1 })); break;
+      case 3: dispatch(fetchEncounterProcedures({ encounterId: id, page: 1 })); break;
+      case 4: dispatch(fetchEncounterImmunizations({ encounterId: id, page: 1 })); break;
+      case 5: dispatch(fetchEncounterAllergies({ encounterId: id, page: 1 })); break;
+      case 6: dispatch(fetchEncounterCareplans({ encounterId: id, page: 1 })); break;
+    }
   }, [tab, id, dispatch, loadedTabs]);
 
   const refreshTabData = (tabIndex: number) => {
     if (!id) return;
-    const fetcher = ALL_FETCHERS[tabIndex];
-    if (fetcher) dispatch(fetcher(id));
+    switch (tabIndex) {
+      case 0: dispatch(fetchEncounterObservations({ encounterId: id, page: 1 })); break;
+      case 1: dispatch(fetchEncounterConditions({ encounterId: id, page: 1 })); break;
+      case 2: dispatch(fetchEncounterMedications({ encounterId: id, page: 1 })); break;
+      case 3: dispatch(fetchEncounterProcedures({ encounterId: id, page: 1 })); break;
+      case 4: dispatch(fetchEncounterImmunizations({ encounterId: id, page: 1 })); break;
+      case 5: dispatch(fetchEncounterAllergies({ encounterId: id, page: 1 })); break;
+      case 6: dispatch(fetchEncounterCareplans({ encounterId: id, page: 1 })); break;
+    }
   };
 
-  // Encounter edit/delete handlers
+  const handleLoadMore = () => {
+    if (!id) return;
+    switch (tab) {
+      case 0: dispatch(fetchEncounterObservations({ encounterId: id, page: observations.page + 1 })); break;
+      case 1: dispatch(fetchEncounterConditions({ encounterId: id, page: conditions.page + 1 })); break;
+      case 2: dispatch(fetchEncounterMedications({ encounterId: id, page: medications.page + 1 })); break;
+      case 3: dispatch(fetchEncounterProcedures({ encounterId: id, page: procedures.page + 1 })); break;
+      case 4: dispatch(fetchEncounterImmunizations({ encounterId: id, page: immunizations.page + 1 })); break;
+      case 5: dispatch(fetchEncounterAllergies({ encounterId: id, page: allergies.page + 1 })); break;
+      case 6: dispatch(fetchEncounterCareplans({ encounterId: id, page: careplans.page + 1 })); break;
+    }
+  };
+
+  const pagedByTab = [observations, conditions, medications, procedures, immunizations, allergies, careplans];
+  const currentPaged = pagedByTab[tab];
+
   const handleEncSubmit = async (value: EncounterFormValue) => {
     if (!id) return;
     setSubmitting(true);
@@ -202,7 +209,6 @@ export default function EncounterDetailPage() {
     if (!(result as any).error) router.push("/encounters");
   };
 
-  // Sub-record handlers
   const openSubAdd = (kind: SubRecordKind) => {
     setSubKind(kind);
     setSubInitial(null);
@@ -285,7 +291,7 @@ export default function EncounterDetailPage() {
   const tabContent: Record<number, React.ReactNode> = {
     0: (
       <ObservationsTab
-        data={observations}
+        data={observations.items}
         onEdit={
           canManage ? (item) => openSubEdit("observation", item) : undefined
         }
@@ -303,7 +309,7 @@ export default function EncounterDetailPage() {
     ),
     1: (
       <ConditionsTab
-        data={conditions}
+        data={conditions.items}
         onEdit={
           canManage ? (item) => openSubEdit("condition", item) : undefined
         }
@@ -321,7 +327,7 @@ export default function EncounterDetailPage() {
     ),
     2: (
       <MedicationsTab
-        data={medications}
+        data={medications.items}
         onEdit={
           canManage ? (item) => openSubEdit("medication", item) : undefined
         }
@@ -339,7 +345,7 @@ export default function EncounterDetailPage() {
     ),
     3: (
       <ProceduresTab
-        data={procedures}
+        data={procedures.items}
         onEdit={
           canManage ? (item) => openSubEdit("procedure", item) : undefined
         }
@@ -357,7 +363,7 @@ export default function EncounterDetailPage() {
     ),
     4: (
       <ImmunizationsTab
-        data={immunizations}
+        data={immunizations.items}
         onEdit={
           canManage ? (item) => openSubEdit("immunization", item) : undefined
         }
@@ -375,7 +381,7 @@ export default function EncounterDetailPage() {
     ),
     5: (
       <AllergiesTab
-        data={allergies}
+        data={allergies.items}
         onEdit={canManage ? (item) => openSubEdit("allergy", item) : undefined}
         onDelete={
           canManage
@@ -391,7 +397,7 @@ export default function EncounterDetailPage() {
     ),
     6: (
       <CarePlansTab
-        data={careplans}
+        data={careplans.items}
         onEdit={canManage ? (item) => openSubEdit("careplan", item) : undefined}
         onDelete={
           canManage
@@ -409,7 +415,6 @@ export default function EncounterDetailPage() {
 
   return (
     <div className={classes.pageContainer}>
-      {/* Encounter-level modals */}
       <EncounterFormModal
         open={encModalOpen}
         initial={encounter}
@@ -438,7 +443,6 @@ export default function EncounterDetailPage() {
         </div>
       </FormModal>
 
-      {/* Sub-record modals */}
       <SubRecordFormModal
         open={subModalOpen}
         kind={subKind}
@@ -645,7 +649,20 @@ export default function EncounterDetailPage() {
           {!loadedTabs.includes(tab) ? (
             <div className={classes.tabLoading}>Loading...</div>
           ) : (
-            <>{tabContent[tab]}</>
+            <>
+              {tabContent[tab]}
+              {currentPaged?.hasMore && (
+                <div className={classes.loadMoreRow}>
+                  <button
+                    className={classes.loadMoreButton}
+                    onClick={handleLoadMore}
+                    disabled={currentPaged.loadingMore}
+                  >
+                    {currentPaged.loadingMore ? "Loading..." : "Load more"}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

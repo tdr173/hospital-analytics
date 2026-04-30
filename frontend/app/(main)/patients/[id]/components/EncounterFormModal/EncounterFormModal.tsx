@@ -66,9 +66,23 @@ export default function EncounterFormModal({
     setTouched(false);
   }, [open, initial]);
 
+  const startTime = startDate.slice(11).trim();
+  const endTime = endDate.slice(11).trim();
+  const isValidTime = (t: string) => /^\d{2}:\d{2}$/.test(t);
+
   const errors = {
     startDate: !startDate ? "This field is required" : undefined,
+    startTime: !startTime
+      ? "This field is required"
+      : !isValidTime(startTime)
+      ? "Input must be HH:MM"
+      : undefined,
     endDate: !endDate ? "This field is required" : undefined,
+    endTime: !endTime
+      ? "This field is required"
+      : !isValidTime(endTime)
+      ? "Input must be HH:MM"
+      : undefined,
     description: !description.trim() ? "This field is required" : undefined,
   };
   const hasError = Object.values(errors).some(Boolean);
@@ -116,20 +130,26 @@ export default function EncounterFormModal({
       <StyledInput
         label="Start (time)"
         type="text"
+        required
         value={startDate.slice(11) || ""}
         onChange={(e) =>
           setStartDate(`${startDate.slice(0, 10) || ""}T${e.target.value}`)
         }
         placeholder="HH:MM"
+        error={touched && !!errors.startTime}
+        helperText={touched ? errors.startTime : undefined}
       />
       <StyledInput
         label="End (time)"
         type="text"
+        required
         value={endDate.slice(11) || ""}
         onChange={(e) =>
           setEndDate(`${endDate.slice(0, 10) || ""}T${e.target.value}`)
         }
         placeholder="HH:MM"
+        error={touched && !!errors.endTime}
+        helperText={touched ? errors.endTime : undefined}
       />
       <StyledInput
         label="Description"

@@ -14,6 +14,7 @@ import {
   EncounterResources,
   FetchEncountersArgs,
 } from "@/models/generic/encounters";
+import { PagedResponse } from "@/models/generic/patients";
 import { ErrorResponse } from "@/models/generic/generic";
 import { API_BASE } from "@/store/slices/clusters/thunks";
 import { appendScopeToUrl } from "@/utils/authScope";
@@ -115,84 +116,84 @@ export const fetchEncounterDetail = createAsyncThunk<
 });
 
 export const fetchEncounterObservations = createAsyncThunk<
-  EncounterObservationItem[],
-  string,
+  PagedResponse<EncounterObservationItem>,
+  { encounterId: string; page: number },
   { rejectValue: ErrorResponse }
->("encounters/fetchEncounterObservations", async (encounterId, thunkAPI) => {
+>("encounters/fetchEncounterObservations", async ({ encounterId, page }, thunkAPI) => {
   try {
-    return await get<EncounterObservationItem[]>(`${API_BASE}/encounters/${encounterId}/observations`, "observations");
+    return await get<PagedResponse<EncounterObservationItem>>(`${API_BASE}/encounters/${encounterId}/observations?page=${page}`, "observations");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch observations" });
   }
 });
 
 export const fetchEncounterConditions = createAsyncThunk<
-  EncounterConditionItem[],
-  string,
+  PagedResponse<EncounterConditionItem>,
+  { encounterId: string; page: number },
   { rejectValue: ErrorResponse }
->("encounters/fetchEncounterConditions", async (encounterId, thunkAPI) => {
+>("encounters/fetchEncounterConditions", async ({ encounterId, page }, thunkAPI) => {
   try {
-    return await get<EncounterConditionItem[]>(`${API_BASE}/encounters/${encounterId}/conditions`, "conditions");
+    return await get<PagedResponse<EncounterConditionItem>>(`${API_BASE}/encounters/${encounterId}/conditions?page=${page}`, "conditions");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch conditions" });
   }
 });
 
 export const fetchEncounterMedications = createAsyncThunk<
-  EncounterMedicationItem[],
-  string,
+  PagedResponse<EncounterMedicationItem>,
+  { encounterId: string; page: number },
   { rejectValue: ErrorResponse }
->("encounters/fetchEncounterMedications", async (encounterId, thunkAPI) => {
+>("encounters/fetchEncounterMedications", async ({ encounterId, page }, thunkAPI) => {
   try {
-    return await get<EncounterMedicationItem[]>(`${API_BASE}/encounters/${encounterId}/medications`, "medications");
+    return await get<PagedResponse<EncounterMedicationItem>>(`${API_BASE}/encounters/${encounterId}/medications?page=${page}`, "medications");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch medications" });
   }
 });
 
 export const fetchEncounterProcedures = createAsyncThunk<
-  EncounterProcedureItem[],
-  string,
+  PagedResponse<EncounterProcedureItem>,
+  { encounterId: string; page: number },
   { rejectValue: ErrorResponse }
->("encounters/fetchEncounterProcedures", async (encounterId, thunkAPI) => {
+>("encounters/fetchEncounterProcedures", async ({ encounterId, page }, thunkAPI) => {
   try {
-    return await get<EncounterProcedureItem[]>(`${API_BASE}/encounters/${encounterId}/procedures`, "procedures");
+    return await get<PagedResponse<EncounterProcedureItem>>(`${API_BASE}/encounters/${encounterId}/procedures?page=${page}`, "procedures");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch procedures" });
   }
 });
 
 export const fetchEncounterImmunizations = createAsyncThunk<
-  EncounterImmunizationItem[],
-  string,
+  PagedResponse<EncounterImmunizationItem>,
+  { encounterId: string; page: number },
   { rejectValue: ErrorResponse }
->("encounters/fetchEncounterImmunizations", async (encounterId, thunkAPI) => {
+>("encounters/fetchEncounterImmunizations", async ({ encounterId, page }, thunkAPI) => {
   try {
-    return await get<EncounterImmunizationItem[]>(`${API_BASE}/encounters/${encounterId}/immunizations`, "immunizations");
+    return await get<PagedResponse<EncounterImmunizationItem>>(`${API_BASE}/encounters/${encounterId}/immunizations?page=${page}`, "immunizations");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch immunizations" });
   }
 });
 
 export const fetchEncounterAllergies = createAsyncThunk<
-  EncounterAllergyItem[],
-  string,
+  PagedResponse<EncounterAllergyItem>,
+  { encounterId: string; page: number },
   { rejectValue: ErrorResponse }
->("encounters/fetchEncounterAllergies", async (encounterId, thunkAPI) => {
+>("encounters/fetchEncounterAllergies", async ({ encounterId, page }, thunkAPI) => {
   try {
-    return await get<EncounterAllergyItem[]>(`${API_BASE}/encounters/${encounterId}/allergies`, "allergies");
+    return await get<PagedResponse<EncounterAllergyItem>>(`${API_BASE}/encounters/${encounterId}/allergies?page=${page}`, "allergies");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch allergies" });
   }
 });
 
 export const fetchEncounterCareplans = createAsyncThunk<
-  EncounterCarePlanItem[],
-  string,
+  PagedResponse<EncounterCarePlanItem>,
+  { encounterId: string; page: number },
   { rejectValue: ErrorResponse }
->("encounters/fetchEncounterCareplans", async (encounterId, thunkAPI) => {
+>("encounters/fetchEncounterCareplans", async ({ encounterId, page }, thunkAPI) => {
   try {
-    return await get<EncounterCarePlanItem[]>(`${API_BASE}/encounters/${encounterId}/careplans`, "careplans");
+    return await get<PagedResponse<EncounterCarePlanItem>>(`${API_BASE}/encounters/${encounterId}/careplans?page=${page}`, "careplans");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch careplans" });
   }

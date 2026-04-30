@@ -40,6 +40,11 @@ export interface ProviderEncounterItem {
   reasonDescription: string | null;
 }
 
+export interface ProviderEncounterPageResponse {
+  items: ProviderEncounterItem[];
+  hasMore: boolean;
+}
+
 export interface ProviderResources {
   genders: FilterOption[];
   specialities: FilterOption[];

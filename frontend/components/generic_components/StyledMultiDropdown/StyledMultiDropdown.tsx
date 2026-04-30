@@ -133,7 +133,7 @@ export default function StyledMultiDropdown({
       return (
         <div
           className={classes.placeholderText}
-          style={{ width: "100%", overflow: "hidden" }}
+          style={{ minWidth: 0, overflow: "hidden" }}
         >
           <TruncatedText text={placeholder} />
         </div>
@@ -141,7 +141,7 @@ export default function StyledMultiDropdown({
     }
     if (allSelected) {
       return (
-        <div style={{ width: "100%", overflow: "hidden" }}>
+        <div style={{ minWidth: 0, overflow: "hidden" }}>
           <TruncatedText text="All" />
         </div>
       );
@@ -150,25 +150,22 @@ export default function StyledMultiDropdown({
       const opt = options.find((o) => o.value === selected[0]);
       const displayLabel = opt?.label ?? String(selected[0]);
       return (
-        <div style={{ width: "100%", overflow: "hidden" }}>
+        <div style={{ minWidth: 0, overflow: "hidden" }}>
           <TruncatedText text={displayLabel} />
         </div>
       );
     }
     return (
-      <span
-        className={classes.countText}
-        style={{ width: "100%", overflow: "hidden", display: "block" }}
-      >
+      <div style={{ minWidth: 0, overflow: "hidden" }}>
         <TruncatedText text={`+${selected.length}`} />
-      </span>
+      </div>
     );
   };
 
   return (
     <div
       className={classes.wrapper}
-      style={{ width: width ?? (fullWidth ? "100%" : undefined) }}
+      style={{ width: width === "auto" ? "100%" : (width ?? (fullWidth ? "100%" : undefined)) }}
     >
       <span className={classes.label} style={{ marginBottom: "6px" }}>
         {required ? `${label} *` : label}

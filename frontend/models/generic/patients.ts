@@ -1,3 +1,8 @@
+export interface PagedResponse<T> {
+  items: T[];
+  hasMore: boolean;
+}
+
 export interface PatientListItem {
   patientId: string;
   firstName: string;

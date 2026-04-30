@@ -1,4 +1,5 @@
-import { FilterOption } from "./patients";
+import { FilterOption, PagedResponse } from "./patients";
+export type { PagedResponse };
 
 export interface EncounterListItem {
   encounterId: string;

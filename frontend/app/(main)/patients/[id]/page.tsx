@@ -98,17 +98,6 @@ const TAB_LABELS = [
   "Observations",
 ];
 
-const TAB_FETCHERS: Record<number, (id: string) => any> = {
-  1: fetchPatientMedications,
-  2: fetchPatientProcedures,
-  3: fetchPatientImmunizations,
-  4: fetchPatientAllergies,
-  5: fetchPatientCareplans,
-  6: fetchPatientEncounters,
-  7: fetchPatientSequences,
-  8: fetchPatientObservations,
-};
-
 const TAB_TO_KIND: Record<number, SubRecordKind | null> = {
   0: "condition",
   1: "medication",
@@ -116,8 +105,8 @@ const TAB_TO_KIND: Record<number, SubRecordKind | null> = {
   3: "immunization",
   4: "allergy",
   5: "careplan",
-  6: null, // encounters tab — handled separately
-  7: null, // sequences — read-only
+  6: null,
+  7: null,
   8: "observation",
 };
 
@@ -182,29 +171,61 @@ export default function PatientDetailPage() {
     dispatch(resetCurrentPatient());
     dispatch(fetchPatientDetail(id));
     dispatch(fetchPatientSummary(id));
-    dispatch(fetchPatientConditions(id));
-    // Encounters power the visit-picker for sub-records, so always fetch them up-front.
-    dispatch(fetchPatientEncounters(id));
+    dispatch(fetchPatientConditions({ patientId: id, page: 1 }));
+    dispatch(fetchPatientEncounters({ patientId: id, page: 1 }));
   }, [id, dispatch]);
 
   useEffect(() => {
     if (!id || tab === 0 || loadedTabs.includes(tab)) return;
-    const fetcher = TAB_FETCHERS[tab];
-    if (fetcher) dispatch(fetcher(id));
+    switch (tab) {
+      case 1: dispatch(fetchPatientMedications({ patientId: id, page: 1 })); break;
+      case 2: dispatch(fetchPatientProcedures({ patientId: id, page: 1 })); break;
+      case 3: dispatch(fetchPatientImmunizations({ patientId: id, page: 1 })); break;
+      case 4: dispatch(fetchPatientAllergies({ patientId: id, page: 1 })); break;
+      case 5: dispatch(fetchPatientCareplans({ patientId: id, page: 1 })); break;
+      case 7: dispatch(fetchPatientSequences({ patientId: id, page: 1 })); break;
+      case 8: dispatch(fetchPatientObservations({ patientId: id, page: 1 })); break;
+    }
   }, [tab, id, dispatch, loadedTabs]);
 
   const refreshTabData = (tabIndex: number) => {
     if (!id) return;
-    const fetcher = TAB_FETCHERS[tabIndex];
-    if (fetcher) dispatch(fetcher(id));
-    if (tabIndex === 0) dispatch(fetchPatientConditions(id));
+    switch (tabIndex) {
+      case 0: dispatch(fetchPatientConditions({ patientId: id, page: 1 })); break;
+      case 1: dispatch(fetchPatientMedications({ patientId: id, page: 1 })); break;
+      case 2: dispatch(fetchPatientProcedures({ patientId: id, page: 1 })); break;
+      case 3: dispatch(fetchPatientImmunizations({ patientId: id, page: 1 })); break;
+      case 4: dispatch(fetchPatientAllergies({ patientId: id, page: 1 })); break;
+      case 5: dispatch(fetchPatientCareplans({ patientId: id, page: 1 })); break;
+      case 6: dispatch(fetchPatientEncounters({ patientId: id, page: 1 })); break;
+      case 7: dispatch(fetchPatientSequences({ patientId: id, page: 1 })); break;
+      case 8: dispatch(fetchPatientObservations({ patientId: id, page: 1 })); break;
+    }
     dispatch(fetchPatientSummary(id));
   };
 
   const refreshEncounters = () => {
     if (!id) return;
-    dispatch(fetchPatientEncounters(id));
+    dispatch(fetchPatientEncounters({ patientId: id, page: 1 }));
   };
+
+  const handleLoadMore = () => {
+    if (!id) return;
+    switch (tab) {
+      case 0: dispatch(fetchPatientConditions({ patientId: id, page: conditions.page + 1 })); break;
+      case 1: dispatch(fetchPatientMedications({ patientId: id, page: medications.page + 1 })); break;
+      case 2: dispatch(fetchPatientProcedures({ patientId: id, page: procedures.page + 1 })); break;
+      case 3: dispatch(fetchPatientImmunizations({ patientId: id, page: immunizations.page + 1 })); break;
+      case 4: dispatch(fetchPatientAllergies({ patientId: id, page: allergies.page + 1 })); break;
+      case 5: dispatch(fetchPatientCareplans({ patientId: id, page: careplans.page + 1 })); break;
+      case 6: dispatch(fetchPatientEncounters({ patientId: id, page: encounters.page + 1 })); break;
+      case 7: dispatch(fetchPatientSequences({ patientId: id, page: sequences.page + 1 })); break;
+      case 8: dispatch(fetchPatientObservations({ patientId: id, page: observations.page + 1 })); break;
+    }
+  };
+
+  const pagedByTab = [conditions, medications, procedures, immunizations, allergies, careplans, encounters, sequences, observations];
+  const currentPaged = pagedByTab[tab];
 
   const openSubAdd = (kind: SubRecordKind) => {
     setSubKind(kind);
@@ -325,7 +346,7 @@ export default function PatientDetailPage() {
 
   const renderConditions = () => (
     <ConditionsTab
-      data={conditions}
+      data={conditions.items}
       onEdit={
         canManage
           ? (item: ConditionItem) =>
@@ -348,7 +369,7 @@ export default function PatientDetailPage() {
   );
   const renderMedications = () => (
     <MedicationsTab
-      data={medications}
+      data={medications.items}
       onEdit={
         canManage
           ? (item: MedicationItem) =>
@@ -371,7 +392,7 @@ export default function PatientDetailPage() {
   );
   const renderProcedures = () => (
     <ProceduresTab
-      data={procedures}
+      data={procedures.items}
       onEdit={
         canManage
           ? (item: ProcedureItem) =>
@@ -394,7 +415,7 @@ export default function PatientDetailPage() {
   );
   const renderImmunizations = () => (
     <ImmunizationsTab
-      data={immunizations}
+      data={immunizations.items}
       onEdit={
         canManage
           ? (item: ImmunizationItem) =>
@@ -417,7 +438,7 @@ export default function PatientDetailPage() {
   );
   const renderAllergies = () => (
     <AllergiesTab
-      data={allergies}
+      data={allergies.items}
       onEdit={
         canManage
           ? (item: AllergyItem) => openSubEdit("allergy", item, "allergyCode")
@@ -439,7 +460,7 @@ export default function PatientDetailPage() {
   );
   const renderCareplans = () => (
     <CarePlansTab
-      data={careplans}
+      data={careplans.items}
       onEdit={
         canManage
           ? (item: CarePlanItem) =>
@@ -462,7 +483,7 @@ export default function PatientDetailPage() {
   );
   const renderEncounters = () => (
     <EncountersTab
-      data={encounters}
+      data={encounters.items}
       onEdit={
         canManage
           ? (item) => {
@@ -477,7 +498,7 @@ export default function PatientDetailPage() {
   );
   const renderObservations = () => (
     <ObservationsTab
-      data={observations}
+      data={observations.items}
       onEdit={
         canManage
           ? (item: PatientObservationItem) =>
@@ -507,7 +528,7 @@ export default function PatientDetailPage() {
     4: renderAllergies(),
     5: renderCareplans(),
     6: renderEncounters(),
-    7: <SequencesTab data={sequences} />,
+    7: <SequencesTab data={sequences.items} />,
     8: renderObservations(),
   };
 
@@ -616,7 +637,20 @@ export default function PatientDetailPage() {
           {!loadedTabs.includes(tab) ? (
             <div className={classes.tabLoading}>Loading...</div>
           ) : (
-            tabContent[tab]
+            <>
+              {tabContent[tab]}
+              {currentPaged?.hasMore && (
+                <div className={classes.loadMoreRow}>
+                  <button
+                    className={classes.loadMoreButton}
+                    onClick={handleLoadMore}
+                    disabled={currentPaged.loadingMore}
+                  >
+                    {currentPaged.loadingMore ? "Loading..." : "Load more"}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -651,7 +685,7 @@ export default function PatientDetailPage() {
       <SubRecordFormModal
         open={subModalOpen}
         kind={subKind}
-        encounters={encounters}
+        encounters={encounters.items}
         initial={subInitial}
         submitting={submitting}
         errorMessage={formError}

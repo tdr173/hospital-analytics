@@ -4,6 +4,7 @@ export const StyledDropdownStyles = (theme: Theme) => ({
   wrapper: {
     display: "flex",
     flexDirection: "column" as const,
+    minWidth: 0,
   },
   label: {
     fontFamily: '"Inter", sans-serif',

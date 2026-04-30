@@ -125,7 +125,7 @@ export default function StyledDropdown({
         <div
           style={{
             color: theme.colors.text.secondary,
-            width: "100%",
+            minWidth: 0,
             overflow: "hidden",
           }}
         >
@@ -136,9 +136,8 @@ export default function StyledDropdown({
     const opt = options.find((o) => o.value === selected);
     const displayLabel = opt?.label ?? String(selected);
 
-    // Bounding the TruncatedText ensures it knows when to trigger the tooltip
     return (
-      <div style={{ width: "100%", overflow: "hidden" }}>
+      <div style={{ minWidth: 0, overflow: "hidden" }}>
         <TruncatedText text={displayLabel} />
       </div>
     );
@@ -147,7 +146,7 @@ export default function StyledDropdown({
   return (
     <div
       className={classes.wrapper}
-      style={{ width: width ?? (fullWidth ? "100%" : undefined) }}
+      style={{ width: width === "auto" ? "100%" : (width ?? (fullWidth ? "100%" : undefined)) }}
     >
       <span className={classes.label} style={{ marginBottom: "6px" }}>
         {required ? `${label} *` : label}

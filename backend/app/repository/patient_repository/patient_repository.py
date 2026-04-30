@@ -284,14 +284,19 @@ class PatientRepository:
             days_since_last_encounter=int(days_since_last_encounter or 0) if days_since_last_encounter is not None else None,
         )
 
-    def get_patient_conditions(self, patient_id: str) -> list[ConditionItem]:
-        rows = (
+    def _paginate(self, query, page: int, page_size: int):
+        rows = query.offset((page - 1) * page_size).limit(page_size + 1).all()
+        has_more = len(rows) > page_size
+        return rows[:page_size], has_more
+
+    def get_patient_conditions(self, patient_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(ConditionModel)
             .filter(ConditionModel.patient_id == patient_id)
             .order_by(ConditionModel.start_date.desc())
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             ConditionItem(
                 id=r.id,
                 description=r.description,
@@ -302,15 +307,16 @@ class PatientRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
-    def get_patient_medications(self, patient_id: str) -> list[MedicationItem]:
-        rows = (
+    def get_patient_medications(self, patient_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(MedicationModel)
             .filter(MedicationModel.patient_id == patient_id)
             .order_by(MedicationModel.start_date.desc())
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             MedicationItem(
                 id=r.id,
                 description=r.description,
@@ -323,15 +329,16 @@ class PatientRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
-    def get_patient_procedures(self, patient_id: str) -> list[ProcedureItem]:
-        rows = (
+    def get_patient_procedures(self, patient_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(ProcedureModel)
             .filter(ProcedureModel.patient_id == patient_id)
             .order_by(ProcedureModel.start_date.desc())
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             ProcedureItem(
                 id=r.id,
                 description=r.description,
@@ -343,15 +350,16 @@ class PatientRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
-    def get_patient_immunizations(self, patient_id: str) -> list[ImmunizationItem]:
-        rows = (
+    def get_patient_immunizations(self, patient_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(ImmunizationModel)
             .filter(ImmunizationModel.patient_id == patient_id)
             .order_by(ImmunizationModel.date.desc())
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             ImmunizationItem(
                 id=r.id,
                 description=r.description,
@@ -361,15 +369,16 @@ class PatientRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
-    def get_patient_careplans(self, patient_id: str) -> list[CarePlanItem]:
-        rows = (
+    def get_patient_careplans(self, patient_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(CarePlanModel)
             .filter(CarePlanModel.patient_id == patient_id)
             .order_by(CarePlanModel.start_date.desc())
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             CarePlanItem(
                 id=r.id,
                 description=r.description,
@@ -382,15 +391,16 @@ class PatientRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
-    def get_patient_allergies(self, patient_id: str) -> list[AllergyItem]:
-        rows = (
+    def get_patient_allergies(self, patient_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(AllergyModel)
             .filter(AllergyModel.patient_id == patient_id)
             .order_by(AllergyModel.start_date.desc())
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             AllergyItem(
                 id=r.id,
                 description=r.description,
@@ -401,16 +411,16 @@ class PatientRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
-    def get_patient_observations(self, patient_id: str) -> list[PatientObservationItem]:
-        rows = (
+    def get_patient_observations(self, patient_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(ObservationModel)
             .filter(ObservationModel.patient_id == patient_id)
             .order_by(ObservationModel.date.desc())
-            .limit(500)
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             PatientObservationItem(
                 id=r.id,
                 date=r.date,
@@ -423,6 +433,7 @@ class PatientRepository:
             )
             for r in rows
         ]
+        return items, has_more
 
     def create_patient(self, payload: PatientCreateRequest) -> PatientDetailResponse:
         patient = PatientModel(
@@ -499,8 +510,8 @@ class PatientRepository:
             ],
         )
 
-    def get_patient_encounters(self, patient_id: str) -> list[EncounterItem]:
-        rows = (
+    def get_patient_encounters(self, patient_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(
                 EncounterModel.encounter_id,
                 EncounterModel.start_date,
@@ -516,12 +527,12 @@ class PatientRepository:
             .outerjoin(OrganizationModel, EncounterModel.organization_id == OrganizationModel.organization_id)
             .filter(EncounterModel.patient_id == patient_id)
             .order_by(EncounterModel.start_date.desc())
-            .all()
         )
-        return [EncounterItem(**row._asdict()) for row in rows]
+        rows, has_more = self._paginate(q, page, page_size)
+        return [EncounterItem(**row._asdict()) for row in rows], has_more
 
-    def get_patient_sequences(self, patient_id: str) -> list[SequenceListItem]:
-        rows = (
+    def get_patient_sequences(self, patient_id: str, page: int = 1, page_size: int = 20):
+        q = (
             self.db.query(PrefixSpanPatternModel)
             .join(
                 PrefixSpanPatientPatternModel,
@@ -532,9 +543,9 @@ class PatientRepository:
                 PrefixSpanPatternModel.support_count.desc(),
                 PrefixSpanPatternModel.rank.asc(),
             )
-            .all()
         )
-        return [
+        rows, has_more = self._paginate(q, page, page_size)
+        items = [
             SequenceListItem(
                 id=r.id,
                 rank=r.rank,
@@ -546,3 +557,4 @@ class PatientRepository:
             )
             for r in rows
         ]
+        return items, has_more
