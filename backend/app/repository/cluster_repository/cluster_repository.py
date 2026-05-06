@@ -326,6 +326,20 @@ class ClusterRepository:
             for row in rows
         ]
 
+    def get_cluster_detail_cache(self, cluster_id: int) -> ClusterDetailResponse | None:
+        cluster = self.db.query(ClusterModel).filter(
+            ClusterModel.cluster_label == cluster_id,
+        ).first()
+        if cluster and cluster.detail_cache:
+            return ClusterDetailResponse.model_validate(cluster.detail_cache)
+        return None
+
+    def save_cluster_detail_cache(self, cluster_id: int, detail: ClusterDetailResponse) -> None:
+        self.db.query(ClusterModel).filter(
+            ClusterModel.cluster_label == cluster_id,
+        ).update({"detail_cache": detail.model_dump()}, synchronize_session="fetch")
+        self.db.commit()
+
     def get_cluster_ai_analysis(self, cluster_id: int) -> AiAnalysisResponse | None:
         cluster = self.db.query(ClusterModel).filter(
             ClusterModel.cluster_label == cluster_id,

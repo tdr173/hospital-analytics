@@ -38,6 +38,7 @@ async def lifespan(app: FastAPI):
             conn.execute(text("ALTER TABLE cluster_meta ADD COLUMN IF NOT EXISTS ai_analysis JSONB"))
             conn.execute(text("ALTER TABLE cluster_meta ADD COLUMN IF NOT EXISTS pca_image BYTEA"))
             conn.execute(text("ALTER TABLE cluster ADD COLUMN IF NOT EXISTS ai_analysis JSONB"))
+            conn.execute(text("ALTER TABLE cluster ADD COLUMN IF NOT EXISTS detail_cache JSONB"))
             conn.execute(text("ALTER TABLE prefix_span_pattern ADD COLUMN IF NOT EXISTS ai_analysis JSONB"))
             # NOT VALID skips the check on existing rows; new inserts are still validated.
             conn.execute(text("""
@@ -55,6 +56,10 @@ async def lifespan(app: FastAPI):
                 END;
                 $$;
             """))
+            # pg_trgm extension + GIN indexes for ILIKE '%pattern%' queries
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_obs_desc_trgm ON observation USING GIN(description gin_trgm_ops)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_cond_desc_trgm ON condition USING GIN(description gin_trgm_ops)"))
             # observation indexes
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_observation_description ON observation (description)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_observation_value_numeric ON observation (value_numeric)"))

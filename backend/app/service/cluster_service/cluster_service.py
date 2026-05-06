@@ -1,4 +1,4 @@
-from domain import AiAnalysisResponse
+from domain import AiAnalysisResponse, ClusterDetailResponse
 from repository import ClusterRepository
 from service._helpers import parse_ai_json
 from service.lllm_sql_agent_service.llm_models import ask_ai
@@ -88,8 +88,13 @@ class ClusterService:
     def get_categorical_features_statistics(self):
         return self.repo.get_categorical_features_statistics()
 
-    def get_cluster_detail(self, cluster_id: int):
-        return self.repo.get_cluster_detail(cluster_id)
+    def get_cluster_detail(self, cluster_id: int) -> ClusterDetailResponse:
+        cached = self.repo.get_cluster_detail_cache(cluster_id)
+        if cached is not None:
+            return cached
+        result = self.repo.get_cluster_detail(cluster_id)
+        self.repo.save_cluster_detail_cache(cluster_id, result)
+        return result
 
     def get_ai_analysis(self, cluster_id: int) -> AiAnalysisResponse:
         # Fast path: no lock, return cached analysis if already computed.

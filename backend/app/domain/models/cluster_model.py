@@ -17,4 +17,5 @@ class ClusterModel(SQLModel, table=True):
     description: str
     insight: str
     recommendation: str
-    ai_analysis: Optional[dict] = Field(default=None, sa_column=Column(JSONB))  # cached per-cluster AI analysis
+    ai_analysis: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
+    detail_cache: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
