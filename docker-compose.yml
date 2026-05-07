@@ -1,20 +1,419 @@
+﻿networks:
+  hospital-net:
+    driver: bridge
+
+volumes:
+  auth_pg:
+  clinical_pg:
+  ml_pg:
+  analytics_pg:
+  queue_pg:
+  rabbitmq_data:
+
+x-pg-base: &pg-base
+  image: postgres:16
+  restart: unless-stopped
+  networks:
+    - hospital-net
+
 services:
+
+  ###################################################
+  # TRAEFIK
+  ###################################################
+  traefik:
+    image: traefik:v3.1
+    container_name: hospital_traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8090:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+    networks:
+      - hospital-net
+
+  ###################################################
+  # POSTGRES — one per data-owning service
+  ###################################################
+  auth-db:
+    <<: *pg-base
+    container_name: hospital_auth_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: auth
+    volumes:
+      - auth_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d auth"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  clinical-db:
+    <<: *pg-base
+    container_name: hospital_clinical_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: clinical
+    ports:
+      - "5432:5432"   # exposed for ETL scripts
+    volumes:
+      - clinical_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d clinical"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  ml-db:
+    <<: *pg-base
+    container_name: hospital_ml_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ml
+    volumes:
+      - ml_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d ml"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  analytics-db:
+    <<: *pg-base
+    container_name: hospital_analytics_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: analytics
+    volumes:
+      - analytics_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d analytics"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  queue-db:
+    <<: *pg-base
+    container_name: hospital_queue_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: queue
+    volumes:
+      - queue_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d queue"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  ###################################################
+  # RABBITMQ
+  ###################################################
   rabbitmq:
     image: rabbitmq:3-management
     container_name: hospital_rabbitmq
-    ports:
-      - "5672:5672"     # AMQP
-      - "15672:15672"   # Management UI (http://localhost:15672, guest/guest)
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+    networks:
+      - hospital-net
 
-volumes:
-  rabbitmq_data:
+  ###################################################
+  # AUTH
+  ###################################################
+  auth:
+    build: ./services/auth
+    container_name: hospital_auth
+    restart: unless-stopped
+    networks:
+      - hospital-net
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: auth
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: auth-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: auth
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-30}
+      CORS_ORIGINS: http://app.localhost,http://localhost:3000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth.rule=Host(`auth.localhost`)"
+      - "traefik.http.routers.auth.entrypoints=web"
+      - "traefik.http.services.auth.loadbalancer.server.port=8000"
+
+  ###################################################
+  # USERS
+  ###################################################
+  users:
+    build: ./services/users
+    container_name: hospital_users
+    restart: unless-stopped
+    networks:
+      - hospital-net
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: users
+      # users service has no primary DB; point at auth-db read-only for now
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: auth-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: auth
+      AUTH_DB_USER: ${POSTGRES_USERNAME}
+      AUTH_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      AUTH_DB_HOST: auth-db
+      AUTH_DB_PORT: 5432
+      AUTH_DB_NAME: auth
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      CORS_ORIGINS: http://app.localhost,http://localhost:3000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.users.rule=Host(`users.localhost`)"
+      - "traefik.http.routers.users.entrypoints=web"
+      - "traefik.http.services.users.loadbalancer.server.port=8000"
+
+  ###################################################
+  # CLINICAL-CORE — owns clinical_db (writable)
+  ###################################################
+  clinical-core:
+    build: ./services/clinical-core
+    container_name: hospital_clinical_core
+    restart: unless-stopped
+    networks:
+      - hospital-net
+    depends_on:
+      clinical-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: clinical-core
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: clinical-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: clinical
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      CORS_ORIGINS: http://app.localhost,http://localhost:3000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.clinical.rule=Host(`clinical.localhost`)"
+      - "traefik.http.routers.clinical.entrypoints=web"
+      - "traefik.http.services.clinical.loadbalancer.server.port=8000"
+
+  ###################################################
+  # ANALYTICS — primary: analytics_db (own views).
+  # Read connections to clinical_db (raw stats) and ml_db (cluster joins).
+  ###################################################
+  analytics:
+    build: ./services/analytics
+    container_name: hospital_analytics
+    restart: unless-stopped
+    networks:
+      - hospital-net
+    depends_on:
+      analytics-db:
+        condition: service_healthy
+      clinical-db:
+        condition: service_healthy
+      ml-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: analytics
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: analytics-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: analytics
+      # cross-service read engines
+      CLINICAL_DB_USER: ${POSTGRES_USERNAME}
+      CLINICAL_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      CLINICAL_DB_HOST: clinical-db
+      CLINICAL_DB_PORT: 5432
+      CLINICAL_DB_NAME: clinical
+      ML_DB_USER: ${POSTGRES_USERNAME}
+      ML_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      ML_DB_HOST: ml-db
+      ML_DB_PORT: 5432
+      ML_DB_NAME: ml
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GPT_KEY: ${GPT_KEY}
+      CORS_ORIGINS: http://app.localhost,http://localhost:3000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.analytics.rule=Host(`analytics.localhost`)"
+      - "traefik.http.routers.analytics.entrypoints=web"
+      - "traefik.http.services.analytics.loadbalancer.server.port=8000"
+
+  ###################################################
+  # ML-BATCH — primary: ml_db. Read connection to clinical_db for features.
+  ###################################################
+  ml-batch:
+    build: ./services/ml-batch
+    container_name: hospital_ml_batch
+    restart: unless-stopped
+    networks:
+      - hospital-net
+    depends_on:
+      ml-db:
+        condition: service_healthy
+      clinical-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: ml-batch
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ml-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ml
+      CLINICAL_DB_USER: ${POSTGRES_USERNAME}
+      CLINICAL_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      CLINICAL_DB_HOST: clinical-db
+      CLINICAL_DB_PORT: 5432
+      CLINICAL_DB_NAME: clinical
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GPT_KEY: ${GPT_KEY}
+      CORS_ORIGINS: http://app.localhost,http://localhost:3000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ml.rule=Host(`ml.localhost`)"
+      - "traefik.http.routers.ml.entrypoints=web"
+      - "traefik.http.services.ml.loadbalancer.server.port=8000"
+
+  ###################################################
+  # MAIL-SERVICE — no DB. Subscribes to RabbitMQ.
+  ###################################################
+  mail-service:
+    build: ./services/mail-service
+    container_name: hospital_mail
+    restart: unless-stopped
+    networks:
+      - hospital-net
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      auth-db:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: mail-service
+      # primary DB unused; pointed at auth-db just so the engine constructs cleanly
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: auth-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: auth
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      MAIL_SMTP_HOST: ${MAIL_SMTP_HOST:-}
+      MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-587}
+      MAIL_SMTP_USER: ${MAIL_SMTP_USER:-}
+      MAIL_SMTP_PASSWORD: ${MAIL_SMTP_PASSWORD:-}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mail.rule=Host(`mail.localhost`)"
+      - "traefik.http.routers.mail.entrypoints=web"
+      - "traefik.http.services.mail.loadbalancer.server.port=8000"
+
+  ###################################################
+  # QUEUE-SERVICE — owns queue_db (APScheduler job state)
+  ###################################################
+  queue-service:
+    build: ./services/queue-service
+    container_name: hospital_queue
+    restart: unless-stopped
+    networks:
+      - hospital-net
+    depends_on:
+      queue-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: queue-service
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: queue-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: queue
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.queue.rule=Host(`queue.localhost`)"
+      - "traefik.http.routers.queue.entrypoints=web"
+      - "traefik.http.services.queue.loadbalancer.server.port=8000"
+
+  ###################################################
+  # FRONTEND
+  ###################################################
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # NEXT_PUBLIC_* envs are baked into the client bundle at npm run build,
+        # so they have to be passed as build args, not runtime env.
+        NEXT_PUBLIC_AUTH_URL: http://auth.localhost
+        NEXT_PUBLIC_USERS_URL: http://users.localhost
+        NEXT_PUBLIC_CLINICAL_URL: http://clinical.localhost
+        NEXT_PUBLIC_ANALYTICS_URL: http://analytics.localhost
+        NEXT_PUBLIC_ML_URL: http://ml.localhost
+        NEXT_PUBLIC_QUEUE_URL: http://queue.localhost
+    container_name: hospital_frontend
+    restart: unless-stopped
+    networks:
+      - hospital-net
+    depends_on:
+      - auth
+      - clinical-core
+      - analytics
+      - ml-batch
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`app.localhost`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"

@@ -1,4 +1,4 @@
-import { ErrorResponse } from "@/models/generic/generic";
+﻿import { ErrorResponse } from "@/models/generic/generic";
 import {
   PatientStatisticsResponse,
   EncounterStatisticsResponse,
@@ -13,7 +13,7 @@ import {
 } from "@/models/generic/statistics";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
-import { API_BASE } from "@/store/slices/clusters/thunks";
+import { apiUrl } from "@/utils/apiBases";
 import { appendScopeToUrl } from "@/utils/authScope";
 import { StatisticsRange } from "./range-slice";
 
@@ -31,7 +31,7 @@ export const getPatientsStatistics = createAsyncThunk<
 >("getPatientsStatistics", async (range, thunkAPI) => {
   try {
     const response = await fetch(
-      `${API_BASE}/statistics/patients${rangeQuery(range || undefined)}`,
+      apiUrl(`/statistics/patients${rangeQuery(range || undefined)}`),
       { headers: defaultHeaders },
     );
 
@@ -60,7 +60,7 @@ export const getEncountersStatistics = createAsyncThunk<
 >("getEncountersStatistics", async (range, thunkAPI) => {
   try {
     const response = await fetch(
-      `${API_BASE}/statistics/encounters${rangeQuery(range || undefined)}`,
+      apiUrl(`/statistics/encounters${rangeQuery(range || undefined)}`),
       { headers: defaultHeaders },
     );
 
@@ -89,7 +89,7 @@ export const getConditionsStatistics = createAsyncThunk<
 >("getConditionsStatistics", async (range, thunkAPI) => {
   try {
     const response = await fetch(
-      `${API_BASE}/statistics/conditions${rangeQuery(range || undefined)}`,
+      apiUrl(`/statistics/conditions${rangeQuery(range || undefined)}`),
       { headers: defaultHeaders },
     );
 
@@ -118,7 +118,7 @@ export const getProvidersStatistics = createAsyncThunk<
 >("getProvidersStatistics", async (range, thunkAPI) => {
   try {
     const response = await fetch(
-      `${API_BASE}/statistics/providers${rangeQuery(range || undefined)}`,
+      apiUrl(`/statistics/providers${rangeQuery(range || undefined)}`),
       { headers: defaultHeaders },
     );
 
@@ -147,7 +147,7 @@ export const getAllergiesStatistics = createAsyncThunk<
 >("getAllergiesStatistics", async (range, thunkAPI) => {
   try {
     const response = await fetch(
-      `${API_BASE}/statistics/allergies${rangeQuery(range || undefined)}`,
+      apiUrl(`/statistics/allergies${rangeQuery(range || undefined)}`),
       { headers: defaultHeaders },
     );
 
@@ -176,7 +176,7 @@ export const getCareplansStatistics = createAsyncThunk<
 >("getCareplansStatistics", async (range, thunkAPI) => {
   try {
     const response = await fetch(
-      `${API_BASE}/statistics/careplans${rangeQuery(range || undefined)}`,
+      apiUrl(`/statistics/careplans${rangeQuery(range || undefined)}`),
       { headers: defaultHeaders },
     );
 
@@ -205,7 +205,7 @@ export const getMedicationsStatistics = createAsyncThunk<
 >("getMedicationsStatistics", async (range, thunkAPI) => {
   try {
     const response = await fetch(
-      `${API_BASE}/statistics/medications${rangeQuery(range || undefined)}`,
+      apiUrl(`/statistics/medications${rangeQuery(range || undefined)}`),
       { headers: defaultHeaders },
     );
 
@@ -234,7 +234,7 @@ export const getProceduresStatistics = createAsyncThunk<
 >("getProceduresStatistics", async (range, thunkAPI) => {
   try {
     const response = await fetch(
-      `${API_BASE}/statistics/procedures${rangeQuery(range || undefined)}`,
+      apiUrl(`/statistics/procedures${rangeQuery(range || undefined)}`),
       { headers: defaultHeaders },
     );
 
@@ -263,7 +263,7 @@ export const getImmunizationsStatistics = createAsyncThunk<
 >("getImmunizationsStatistics", async (range, thunkAPI) => {
   try {
     const response = await fetch(
-      `${API_BASE}/statistics/immunizations${rangeQuery(range || undefined)}`,
+      apiUrl(`/statistics/immunizations${rangeQuery(range || undefined)}`),
       { headers: defaultHeaders },
     );
 
@@ -292,7 +292,7 @@ export const getObservationsStatistics = createAsyncThunk<
 >("getObservationsStatistics", async (range, thunkAPI) => {
   try {
     const response = await fetch(
-      `${API_BASE}/statistics/observations${rangeQuery(range || undefined)}`,
+      apiUrl(`/statistics/observations${rangeQuery(range || undefined)}`),
       { headers: defaultHeaders },
     );
 
@@ -320,7 +320,7 @@ export const getSqlAgentResponse = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("getSqlAgentResponse", async ({ question, history }, thunkAPI) => {
   try {
-    const response = await fetch(appendScopeToUrl(`${API_BASE}/statistics/sql-agent`), {
+    const response = await fetch(appendScopeToUrl(apiUrl(`/statistics/sql-agent`)), {
       method: "POST",
       headers: {
         ...defaultHeaders,

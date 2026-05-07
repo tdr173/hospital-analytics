@@ -1,0 +1,9 @@
+﻿fastapi~=0.128.0
+sqlalchemy
+sqlmodel
+aio-pika
+apscheduler
+PyJWT
+python-dotenv
+psycopg2-binary
+uvicorn[standard]

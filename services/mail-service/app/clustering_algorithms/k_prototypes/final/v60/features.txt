@@ -1,0 +1,18 @@
+version: v60
+k range: 4..6
+
+numerical (4):
+  - age
+  - active_conditions_count
+  - total_medications
+  - preventive_to_reactive_ratio
+
+categorical (8):
+  - gender
+  - pregnancy_history
+  - has_heart_disease
+  - has_diabetes
+  - has_hypertension
+  - condition_burden
+  - bmi_type
+  - cholesterol_risk_category

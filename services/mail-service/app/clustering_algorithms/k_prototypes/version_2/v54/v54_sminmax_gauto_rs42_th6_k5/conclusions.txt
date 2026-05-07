@@ -1,0 +1,34 @@
+v54_sminmax_gauto_rs42_th6_k5 | Huang + minmax + gamma=auto + k=5 + seed=42 + threshold=6
+=========================================================================================
+Cluster Evaluation Report
+
+Silhouette Score:        0.1630  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
+Gower Silhouette Score:  0.1689  (numerical + categorical, same scale as above)
+Calinski-Harabasz:       8925.01  (numerical only, range 0 to inf, higher is better)
+Calinski-Harabasz (FAMD):5048.22  (mixed, on 2D FAMD embedding)
+Davies-Bouldin:          1.3559  (numerical only, range 0 to inf, lower is better, <1 good, >2 poor)
+Davies-Bouldin (FAMD):   2.3046  (mixed, on 2D FAMD embedding)
+
+Per-cluster Silhouette (Gower, weak if near 0 or negative):
+    cluster 0   0.1362
+    cluster 1   0.0168
+    cluster 2   0.4423
+    cluster 3   0.0790
+    cluster 4   -0.0040
+
+Feature Importance (contribution to clustering, range 0 to 1, higher is better)
+  Numerical (eta-squared, between-cluster variance / total variance):
+    age                              0.7511
+    qaly                             0.7051
+    severe_care_count                0.4784
+    distinct_providers_seen          0.4500
+    total_encounter_duration_hours   0.3213
+    acute_care_count                 0.1857
+  Categorical (Cramer's V, association between feature and cluster label):
+    has_inpatient_history            0.7126
+    gender                           0.4208
+    substance_use_profile            0.3880
+    dominant_encounter_class         0.3851
+    out_of_hours_flyer               0.3343
+    readmission_risk_tier            0.2938
+    pain_management_tier             0.2528

@@ -1,4 +1,4 @@
-import { API_BASE } from "@/store/slices/clusters/thunks";
+﻿import { apiUrl } from "@/utils/apiBases";
 
 export type UserRole = "MANAGER" | "DOCTOR" | "PATIENT";
 
@@ -18,7 +18,7 @@ export interface RegisterUserPayload {
 }
 
 export async function registerUser(_payload: RegisterUserPayload): Promise<void> {
-  // await fetch(`${API_BASE}/create-user`, {
+  // await fetch(apiUrl(`/create-user`), {
   //   method: "POST",
   //   headers: {
   //     "Content-Type": "application/json",
@@ -26,7 +26,7 @@ export async function registerUser(_payload: RegisterUserPayload): Promise<void>
   //   },
   //   body: JSON.stringify(_payload),
   // });
-  void API_BASE;
+  void _payload;
 }
 
 const defaultHeaders: Record<string, string> = {
@@ -35,7 +35,7 @@ const defaultHeaders: Record<string, string> = {
 
 export async function fetchDemoPatientId(): Promise<string | undefined> {
   try {
-    const res = await fetch(`${API_BASE}/patients?rows=1&page=1`, {
+    const res = await fetch(apiUrl(`/patients?rows=1&page=1`), {
       headers: defaultHeaders,
     });
     if (!res.ok) return undefined;
@@ -49,7 +49,7 @@ export async function fetchDemoPatientId(): Promise<string | undefined> {
 
 export async function fetchDemoProviderId(): Promise<string | undefined> {
   try {
-    const res = await fetch(`${API_BASE}/providers?rows=1&page=1`, {
+    const res = await fetch(apiUrl(`/providers?rows=1&page=1`), {
       headers: defaultHeaders,
     });
     if (!res.ok) return undefined;

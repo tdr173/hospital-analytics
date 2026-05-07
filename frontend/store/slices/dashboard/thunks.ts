@@ -1,9 +1,9 @@
-import { createAsyncThunk } from "@reduxjs/toolkit";
+﻿import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
 import type { RootState } from "@/store";
 import { DashboardData } from "@/models/generic/dashboard";
 import { ErrorResponse } from "@/models/generic/generic";
-import { API_BASE } from "@/store/slices/clusters/thunks";
+import { apiUrl } from "@/utils/apiBases";
 import { appendScopeToUrl } from "@/utils/authScope";
 
 const defaultHeaders: Record<string, string> = {
@@ -26,7 +26,7 @@ export const fetchDashboard = createAsyncThunk<
   { state: RootState; rejectValue: ErrorResponse }
 >("dashboard/fetchDashboard", async (_, thunkAPI) => {
   try {
-    return await get<DashboardData>(`${API_BASE}/dashboard`, "dashboard");
+    return await get<DashboardData>(apiUrl(`/dashboard`), "dashboard");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch dashboard" });
   }

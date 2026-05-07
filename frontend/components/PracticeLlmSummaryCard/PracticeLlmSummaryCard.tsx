@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/store";
-import { API_BASE } from "@/store/slices/clusters/thunks";
+import { apiUrl } from "@/utils/apiBases";
 import useClasses from "@/utils/useClasses";
 import { PracticeLlmSummaryCardStyles } from "./PracticeLlmSummaryCardStyles";
 
@@ -20,7 +20,7 @@ export default function PracticeLlmSummaryCard() {
     if (!providerId) return;
     setLoading(true);
     setErr(null);
-    fetch(`${API_BASE}/dashboard/practice-summary?providerId=${providerId}`, {
+    fetch(apiUrl(`/dashboard/practice-summary?providerId=${providerId}`), {
       headers: { "ngrok-skip-browser-warning": "true" },
     })
       .then((r) => {

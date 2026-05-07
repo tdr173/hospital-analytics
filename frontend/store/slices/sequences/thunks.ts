@@ -1,4 +1,4 @@
-import { createAsyncThunk } from "@reduxjs/toolkit";
+﻿import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
 import type { RootState } from "@/store";
 import {
@@ -8,7 +8,7 @@ import {
   FetchSequencesArgs,
 } from "@/models/generic/sequences";
 import { ErrorResponse } from "@/models/generic/generic";
-import { API_BASE } from "@/store/slices/clusters/thunks";
+import { apiUrl } from "@/utils/apiBases";
 
 const defaultHeaders: Record<string, string> = {
   "ngrok-skip-browser-warning": "true",
@@ -20,7 +20,7 @@ export const fetchSequenceResources = createAsyncThunk<
   { state: RootState; rejectValue: ErrorResponse }
 >("sequences/fetchResources", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/sequences/resources`, {
+    const response = await fetch(apiUrl(`/sequences/resources`), {
       headers: defaultHeaders,
     });
     if (!response.ok) {
@@ -62,7 +62,7 @@ export const fetchSequences = createAsyncThunk<
     q.set("sortType", args.sortType);
     q.set("page", args.page.toString());
     q.set("rows", args.rows.toString());
-    const response = await fetch(`${API_BASE}/sequences?${q.toString()}`, {
+    const response = await fetch(apiUrl(`/sequences?${q.toString()}`), {
       headers: defaultHeaders,
     });
     if (!response.ok) {
@@ -89,7 +89,7 @@ export const getSequenceAiAnalysis = createAsyncThunk<
 >("sequences/getAiAnalysis", async (patternId, thunkAPI) => {
   try {
     const response = await fetch(
-      `${API_BASE}/sequences/ai-analysis/${patternId}`,
+      apiUrl(`/sequences/ai-analysis/${patternId}`),
       { headers: defaultHeaders },
     );
     if (!response.ok) {

@@ -1,4 +1,4 @@
-import { createAsyncThunk } from "@reduxjs/toolkit";
+﻿import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
 import type { RootState } from "@/store";
 import {
@@ -18,7 +18,7 @@ import {
 } from "@/models/generic/patients";
 import { ErrorResponse } from "@/models/generic/generic";
 import { SequenceListItem, PatientContinuationItem } from "@/models/generic/sequences";
-import { API_BASE } from "@/store/slices/clusters/thunks";
+import { apiUrl } from "@/utils/apiBases";
 import { appendScopeToUrl } from "@/utils/authScope";
 import { apiPost, apiPatch, apiDelete } from "@/store/slices/_apiClient";
 
@@ -68,7 +68,7 @@ export const fetchPatientResources = createAsyncThunk<
   { state: RootState; rejectValue: ErrorResponse }
 >("patients/fetchPatientResources", async (_, thunkAPI) => {
   try {
-    return await get<PatientResources>(`${API_BASE}/patients/resources`, "patient resources");
+    return await get<PatientResources>(apiUrl(`/patients/resources`), "patient resources");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patient resources" });
   }
@@ -97,7 +97,7 @@ export const fetchPatients = createAsyncThunk<
     q.set("rows", args.rows.toString());
     q.set("sortBy", args.sortBy);
     q.set("sortType", args.sortType);
-    return await get<PatientListResponse>(`${API_BASE}/patients?${q}`, "patients");
+    return await get<PatientListResponse>(apiUrl(`/patients?${q}`), "patients");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patients" });
   }
@@ -109,7 +109,7 @@ export const fetchPatientDetail = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/fetchPatientDetail", async (patientId, thunkAPI) => {
   try {
-    return await get<PatientDetail>(`${API_BASE}/patients/${patientId}`, "patient");
+    return await get<PatientDetail>(apiUrl(`/patients/${patientId}`), "patient");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patient" });
   }
@@ -121,7 +121,7 @@ export const fetchPatientSummary = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/fetchPatientSummary", async (patientId, thunkAPI) => {
   try {
-    return await get<PatientSummary>(`${API_BASE}/patients/${patientId}/summary`, "patient summary");
+    return await get<PatientSummary>(apiUrl(`/patients/${patientId}/summary`), "patient summary");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patient summary" });
   }
@@ -133,7 +133,7 @@ export const fetchPatientConditions = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/fetchPatientConditions", async ({ patientId, page }, thunkAPI) => {
   try {
-    return await get<PagedResponse<ConditionItem>>(`${API_BASE}/patients/${patientId}/conditions?page=${page}`, "conditions");
+    return await get<PagedResponse<ConditionItem>>(apiUrl(`/patients/${patientId}/conditions?page=${page}`), "conditions");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch conditions" });
   }
@@ -145,7 +145,7 @@ export const fetchPatientMedications = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/fetchPatientMedications", async ({ patientId, page }, thunkAPI) => {
   try {
-    return await get<PagedResponse<MedicationItem>>(`${API_BASE}/patients/${patientId}/medications?page=${page}`, "medications");
+    return await get<PagedResponse<MedicationItem>>(apiUrl(`/patients/${patientId}/medications?page=${page}`), "medications");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch medications" });
   }
@@ -157,7 +157,7 @@ export const fetchPatientProcedures = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/fetchPatientProcedures", async ({ patientId, page }, thunkAPI) => {
   try {
-    return await get<PagedResponse<ProcedureItem>>(`${API_BASE}/patients/${patientId}/procedures?page=${page}`, "procedures");
+    return await get<PagedResponse<ProcedureItem>>(apiUrl(`/patients/${patientId}/procedures?page=${page}`), "procedures");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch procedures" });
   }
@@ -169,7 +169,7 @@ export const fetchPatientImmunizations = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/fetchPatientImmunizations", async ({ patientId, page }, thunkAPI) => {
   try {
-    return await get<PagedResponse<ImmunizationItem>>(`${API_BASE}/patients/${patientId}/immunizations?page=${page}`, "immunizations");
+    return await get<PagedResponse<ImmunizationItem>>(apiUrl(`/patients/${patientId}/immunizations?page=${page}`), "immunizations");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch immunizations" });
   }
@@ -181,7 +181,7 @@ export const fetchPatientAllergies = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/fetchPatientAllergies", async ({ patientId, page }, thunkAPI) => {
   try {
-    return await get<PagedResponse<AllergyItem>>(`${API_BASE}/patients/${patientId}/allergies?page=${page}`, "allergies");
+    return await get<PagedResponse<AllergyItem>>(apiUrl(`/patients/${patientId}/allergies?page=${page}`), "allergies");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch allergies" });
   }
@@ -193,7 +193,7 @@ export const fetchPatientCareplans = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/fetchPatientCareplans", async ({ patientId, page }, thunkAPI) => {
   try {
-    return await get<PagedResponse<CarePlanItem>>(`${API_BASE}/patients/${patientId}/careplans?page=${page}`, "careplans");
+    return await get<PagedResponse<CarePlanItem>>(apiUrl(`/patients/${patientId}/careplans?page=${page}`), "careplans");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch careplans" });
   }
@@ -205,7 +205,7 @@ export const fetchPatientEncounters = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/fetchPatientEncounters", async ({ patientId, page }, thunkAPI) => {
   try {
-    return await get<PagedResponse<EncounterItem>>(`${API_BASE}/patients/${patientId}/encounters?page=${page}`, "encounters");
+    return await get<PagedResponse<EncounterItem>>(apiUrl(`/patients/${patientId}/encounters?page=${page}`), "encounters");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch encounters" });
   }
@@ -217,7 +217,7 @@ export const fetchPatientObservations = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/fetchPatientObservations", async ({ patientId, page }, thunkAPI) => {
   try {
-    return await get<PagedResponse<PatientObservationItem>>(`${API_BASE}/patients/${patientId}/observations?page=${page}`, "observations");
+    return await get<PagedResponse<PatientObservationItem>>(apiUrl(`/patients/${patientId}/observations?page=${page}`), "observations");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch observations" });
   }
@@ -229,7 +229,7 @@ export const createPatient = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/createPatient", async (payload, thunkAPI) => {
   try {
-    return await apiPost<PatientDetail>(`${API_BASE}/patients`, payload, "create patient");
+    return await apiPost<PatientDetail>(apiUrl(`/patients`), payload, "create patient");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to create patient" });
   }
@@ -241,7 +241,7 @@ export const updatePatient = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/updatePatient", async ({ patientId, payload }, thunkAPI) => {
   try {
-    return await apiPatch<PatientDetail>(`${API_BASE}/patients/${patientId}`, payload, "update patient");
+    return await apiPatch<PatientDetail>(apiUrl(`/patients/${patientId}`), payload, "update patient");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to update patient" });
   }
@@ -253,7 +253,7 @@ export const deletePatient = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/deletePatient", async (patientId, thunkAPI) => {
   try {
-    await apiDelete(`${API_BASE}/patients/${patientId}`, "delete patient");
+    await apiDelete(apiUrl(`/patients/${patientId}`), "delete patient");
     return patientId;
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to delete patient" });
@@ -266,7 +266,7 @@ export const fetchPatientSequences = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/fetchPatientSequences", async ({ patientId, page }, thunkAPI) => {
   try {
-    return await get<PagedResponse<SequenceListItem>>(`${API_BASE}/patients/${patientId}/sequences?page=${page}`, "patient sequences");
+    return await get<PagedResponse<SequenceListItem>>(apiUrl(`/patients/${patientId}/sequences?page=${page}`), "patient sequences");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patient sequences" });
   }
@@ -284,7 +284,7 @@ export const fetchPatientContinuations = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("patients/fetchPatientContinuations", async ({ patientId, lastN, page }, thunkAPI) => {
   try {
-    const url = `${API_BASE}/patients/${patientId}/sequence-continuations?lastN=${lastN}&page=${page}`;
+    const url = apiUrl(`/patients/${patientId}/sequence-continuations?lastN=${lastN}&page=${page}`);
     return await get<PagedResponse<PatientContinuationItem>>(url, "patient continuations");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patient continuations" });

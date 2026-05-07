@@ -1,0 +1,29 @@
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# NEXT_PUBLIC_* envs are baked into the client bundle at build time, so they
+# must be available during `npm run build`. Override via compose `build.args`.
+ARG NEXT_PUBLIC_AUTH_URL
+ARG NEXT_PUBLIC_USERS_URL
+ARG NEXT_PUBLIC_CLINICAL_URL
+ARG NEXT_PUBLIC_ANALYTICS_URL
+ARG NEXT_PUBLIC_ML_URL
+ARG NEXT_PUBLIC_QUEUE_URL
+ENV NEXT_PUBLIC_AUTH_URL=$NEXT_PUBLIC_AUTH_URL \
+    NEXT_PUBLIC_USERS_URL=$NEXT_PUBLIC_USERS_URL \
+    NEXT_PUBLIC_CLINICAL_URL=$NEXT_PUBLIC_CLINICAL_URL \
+    NEXT_PUBLIC_ANALYTICS_URL=$NEXT_PUBLIC_ANALYTICS_URL \
+    NEXT_PUBLIC_ML_URL=$NEXT_PUBLIC_ML_URL \
+    NEXT_PUBLIC_QUEUE_URL=$NEXT_PUBLIC_QUEUE_URL
+
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app ./
+EXPOSE 3000
+CMD ["npm", "start"]

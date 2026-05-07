@@ -1,0 +1,32 @@
+Huang + minmax + gamma=auto + 6 clusters + seed=42 + threshold=4
+================================================================
+Cluster Evaluation Report
+
+Silhouette Score:        0.1207  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
+Gower Silhouette Score:  0.2148  (numerical + categorical, same scale as above)
+Dunn Index (Gower):      0.0081  (range 0 to inf, higher is better; worst-case cluster separation)
+Calinski-Harabasz:       5386.32  (numerical only, range 0 to inf, higher is better)
+Calinski-Harabasz (FAMD):12259.66  (mixed, on 2D FAMD embedding)
+Davies-Bouldin:          1.7089  (numerical only, range 0 to inf, lower is better, <1 good, >2 poor)
+Davies-Bouldin (FAMD):   1.4834  (mixed, on 2D FAMD embedding)
+
+Per-cluster Silhouette (Gower, weak if near 0 or negative):
+    cluster 0   0.1381
+    cluster 1   0.0819
+    cluster 2   0.1633
+    cluster 3   0.2020
+    cluster 4   0.4078
+    cluster 5   0.2332
+
+Feature Importance (contribution to clustering, range 0 to 1, higher is better)
+  Numerical (eta-squared, between-cluster variance / total variance):
+    age                              0.7416
+    clinical_severity_score          0.5792
+    routine_care_count               0.5580
+    acute_care_count                 0.5299
+    severe_care_count                0.5108
+    wellness_count                   0.3257
+  Categorical (Cramer's V, association between feature and cluster label):
+    gender                           0.6561
+    dominant_careplan                0.5513
+    bmi_type                         0.3183

@@ -1,0 +1,20 @@
+version: v52
+k range: 4..6
+
+numerical (7):
+  - qaly
+  - total_procedures
+  - total_medications
+  - active_conditions_count
+  - wellness_count
+  - acute_care_count
+  - severe_care_count
+
+categorical (7):
+  - gender
+  - pregnancy_history
+  - has_heart_disease
+  - has_diabetes
+  - has_hypertension
+  - dominant_careplan
+  - dominant_encounter_class

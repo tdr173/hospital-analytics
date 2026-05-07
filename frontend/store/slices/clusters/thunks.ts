@@ -11,7 +11,7 @@ import {
 } from "@/models/generic/clusters";
 import { ErrorResponse } from "@/models/generic/generic";
 
-const API_BASE = "http://127.0.0.1:8000";
+import { apiUrl, API_BASE } from "@/utils/apiBases";
 
 const defaultHeaders: Record<string, string> = {
   "ngrok-skip-browser-warning": "true",
@@ -25,7 +25,7 @@ export const getClusterStatistics = createAsyncThunk<
   { state: RootState; rejectValue: ErrorResponse }
 >("getClusterStatistics", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/clusters/statistics`, {
+    const response = await fetch(apiUrl(`/clusters/statistics`), {
       headers: defaultHeaders,
     });
 
@@ -55,7 +55,7 @@ export const getNumericalFeaturesStatistics = createAsyncThunk<
   { state: RootState; rejectValue: ErrorResponse }
 >("getNumericalFeaturesStatistics", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/clusters/numerical-features-statistics`, {
+    const response = await fetch(apiUrl(`/clusters/numerical-features-statistics`), {
       headers: defaultHeaders,
     });
     if (!response.ok) {
@@ -77,7 +77,7 @@ export const getCategoricalFeaturesStatistics = createAsyncThunk<
   { state: RootState; rejectValue: ErrorResponse }
 >("getCategoricalFeaturesStatistics", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/clusters/categorical-features-statistics`, {
+    const response = await fetch(apiUrl(`/clusters/categorical-features-statistics`), {
       headers: defaultHeaders,
     });
     if (!response.ok) {
@@ -99,7 +99,7 @@ export const getAiAnalysis = createAsyncThunk<
   { state: RootState; rejectValue: ErrorResponse }
 >("getAiAnalysis", async (clusterId, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/clusters/ai-analysis/${clusterId}`, {
+    const response = await fetch(apiUrl(`/clusters/ai-analysis/${clusterId}`), {
       headers: defaultHeaders,
     });
     if (!response.ok) {
@@ -125,7 +125,7 @@ export const getClusterDetail = createAsyncThunk<
   { state: RootState; rejectValue: ErrorResponse }
 >("getClusterDetail", async (clusterId, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/clusters/detail/${clusterId}`, {
+    const response = await fetch(apiUrl(`/clusters/detail/${clusterId}`), {
       headers: defaultHeaders,
     });
     if (!response.ok) {
@@ -153,7 +153,7 @@ export const getClustersOverview = createAsyncThunk<
   { state: RootState; rejectValue: ErrorResponse }
 >("getClustersOverview", async (_, thunkAPI) => {
   try {
-    const response = await fetch(`${API_BASE}/clusters`, {
+    const response = await fetch(apiUrl(`/clusters`), {
       headers: defaultHeaders,
     });
 

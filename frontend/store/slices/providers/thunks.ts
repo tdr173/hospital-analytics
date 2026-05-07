@@ -1,4 +1,4 @@
-import { createAsyncThunk } from "@reduxjs/toolkit";
+﻿import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
 import type { RootState } from "@/store";
 import {
@@ -9,7 +9,7 @@ import {
   FetchProvidersArgs,
 } from "@/models/generic/providers";
 import { ErrorResponse } from "@/models/generic/generic";
-import { API_BASE } from "@/store/slices/clusters/thunks";
+import { apiUrl } from "@/utils/apiBases";
 import { appendScopeToUrl } from "@/utils/authScope";
 import { apiPost, apiPatch, apiDelete } from "@/store/slices/_apiClient";
 
@@ -43,7 +43,7 @@ export const fetchProviderResources = createAsyncThunk<
   { state: RootState; rejectValue: ErrorResponse }
 >("providers/fetchProviderResources", async (_, thunkAPI) => {
   try {
-    return await get<ProviderResources>(`${API_BASE}/providers/resources`, "provider resources");
+    return await get<ProviderResources>(apiUrl(`/providers/resources`), "provider resources");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch provider resources" });
   }
@@ -69,7 +69,7 @@ export const fetchProviders = createAsyncThunk<
     q.set("rows", args.rows.toString());
     q.set("sortBy", args.sortBy);
     q.set("sortType", args.sortType);
-    return await get<ProviderListResponse>(`${API_BASE}/providers?${q}`, "providers");
+    return await get<ProviderListResponse>(apiUrl(`/providers?${q}`), "providers");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch providers" });
   }
@@ -81,7 +81,7 @@ export const fetchProviderDetail = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("providers/fetchProviderDetail", async (providerId, thunkAPI) => {
   try {
-    return await get<ProviderDetail>(`${API_BASE}/providers/${providerId}`, "provider");
+    return await get<ProviderDetail>(apiUrl(`/providers/${providerId}`), "provider");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch provider" });
   }
@@ -93,7 +93,7 @@ export const createProvider = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("providers/createProvider", async (payload, thunkAPI) => {
   try {
-    return await apiPost<ProviderDetail>(`${API_BASE}/providers`, payload, "create doctor");
+    return await apiPost<ProviderDetail>(apiUrl(`/providers`), payload, "create doctor");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to create doctor" });
   }
@@ -105,7 +105,7 @@ export const updateProvider = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("providers/updateProvider", async ({ providerId, payload }, thunkAPI) => {
   try {
-    return await apiPatch<ProviderDetail>(`${API_BASE}/providers/${providerId}`, payload, "update doctor");
+    return await apiPatch<ProviderDetail>(apiUrl(`/providers/${providerId}`), payload, "update doctor");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to update doctor" });
   }
@@ -117,7 +117,7 @@ export const deleteProvider = createAsyncThunk<
   { rejectValue: ErrorResponse }
 >("providers/deleteProvider", async (providerId, thunkAPI) => {
   try {
-    await apiDelete(`${API_BASE}/providers/${providerId}`, "delete doctor");
+    await apiDelete(apiUrl(`/providers/${providerId}`), "delete doctor");
     return providerId;
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to delete doctor" });
@@ -131,7 +131,7 @@ export const fetchProviderEncounters = createAsyncThunk<
 >("providers/fetchProviderEncounters", async ({ providerId, page }, thunkAPI) => {
   try {
     return await get<ProviderEncounterPageResponse>(
-      `${API_BASE}/providers/${providerId}/encounters?page=${page}`,
+      apiUrl(`/providers/${providerId}/encounters?page=${page}`),
       "provider encounters"
     );
   } catch {

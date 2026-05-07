@@ -1,0 +1,19 @@
+version: v48
+k range: 4..6
+
+numerical (5):
+  - age
+  - qaly
+  - distinct_providers_seen
+  - clinical_severity_score
+  - preventive_to_reactive_ratio
+
+categorical (8):
+  - gender
+  - pregnancy_history
+  - has_heart_disease
+  - has_diabetes
+  - has_hypertension
+  - dominant_careplan
+  - bmi_type
+  - cholesterol_risk_category

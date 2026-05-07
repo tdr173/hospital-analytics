@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/store";
-import { API_BASE } from "@/store/slices/clusters/thunks";
+import { apiUrl } from "@/utils/apiBases";
 import useClasses from "@/utils/useClasses";
 import { PersonalLlmSummaryCardStyles } from "./PersonalLlmSummaryCardStyles";
 
@@ -20,7 +20,7 @@ export default function PersonalLlmSummaryCard() {
     if (!patientId) return;
     setLoading(true);
     setErr(null);
-    fetch(`${API_BASE}/dashboard/personal-summary?patientId=${patientId}`, {
+    fetch(apiUrl(`/dashboard/personal-summary?patientId=${patientId}`), {
       headers: { "ngrok-skip-browser-warning": "true" },
     })
       .then((r) => {

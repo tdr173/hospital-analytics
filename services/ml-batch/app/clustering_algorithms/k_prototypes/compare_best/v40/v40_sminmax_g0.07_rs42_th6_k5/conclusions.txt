@@ -1,0 +1,33 @@
+v40_sminmax_g0.07_rs42_th6_k5 | Huang + minmax + gamma=0.07 + k=5 + seed=42 + threshold=6
+=========================================================================================
+Cluster Evaluation Report
+
+Silhouette Score:        0.1885  (numerical only, range -1 to 1, higher is better, >0.7 strong, >0.5 reasonable, >0.25 weak)
+Gower Silhouette Score:  0.1992  (numerical + categorical, same scale as above)
+Calinski-Harabasz:       13268.26  (numerical only, range 0 to inf, higher is better)
+Calinski-Harabasz (FAMD):16040.48  (mixed, on 2D FAMD embedding)
+Davies-Bouldin:          1.4507  (numerical only, range 0 to inf, lower is better, <1 good, >2 poor)
+Davies-Bouldin (FAMD):   1.9207  (mixed, on 2D FAMD embedding)
+
+Per-cluster Silhouette (Gower, weak if near 0 or negative):
+    cluster 0   -0.1370
+    cluster 1   0.1455
+    cluster 2   0.5771
+    cluster 3   0.1287
+    cluster 4   0.2186
+
+Feature Importance (contribution to clustering, range 0 to 1, higher is better)
+  Numerical (eta-squared, between-cluster variance / total variance):
+    age                              0.7303
+    active_conditions_count          0.7197
+    lifetime_medication_days         0.3894
+    total_medications                0.2145
+  Categorical (Cramer's V, association between feature and cluster label):
+    condition_burden                 0.7781
+    has_heart_disease                0.6754
+    has_hypertension                 0.6255
+    has_diabetes                     0.5605
+    gender                           0.5421
+    pregnancy_history                0.4981
+    bmi_type                         0.4603
+    cholesterol_risk_category        0.4138

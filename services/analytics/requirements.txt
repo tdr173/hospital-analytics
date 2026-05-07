@@ -1,0 +1,14 @@
+﻿fastapi~=0.128.0
+sqlalchemy
+sqlmodel
+pandas
+numpy
+google-genai
+langgraph
+openai
+scipy
+aio-pika
+PyJWT
+python-dotenv
+psycopg2-binary
+uvicorn[standard]
