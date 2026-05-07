@@ -29,6 +29,7 @@ export default function SequenceChipRow({ patternStr, colors }: Props) {
                 <span
                   key={tokenIdx}
                   className={classes.chip}
+                  title={`${token.prefix}: ${token.value}`}
                   style={{
                     backgroundColor: colorWithAlpha(color, 0.12),
                     color,
@@ -42,7 +43,10 @@ export default function SequenceChipRow({ patternStr, colors }: Props) {
             })}
           </span>
           {stepIdx < steps.length - 1 && (
-            <span className={classes.arrow}>→</span>
+            <>
+              <span className={classes.arrow} aria-hidden="true">→</span>
+              <span className={classes.srOnly}>then</span>
+            </>
           )}
         </React.Fragment>
       ))}

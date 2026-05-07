@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import {
   PatientDetail,
   PatientSummary,
@@ -10,7 +10,10 @@ import {
   CarePlanItem,
   EncounterItem,
 } from "@/models/generic/patients";
-import { SequenceListItem } from "@/models/generic/sequences";
+import {
+  SequenceListItem,
+  PatientContinuationItem,
+} from "@/models/generic/sequences";
 import {
   fetchPatientDetail,
   fetchPatientSummary,
@@ -22,6 +25,7 @@ import {
   fetchPatientCareplans,
   fetchPatientEncounters,
   fetchPatientSequences,
+  fetchPatientContinuations,
   fetchPatientObservations,
   PatientObservationItem,
 } from "./thunks";
@@ -68,6 +72,8 @@ interface CurrentPatientState {
   careplans: PagedCollectionState<CarePlanItem>;
   encounters: PagedCollectionState<EncounterItem>;
   sequences: PagedCollectionState<SequenceListItem>;
+  continuations: PagedCollectionState<PatientContinuationItem>;
+  continuationsLastN: number;
   observations: PagedCollectionState<PatientObservationItem>;
   loading: boolean;
   error: string | null;
@@ -85,6 +91,8 @@ const initialState: CurrentPatientState = {
   careplans: initPaged(),
   encounters: initPaged(),
   sequences: initPaged(),
+  continuations: initPaged(),
+  continuationsLastN: 3,
   observations: initPaged(),
   loading: false,
   error: null,
@@ -101,6 +109,13 @@ const currentPatientSlice = createSlice({
   reducers: {
     resetCurrentPatient() {
       return { ...initialState, loading: true };
+    },
+    setContinuationsLastN(state, action: PayloadAction<number>) {
+      state.continuationsLastN = action.payload;
+      // Drop tab 8 from loadedTabs so the page re-fetches with the new N
+      // when the user is currently on or returns to that tab.
+      state.loadedTabs = state.loadedTabs.filter((t) => t !== 8);
+      state.continuations = { items: [], page: 1, hasMore: false, loadingMore: false };
     },
   },
   extraReducers: (builder) => {
@@ -224,21 +239,34 @@ const currentPatientSlice = createSlice({
         handlePagedRejected(state.sequences);
         addTab(state, 7);
       })
-      // Observations (tab 8)
+      // Continuations (tab 8)
+      .addCase(fetchPatientContinuations.pending, (state, action) => {
+        handlePagedPending(state.continuations, action.meta.arg.page);
+      })
+      .addCase(fetchPatientContinuations.fulfilled, (state, action) => {
+        const { items, hasMore } = action.payload;
+        handlePagedFulfilled(state.continuations, items, hasMore, action.meta.arg.page);
+        addTab(state, 8);
+      })
+      .addCase(fetchPatientContinuations.rejected, (state) => {
+        handlePagedRejected(state.continuations);
+        addTab(state, 8);
+      })
+      // Observations (tab 9)
       .addCase(fetchPatientObservations.pending, (state, action) => {
         handlePagedPending(state.observations, action.meta.arg.page);
       })
       .addCase(fetchPatientObservations.fulfilled, (state, action) => {
         const { items, hasMore } = action.payload;
         handlePagedFulfilled(state.observations, items, hasMore, action.meta.arg.page);
-        addTab(state, 8);
+        addTab(state, 9);
       })
       .addCase(fetchPatientObservations.rejected, (state) => {
         handlePagedRejected(state.observations);
-        addTab(state, 8);
+        addTab(state, 9);
       });
   },
 });
 
-export const { resetCurrentPatient } = currentPatientSlice.actions;
+export const { resetCurrentPatient, setContinuationsLastN } = currentPatientSlice.actions;
 export default currentPatientSlice.reducer;

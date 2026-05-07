@@ -114,5 +114,9 @@ export const SequenceCardStyles = (theme: Theme) => ({
     cursor: "pointer",
     transition: "opacity 0.15s",
     "&:hover": { opacity: 0.85 },
+    "&:disabled": {
+      cursor: "not-allowed",
+      opacity: 0.6,
+    },
   },
 });

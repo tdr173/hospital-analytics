@@ -78,6 +78,20 @@ class SequenceService:
             rows=rows,
         )
 
+    def get_patient_continuations(
+        self,
+        patient_id: str,
+        last_n: int = 3,
+        page: int = 1,
+        page_size: int = 20,
+    ):
+        return self.repo.get_patient_continuations(
+            patient_id=patient_id,
+            last_n=last_n,
+            page=page,
+            page_size=page_size,
+        )
+
     def get_ai_analysis(self, pattern_id: int) -> dict:
         cached = self.repo.get_pattern_ai_analysis(pattern_id)
         if cached:

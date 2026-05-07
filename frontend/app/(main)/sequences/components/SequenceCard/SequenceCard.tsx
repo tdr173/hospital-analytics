@@ -1,7 +1,10 @@
 "use client";
 
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import CircularProgress from "@mui/material/CircularProgress";
+import { useSelector } from "react-redux";
 import useClasses from "@/utils/useClasses";
+import { RootState } from "@/store";
 import { SequenceListItem } from "@/models/generic/sequences";
 import { SequenceCardStyles } from "./SequenceCardStyles";
 import SequenceChipRow from "../SequenceChipRow/SequenceChipRow";
@@ -14,6 +17,13 @@ interface Props {
 
 export default function SequenceCard({ sequence, colors, onAnalyse }: Props) {
   const classes = useClasses(SequenceCardStyles, { name: "SequenceCard" });
+  const aiLoading = useSelector((s: RootState) => s.sequenceAi.loading);
+  const aiCurrentId = useSelector((s: RootState) => s.sequenceAi.currentPatternId);
+  const aiCached = useSelector(
+    (s: RootState) => !!s.sequenceAi.cache[sequence.id],
+  );
+  const isThisLoading =
+    aiLoading && aiCurrentId === sequence.id && !aiCached;
 
   const clampedPct = Math.max(0, Math.min(100, sequence.supportPct));
 
@@ -62,8 +72,14 @@ export default function SequenceCard({ sequence, colors, onAnalyse }: Props) {
           className={classes.analyseButton}
           onClick={() => onAnalyse(sequence)}
           type="button"
+          disabled={isThisLoading}
+          aria-label="Get AI insights for this pattern"
         >
-          <AutoAwesomeIcon style={{ fontSize: 15 }} />
+          {isThisLoading ? (
+            <CircularProgress size={14} sx={{ color: "#fff" }} />
+          ) : (
+            <AutoAwesomeIcon style={{ fontSize: 15 }} />
+          )}
           Get AI Insights
         </button>
       </div>

@@ -17,6 +17,7 @@ import {
   fetchPatientCareplans,
   fetchPatientEncounters,
   fetchPatientSequences,
+  fetchPatientContinuations,
 } from "@/store/slices/patients/thunks";
 import { resetCurrentPatient } from "@/store/slices/patients/current-patient-slice";
 import { PatientSummary } from "@/models/generic/patients";
@@ -30,6 +31,7 @@ import AllergiesTab from "@/components/PatientComponents/AllergiesTab/AllergiesT
 import CarePlansTab from "@/components/PatientComponents/CarePlansTab/CarePlansTab";
 import EncountersTab from "@/components/PatientComponents/EncountersTab/EncountersTab";
 import SequencesTab from "@/components/PatientComponents/SequencesTab/SequencesTab";
+import ContinuationsTab from "@/components/PatientComponents/ContinuationsTab/ContinuationsTab";
 import MetricComponent from "@/components/PatientComponents/MetricComponent/MetricComponent";
 import PersonalLlmSummaryCard from "@/components/PersonalLlmSummaryCard/PersonalLlmSummaryCard";
 
@@ -62,6 +64,7 @@ const TAB_LABELS = [
   "Care Plans",
   "Visits",
   "Care Sequences",
+  "Possible Continuations",
 ];
 
 export default function PatientSelfView() {
@@ -80,6 +83,8 @@ export default function PatientSelfView() {
     careplans,
     encounters,
     sequences,
+    continuations,
+    continuationsLastN,
     loading,
     error,
     loadedTabs,
@@ -105,8 +110,9 @@ export default function PatientSelfView() {
       case 5: dispatch(fetchPatientCareplans({ patientId, page: 1 })); break;
       case 6: dispatch(fetchPatientEncounters({ patientId, page: 1 })); break;
       case 7: dispatch(fetchPatientSequences({ patientId, page: 1 })); break;
+      case 8: dispatch(fetchPatientContinuations({ patientId, lastN: continuationsLastN, page: 1 })); break;
     }
-  }, [tab, patientId, dispatch, loadedTabs]);
+  }, [tab, patientId, dispatch, loadedTabs, continuationsLastN]);
 
   if (!patientId) {
     return <div className={classes.pageError}>No patient id in session.</div>;
@@ -127,6 +133,7 @@ export default function PatientSelfView() {
     5: <CarePlansTab data={careplans.items} />,
     6: <EncountersTab data={encounters.items} />,
     7: <SequencesTab data={sequences.items} />,
+    8: <ContinuationsTab patientId={patientId} data={continuations.items} />,
   };
 
   return (

@@ -19,6 +19,7 @@ import {
   fetchPatientCareplans,
   fetchPatientEncounters,
   fetchPatientSequences,
+  fetchPatientContinuations,
   fetchPatientObservations,
   PatientObservationItem,
 } from "@/store/slices/patients/thunks";
@@ -52,6 +53,7 @@ import AllergiesTab from "@/components/PatientComponents/AllergiesTab/AllergiesT
 import CarePlansTab from "@/components/PatientComponents/CarePlansTab/CarePlansTab";
 import EncountersTab from "@/components/PatientComponents/EncountersTab/EncountersTab";
 import SequencesTab from "@/components/PatientComponents/SequencesTab/SequencesTab";
+import ContinuationsTab from "@/components/PatientComponents/ContinuationsTab/ContinuationsTab";
 import ObservationsTab from "@/components/PatientComponents/ObservationsTab/ObservationsTab";
 
 import MetricComponent from "@/components/PatientComponents/MetricComponent/MetricComponent";
@@ -95,6 +97,7 @@ const TAB_LABELS = [
   "Care Plans",
   "Visits",
   "Sequences",
+  "Continuations",
   "Observations",
 ];
 
@@ -107,7 +110,8 @@ const TAB_TO_KIND: Record<number, SubRecordKind | null> = {
   5: "careplan",
   6: null,
   7: null,
-  8: "observation",
+  8: null,
+  9: "observation",
 };
 
 const ADD_LABEL: Record<number, string> = {
@@ -118,7 +122,7 @@ const ADD_LABEL: Record<number, string> = {
   4: "Add allergy",
   5: "Add care plan",
   6: "Add visit",
-  8: "Add observation",
+  9: "Add observation",
 };
 
 interface RecordRef {
@@ -146,6 +150,8 @@ export default function PatientDetailPage() {
     careplans,
     encounters,
     sequences,
+    continuations,
+    continuationsLastN,
     observations,
     loading,
     error,
@@ -184,9 +190,10 @@ export default function PatientDetailPage() {
       case 4: dispatch(fetchPatientAllergies({ patientId: id, page: 1 })); break;
       case 5: dispatch(fetchPatientCareplans({ patientId: id, page: 1 })); break;
       case 7: dispatch(fetchPatientSequences({ patientId: id, page: 1 })); break;
-      case 8: dispatch(fetchPatientObservations({ patientId: id, page: 1 })); break;
+      case 8: dispatch(fetchPatientContinuations({ patientId: id, lastN: continuationsLastN, page: 1 })); break;
+      case 9: dispatch(fetchPatientObservations({ patientId: id, page: 1 })); break;
     }
-  }, [tab, id, dispatch, loadedTabs]);
+  }, [tab, id, dispatch, loadedTabs, continuationsLastN]);
 
   const refreshTabData = (tabIndex: number) => {
     if (!id) return;
@@ -199,7 +206,8 @@ export default function PatientDetailPage() {
       case 5: dispatch(fetchPatientCareplans({ patientId: id, page: 1 })); break;
       case 6: dispatch(fetchPatientEncounters({ patientId: id, page: 1 })); break;
       case 7: dispatch(fetchPatientSequences({ patientId: id, page: 1 })); break;
-      case 8: dispatch(fetchPatientObservations({ patientId: id, page: 1 })); break;
+      case 8: dispatch(fetchPatientContinuations({ patientId: id, lastN: continuationsLastN, page: 1 })); break;
+      case 9: dispatch(fetchPatientObservations({ patientId: id, page: 1 })); break;
     }
     dispatch(fetchPatientSummary(id));
   };
@@ -220,11 +228,12 @@ export default function PatientDetailPage() {
       case 5: dispatch(fetchPatientCareplans({ patientId: id, page: careplans.page + 1 })); break;
       case 6: dispatch(fetchPatientEncounters({ patientId: id, page: encounters.page + 1 })); break;
       case 7: dispatch(fetchPatientSequences({ patientId: id, page: sequences.page + 1 })); break;
-      case 8: dispatch(fetchPatientObservations({ patientId: id, page: observations.page + 1 })); break;
+      case 8: dispatch(fetchPatientContinuations({ patientId: id, lastN: continuationsLastN, page: continuations.page + 1 })); break;
+      case 9: dispatch(fetchPatientObservations({ patientId: id, page: observations.page + 1 })); break;
     }
   };
 
-  const pagedByTab = [conditions, medications, procedures, immunizations, allergies, careplans, encounters, sequences, observations];
+  const pagedByTab = [conditions, medications, procedures, immunizations, allergies, careplans, encounters, sequences, continuations, observations];
   const currentPaged = pagedByTab[tab];
 
   const openSubAdd = (kind: SubRecordKind) => {
@@ -529,7 +538,8 @@ export default function PatientDetailPage() {
     5: renderCareplans(),
     6: renderEncounters(),
     7: <SequencesTab data={sequences.items} />,
-    8: renderObservations(),
+    8: <ContinuationsTab patientId={id} data={continuations.items} />,
+    9: renderObservations(),
   };
 
   const handleAddClick = () => {

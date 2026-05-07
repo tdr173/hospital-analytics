@@ -40,3 +40,16 @@ export interface FetchSequencesArgs {
   page: number;
   rows: number;
 }
+
+export interface PatientContinuationItem {
+  patternId: number;
+  rank: number;
+  patternStr: string;
+  length: number;
+  supportCount: number;
+  supportPct: number;
+  hasAiAnalysis: boolean;
+  prefixLength: number;
+  continuationLength: number;
+  matchedPrefixStr: string;
+}
