@@ -3,7 +3,7 @@ from api._scope import DEFAULT_PROVIDER_ID
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
-from db.db_connector import get_db
+from db.db_connector import get_clinical_db as get_db
 from domain import EncounterModel, ConditionModel
 from service.llm_prompts import practice_summary
 from .dashboard_router import dashboard_router

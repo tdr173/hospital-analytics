@@ -23,8 +23,9 @@ AGE_GROUP_ORDER = ["Child", "Young Adult", "Middle Aged", "Senior", "Elderly"]
 
 
 class DashboardRepository:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, analytics_db: Session | None = None):
         self.db = db
+        self.analytics_db = analytics_db or db
 
     def get_dashboard(self) -> DashboardResponse:
         kpi_row = self.db.execute(text("""
@@ -114,7 +115,7 @@ class DashboardRepository:
             ]
 
         cluster_rows = (
-            self.db.query(
+            self.analytics_db.query(
                 ClusterModel.title,
                 ClusterModel.color,
                 func.count(ClusterPatientModel.id).label("count"),

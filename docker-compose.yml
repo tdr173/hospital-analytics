@@ -19,17 +19,36 @@ x-pg-base: &pg-base
 services:
 
   ###################################################
+  # DOCKER SOCKET PROXY — exposes Docker API safely to Traefik over TCP.
+  # Avoids mounting /var/run/docker.sock directly into Traefik (works on
+  # Docker Desktop for Windows where the Unix socket is unreliable).
+  ###################################################
+  docker-proxy:
+    image: haproxy:3.0-alpine
+    container_name: hospital_docker_proxy
+    restart: unless-stopped
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/docker-proxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      - hospital-net
+
+  ###################################################
   # TRAEFIK
   ###################################################
   traefik:
     image: traefik:v3.1
     container_name: hospital_traefik
     restart: unless-stopped
+    depends_on:
+      - docker-proxy
+    environment:
+      DOCKER_API_VERSION: "1.44"
     ports:
       - "80:80"
       - "8090:8080"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
     networks:
       - hospital-net
@@ -161,12 +180,30 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       ALGORITHM: ${ALGORITHM:-HS256}
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-30}
+      GPT_KEY: ${GPT_KEY}
       CORS_ORIGINS: http://app.localhost,http://localhost:3000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      MAIL_SMTP_HOST: ${MAIL_SMTP_HOST:-}
+      MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-587}
+      MAIL_SMTP_USER: ${MAIL_SMTP_USER:-}
+      MAIL_SMTP_PASSWORD: ${MAIL_SMTP_PASSWORD:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Hospital Analytics}
+      MAIL_USE_TLS: ${MAIL_USE_TLS:-true}
+      MAIL_TIMEOUT: ${MAIL_TIMEOUT:-10}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.auth.rule=Host(`auth.localhost`)"
       - "traefik.http.routers.auth.entrypoints=web"
       - "traefik.http.services.auth.loadbalancer.server.port=8000"
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./services/auth/app
+          target: /app/app
+          ignore: ["**/__pycache__", "**/*.pyc"]
+        - action: rebuild
+          path: ./services/auth/requirements.txt
 
   ###################################################
   # USERS
@@ -196,12 +233,21 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
       SECRET_KEY: ${SECRET_KEY}
       ALGORITHM: ${ALGORITHM:-HS256}
+      GPT_KEY: ${GPT_KEY}
       CORS_ORIGINS: http://app.localhost,http://localhost:3000
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.users.rule=Host(`users.localhost`)"
       - "traefik.http.routers.users.entrypoints=web"
       - "traefik.http.services.users.loadbalancer.server.port=8000"
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./services/users/app
+          target: /app/app
+          ignore: ["**/__pycache__", "**/*.pyc"]
+        - action: rebuild
+          path: ./services/users/requirements.txt
 
   ###################################################
   # CLINICAL-CORE — owns clinical_db (writable)
@@ -227,12 +273,21 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
       SECRET_KEY: ${SECRET_KEY}
       ALGORITHM: ${ALGORITHM:-HS256}
+      GPT_KEY: ${GPT_KEY}
       CORS_ORIGINS: http://app.localhost,http://localhost:3000
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.clinical.rule=Host(`clinical.localhost`)"
       - "traefik.http.routers.clinical.entrypoints=web"
       - "traefik.http.services.clinical.loadbalancer.server.port=8000"
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./services/clinical-core/app
+          target: /app/app
+          ignore: ["**/__pycache__", "**/*.pyc"]
+        - action: rebuild
+          path: ./services/clinical-core/requirements.txt
 
   ###################################################
   # ANALYTICS — primary: analytics_db (own views).
@@ -274,7 +329,6 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
       SECRET_KEY: ${SECRET_KEY}
       ALGORITHM: ${ALGORITHM:-HS256}
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
       GPT_KEY: ${GPT_KEY}
       CORS_ORIGINS: http://app.localhost,http://localhost:3000
     labels:
@@ -282,6 +336,14 @@ services:
       - "traefik.http.routers.analytics.rule=Host(`analytics.localhost`)"
       - "traefik.http.routers.analytics.entrypoints=web"
       - "traefik.http.services.analytics.loadbalancer.server.port=8000"
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./services/analytics/app
+          target: /app/app
+          ignore: ["**/__pycache__", "**/*.pyc"]
+        - action: rebuild
+          path: ./services/analytics/requirements.txt
 
   ###################################################
   # ML-BATCH — primary: ml_db. Read connection to clinical_db for features.
@@ -314,7 +376,6 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
       SECRET_KEY: ${SECRET_KEY}
       ALGORITHM: ${ALGORITHM:-HS256}
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
       GPT_KEY: ${GPT_KEY}
       CORS_ORIGINS: http://app.localhost,http://localhost:3000
     labels:
@@ -322,6 +383,14 @@ services:
       - "traefik.http.routers.ml.rule=Host(`ml.localhost`)"
       - "traefik.http.routers.ml.entrypoints=web"
       - "traefik.http.services.ml.loadbalancer.server.port=8000"
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./services/ml-batch/app
+          target: /app/app
+          ignore: ["**/__pycache__", "**/*.pyc"]
+        - action: rebuild
+          path: ./services/ml-batch/requirements.txt
 
   ###################################################
   # MAIL-SERVICE — no DB. Subscribes to RabbitMQ.
@@ -352,11 +421,20 @@ services:
       MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-587}
       MAIL_SMTP_USER: ${MAIL_SMTP_USER:-}
       MAIL_SMTP_PASSWORD: ${MAIL_SMTP_PASSWORD:-}
+      GPT_KEY: ${GPT_KEY}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mail.rule=Host(`mail.localhost`)"
       - "traefik.http.routers.mail.entrypoints=web"
       - "traefik.http.services.mail.loadbalancer.server.port=8000"
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./services/mail-service/app
+          target: /app/app
+          ignore: ["**/__pycache__", "**/*.pyc"]
+        - action: rebuild
+          path: ./services/mail-service/requirements.txt
 
   ###################################################
   # QUEUE-SERVICE — owns queue_db (APScheduler job state)
@@ -382,11 +460,20 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
       SECRET_KEY: ${SECRET_KEY}
       ALGORITHM: ${ALGORITHM:-HS256}
+      GPT_KEY: ${GPT_KEY}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.queue.rule=Host(`queue.localhost`)"
       - "traefik.http.routers.queue.entrypoints=web"
       - "traefik.http.services.queue.loadbalancer.server.port=8000"
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./services/queue-service/app
+          target: /app/app
+          ignore: ["**/__pycache__", "**/*.pyc"]
+        - action: rebuild
+          path: ./services/queue-service/requirements.txt
 
   ###################################################
   # FRONTEND
@@ -417,3 +504,10 @@ services:
       - "traefik.http.routers.frontend.rule=Host(`app.localhost`)"
       - "traefik.http.routers.frontend.entrypoints=web"
       - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+    develop:
+      watch:
+        - action: rebuild
+          path: ./frontend
+          ignore:
+            - node_modules/
+            - .next/

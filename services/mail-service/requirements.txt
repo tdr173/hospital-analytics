@@ -1,4 +1,4 @@
-﻿fastapi~=0.128.0
+fastapi~=0.128.0
 sqlalchemy
 sqlmodel
 aio-pika
@@ -6,3 +6,8 @@ PyJWT
 python-dotenv
 psycopg2-binary
 uvicorn[standard]
+email-validator
+openai
+bcrypt
+langgraph
+google-genai

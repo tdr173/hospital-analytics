@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
-from db.db_connector import get_db
+from db.db_connector import get_clinical_db as get_db
 from repository import PatientRepository
 from service import PatientService
 from api._scope import Scope, scope_dep

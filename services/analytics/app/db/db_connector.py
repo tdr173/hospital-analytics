@@ -95,3 +95,36 @@ def read_engine(name: str):
         "ml": ml_read_engine,
         "auth": auth_read_engine,
     }.get(name)
+
+
+_ClinicalSessionLocal = (
+    sessionmaker(autocommit=False, autoflush=False, bind=clinical_read_engine)
+    if clinical_read_engine is not None
+    else None
+)
+
+_MlSessionLocal = (
+    sessionmaker(autocommit=False, autoflush=False, bind=ml_read_engine)
+    if ml_read_engine is not None
+    else None
+)
+
+
+def get_clinical_db():
+    if _ClinicalSessionLocal is None:
+        raise RuntimeError("CLINICAL_DB_* env vars not configured")
+    db = _ClinicalSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_ml_db():
+    if _MlSessionLocal is None:
+        raise RuntimeError("ML_DB_* env vars not configured")
+    db = _MlSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

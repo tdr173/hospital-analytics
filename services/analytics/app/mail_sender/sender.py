@@ -11,7 +11,7 @@ Usage::
         html="<p>Optional HTML</p>",
     )
 
-Loads SMTP credentials from env (see backend/.env.example). Not wired into
+Loads SMTP credentials from env (see backend/.env). Not wired into
 any route - import and call from wherever you need it.
 
 Because smtplib is blocking, call this from a threadpool when invoking

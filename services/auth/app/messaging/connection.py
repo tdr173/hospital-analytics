@@ -6,6 +6,7 @@ environments without docker-compose still work.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Optional
 
@@ -16,6 +17,10 @@ from .config import rabbitmq_url
 from .events import EXCHANGE_NAME
 
 logger = logging.getLogger(__name__)
+
+_RETRY_ATTEMPTS = 10
+_RETRY_BASE_DELAY = 2.0   # seconds; doubles each attempt up to _RETRY_MAX_DELAY
+_RETRY_MAX_DELAY = 30.0
 
 
 class _State:
@@ -35,28 +40,43 @@ def get_exchange() -> Optional[AbstractRobustExchange]:
 async def startup_messaging() -> None:
     """Connect to RabbitMQ and declare the topic exchange.
 
-    Called from the FastAPI lifespan. If the broker is unreachable we log
-    and return — the app keeps running with publishing disabled.
+    Retries with exponential backoff so that slow broker startup (common in
+    docker-compose) doesn't permanently disable messaging. If all attempts
+    fail, the app keeps running with publishing disabled.
     """
     url = rabbitmq_url()
-    try:
-        _state.connection = await aio_pika.connect_robust(url)
-        _state.channel = await _state.connection.channel()
-        _state.exchange = await _state.channel.declare_exchange(
-            EXCHANGE_NAME,
-            aio_pika.ExchangeType.TOPIC,
-            durable=True,
-        )
-        logger.info("RabbitMQ connected at %s, exchange=%s", url, EXCHANGE_NAME)
-    except Exception:
-        logger.warning(
-            "RabbitMQ unavailable at %s - messaging will be a no-op until restart",
-            url,
-            exc_info=False,
-        )
-        _state.connection = None
-        _state.channel = None
-        _state.exchange = None
+    delay = _RETRY_BASE_DELAY
+    for attempt in range(1, _RETRY_ATTEMPTS + 1):
+        try:
+            _state.connection = await aio_pika.connect_robust(url)
+            _state.channel = await _state.connection.channel()
+            _state.exchange = await _state.channel.declare_exchange(
+                EXCHANGE_NAME,
+                aio_pika.ExchangeType.TOPIC,
+                durable=True,
+            )
+            logger.info("RabbitMQ connected at %s, exchange=%s", url, EXCHANGE_NAME)
+            return
+        except Exception as exc:
+            _state.connection = None
+            _state.channel = None
+            _state.exchange = None
+            if attempt == _RETRY_ATTEMPTS:
+                logger.warning(
+                    "RabbitMQ unavailable at %s after %d attempts - messaging will be a no-op until restart",
+                    url,
+                    _RETRY_ATTEMPTS,
+                )
+                return
+            logger.info(
+                "RabbitMQ not ready (attempt %d/%d): %s — retrying in %.0fs",
+                attempt,
+                _RETRY_ATTEMPTS,
+                exc,
+                delay,
+            )
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, _RETRY_MAX_DELAY)
 
 
 async def shutdown_messaging() -> None:

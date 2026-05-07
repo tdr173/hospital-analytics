@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from db.db_connector import get_db
+from db.db_connector import get_clinical_db as get_db
 from repository import PatientRepository
 from service.llm_prompts import personal_summary
 from .dashboard_router import dashboard_router

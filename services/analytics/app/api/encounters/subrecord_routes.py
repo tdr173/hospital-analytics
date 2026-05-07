@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from db.db_connector import get_db
+from db.db_connector import get_clinical_db as get_db
 from domain import (
     EncounterObservationItem, EncounterConditionItem, EncounterMedicationItem,
     EncounterProcedureItem, EncounterImmunizationItem, EncounterAllergyItem,

@@ -26,7 +26,6 @@ from domain.schemas.auth_schemas.auth_schema import (
     CurrentUserResponse,
 )
 from repository import AuthRepository
-from api._security import create_access_token
 from mail_sender import send_mail, MailSendError
 
 logger = logging.getLogger(__name__)
@@ -96,6 +95,7 @@ class AuthService:
         self.repo = repo
 
     def login(self, dto: LoginRequest) -> LoginResponse:
+        from api._security import create_access_token
         user = self.repo.get_by_email(dto.email)
         if not user or not _verify_password(dto.password, user.password):
             raise HTTPException(

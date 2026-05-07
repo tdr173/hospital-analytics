@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Header from "@/components/generic_components/Header/Header";
 import Sidebar from "@/components/generic_components/Sidebar/Sidebar";
 import ChatPanel from "@/components/ChatPanel/ChatPanel";
@@ -24,19 +25,21 @@ export default function MainLayout({
 
   return (
     <div className={classes.root}>
-      <RoleGuard>
-        <Sidebar />
-        <div className={classes.main}>
-          <Header />
-          <div className={classes.content}>
-            {children}
+      <Suspense>
+        <RoleGuard>
+          <Sidebar />
+          <div className={classes.main}>
+            <Header />
+            <div className={classes.content}>
+              {children}
+            </div>
+            <ShowChatButton
+              isOpen={chatOpen}
+              onClick={() => dispatch(toggleChat())}
+            />
           </div>
-          <ShowChatButton
-            isOpen={chatOpen}
-            onClick={() => dispatch(toggleChat())}
-          />
-        </div>
-      </RoleGuard>
+        </RoleGuard>
+      </Suspense>
       <ToastContainer
         position="bottom-right"
         autoClose={3000}

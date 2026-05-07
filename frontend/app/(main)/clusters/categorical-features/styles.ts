@@ -57,7 +57,7 @@ export const CategoricalFeaturesPageStyles = (theme: Theme) => ({
     alignItems: "center",
     justifyContent: "center",
     background: "none",
-    border: `1px solid ${theme.colors.border.default}`,
+    border: `1px solid ${theme.colors.border.main}`,
     borderRadius: theme.borderRadius.sm,
     cursor: "pointer",
     fontSize: "24px",
