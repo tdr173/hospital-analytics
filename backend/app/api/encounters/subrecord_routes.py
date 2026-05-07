@@ -27,6 +27,7 @@ from domain.schemas.encounter_schemas.encounter_schema import (
 from repository import EncounterRepository
 from service import EncounterService
 from api._scope import Scope, scope_dep
+from messaging import publish_event_nowait, EventAction
 from .encounter_router import encounter_router
 
 
@@ -123,6 +124,12 @@ def _make_create(kind: str, request_model: Type[BaseModel], response_model):
             raise HTTPException(status_code=403, detail=str(e))
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
+        publish_event_nowait(
+            kind, EventAction.CREATED,
+            patient_id=getattr(instance, "patient_id", None),
+            encounter_id=encounter_id,
+            record_id=getattr(instance, "id", None),
+        )
         return _to_item(kind, instance)
     _create.__name__ = f"create_{kind}"
     return _create
@@ -146,6 +153,12 @@ def _make_update(kind: str, request_model: Type[BaseModel], response_model):
             raise HTTPException(status_code=403, detail=str(e))
         except ValueError as e:
             raise HTTPException(status_code=404, detail=str(e))
+        publish_event_nowait(
+            kind, EventAction.UPDATED,
+            patient_id=getattr(instance, "patient_id", None),
+            encounter_id=encounter_id,
+            record_id=record_id,
+        )
         return _to_item(kind, instance)
     _update.__name__ = f"update_{kind}"
     return _update
@@ -168,6 +181,11 @@ def _make_delete(kind: str):
             raise HTTPException(status_code=403, detail=str(e))
         except ValueError as e:
             raise HTTPException(status_code=404, detail=str(e))
+        publish_event_nowait(
+            kind, EventAction.DELETED,
+            encounter_id=encounter_id,
+            record_id=record_id,
+        )
         return Response(status_code=204)
     _delete.__name__ = f"delete_{kind}"
     return _delete

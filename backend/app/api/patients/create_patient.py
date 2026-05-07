@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from db.db_connector import get_db
 from domain import PatientDetailResponse
 from domain.schemas.patient_schemas.patient_schema import PatientCreateRequest
-from repository import PatientRepository
-from service import PatientService
+from repository import PatientRepository, AuthRepository
+from service import PatientService, AuthService
 from api._scope import Scope, scope_dep
 from .patient_router import patient_router
 
@@ -19,6 +19,14 @@ async def create_patient(
     if scope.is_patient:
         raise HTTPException(status_code=403, detail="Patients cannot create patient records")
     try:
-        return PatientService(PatientRepository(db)).create_patient(payload)
+        result = PatientService(PatientRepository(db)).create_patient(payload)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    if payload.email:
+        AuthService(AuthRepository(db)).create_account_for_patient(
+            email=payload.email,
+            patient_id=result.patient_id,
+        )
+
+    return result

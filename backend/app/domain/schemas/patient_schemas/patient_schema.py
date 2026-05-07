@@ -135,6 +135,9 @@ class PatientCreateRequest(CamelModel):
     ethnicity: Optional[str] = None
     marital: Optional[str] = None
     city: Optional[str] = None
+    # Optional. When provided, an auth account is created and a "set your
+    # password" email is sent to this address.
+    email: Optional[str] = None
 
 
 class PatientUpdateRequest(CamelModel):

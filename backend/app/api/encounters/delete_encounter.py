@@ -5,6 +5,7 @@ from db.db_connector import get_db
 from repository import EncounterRepository
 from service import EncounterService
 from api._scope import Scope, scope_dep
+from messaging import publish_event_nowait, EventAction
 from .encounter_router import encounter_router
 
 
@@ -25,4 +26,8 @@ async def delete_encounter(
         msg = str(e)
         status = 409 if "cannot delete" in msg else 404
         raise HTTPException(status_code=status, detail=msg)
+    publish_event_nowait(
+        "encounter", EventAction.DELETED,
+        encounter_id=encounter_id,
+    )
     return Response(status_code=204)

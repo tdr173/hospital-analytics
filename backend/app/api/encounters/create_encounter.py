@@ -7,6 +7,7 @@ from domain.schemas.encounter_schemas.encounter_schema import EncounterCreateReq
 from repository import EncounterRepository
 from service import EncounterService
 from api._scope import Scope, scope_dep
+from messaging import publish_event_nowait, EventAction
 from .encounter_router import encounter_router
 
 
@@ -20,6 +21,12 @@ async def create_encounter(
         raise HTTPException(status_code=403, detail="Patients cannot create encounters")
     provider_id_scope = scope.provider_id if scope.is_doctor else None
     try:
-        return EncounterService(EncounterRepository(db)).create_encounter(payload, provider_id_scope)
+        result = EncounterService(EncounterRepository(db)).create_encounter(payload, provider_id_scope)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    publish_event_nowait(
+        "encounter", EventAction.CREATED,
+        patient_id=getattr(result, "patient_id", None),
+        encounter_id=getattr(result, "encounter_id", None),
+    )
+    return result

@@ -15,3 +15,7 @@ protobuf
 prince
 prefixspan
 umap-learn
+aio-pika
+bcrypt
+PyJWT
+python-dotenv

@@ -5,4 +5,5 @@ from .sequence_schemas import *
 from .provider_schemas import *
 from .dashboard_schemas import *
 from .encounter_schemas import *
+from .auth_schemas import *
 from .paged_response import PagedResponse

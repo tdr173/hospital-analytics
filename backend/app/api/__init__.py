@@ -5,3 +5,4 @@ from .providers import *
 from .dashboard import *
 from .encounters import *
 from .sequences import *
+from .auth import *

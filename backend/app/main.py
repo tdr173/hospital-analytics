@@ -6,8 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 from sqlalchemy import text
 
-from app import statistics_router, cluster_router, patient_router, provider_router, dashboard_router, encounter_router, sequence_router
+from app import statistics_router, cluster_router, patient_router, provider_router, dashboard_router, encounter_router, sequence_router, auth_router
 from db.db_connector import engine
+from messaging import startup_messaging, shutdown_messaging
 import domain.models  # noqa: F401 - ensures all models are registered before create_all
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ routers = [
     provider_router,
     dashboard_router,
     encounter_router,
+    auth_router,
 ]
 
 
@@ -153,7 +155,11 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.exception("Observation materialized view creation failed")
 
-    yield
+    await startup_messaging()
+    try:
+        yield
+    finally:
+        await shutdown_messaging()
 
 
 app = FastAPI(lifespan=lifespan)
