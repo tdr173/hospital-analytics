@@ -5,6 +5,7 @@ from db.db_connector import get_db
 from repository import PatientRepository
 from service import PatientService
 from api._scope import Scope, scope_dep
+from messaging import publish_event_nowait, EventAction
 from .patient_router import patient_router
 
 
@@ -22,4 +23,9 @@ async def delete_patient(
         msg = str(e)
         status = 409 if "cannot delete" in msg else 404
         raise HTTPException(status_code=status, detail=msg)
+
+    # Cross-service sync: tell auth to drop the linked account, ml-batch
+    # to drop orphan cluster_patient rows.
+    publish_event_nowait("patient", EventAction.DELETED, patient_id=patient_id)
+
     return Response(status_code=204)

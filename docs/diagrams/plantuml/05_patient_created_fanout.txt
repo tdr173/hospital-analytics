@@ -1,0 +1,51 @@
+@startuml patient_created_fanout
+' Figure 5.18b — patient.created end-to-end fan-out
+' clinical-core publishes once; auth and mail-service react asynchronously.
+
+skinparam shadowing false
+skinparam sequenceArrowThickness 1.4
+
+actor "Manager" as M
+participant "Frontend" as FE
+participant "clinical-core" as CC
+database "clinical-db" as CDB
+queue "RabbitMQ\nclinical.events\n(topic exchange)" as RMQ
+participant "auth service" as A
+database "auth-db" as ADB
+participant "mail-service" as MAIL
+boundary "SMTP server" as SMTP
+
+== Synchronous side (HTTP) ==
+M -> FE : fill new-patient form
+FE -> CC : POST /patients\n{ first_name, last_name, email, ... }
+CC -> CDB : INSERT INTO patient
+CDB --> CC : patient_id
+CC -> RMQ : publish routing_key=patient.created\npayload={ patient_id, first_name, last_name, email }
+CC --> FE : 201 Created\n{ patient_id }
+FE --> M : show success toast
+note right of CC
+  Synchronous response returns
+  the moment clinical-db commit lands.
+end note
+
+== Asynchronous side (AMQP fan-out) ==
+RMQ -> A : deliver to queue auth.account_sync
+A -> A : generate one-time set_password_token
+A -> ADB : INSERT auth_user\n(role=PATIENT, token, expires)
+ADB --> A : ok
+A -> RMQ : publish routing_key=notification.send\npayload={ to, subject, body, link }
+A -> RMQ : ACK (auth.account_sync)
+
+RMQ -> MAIL : deliver to queue mail.notifications
+MAIL -> MAIL : render template "set-password"
+MAIL -> SMTP : SMTP DATA (HELO, MAIL FROM, RCPT TO, body)
+SMTP --> MAIL : 250 OK
+MAIL -> RMQ : ACK (mail.notifications)
+
+note over RMQ
+  Both queues are durable.
+  If a consumer is offline,
+  messages are held until ACK.
+end note
+
+@enduml

@@ -1,0 +1,76 @@
+%% Figure 4.28 — Bounded-context map
+%% Seven domain bubbles with the ubiquitous-language terms each context owns.
+
+flowchart LR
+  classDef ctx fill:#bfdbfe,stroke:#1e3a8a,color:#000
+
+  subgraph auth_ctx["auth (Identity)"]
+    direction TB
+    a1[auth_user]
+    a2[role: PATIENT/DOCTOR/MANAGER]
+    a3[set_password_token]
+    a4[JWT issuance]
+  end
+  class auth_ctx ctx
+
+  subgraph users_ctx["users (User Mgmt)"]
+    direction TB
+    u1["user CRUD (admin)"]
+  end
+  class users_ctx ctx
+
+  subgraph clinical_ctx["clinical-core (Source-of-Truth)"]
+    direction TB
+    c1[patient]
+    c2[provider]
+    c3[encounter]
+    c4["clinical events:<br/>condition, medication,<br/>procedure, careplan,<br/>allergy, observation,<br/>immunization"]
+    c5[organization]
+  end
+  class clinical_ctx ctx
+
+  subgraph analytics_ctx["analytics (Aggregation + LLM)"]
+    direction TB
+    an1[dashboard query]
+    an2[statistics view]
+    an3[LLM SQL agent]
+    an4[role-scoped read]
+  end
+  class analytics_ctx ctx
+
+  subgraph ml_ctx["ml-batch (ML Jobs)"]
+    direction TB
+    m1[cluster_meta]
+    m2[cluster]
+    m3[cluster_patient]
+    m4[prefix_span_pattern]
+    m5[k-Prototypes runner]
+    m6[PrefixSpan runner]
+  end
+  class ml_ctx ctx
+
+  subgraph mail_ctx["mail-service (Notifications)"]
+    direction TB
+    ma1[notification template]
+    ma2[SMTP dispatch]
+  end
+  class mail_ctx ctx
+
+  subgraph queue_ctx["queue-service (Scheduling)"]
+    direction TB
+    q1[APScheduler job]
+    q2[nightly recluster]
+    q3[view refresh]
+  end
+  class queue_ctx ctx
+
+  %% Conceptual relationships (not technical wiring)
+  clinical_ctx -->|"emits patient.created/deleted,<br/>provider.created/deleted"| auth_ctx
+  clinical_ctx -->|"emits patient.deleted"| ml_ctx
+  auth_ctx -->|"emits notification.send"| mail_ctx
+  analytics_ctx -.->|"reads (read-only)"| clinical_ctx
+  analytics_ctx -.->|"reads (read-only)"| ml_ctx
+  ml_ctx -.->|"reads (read-only)"| clinical_ctx
+  users_ctx -.->|"reads (read-only)"| auth_ctx
+  queue_ctx -.->|"triggers jobs in"| ml_ctx
+  queue_ctx -.->|"triggers jobs in"| analytics_ctx

@@ -1,0 +1,39 @@
+@startuml login_sequence
+' Figure 5.17 — Login Sequence Diagram
+' Synchronous JWT flow with success and failure paths.
+
+skinparam shadowing false
+skinparam sequenceArrowThickness 1.4
+skinparam responseMessageBelowArrow true
+
+actor "User" as U
+participant "Frontend\n(Next.js)" as FE
+participant "Traefik" as T
+participant "auth service\n(FastAPI)" as A
+database "auth-db\n(Postgres)" as DB
+
+== Successful login ==
+U -> FE : enter email + password
+FE -> T : POST http://auth.localhost/auth/login\nContent-Type: application/json
+T -> A : forward (Host header match)
+A -> DB : SELECT * FROM auth_user\n WHERE email = :email
+DB --> A : auth_user row (password_hash, role, provider_id?)
+A -> A : bcrypt.checkpw(password, hash)
+A -> A : encode JWT (sub, role, provider_id, exp)\nsigned with SECRET_KEY (HS256)
+A --> T : 200 OK\n{ token, role }
+T --> FE : 200 OK
+FE -> FE : localStorage.setItem("jwt", token)
+FE --> U : redirect to /home
+
+== Failed login ==
+U -> FE : enter email + wrong password
+FE -> T : POST /auth/login
+T -> A : forward
+A -> DB : SELECT * FROM auth_user
+DB --> A : auth_user row
+A -> A : bcrypt.checkpw → False
+A --> T : 401 Unauthorized\n{ detail: "Invalid credentials" }
+T --> FE : 401
+FE --> U : show toast error
+
+@enduml

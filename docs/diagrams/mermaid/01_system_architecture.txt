@@ -1,0 +1,74 @@
+%% Figure 5.1 — System Architecture Diagram (Docker topology)
+%% Render online: https://mermaid.live  or  npx @mermaid-js/mermaid-cli -i 01_system_architecture.txt -o out.png
+%% All containers on the hospital-net bridge network. Traefik fronts everything.
+
+flowchart LR
+
+  classDef proxy fill:#fde68a,stroke:#a16207,color:#000
+  classDef svc fill:#bfdbfe,stroke:#1e3a8a,color:#000
+  classDef db fill:#fecaca,stroke:#7f1d1d,color:#000
+  classDef bus fill:#bbf7d0,stroke:#14532d,color:#000
+  classDef fe fill:#e9d5ff,stroke:#581c87,color:#000
+
+  user((Browser))
+
+  subgraph host["Docker Host (hospital-net bridge)"]
+    direction LR
+
+    traefik[/"Traefik v3.1<br/>:80 routes by Host header"/]:::proxy
+
+    subgraph svc_layer["Application services"]
+      direction TB
+      auth["auth<br/>(FastAPI)"]:::svc
+      users["users<br/>(FastAPI)"]:::svc
+      cc["clinical-core<br/>(FastAPI)"]:::svc
+      an["analytics<br/>(FastAPI)"]:::svc
+      ml["ml-batch<br/>(FastAPI)"]:::svc
+      mail["mail-service<br/>(FastAPI + aio-pika)"]:::svc
+      q["queue-service<br/>(FastAPI + APScheduler)"]:::svc
+      fe["frontend<br/>(Next.js 16)"]:::fe
+    end
+
+    subgraph data_layer["Stateful services"]
+      direction TB
+      authdb[("auth-db<br/>postgres:16")]:::db
+      ccdb[("clinical-db<br/>postgres:16<br/>:5432→host")]:::db
+      andb[("analytics-db<br/>postgres:16")]:::db
+      mldb[("ml-db<br/>postgres:16")]:::db
+      qdb[("queue-db<br/>postgres:16")]:::db
+      rmq[["RabbitMQ 3<br/>:5672 / :15673"]]:::bus
+    end
+  end
+
+  user -->|HTTP| traefik
+  traefik -->|"Host(app.localhost)"| fe
+  traefik -->|"Host(auth.localhost)"| auth
+  traefik -->|"Host(users.localhost)"| users
+  traefik -->|"Host(clinical.localhost)"| cc
+  traefik -->|"Host(analytics.localhost)"| an
+  traefik -->|"Host(ml.localhost)"| ml
+  traefik -->|"Host(mail.localhost)"| mail
+  traefik -->|"Host(queue.localhost)"| q
+
+  %% Owned databases (R/W)
+  auth -->|R/W| authdb
+  cc -->|R/W| ccdb
+  an -->|R/W| andb
+  ml -->|R/W| mldb
+  q -->|R/W| qdb
+
+  %% Cross-DB read engines (read-only)
+  an -.->|read-only| ccdb
+  an -.->|read-only| mldb
+  ml -.->|read-only| ccdb
+  users -.->|read-only| authdb
+
+  %% AMQP messaging
+  cc -.->|publish| rmq
+  auth <-.->|pub + sub| rmq
+  mail <-.->|subscribe| rmq
+  ml <-.->|subscribe| rmq
+  q <-.->|subscribe| rmq
+
+  %% Frontend → backend (browser-side, via Traefik)
+  fe -.->|client-side fetch| traefik

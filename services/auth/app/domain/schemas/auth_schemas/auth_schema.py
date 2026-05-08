@@ -21,9 +21,18 @@ class LoginResponse(CamelModel):
 
 
 class SetPasswordRequest(BaseModel):
-    email: EmailStr
-    temp_password: str = Field(min_length=1, max_length=120)
+    """Token-based password set/reset.
+
+    The token is a short-lived JWT (10 min) with `purpose=password_reset`,
+    issued by /auth/forgot-password or by the invite flow when an account is
+    auto-provisioned via patient.created / provider.created.
+    """
+    token: str = Field(min_length=10)
     new_password: str = Field(min_length=8, max_length=120)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
 
 
 class CurrentUserResponse(CamelModel):

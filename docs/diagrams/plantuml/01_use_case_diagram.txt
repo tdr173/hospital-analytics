@@ -1,0 +1,84 @@
+@startuml use_case_diagram
+' Figure 4.1 — Use Case Diagram
+' Three actors (PATIENT, DOCTOR, MANAGER) with role-scoped use cases.
+' Render: java -jar plantuml.jar 01_use_case_diagram.txt
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam shadowing false
+
+actor "Patient" as PATIENT
+actor "Doctor" as DOCTOR
+actor "Manager" as MANAGER
+
+rectangle "Hospital Analytics Platform" {
+  usecase "Authenticate" as UC_AUTH
+  usecase "Reset Password" as UC_RESET
+  usecase "View Personal Dashboard" as UC_PERSONAL
+  usecase "Browse My Care Trajectory" as UC_TRAJ
+  usecase "Browse Patients" as UC_PATIENTS
+  usecase "View Patient Detail" as UC_DETAIL
+  usecase "Browse Clusters" as UC_CLUSTERS
+  usecase "View Cluster Detail" as UC_CLUSTER_DETAIL
+  usecase "Browse Frequent Sequences" as UC_SEQ
+  usecase "View Sequence Detail" as UC_SEQ_DETAIL
+  usecase "Run Clustering Job" as UC_RUN
+  usecase "Ask Natural-Language Question" as UC_LLM
+  usecase "Manage Providers" as UC_PROV
+  usecase "View Statistics Dashboard" as UC_STATS
+}
+
+' PATIENT
+PATIENT --> UC_AUTH
+PATIENT --> UC_RESET
+PATIENT --> UC_PERSONAL
+PATIENT --> UC_TRAJ
+
+' DOCTOR
+DOCTOR --> UC_AUTH
+DOCTOR --> UC_RESET
+DOCTOR --> UC_PATIENTS
+DOCTOR --> UC_DETAIL
+DOCTOR --> UC_LLM
+DOCTOR --> UC_STATS
+
+' MANAGER
+MANAGER --> UC_AUTH
+MANAGER --> UC_RESET
+MANAGER --> UC_PATIENTS
+MANAGER --> UC_DETAIL
+MANAGER --> UC_CLUSTERS
+MANAGER --> UC_CLUSTER_DETAIL
+MANAGER --> UC_SEQ
+MANAGER --> UC_SEQ_DETAIL
+MANAGER --> UC_RUN
+MANAGER --> UC_LLM
+MANAGER --> UC_STATS
+MANAGER --> UC_PROV
+
+' Includes / extends
+UC_PERSONAL .|> UC_AUTH : <<include>>
+UC_TRAJ .|> UC_AUTH : <<include>>
+UC_PATIENTS .|> UC_AUTH : <<include>>
+UC_DETAIL .|> UC_AUTH : <<include>>
+UC_CLUSTERS .|> UC_AUTH : <<include>>
+UC_CLUSTER_DETAIL .|> UC_AUTH : <<include>>
+UC_SEQ .|> UC_AUTH : <<include>>
+UC_SEQ_DETAIL .|> UC_AUTH : <<include>>
+UC_RUN .|> UC_AUTH : <<include>>
+UC_LLM .|> UC_AUTH : <<include>>
+UC_STATS .|> UC_AUTH : <<include>>
+UC_PROV .|> UC_AUTH : <<include>>
+
+UC_DETAIL .|> UC_PATIENTS : <<extend>>
+UC_CLUSTER_DETAIL .|> UC_CLUSTERS : <<extend>>
+UC_SEQ_DETAIL .|> UC_SEQ : <<extend>>
+
+note right of UC_LLM
+  Doctor scope: results restricted
+  to patients seen by provider_id.
+  Manager scope: full read access.
+end note
+
+@enduml

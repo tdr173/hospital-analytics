@@ -28,17 +28,17 @@ The data substrate underpinning all three is the *Synthea*-generated synthetic E
 
 ### 4.2.1 Logical model of the source data
 
-Synthea exports each clinical concept in a separate flat file, with patients as the natural primary entity and clinical events (encounters, procedures, medications, conditions, observations) as the satellite tables. Foreign keys are encoded as UUID strings. The ETL preserves the same relational shape but enforces it with explicit foreign-key constraints, type coercion, and a normalisation pass that reduces the cardinality of free-text categoricals.
+Synthea exports each clinical concept in a separate flat file, with the patient as the primary entity and clinical events (encounter, condition, procedure, medication, observation, allergy, careplan, immunization) as satellite tables. The relational backbone is held together by UUID-encoded foreign keys (`PATIENT`, `ENCOUNTER`, `PROVIDER`, `ORGANIZATION`). Eleven CSVs are consumed: `patients`, `organizations`, `providers`, `encounters`, `allergies`, `procedures`, `medications`, `immunizations`, `careplans`, `conditions`, `observations`. The ETL preserves this shape in a normalised PostgreSQL schema while applying five families of transformations: column renaming and type coercion, business-rule normalisation, audit-trail emission, semantic imputation, and bulk insertion.
 
 ### 4.2.2 ETL invariants
 
-The ETL guarantees five invariants on the loaded warehouse:
+Five invariants are enforced on the loaded warehouse:
 
-* **Singular organisation.** The synthetic dataset is collapsed to a single `organization` row — the one with the highest utilisation count. The thesis is about a *hospital* analytics platform, not a multi-hospital network; a single org keeps the joins simple and matches the deployment story (one hospital, many providers).
-* **Bounded provider cardinality.** At most 300 providers are kept (the most-active by encounter count). Encounters belonging to dropped providers are *redistributed* round-robin among kept providers within the same calendar year, preserving annual workload distribution.
-* **Temporal sanity.** Future-dated encounters (a Synthea quirk) are clamped to "today". Encounter durations beyond clinically plausible caps (e.g. 30 days for inpatient, 3 days for ER) are truncated.
-* **Categorical floor.** Missing categoricals are replaced with the modal value (gender, race, ethnicity) or with a sentinel string (`no_reason_specified`, `unknown_condition`) — never silently dropped.
-* **Numerical fidelity.** Counts and durations missing in the source are filled with zero only when zero is the *semantically correct* default (e.g., `wellness_count = 0` means "had no wellness visits"); otherwise they are filled with the median to avoid bias.
+* **Singular organisation.** The synthetic export is collapsed to one `organization` row — the row with the highest `UTILIZATION` value. The platform is a *single-hospital* analytics tool; collapsing the org keeps every cross-table join logically straightforward and removes a category of artificial multi-hospital noise that Synthea generates.
+* **Bounded provider cardinality.** At most 300 providers are kept, ranked by encounter frequency. Encounters belonging to dropped providers are not deleted: they are redistributed round-robin among the kept providers, *within the same calendar year* the encounter took place, in proportion to that year's per-provider activity. A global fallback (the most-active provider across all years) handles years with no kept providers.
+* **Temporal sanity.** Future-dated encounters (a Synthea quirk where simulated dates can drift past `today`) are clamped to the current UTC midnight. Encounter durations are clamped per encounter class to clinically plausible upper bounds: wellness ≤ 2 h, ambulatory ≤ 8 h, outpatient/urgentcare ≤ 24 h, emergency ≤ 72 h, inpatient ≤ 30 days.
+* **Semantic imputation.** Missing categoricals are replaced with the modal value (for demographics: gender, race, ethnicity) or with an explicit sentinel string (`no_reason_specified`, `unknown_condition`, `unknown_allergy`, `unknown_vaccine`, `unknown_careplan`, `routine_procedure`). Numerical NaNs are replaced with the median for fidelity-preserving columns (encounter and procedure counts on `provider`) and with zero only when zero is the semantically correct default (per-class encounter counts, polypharmacy flag).
+* **Auditable cleaning.** Every loader writes a `cleaned_<table>.csv` to `dataset/cleaned/` immediately before the bulk insert. This is the materialised audit trail: a reviewer can diff `dataset/cleaned/cleaned_patients.csv` against `synthea/output/csv/patients.csv` and reconstruct exactly which rows were normalised and how.
 
 ### 4.2.3 Order of operations
 
@@ -53,7 +53,36 @@ LOAD:    patient → organization → provider → encounter → patient_provide
         → condition → observation
 ```
 
-This guarantees referential integrity at every step. Observations — the largest table by far (often 10–20 M rows) — are inserted in 10 000-row chunks to keep the WAL bounded. After the load finishes, five materialised views (`mv_obs_totals`, `mv_obs_per_patient`, `mv_obs_top_types`, `mv_obs_numeric_stats`, `mv_obs_categorical_stats`) are refreshed; these views power the Statistics dashboard without re-scanning the observation table on every request.
+This guarantees referential integrity at every step. The truncation order is the inverse of the foreign-key direction; the load order is the foreign-key direction. The pipeline is idempotent — `run_etl(engine)` can be replayed from scratch.
+
+### 4.2.4 Per-table loaders (loader-by-loader specification)
+
+Each of the 12 loaders performs the same five-step pattern: `pandas.read_csv` → column rename → type coercion / derived columns → semantic imputation → write `cleaned_*.csv` audit file → `to_sql(if_exists="append")`. The differences below describe the *business-rule layer* on top of that pattern.
+
+* **`load_patients`.** Renames {Id, BIRTHDATE, DEATHDATE, FIRST, LAST, MARITAL, GENDER, RACE, ETHNICITY, CITY} → {patient_id, birthdate, deathdate, first_name, last_name, marital, gender, race, ethnicity, city}. `_strip_digits` removes the trailing numeric suffix Synthea appends to first/last names (`Maria123` → `Maria`). Missing `marital` → `'S'` (single). Missing `gender`/`race`/`ethnicity` → modal value of the column. `birthdate` and `deathdate` are coerced to UTC datetime. A derived **`age`** column is computed as `(deathdate or today − birthdate).days // 365`, so the age of deceased patients freezes at death.
+* **`load_organizations`.** Reads `organizations.csv`, picks the row with `UTILIZATION = max`, drops `latitude`/`longitude` (geo-analytics out of scope), and keeps {organization_id, name, city, phone, utilization}. Yields exactly one row.
+* **`load_providers`.** Filters to the top-300 providers by encounter frequency (computed by a one-pass `value_counts` on `encounters.csv`). Forces `organization_id` to the singleton org id. Splits `NAME` on the *last* whitespace to {first_name, last_name} and applies `_strip_digits` to both. Modal-imputes `gender` and `speciality`; median-imputes `encounters` and `procedures` counts.
+* **`load_encounters`.** The most rule-heavy loader. (i) Computes a per-year provider-activity ranking (`year_to_providers`) and a global fallback. (ii) Identifies the *dropped* set (providers not in the top-300). (iii) For every encounter whose provider was dropped, picks a replacement round-robin from the same year's kept-provider list, falling back to the global fallback. (iv) Forces `organization_id` to the singleton org id. (v) Coerces `start_date`/`end_date` to UTC. (vi) Clamps both dates to `today` to remove Synthea's future-dated rows. (vii) Computes **`duration`** in minutes as `(end_date − start_date).total_seconds() / 60`. (viii) Caps `duration` per encounter class — `wellness 120`, `ambulatory 480`, `outpatient 1440`, `urgentcare 1440`, `emergency 4320`, `inpatient 43200`. (ix) Sentinel-imputes textual fields (`encounter_class`, `description`, `reason_description`) to `'no_reason_specified'`. (x) Median-imputes `duration` if any remaining NaN.
+* **`load_patient_providers`.** Reads back the just-written `cleaned_encounters.csv`, projects `(patient_id, provider_id)`, drops duplicates and NaNs, writes the M:N junction `patient_provider`.
+* **`load_allergies`.** Renames {START, STOP, PATIENT, ENCOUNTER, CODE, DESCRIPTION} → {start_date, end_date, patient_id, encounter_id, allergy_code, description}. Coerces dates to UTC. Sentinel-imputes `description` → `'unknown_allergy'`. Inserts with auto-generated integer `id`.
+* **`load_procedures`.** Same as `load_allergies` plus `reason_description`. Both `description` and `reason_description` sentinel-impute to `'routine_procedure'`.
+* **`load_medications`.** Same as `load_procedures` plus a derived **`duration_days = (end_date − start_date).dt.days`**, with NaN → 0 (a NaN here means an active prescription with no end_date). Sentinels: `'no_reason_specified'`.
+* **`load_immunizations`.** Renames {DATE, PATIENT, ENCOUNTER, CODE, DESCRIPTION}. Sentinel: `'unknown_vaccine'`.
+* **`load_careplans`.** Renames the standard set plus `REASONCODE`/`REASONDESCRIPTION`. Coerces both dates with `errors='coerce'` (Synthea sometimes leaves a careplan open with an invalid stop date). Derived `duration_days` (NaN → 0). Sentinels: `'unknown_careplan'`, `'no_reason_specified'`.
+* **`load_conditions`.** Standard rename + sentinel `'unknown_condition'`.
+* **`load_observations`.** The largest table by 1–2 orders of magnitude. Standard rename. A derived **`value_numeric = pd.to_numeric(value, errors='coerce')`** column is added — categorical observations (e.g. `Tobacco smoking status`) yield NaN, numerics survive. Before the insert, `TRUNCATE observation RESTART IDENTITY CASCADE` resets the table; rows are then inserted in chunks of **10 000 rows**, with progress logged after every chunk so that a 20 M-row load remains observable. Bulk WAL stays bounded because each chunk is its own transaction.
+
+### 4.2.5 Materialised views
+
+After `load_observations`, `_refresh_observation_views` issues `REFRESH MATERIALIZED VIEW` against five pre-defined views:
+
+* **`mv_obs_totals`** — global counts (rows, distinct types, distinct patients).
+* **`mv_obs_per_patient`** — per-patient row counts and last-observation-date.
+* **`mv_obs_top_types`** — top-N most-frequent observation descriptions.
+* **`mv_obs_numeric_stats`** — per-description min/max/mean/median/stddev for numerical observations.
+* **`mv_obs_categorical_stats`** — per-description value-frequency table for non-numerical observations.
+
+These views are the substrate of the Statistics dashboard. They keep the dashboard query-cheap (read a denormalised aggregate, never re-scan the 20 M-row observation table) and let the LLM SQL agent cite stable aggregates without invoking a heavy window function.
 
 ## 4.3 Patient segmentation: theoretical underpinning of k-Prototypes
 
@@ -117,7 +146,7 @@ A safety check forbids using `clinical_severity_score` together with any of its 
 
 ### 4.3.7 Outlier removal: a z-score gate before clustering
 
-Outliers in mixed-type space are dangerous because k-Prototypes is sensitive to extreme values in the numerical block. The platform applies a global z-score gate (`threshold = 6` in production) on a fixed list of utilisation features:
+Outliers in mixed-type space are dangerous because k-Prototypes is sensitive to extreme values in the numerical block. The platform applies a global z-score gate (`threshold = 6` in production, `4` available as a tighter alternative) on a fixed list of utilisation features:
 
 ```
 age, total_medications, total_procedures, active_conditions_count,
@@ -126,7 +155,7 @@ total_encounter_duration_hours, wellness_count, acute_care_count,
 severe_care_count
 ```
 
-For the three skewed columns, the z-score is computed *after* a log1p transform. A patient is flagged as an outlier if **any** column's |z| exceeds the threshold. Outliers are clustered separately and assigned label `-1`.
+For the three skewed columns, the z-score is computed *after* a log1p transform so the long tail does not artificially inflate every patient's z. The implementation skips zero-variance columns (avoids divide-by-zero on degenerate features). A patient is flagged as an outlier if **any** column's |z| exceeds the threshold (a logical OR, not AND — one extreme value is enough). Outliers are not deleted: they are clustered separately and assigned label `-1`, which the AI narrative engine renders as a distinct grey "Outliers" cluster on the dashboard.
 
 ### 4.3.8 Choosing $k$ — the elbow plot
 
@@ -162,6 +191,94 @@ Both are scaled to $[0, 1]$ and ranked, giving a clear "this cluster is explaine
 ### 4.3.11 Per-cluster silhouette: a weakness detector
 
 A single global silhouette can hide a weak cluster. The platform also computes per-cluster mean silhouette from the Gower-based per-sample silhouettes. A cluster whose mean silhouette is near 0 or negative is structurally weak — this is reported and considered when choosing among configurations.
+
+### 4.3.12 The patient-feature substrate (the 22 feature frames)
+
+A clustering algorithm is only as good as its features. The platform computes a unified patient feature matrix by running 22 SQL feature frames against the clinical warehouse and merging them on `patient_id`. Each frame answers a single clinically-meaningful question. The choice of frames — and their categorisation/bucketing rules — is the principal *domain knowledge* injected into the model; the rules below are the result of iterative tuning against clinical guidance.
+
+#### Demographic and base frames
+
+* **F1 — `patient_features`.** The base relation: `(patient_id, age, gender, race, ethnicity, marital)`. `age` was already computed by the ETL.
+* **F12 — `provider_features`.** `distinct_providers_seen = COUNT(DISTINCT provider_id)` over a patient's encounters.
+
+#### Encounter mix and dominance
+
+* **F2 — `encounter_features`.** Eight per-class counts using `FILTER (WHERE encounter_class = X)`: `inpatient_count`, `outpatient_count`, `emergency_count`, `wellness_count`, `ambulatory_count`, `urgentcare_count`, `snf_count`, `hospice_count`.
+* **F3 — `dominant_encounter_features`.** Per patient, the encounter class with the highest count, computed via `DISTINCT ON (patient_id) ... ORDER BY count DESC`. Returned as **`dominant_encounter_class`** (categorical).
+
+#### Diagnosis frames
+
+* **F4 — `condition_features`.** `total_conditions = COUNT(*)` of every recorded condition.
+* **F10 — `active_conditions_features`.** `active_conditions_count = COUNT(*) WHERE end_date IS NULL` — the open chronic load.
+* **F5 — `disease_flags`.** A bank of binary flags (0/1) computed by case-insensitive `LIKE` matching on the condition's free-text description. The matching rules are clinically chosen so they do *not* match family history or "suspected of" entries:
+  * `has_diabetes` — `description ILIKE 'diabetes%' AND NOT 'prediabetes%'`.
+  * `has_hypertension` — `'hypertension%' AND NOT 'prehypertension%'`.
+  * `has_cancer` — `'neoplasm%' OR 'cancer%' OR 'carcinoma%' OR 'leukemia%' OR 'lymphoma%' OR 'myeloma%' OR 'melanoma%' OR 'sarcoma%' OR 'malignant%'`, all excluding `'suspected%'` and `'family history%'`.
+  * `has_kidney_disease` — `'kidney%' OR 'renal%' OR 'nephro%' OR 'pyelonephritis%' OR 'microalbuminuria%' OR 'proteinuria%'`.
+  * `has_mental_health` — `'depress%' OR 'anxiety%' OR 'schizophrenia%' OR 'ptsd%' OR 'posttraumatic%' OR 'suicid%' OR 'bipolar%' OR 'attention deficit%'`.
+  * `has_heart_disease` — `'heart failure%' OR 'myocardial infarction%' OR 'coronary%' OR 'cardiac arrest%' OR 'atrial fibrillation%' OR 'arrhythmia%' OR 'angina%' OR 'ischemic heart%' OR 'cardiomyopathy%'`, excluding `'family history%'`.
+  * `has_chronic_resp` — `'copd%' OR 'chronic obstructive%' OR 'emphysema%' OR 'chronic bronchitis%' OR 'asthma%' OR 'pulmonary fibrosis%'`, excluding family-history.
+  * `has_active_acute_resp` — `'acute bronchitis%' OR 'pneumonia%' OR 'acute respiratory%' OR 'acute upper respiratory%' OR 'influenza%' OR 'bronchiolitis%'` *with* `end_date IS NULL` (currently active acute episode).
+
+  Two flags merge into a categorical: **`respiratory_disease_profile`** ∈ {`Chronic with Active Acute`, `Chronic`, `Active Acute`, `None`} based on the truth table of `has_chronic_resp` × `has_active_acute_resp`.
+
+* **F6 — `inpatient_history`.** `has_inpatient_history = MAX(CASE WHEN encounter_class='inpatient' THEN 1 ELSE 0 END)`; binary 0/1.
+
+#### Pharmacological frames
+
+* **F7 — `medication_features`.** `total_medications = COUNT(*)` over all prescription rows. **`is_polypharmacy_raw`** = 1 iff `COUNT(*) FILTER (WHERE end_date IS NULL) ≥ 5` — the WHO threshold for polypharmacy.
+* **F17 — `lifetime_medication_features`.** `lifetime_medication_days = SUM(GREATEST(0, EXTRACT(EPOCH FROM (COALESCE(end_date, CURRENT_DATE) − start_date)) / 86400))` — total days under any medication, with active prescriptions counted up to today.
+
+#### Procedure / careplan / encounter-duration frames
+
+* **F8 — `procedure_features`.** `total_procedures = COUNT(*)`.
+* **F18 — `encounter_duration_features`.** `total_encounter_duration_hours = SUM((end_date − start_date) / 3600)` over closed encounters.
+* **F11 — `dominant_careplan_features`.** A clinically-prioritised severity classifier. Each careplan description is mapped via `~*` regex to one of six tiers, ranked 1 (worst) to 6 (best). For each patient the tier with the smallest rank that has any matching plan wins:
+  * Rank 1 — `Complex, Oncology & Palliative` (matches `cancer|dialysis|terminal`).
+  * Rank 2 — `Maternal & Antenatal` (`antenatal`).
+  * Rank 3 — `Acute Trauma, Wound & Surgery` (`fracture|wound|surgery|surgical|injury|trauma|burn|musculoskeletal|spinal|jaw`).
+  * Rank 4 — `Respiratory & Infectious` (`respiratory|asthma|pulmonary|infect|covid|pneumonia|bronchitis|sinusitis`).
+  * Rank 5 — `Chronic Cardio-Metabolic` (`diabetes|hyperlipidemia|heart|hypertension|weight|cardiac|coronary`).
+  * Rank 6 — `General Rehab & Routine` (everything else).
+
+  This severity-aware bucket dramatically reduces the cardinality of a free-text careplan description (Synthea generates ~60 distinct phrasings) into a 6-level ordinal categorical ideal for k-Modes mode-finding.
+
+#### Observation-derived vital frames
+
+* **F9 — `observation_features`.** Numerical vitals are extracted by ILIKE pattern-matching on the observation `description` and averaged over the **most recent three** measurements per patient (a `ROW_NUMBER() = 1..3` per type). Glucose values reported in mmol/L are converted to mg/dL by multiplying by 18.0. Safety guards reject percentile/z-score observations and biologically implausible values (BMI > 100, glucose > 1000). Five numerics are produced (rounded to 2 decimals): `avg_bmi`, `qaly`, `daly`, `avg_systolic_bp`, `avg_glucose`.
+* **F19 — `cholesterol_features`.** `AVG(value_numeric) WHERE description ILIKE '%cholesterol%' AND NOT '%ldl%' AND NOT '%hdl%' AND NOT '%triglyceride%' AND NOT '%ratio%'`, then bucketed: `Optimal (<170)`, `Borderline (170–199)`, `High (200–239)`, `Very High (≥240)`, `Unknown` (NULL). Returned as the categorical **`cholesterol_risk_category`**.
+* **F22 — `smoking_features`.** Reads observations whose description ILIKE `%tobacco smoking status%`, maps the textual value to **`smoking_status`** ∈ {`current`, `former`, `never`} via substring match (`%daily%|%current%` → current; `%ex-smoker%|%former%` → former; else `never`).
+
+#### Behavioural / utilisation frames
+
+* **F13 — `ooh_features`** (out-of-hours flyer). Flags a patient whose acute encounters (emergency + urgentcare) cluster around evenings/weekends. (i) Extract day-of-week and hour from `start_date`. (ii) Classify each acute encounter as out-of-hours iff `DOW ∈ {0,6}` (Sun/Sat) or `HOUR ≥ 20` or `HOUR < 8`. (iii) `out_of_hours_flyer = 'Yes'` iff the patient has at least 5 acute encounters AND ≥ 80% of them were out-of-hours; else `'No'`.
+* **F14 — `substance_use_features`.** Combines condition flags with screening scores from observations. (i) `has_illicit` — condition description matches `drug abuse|misuses drugs|opioid abuse|dependent drug`. (ii) `has_alcohol` — `alcoholism|alcohol drinking`. (iii) Read the latest **DAST-10** and **AUDIT-C** screening scores (validated alcohol/drug screening instruments) from observations. (iv) Map: `High Risk (Drug/Illicit)` if `has_illicit=1 OR DAST-10 ≥ 3`; `Moderate Risk (Alcohol)` if `has_alcohol=1 OR AUDIT-C ≥ 4`; otherwise `No/Low Risk`. Returned as **`substance_use_profile`**.
+* **F15 — `pain_management_features`.** A four-tier classifier built from condition + medication descriptions: (i) `has_chronic_pain` matches `chronic pain|chronic low back|chronic neck|fibromyalgia|chronic intractable`; (ii) `has_acute_pain` matches `sprain|laceration|fracture|muscle pain|joint pain`; (iii) `has_opioid` matches `oxycodone|fentanyl|hydrocodone|morphine|tramadol|buprenorphine|codeine`. Tier rules — checked in order: `Chronic Opioid` (chronic pain AND opioid), `Chronic Non-Opioid` (chronic pain only), `Acute/Minor` (acute pain), else `None`. Returned as **`pain_management_tier`**.
+* **F16 — `thirty_day_readmission_features`.** Counts back-to-back inpatient/ER chains within 30 days using a window-function trick. (i) For each patient, `LAG(end_date) OVER (PARTITION BY patient_id ORDER BY start_date)` gives the previous encounter's end. (ii) A row is a *readmission* iff `start_date ≤ prev_end_date + INTERVAL '30 days'`. (iii) Map count → tier: `0 → '0. None'`, `1–2 → '1. Occasional (1–2)'`, `3–5 → '2. Frequent (3–5)'`, `>5 → '3. Super-Utilizer (>5)'`. Returned as **`readmission_risk_tier`** — an ordinal categorical that the LLM narrative interprets as escalating utilisation pressure.
+* **F21 — `days_since_features`.** `days_since_last_encounter = EXTRACT(DAY FROM (CURRENT_DATE − MAX(end_date)))` — used as a recency / disengagement signal.
+
+#### Pregnancy frame
+
+* **F20 — `pregnancy_features`.** Three-class categorical computed from condition matches: `Active` if a `normal pregnancy` row exists with `end_date IS NULL`; `Past` if any of `pregnancy%|miscarriage%|tubal ligation%|antenatal%|eclampsia%` ever appeared; else `None`. Returned as **`pregnancy_history`**.
+
+#### Post-processing: derived compound features
+
+After all 22 frames are merged on `patient_id`, a small derivation pass produces interpretable rollups and ordinal bins:
+
+* `routine_care_count = ambulatory_count + outpatient_count`.
+* `acute_care_count = emergency_count + urgentcare_count`.
+* `severe_care_count = inpatient_count + snf_count + hospice_count`.
+* `preventive_to_reactive_ratio = wellness_count / (acute_care_count + severe_care_count + 1)` — the +1 prevents a divide-by-zero for patients with no acute care.
+* **`bmi_type`** — `pd.cut(avg_bmi, bins=[−∞, 18.5, 25, 30, 35, 40, ∞])` → `Underweight`, `Normal`, `Overweight`, `Obese I`, `Obese II`, `Obese III`; NaN → `Unknown`.
+* **`bp_risk_category`** — `pd.cut(avg_systolic_bp, bins=[−∞, 119.9, 139.9, ∞])` → `Normal`, `Elevated`, `Hypertensive`; NaN → `Unknown`.
+* **`glucose_risk_category`** — `pd.cut(avg_glucose, bins=[−∞, 99.9, 125.9, ∞])` → `Normal`, `Prediabetic`, `Diabetic`; NaN → `Unknown`.
+* **`condition_burden`** — `pd.cut(active_conditions_count, bins=[−1, 3, 10, ∞])` → `low`, `medium`, `high`.
+* **`medication_intensity`** — `pd.cut(total_medications, bins=[−1, 5, 20, ∞])` → `low`, `medium`, `high`.
+* `is_polypharmacy` is mapped from the raw 0/1 to `'No'`/`'Yes'` so it is a clean string for k-Modes.
+* All disease flags (`has_diabetes`, …, `has_inpatient_history`) are mapped 0→`'No'`, 1→`'Yes'`.
+* All categoricals are NaN-filled with semantically-correct sentinels: `dominant_encounter_class`→`'wellness'`, `dominant_careplan`→`'None'`, `respiratory_disease_profile`→`'None'`, `substance_use_profile`→`'None'`, `pain_management_tier`→`'None'`, `readmission_risk_tier`→`'None'`, `cholesterol_risk_category`→`'Unknown'`, `pregnancy_history`→`'None'`, `out_of_hours_flyer`→`'No'`, `smoking_status`→`'never'`. A single canonical `gender` fallback (`'F'`) and `marital` fallback (`'S'`) are also applied.
+
+The output is a 22-feature-frame ⊕ 12-derived-feature matrix, with every patient described by ~65 columns. From this matrix each `configs.py` configuration selects a small subset (typically 5 numerical + 8 categorical) to actually feed into k-Prototypes.
 
 ## 4.4 Care-trajectory mining: theoretical underpinning of PrefixSpan
 
@@ -212,6 +329,20 @@ Even after GML re-rank, patterns can be near-duplicates (sharing 4 of 5 items, i
 * if the pattern is "dental-majority" (≥ 50% of items contain a dental keyword), fewer than 15 dental patterns have already been chosen.
 
 The dental quota addresses a Synthea idiosyncrasy: a periodontal-cleaning protocol generates a near-identical 4-step dental sequence in 30%+ of patients, and without the cap the entire top-K would be flooded with dental near-duplicates.
+
+### 4.4.5b Pre-mining: shaping the sequence database
+
+Before PrefixSpan ever runs, the platform applies a five-stage shaping pass that materially improves the quality of the mined patterns:
+
+1. **Item-blacklist filtering.** Three Synthea catch-alls — `assessment of health and social care needs`, `medication review due`, `medication reconciliation` — appear in 30 %+ of patient timelines and convey no clinical information. They are filtered case-insensitively before mining.
+2. **Deterministic prefix-priority sort.** Within a single calendar day a patient may have multiple events with identical timestamps. To make the mining deterministic *and* clinically meaningful, ties are broken by a fixed prefix priority: `C (Condition) → M (Medication) → P (Procedure) → CP (CarePlan)`. The ordering reflects the natural diagnostic-then-therapeutic causality (a condition is diagnosed before a medication is prescribed in response).
+3. **Two-year rolling window.** For each patient, only events within `WINDOW_DAYS = 730` of their *most recent* event are retained. Recent care patterns are more clinically actionable than lifetime patterns; older events also dilute the support of recent trajectories.
+4. **Run-length collapse.** Consecutive identical items in the same patient's timeline are collapsed: `A → A → B` becomes `A → B`. The `prev_pid == cur_pid AND prev_item == cur_item` predicate is computed via vectorised `pandas.shift()`.
+5. **Tail truncation.** Each patient's timeline is truncated to the most recent `MAX_EVENTS_PER_PATIENT = 25` events. Patients with hundreds of events would otherwise dominate the projected databases and slow mining down asymmetrically.
+
+### 4.4.5c Same-type-run filter (post-mining)
+
+After the topk call but before GML re-ranking, patterns containing `≥ 3` consecutive items of the *same* event-type prefix are dropped. Examples eliminated by this filter: `C:Diabetes → C:Hypertension → C:Hyperlipidemia` (three conditions in a row, characteristic of Synthea's dental-cleaning bursts) or `M:Drug A → M:Drug B → M:Drug C` (three medication prescriptions in a row, often a single visit-bundle artefact). The clinical principle: an interesting trajectory crosses domains.
 
 ### 4.4.6 Tunable parameters of the mining stage
 
@@ -363,25 +494,54 @@ AI analyses are persisted in dedicated JSONB columns (`ai_analysis` on `cluster_
 
 ## 4.7 System architecture: the case for microservices
 
-The platform is decomposed into seven backend microservices. Each owns at most one database; cross-service reads are explicit (separate read engines). The split is by *bounded context*:
+The platform is decomposed into seven backend microservices, each carved out by *bounded context* — a unit of business behaviour that has its own lifecycle, its own data ownership, and its own scaling profile. The split is summarised in the table below; the rest of this section justifies each separation theoretically.
 
-| Service | Owns | Reads from | Why it is its own service |
-|---------|------|------------|---------------------------|
-| `auth` | `auth_db` (users, credentials) | — | Independent deploy cadence and a security boundary. |
-| `users` | — | `auth_db` (read-only) | Pure user-management API; thin layer over auth_db. |
-| `clinical-core` | `clinical_db` (patient, encounter, condition, …) | — | Source of truth for clinical data; ETL writes here. |
-| `analytics` | `analytics_db` (materialised views) | `clinical_db`, `ml_db` | Read-heavy aggregation; needs separate scaling profile. |
-| `ml-batch` | `ml_db` (cluster, prefix_span_*) | `clinical_db` | Long-running CPU-bound jobs; isolated so they never block the API. |
-| `mail-service` | — | RabbitMQ subscriber | I/O-bound, transactional outbox via the broker. |
-| `queue-service` | `queue_db` (APScheduler jobs) | — | Cron-style job orchestration. |
+| Service | Owns | Reads from | Communicates over | Bounded context |
+|---------|------|------------|-------------------|------------------|
+| `auth` | `auth_db` (`auth_user`, password-reset tokens) | — | HTTP, AMQP (publisher + subscriber) | Identity and credentials |
+| `users` | — (placeholder) | `auth_db` (read-only) | HTTP | User-management API surface |
+| `clinical-core` | `clinical_db` (12 tables: patient, provider, encounter, condition, medication, procedure, careplan, allergy, observation, immunization, organization, patient_provider) | — | HTTP, AMQP (publisher) | Clinical source-of-truth |
+| `analytics` | `analytics_db` (read replicas / aggregates) | `clinical_db`, `ml_db` | HTTP | Read-heavy aggregation, dashboards, LLM SQL agent |
+| `ml-batch` | `ml_db` (`cluster_meta`, `cluster`, `cluster_patient`, `prefix_span_pattern`, `prefix_span_patient_pattern`) | `clinical_db` | HTTP, AMQP (subscriber) | Long-running ML jobs |
+| `mail-service` | — | — | AMQP (subscriber), SMTP (egress) | Transactional email |
+| `queue-service` | `queue_db` (APScheduler jobstore) | — | HTTP, AMQP (subscriber) | Cron-style job orchestration |
 
-A single **Traefik** reverse proxy fronts every service, routing by `Host` header (`auth.localhost`, `clinical.localhost`, etc.). Inter-service async messaging is via **RabbitMQ**; synchronous reads are HTTP. The frontend is also a service, served on `app.localhost`.
+### 4.7.1 The data-ownership invariant
 
-This split serves three theoretical properties:
+Each writable piece of state is owned by exactly one service. A second service that needs the data either (a) reads through a *read-only* engine bound to the owner's database, or (b) listens for AMQP events the owner publishes when state changes. There are no cross-service `JOIN`s and no shared tables; the relational integrity that used to live in foreign keys now lives in event consistency. This is the *Database-per-Service* pattern in its strict form.
 
-1. **Independent deployability.** Pushing a fix to `mail-service` does not touch `analytics` or `clinical-core`.
-2. **Scaling locality.** The ML-batch service is CPU-bound; the analytics service is I/O-bound. They can be scaled independently.
-3. **Failure isolation.** A crash in the ML batch container does not bring down clinical-core or login.
+### 4.7.2 The seven contexts in detail
+
+* **`auth`.** Owns identity. Responsible for login (issue JWT), password reset (one-time token + email), set-password, and `me` retrieval. Listens on RabbitMQ for `patient.created`/`patient.deleted` and `provider.created`/`provider.deleted` and provisions/deletes the corresponding `auth_user` rows. Emits `notification.send` for password-reset emails.
+* **`users`.** A thin user-management layer reading from `auth_db`. Currently a placeholder for an admin-facing user CRUD; isolated so that any admin-specific RBAC logic does not contaminate the security-critical `auth` service.
+* **`clinical-core`.** Owns every clinical table. The ETL writes here. Patient and provider CRUD endpoints live here; deletions cascade through AMQP events that downstream services consume.
+* **`analytics`.** Computes dashboards and runs the LLM SQL agent. Read-only access to `clinical_db` and `ml_db` is explicit: separate SQLAlchemy engines mounted via the `read_engine("clinical")` / `read_engine("ml")` factory, each driven by `CLINICAL_DB_*` / `ML_DB_*` env vars. The agent is forbidden from emitting writes.
+* **`ml-batch`.** The CPU-heavy outlier. Runs `build_patient_features` (21 SQL frames) against a read engine to `clinical_db`, runs k-Prototypes / PrefixSpan, and writes results to its own `ml_db`. Listens for `patient.deleted` to cascade-delete orphan `cluster_patient` rows.
+* **`mail-service`.** No HTTP API of consequence — it consumes `notification.send` and dispatches via SMTP. Isolated because SMTP is I/O-bound and externally fragile (connection pooling, rate limits, retry semantics) and should not block any HTTP request.
+* **`queue-service`.** APScheduler with a `queue_db` jobstore for persistent cron jobs (e.g., nightly recluster, view refresh). On boot, the scheduler reloads its jobstore so a container restart never loses scheduled work.
+
+### 4.7.3 Theoretical properties earned by the split
+
+1. **Independent deployability.** A patch to `mail-service` rebuilds and rolls only its container; `clinical-core` and `auth` keep serving traffic.
+2. **Scaling locality.** `ml-batch` is CPU-bound and benefits from vertical scaling; `analytics` is I/O- and LLM-latency-bound and benefits from horizontal scaling. The Docker Compose topology already exposes per-service replica counts; a Kubernetes manifest derived from it would tune `resources.limits` and `replicas` per service.
+3. **Failure isolation.** A k-Prototypes job that exhausts memory crashes only the `ml-batch` container; login still works.
+4. **Fault-tolerant async coupling.** RabbitMQ persists the message until a consumer ACKs it. If `mail-service` is down when `notification.send` is published, the event is held in `mail.notifications` and delivered when the consumer comes back — a property the synchronous HTTP path cannot offer.
+5. **Security boundary.** `auth` is the only service that accesses `auth_db`. The LLM SQL agent in `analytics` cannot read user passwords because there is no engine that goes there — even a successful prompt-injection attack stops at the boundary.
+
+### 4.7.4 The event taxonomy (`clinical.events` topic exchange)
+
+A single AMQP topic exchange `clinical.events` routes every domain event by an `<entity>.<action>` routing key. Three queues subscribe with selective bindings:
+
+| Routing key | Publisher | Subscribed by | Side-effect |
+|-------------|-----------|---------------|-------------|
+| `patient.created` | clinical-core | `auth.account_sync` (auth) | Provision a `PATIENT` `auth_user`, send invite email |
+| `patient.deleted` | clinical-core | `auth.account_sync` (auth) | Delete the linked `auth_user` |
+| `patient.deleted` | clinical-core | `ml.clinical_sync` (ml-batch) | Delete orphaned `cluster_patient` rows in `ml_db` |
+| `provider.created` | clinical-core | `auth.account_sync` (auth) | Provision a `DOCTOR` `auth_user`, send invite email |
+| `provider.deleted` | clinical-core | `auth.account_sync` (auth) | Delete the linked `auth_user` |
+| `notification.send` | any | `mail.notifications` (mail) | Render template, dispatch via SMTP |
+
+A single routing key may bind to multiple queues (note `patient.deleted` fans out to both `auth` and `ml-batch`). This is the *Publisher / Multiple Subscribers* pattern with selective routing — every consumer sees only the events it cares about.
 
 ---
 
@@ -760,6 +920,82 @@ Everything else stays internal to the bridge network.
 
 `queue-service` runs **APScheduler** with a Postgres-backed jobstore (`queue-db`). Long-running operations (re-running clustering on a schedule, refreshing materialised views nightly) are registered as APScheduler jobs. The job state is persistent across container restarts; on boot, the scheduler re-loads the jobstore and resumes the schedule.
 
+## 5.14 Microservice runtime in detail
+
+### 5.14.1 Per-service responsibilities and routes
+
+The seven backend services materialise the bounded contexts of Section 4.7. Each one is a self-contained FastAPI application sharing a common skeleton (`api/` → `service/` → `repository/` → `domain/`); the chosen routers are gated by the `SERVICE_NAME` environment variable so the same image can in principle serve any role, even though in production each service is built from its own folder.
+
+| Service | HTTP routes (Traefik host) | Owned database | Key responsibility |
+|---------|----------------------------|----------------|--------------------|
+| `auth` | `auth.localhost`: `POST /auth/login`, `POST /auth/forgot-password`, `POST /auth/set-password`, `GET /auth/me`, `GET /health` | `auth_db` | Issue/validate JWTs, password-reset workflow, account provisioning from clinical events |
+| `users` | `users.localhost`: (placeholder) | — | Future admin-facing user CRUD |
+| `clinical-core` | `clinical.localhost`: `/patients/*`, `/providers/*`, `/encounters/*` | `clinical_db` | Source-of-truth CRUD; emits domain events |
+| `analytics` | `analytics.localhost`: `/statistics/*`, `/dashboard/*`, `POST /statistics/sql-agent` | `analytics_db` (read replicas of `clinical_db`, `ml_db`) | Aggregations, dashboards, LLM SQL agent |
+| `ml-batch` | `ml.localhost`: `/clusters/*`, `/sequences/*` | `ml_db` (read replica of `clinical_db`) | Run k-Prototypes / PrefixSpan, persist results, serve cluster/sequence detail pages |
+| `mail-service` | `mail.localhost`: `GET /health` | — | Consume `notification.send`, render template, send SMTP |
+| `queue-service` | `queue.localhost`: (placeholder) | `queue_db` | APScheduler jobstore for nightly recluster, view-refresh, etc. |
+
+The `app.localhost` host serves the Next.js frontend; `localhost:8090` exposes the Traefik dashboard; `localhost:15673` exposes the RabbitMQ management UI; `localhost:5432` exposes `clinical-db` so the host-run ETL script can connect.
+
+### 5.14.2 The asynchronous data plane (RabbitMQ)
+
+Every domain event is published as a JSON message on the topic exchange `clinical.events` with routing key `<entity>.<action>`. The exchange is durable; each queue is durable and has a single named consumer per service so events survive restarts.
+
+```
+                                ┌─────────────────────────┐
+                                │ exchange clinical.events│ (topic, durable)
+                                └────────────┬────────────┘
+                              routing keys → │
+            ┌────────────────────────────────┼─────────────────────────────┐
+            ▼                                ▼                             ▼
+   ┌─────────────────────┐         ┌────────────────────┐        ┌────────────────────┐
+   │ queue auth.account_ │         │ queue mail.        │        │ queue ml.clinical_ │
+   │       sync          │         │      notifications │        │       sync         │
+   │ binds:              │         │ binds:             │        │ binds:             │
+   │  patient.created    │         │  notification.send │        │  patient.deleted   │
+   │  patient.deleted    │         └─────────┬──────────┘        └─────────┬──────────┘
+   │  provider.created   │                   │                              │
+   │  provider.deleted   │                   ▼                              ▼
+   └─────────┬───────────┘            mail-service                     ml-batch
+             │                        SMTP dispatch                    delete cluster_patient
+             ▼
+        auth-service
+        provision/delete
+        auth_user
+```
+
+### 5.14.3 End-to-end synchronization flows
+
+The key inter-service flows are:
+
+* **Patient creation (clinical-core → auth → mail-service).** A clinician creates a patient via `POST /patients`. clinical-core inserts the row, then publishes `patient.created` with payload `{patient_id, first_name, last_name, email}`. auth's `account_sync` consumer receives it, inserts a new `auth_user` with role `PATIENT` and a one-time `set_password_token`, then publishes `notification.send` with the invite-email payload. mail-service's `notifications` consumer receives that, renders the template, and dispatches via SMTP. The whole chain is asynchronous — clinical-core's HTTP response returns the moment its own commit lands; the auth+email side completes within a few hundred milliseconds afterwards.
+* **Patient deletion (clinical-core → auth + ml-batch).** A `DELETE /patients/{id}` cascades the row removal on `clinical_db`, then publishes `patient.deleted`. The same routing key is bound to *two* queues: auth's removes the linked `auth_user`; ml-batch's removes orphaned `cluster_patient` rows in `ml_db`. The two sides are independent — if one fails it can be retried from its DLQ without affecting the other.
+* **Provider creation/deletion (clinical-core → auth).** Mirrors patient-create/delete but provisions a `DOCTOR` account (with `provider_id` claim used by the LLM SQL agent's `DOCTOR_SCOPE_CLAUSE`).
+* **Password reset (auth → mail-service).** `POST /auth/forgot-password` generates a one-time token, stores it in `auth_db`, and publishes `notification.send` with the password-reset URL. The mail consumer dispatches the email. The user clicks the link and `POST /auth/set-password` validates the token and sets a new hash.
+* **Cluster run (frontend → ml-batch → ml-batch → analytics).** The MANAGER triggers a clustering run via `POST /clusters/run`. ml-batch fetches features through the `clinical-db` read engine, runs `run_kprototypes`, writes results to `ml_db`, and returns. Subsequent dashboard reads come from `analytics`, which reads `ml_db` through *its own* read engine.
+* **LLM SQL agent (frontend → analytics → clinical-db read).** The user asks a natural-language question. The analytics service runs `process_input → generate_query → validate_query → execute_query → summarise`, generating a SELECT-only SQL string and executing it through the `read_engine("clinical")` connection. No write path exists.
+
+### 5.14.4 Read-only cross-DB engines
+
+The `read_engine(name)` factory (in each consuming service's `db/db_connector.py`) constructs an SQLAlchemy `Engine` against an alternate database using `<NAME>_DB_*` env vars (e.g. `CLINICAL_DB_HOST`, `ML_DB_HOST`). A *read-only* `application_name` is set on the connection so DBAs can audit who is reading what. Engines are cached per process so they survive across requests.
+
+### 5.14.5 Tableset registry — what each service owns
+
+Inside each service folder, `db/model_registry.py` maps `SERVICE_NAME` to the set of tables that service is responsible for. At startup, `SQLModel.metadata.create_all(engine, tables=registry[SERVICE_NAME])` creates only that subset, never the others. This makes the database-per-service contract enforced at the schema-creation layer, not just by convention.
+
+### 5.14.6 Failure modes and recovery
+
+* **Consumer offline.** RabbitMQ holds messages in the durable queue. When the consumer comes back, it drains the backlog. No messages are lost.
+* **Publisher fails to publish.** The platform uses publisher confirms; if the broker NACKs, the publishing service retries with exponential backoff. If retries exhaust, the event is logged and a manual reconciliation (e.g. re-running a sync job) is required.
+* **Consumer crashes mid-processing.** The message remains unacknowledged; on reconnect RabbitMQ redelivers. Consumers must therefore be **idempotent** — re-creating an `auth_user` that already exists is a no-op (`INSERT ... ON CONFLICT DO NOTHING`).
+* **Database down on startup.** Compose `depends_on` with `condition: service_healthy` blocks the service until its DB passes `pg_isready`. Cross-service read engines do not block startup; they retry on first use.
+* **Eventual consistency.** A patient created in clinical-core may be queryable there before `auth` has provisioned the account. The frontend handles this by surfacing the "we sent you an email" message rather than asserting immediate login readiness.
+
+### 5.14.7 Observability hooks
+
+Every service exposes `GET /health`. Traefik's dashboard at `:8090` aggregates the routing table; the RabbitMQ management UI at `:15673` exposes per-queue depth, consumer count, and message rate. Logs are stdout-only (Docker collects them) — a future iteration would forward them to a central log store via Fluent Bit or Loki.
+
 ---
 
 # Chapter 6 — Testing and Validation
@@ -1001,8 +1237,22 @@ The Chapter 4 diagrams are conceptual: data structures, abstract flows, mathemat
 
 * **Figure 4.4 — Synthea source-file relationship sketch.** The 11 Synthea CSVs as nodes with the foreign-key edges between them (PATIENT, ENCOUNTER, etc. as the join columns). This is a *conceptual* schema, not the production ER diagram.
 * **Figure 4.5 — ETL truncate/load order flowchart.** Shows the child-first truncate sequence and the parent-first load sequence, with the FK direction indicated by edge color.
-* **Figure 4.6 — Feature-engineering pipeline (block diagram).** 21 boxes (one per feature frame) feeding into a single "merged feature matrix" box, then into "post-processing derived features" (routine_care_count, severity_score, bucket categoricals). Group the 21 frames by source table.
-* **Figure 4.7 — Composite feature derivation.** A small block diagram showing `total_procedures + total_medications + active_conditions_count → log1p → standardise → PCA(1) → clinical_severity_score`.
+* **Figure 4.5b — Per-loader transform pattern.** A single-loader block diagram showing the five universal stages (read CSV → rename → coerce/derive → impute → audit-CSV write → bulk insert), with annotations showing what is *unique* to a complex loader like `load_encounters` (provider-redistribution, future-date clamp, per-class duration cap).
+* **Figure 4.5c — Provider-redistribution mechanism.** A schematic with two horizontal tracks (raw provider distribution vs. kept-provider distribution per year), arrows showing how dropped-provider encounters are re-mapped round-robin within the same year.
+* **Figure 4.5d — Encounter duration-cap rule chart.** A bar chart of the per-class duration caps (wellness=120 min … inpatient=43 200 min), with a horizontal "median observed duration" overlay so the cap appears reasonable.
+* **Figure 4.5e — Observation-load chunking schematic.** A block diagram of the 10 000-row chunked insert with a progress-log emission point per chunk; a small inset showing why a single 20 M-row insert would explode the WAL.
+* **Figure 4.5f — Materialised-view dependency tree.** Five MVs (`mv_obs_totals`, `mv_obs_per_patient`, `mv_obs_top_types`, `mv_obs_numeric_stats`, `mv_obs_categorical_stats`) and the tables they depend on; arrows show the order in which `REFRESH MATERIALIZED VIEW` is issued.
+* **Figure 4.6 — Feature-engineering pipeline (block diagram).** 22 boxes (one per feature frame F1..F22) feeding into a single "merged feature matrix" box, then into "post-processing derived features" (routine/acute/severe care counts, ratio, bmi_type, bp_risk_category, glucose_risk_category, condition_burden, medication_intensity). Group the 22 frames by source table (patient, encounter, condition, medication, procedure, observation, careplan).
+* **Figure 4.6b — Frame catalogue (table-style figure).** A two-column figure: left = frame ID (F1..F22) and short name, right = output columns it produces. Used as the canonical reference for the rest of the chapter.
+* **Figure 4.6c — Disease-flag classifier rules.** A decision-table figure showing the LIKE-pattern rules for `has_diabetes`, `has_hypertension`, `has_cancer`, `has_heart_disease`, `has_kidney_disease`, `has_mental_health`, `has_chronic_resp`, `has_active_acute_resp`, with the explicit exclusions for family-history and suspected entries.
+* **Figure 4.6d — Careplan severity-ranked classifier.** A flowchart with 6 ranked tiers (1 Complex/Oncology, 2 Maternal, 3 Acute Trauma, 4 Respiratory & Infectious, 5 Chronic Cardio-Metabolic, 6 General Rehab) and the regex predicates that route a careplan description into the lowest matching tier.
+* **Figure 4.6e — Out-of-hours flyer rule.** A small flowchart: extract DOW + HOUR → tag OOH if weekend or HOUR ≥ 20 or HOUR < 8 → flag `'Yes'` only if total acute ≥ 5 AND OOH share ≥ 80%.
+* **Figure 4.6f — Substance-use rule.** A two-input AND/OR diagram combining condition flags (illicit / alcohol) with screening scores (DAST-10 ≥ 3 / AUDIT-C ≥ 4) into the three-tier `substance_use_profile`.
+* **Figure 4.6g — Pain-management tier rule.** A four-step ordered classifier: chronic+opioid → `Chronic Opioid`; chronic only → `Chronic Non-Opioid`; acute only → `Acute/Minor`; else `None`.
+* **Figure 4.6h — 30-day readmission window.** A timeline figure showing two consecutive inpatient encounters; the LAG window function captures the previous end-date; the arrow marks the 30-day re-entry window.
+* **Figure 4.6i — Vitals rolling-window aggregation.** A patient timeline with all observations of a type, the most-recent-3 are highlighted, an arrow shows the AVG rolling backwards from "most recent measurement".
+* **Figure 4.6j — Bucketing rules for derived categoricals.** Four small histograms (BMI, BP, glucose, conditions) overlaid with the bin boundaries (e.g., 18.5/25/30/35/40 for BMI) and the corresponding label of each bin.
+* **Figure 4.7 — Composite feature derivation.** A small block diagram showing `total_procedures + total_medications + active_conditions_count → log1p → standardise → PCA(1) → clinical_severity_score`. Annotate the explained-variance ratio.
 
 ### A.1.3 k-Prototypes algorithm diagrams
 
@@ -1023,10 +1273,15 @@ The Chapter 4 diagrams are conceptual: data structures, abstract flows, mathemat
 
 ### A.1.5 PrefixSpan algorithm diagrams
 
-* **Figure 4.19 — Sequence database schematic.** A few patient timelines visualised as horizontal arrows with prefixed events (`C:Hypertension`, `M:Lisinopril`, `P:ECG`, etc.) at their event dates. Annotate the COD prefix legend.
+* **Figure 4.19 — Sequence database schematic.** A few patient timelines visualised as horizontal arrows with prefixed events (`C:Hypertension`, `M:Lisinopril`, `P:ECG`, etc.) at their event dates. Annotate the COD/CP prefix legend.
+* **Figure 4.19b — Pre-mining shaping pipeline.** A five-stage flowchart: Item-blacklist → Prefix-priority sort → 2-year rolling window → Run-length collapse → Tail-truncate. Annotate counts ("from N events to M events") at each stage.
+* **Figure 4.19c — Prefix-priority tie-breaker.** A patient calendar day with three same-day events (a Condition, a Medication, a Procedure) showing how the C→M→P→CP ordering fixes the deterministic comparison ordering.
+* **Figure 4.19d — 2-year rolling window.** A patient timeline (years on x-axis) with the most-recent-event marker and a 730-day backward shading; events outside the window are greyed out.
 * **Figure 4.20 — PrefixSpan prefix-projection illustration.** Show how a prefix `<a>` induces a projected database, then `<a, b>` induces a smaller projected database, recursively.
 * **Figure 4.21 — Closed-pattern dominance.** Two patterns $P \subset Q$ with the same support; visualise the dominance check `Q is strictly longer AND P is a (set ∧ order) subsequence of Q`.
 * **Figure 4.22 — GML re-ranking effect (scatter).** Scatter of every mined pattern with support on x-axis and GML on y-axis. Highlight the top-K-by-support set (clustered around GML=1) vs. top-K-by-GML set (uniformly above GML=2).
+* **Figure 4.22b — Type-diversity bonus.** A bar chart of the GML multiplier (1.0, 1.3, 1.6, 1.9) for patterns with 1, 2, 3, 4 distinct prefix types.
+* **Figure 4.22c — Same-type-run rejection.** Three example patterns: `C→C→C` (rejected), `C→C→M` (kept), `C→M→P→CP` (kept) with the same-type-run filter circled around the rejected one.
 * **Figure 4.23 — Posting-list patient attribution.** Block diagram showing the inverted index `posting[item] → list of seq idx`, the rarity-sorted intersection, and the two-pointer subsequence verification.
 * **Figure 4.24 — Pattern-mining funnel.** Funnel chart: 10 000 raw → 7 800 (support floor) → 6 200 (no-3-consecutive-same-type) → 3 100 (closedness) → 500 (Jaccard dedup with caps).
 
@@ -1035,6 +1290,13 @@ The Chapter 4 diagrams are conceptual: data structures, abstract flows, mathemat
 * **Figure 4.25 — LLM agent state graph.** The full LangGraph: START → process_input → {answer_general, generate_query, END} → validate_query → {execute_query, generate_query (retry), END} → execute_query → {summarise, generate_query (retry), END}. Show all conditional edges with their labels.
 * **Figure 4.26 — Defence-in-depth validation pipeline.** Static regex check → SELECT-only check → LLM audit (PROMPT_VALIDATE_SQL) → role-scope literal check. Each layer rejects independently.
 * **Figure 4.27 — Role-based scope projection.** A flow showing how MANAGER / DOCTOR / PATIENT roles inject different scope clauses into the prompt and how the resulting SQL differs.
+
+### A.1.7 Microservice / domain-event theory diagrams
+
+* **Figure 4.28 — Bounded-context map.** Seven domain bubbles (auth, users, clinical-core, analytics, ml-batch, mail, queue) with the ubiquitous-language terms each context owns. No technical wiring — purely conceptual ownership.
+* **Figure 4.29 — Database-per-Service ownership matrix.** Rows = tables (every clinical, ml, auth, queue table), columns = services; an `R/W` mark in the owner cell, an `R-only` mark for cross-service read engines, blank elsewhere.
+* **Figure 4.30 — Event taxonomy and routing-key tree.** The `clinical.events` exchange at the root, `<entity>.<action>` routing keys as branches (`patient.created`, `patient.deleted`, `provider.created`, `provider.deleted`, `notification.send`), with consumer queues as leaves.
+* **Figure 4.31 — Eventual-consistency timeline.** A horizontal time axis showing `t=0` patient.created emitted by clinical-core, `t=Δ₁` auth provisions account, `t=Δ₂` mail dispatches invite. Annotates the bounded-staleness contract.
 
 ## A.2 Diagrams for Chapter 5 — Detailed Design and Implementation
 
@@ -1071,10 +1333,14 @@ Chapter 5 diagrams are concrete: deployment topologies, ER diagrams, package and
 ### A.2.5 Sequence diagrams
 
 * **Figure 5.17 — Login sequence diagram.** User → Frontend → Auth Service → Auth DB → JWT → Frontend → localStorage. Include the failure path (wrong password → 401).
-* **Figure 5.18 — Forgot-password sequence diagram.** User → Frontend → Auth Service → Auth DB (write token) → RabbitMQ publish `password_reset_requested` → Mail Service consumer → SMTP. Asynchronous boundary highlighted.
-* **Figure 5.19 — Cluster run sequence diagram.** Manager → Frontend → ML-batch Service → build_patient_features (reads clinical_db) → run_kprototypes → full_evaluation_report → ask_ai for narratives → save_cluster_results (writes ml_db) → 200 OK.
+* **Figure 5.18 — Forgot-password sequence diagram.** User → Frontend → Auth Service → Auth DB (write token) → RabbitMQ publish `notification.send` → Mail Service consumer → SMTP. Asynchronous boundary highlighted.
+* **Figure 5.18b — `patient.created` end-to-end fan-out.** clinical-core → publish `patient.created` → auth (provision PATIENT account) → publish `notification.send` → mail-service (SMTP). Three lifelines, two AMQP boundaries highlighted.
+* **Figure 5.18c — `patient.deleted` multi-consumer fan-out.** Single publish from clinical-core → two parallel consumer arrows: (a) auth deletes the linked auth_user; (b) ml-batch deletes orphaned cluster_patient rows. Show that the two paths complete independently.
+* **Figure 5.18d — `provider.created` provisioning.** clinical-core → auth provisions DOCTOR account with `provider_id` claim → publishes `notification.send` → mail-service dispatches invite.
+* **Figure 5.19 — Cluster run sequence diagram.** Manager → Frontend → ML-batch Service → build_patient_features (reads clinical_db via read engine) → run_kprototypes → full_evaluation_report → ask_ai for narratives → save_cluster_results (writes ml_db) → 200 OK.
 * **Figure 5.20 — LLM SQL agent sequence diagram.** User question → Frontend → Analytics Service → run_agent → process_input → generate_query → validate_query → (retry loop) → execute_query → PROMPT_RESULT → response. Include the doctor-scope verification step at the end.
 * **Figure 5.21 — Cluster-detail page load sequence.** Frontend → Analytics Service → SELECT FROM cluster_patient WHERE cluster_id=X → JSONB feature aggregation → response. Demonstrates that no clinical-table joins are needed at request time.
+* **Figure 5.21b — Cross-DB read engine activation.** A small sequence diagram: analytics service receives `/statistics/patients` → resolves `read_engine("clinical")` → SQLAlchemy uses `CLINICAL_DB_*` env to open a read-only pool → query → result returned.
 
 ### A.2.6 Activity / state diagrams
 
@@ -1089,6 +1355,18 @@ These are *listings*, not diagrams, but earn figure-style numbering because they
 * **Listing 5.1 — Pseudocode of `mine_patterns`** (sequence build, integer encode, topk, GML, closedness, Jaccard dedup).
 * **Listing 5.2 — Pseudocode of `attribute_patients`** (posting list build, rarity intersection, two-pointer subsequence).
 * **Listing 5.3 — Pseudocode of `run_agent`** (state init, scope clause, graph invoke, post-processing branches).
+* **Listing 5.4 — Pseudocode of `run_etl(engine)`** (truncate child-first, load patients/orgs/providers/encounters, redistribute providers, refresh MVs).
+* **Listing 5.5 — Pseudocode of `build_patient_features`** (run 22 SQL frames, merge on patient_id, derive compound counts, bucket categoricals).
+* **Listing 5.6 — Pseudocode of `run_kprototypes`** (validation, dual-frame separation, log1p, severity PCA, scale, build matrix, optional elbow short-circuit, fit, plot).
+
+### A.2.8 Microservice runtime diagrams
+
+* **Figure 5.25 — RabbitMQ topology map (concrete).** Concrete view of the `clinical.events` topic exchange, three durable queues (`auth.account_sync`, `mail.notifications`, `ml.clinical_sync`), the routing-key bindings table, and the consumer-count badges per queue.
+* **Figure 5.26 — Per-service container manifest.** A single block per Docker container showing image, exposed port, owned database, mounted volumes, depends_on graph. Color-code data-owning vs. stateless services.
+* **Figure 5.27 — Cross-DB read-engine factory class diagram.** UML class diagram of `db_connector.py`: `read_engine(name)` factory, the per-name engine cache, env-var configuration map.
+* **Figure 5.28 — Tableset / model_registry ownership table.** A grid: rows = SERVICE_NAME values, columns = SQLModel tables; cells marked with the lifecycle action this service performs at startup (`create_all` vs. nothing).
+* **Figure 5.29 — Idempotent consumer state machine.** State diagram: `received → already-handled? → if yes ACK no-op, if no apply → ACK`. Explains why a redelivered message never breaks invariants.
+* **Figure 5.30 — Failure-and-recovery decision matrix.** Two-axis matrix (publisher failure vs. consumer failure) × (synchronous vs. async). Each cell describes the recovery action (queue persists, retry, DLQ).
 
 ## A.3 Diagrams for Chapter 6 — Testing and Validation
 
@@ -1144,6 +1422,9 @@ Chapter 6 diagrams are *plots*: line charts, bar charts, scatter plots, heat-map
 
 * **Figure 6.29 — Smoke-test sequence diagram.** The 5-step end-to-end smoke test (login → list clusters → list sequences → ask agent → reject DDL) as a sequence diagram with timings on each arrow.
 * **Figure 6.30 — Container healthcheck timeline.** Gantt-style chart: each container's "starting" → "healthy" duration. Visualises that the dependency order is correct and no service comes up before its DB.
+* **Figure 6.31 — Event-fan-out latency distribution.** Histogram of the wall-clock between `patient.created` publish and `auth_user` row insertion (n = 1000 simulated events). Validates eventual-consistency budget.
+* **Figure 6.32 — RabbitMQ queue depth over a synthetic workload.** Time-series of `auth.account_sync`, `mail.notifications`, `ml.clinical_sync` queue depths during a burst of 200 patient creations. Demonstrates that no queue saturates.
+* **Figure 6.33 — Per-service request-rate dashboard.** Line chart with one line per service (`auth`, `users`, `clinical-core`, `analytics`, `ml-batch`, `mail-service`, `queue-service`) over a representative day. Used to validate scaling-locality claims.
 
 ## A.4 Diagram-production guidance
 
@@ -1156,3 +1437,139 @@ For consistency:
 * **Captions are self-contained.** A reader scanning only the figures should be able to grasp the main result. Captions of 2–3 sentences are normal; one-line captions are too thin for a thesis.
 
 The complete inventory above totals **30 unique numbered diagrams in Chapter 4 (Figures 4.1–4.27 plus three composite visualisations), 24 in Chapter 5 (Figures 5.1–5.24), and 30 in Chapter 6 (Figures 6.1–6.30)** — comfortably above the density expected of a 70%-three-chapters thesis and matching the visual rigour Varga's reference work demonstrates.
+
+---
+
+# Appendix B — Consolidated flat list of all diagrams
+
+A single linear checklist for production use. Each line is one figure to draw, ordered by chapter, suitable for tracking against `outputs/figures/`.
+
+## Chapter 4 — Analysis and Theoretical Foundation
+
+1. Figure 4.1 — Use-case diagram (PATIENT/DOCTOR/MANAGER actors).
+2. Figure 4.2 — High-level component diagram (conceptual blocks).
+3. Figure 4.3 — DFD level-1 (Synthea CSV → ETL → DB → ML → API → FE).
+4. Figure 4.4 — Synthea source-file relationship sketch (11 CSVs).
+5. Figure 4.5 — ETL truncate/load order flowchart.
+6. Figure 4.5b — Per-loader transform pattern (5 universal stages).
+7. Figure 4.5c — Provider-redistribution mechanism (round-robin per year).
+8. Figure 4.5d — Encounter-class duration-cap chart.
+9. Figure 4.5e — Observation-load chunking schematic.
+10. Figure 4.5f — Materialised-view dependency tree.
+11. Figure 4.6 — Feature-engineering pipeline (22 frames → matrix → derived).
+12. Figure 4.6b — Frame catalogue (table-style).
+13. Figure 4.6c — Disease-flag classifier rules.
+14. Figure 4.6d — Careplan severity-ranked classifier.
+15. Figure 4.6e — Out-of-hours flyer rule.
+16. Figure 4.6f — Substance-use rule (DAST-10 / AUDIT-C).
+17. Figure 4.6g — Pain-management tier rule.
+18. Figure 4.6h — 30-day readmission window timeline.
+19. Figure 4.6i — Vitals rolling-window aggregation.
+20. Figure 4.6j — Bucketing rules for derived categoricals (BMI/BP/glucose/conditions).
+21. Figure 4.7 — Composite feature derivation (severity PCA pipeline).
+22. Figure 4.8 — k-Prototypes algorithm flowchart (init → assign → update → converge).
+23. Figure 4.9 — Mixed-dissimilarity decomposition (Euclidean + indicator).
+24. Figure 4.10 — Effect of γ on cluster geometry (γ=0.05 / 0.5 / 5.0).
+25. Figure 4.11 — Huang-init vs. random-init convergence.
+26. Figure 4.12 — Scaler comparison (boxplot).
+27. Figure 4.13 — Effect of log1p on a skewed feature.
+28. Figure 4.14 — Feature-space embedding (FAMD scatter).
+29. Figure 4.15 — Silhouette coefficient illustration.
+30. Figure 4.16 — Gower distance matrix construction.
+31. Figure 4.17 — Three-tier evaluation pipeline.
+32. Figure 4.18 — Feature-importance schematic (η², Cramér's V).
+33. Figure 4.19 — Sequence database schematic (patient timelines + COD prefixes).
+34. Figure 4.19b — Pre-mining shaping pipeline (5 stages).
+35. Figure 4.19c — Prefix-priority tie-breaker.
+36. Figure 4.19d — 2-year rolling window.
+37. Figure 4.20 — PrefixSpan prefix-projection illustration.
+38. Figure 4.21 — Closed-pattern dominance.
+39. Figure 4.22 — GML re-ranking effect (scatter).
+40. Figure 4.22b — Type-diversity bonus multiplier.
+41. Figure 4.22c — Same-type-run rejection examples.
+42. Figure 4.23 — Posting-list patient attribution.
+43. Figure 4.24 — Pattern-mining funnel.
+44. Figure 4.25 — LLM agent state graph (LangGraph).
+45. Figure 4.26 — Defence-in-depth validation pipeline.
+46. Figure 4.27 — Role-based scope projection.
+47. Figure 4.28 — Bounded-context map.
+48. Figure 4.29 — Database-per-Service ownership matrix.
+49. Figure 4.30 — Event taxonomy and routing-key tree.
+50. Figure 4.31 — Eventual-consistency timeline.
+
+## Chapter 5 — Detailed Design and Implementation
+
+51. Figure 5.1 — System architecture diagram (concrete).
+52. Figure 5.2 — Deployment diagram (UML, ports, networks).
+53. Figure 5.3 — Network and routing diagram.
+54. Figure 5.4 — RabbitMQ topic-exchange map.
+55. Figure 5.5 — Clinical-schema ER diagram.
+56. Figure 5.6 — ML-schema ER diagram.
+57. Figure 5.7 — Auth-schema ER diagram.
+58. Figure 5.8 — Materialised-view dependency graph.
+59. Figure 5.9 — Backend package diagram (per service).
+60. Figure 5.10 — Layer-boundary rule diagram.
+61. Figure 5.11 — Black-box diagram of the analytics service.
+62. Figure 5.12 — Black-box diagram of the ML-batch service.
+63. Figure 5.13 — Clustering-domain class diagram.
+64. Figure 5.14 — Sequence-mining-domain class diagram.
+65. Figure 5.15 — LLM-agent-domain class diagram.
+66. Figure 5.16 — Frontend Redux slice diagram.
+67. Figure 5.17 — Login sequence diagram.
+68. Figure 5.18 — Forgot-password sequence diagram.
+69. Figure 5.18b — `patient.created` end-to-end fan-out.
+70. Figure 5.18c — `patient.deleted` multi-consumer fan-out.
+71. Figure 5.18d — `provider.created` provisioning.
+72. Figure 5.19 — Cluster-run sequence diagram.
+73. Figure 5.20 — LLM SQL agent sequence diagram.
+74. Figure 5.21 — Cluster-detail page-load sequence.
+75. Figure 5.21b — Cross-DB read-engine activation.
+76. Figure 5.22 — ETL activity diagram.
+77. Figure 5.23 — k-Prototypes orchestrator activity diagram.
+78. Figure 5.24 — Frontend route hierarchy.
+79. Figure 5.25 — RabbitMQ topology map (concrete).
+80. Figure 5.26 — Per-service container manifest.
+81. Figure 5.27 — Cross-DB read-engine factory class diagram.
+82. Figure 5.28 — Tableset / model_registry ownership table.
+83. Figure 5.29 — Idempotent consumer state machine.
+84. Figure 5.30 — Failure-and-recovery decision matrix.
+
+(Listings: 5.1 mine_patterns, 5.2 attribute_patients, 5.3 run_agent, 5.4 run_etl, 5.5 build_patient_features, 5.6 run_kprototypes.)
+
+## Chapter 6 — Testing and Validation
+
+85. Figure 6.1 — Elbow plot (cost vs. k).
+86. Figure 6.2 — FAMD scatter (production run).
+87. Figure 6.3 — Cluster-feature heat-map.
+88. Figure 6.4 — Cluster-feature bar-chart panel.
+89. Figure 6.5 — Categorical-distribution stacked bars.
+90. Figure 6.6 — Per-cluster Gower silhouette bar chart.
+91. Figure 6.7 — Cluster-size pie chart.
+92. Figure 6.8 — Silhouette vs. k across configs (v40, v54, v55).
+93. Figure 6.9 — Stability across seeds (boxplot).
+94. Figure 6.10 — Scaler comparison radar chart.
+95. Figure 6.11 — Outlier-threshold trade-off scatter.
+96. Figure 6.12 — Gamma sensitivity line plot.
+97. Figure 6.13 — Configuration ranking heat-map.
+98. Figure 6.14 — AI-clarity vs. metric-quality scatter.
+99. Figure 6.15 — Cluster-narrative word cloud.
+100. Figure 6.16 — Pattern-mining funnel chart.
+101. Figure 6.17 — GML vs. support scatter.
+102. Figure 6.18 — Type-diversity histogram.
+103. Figure 6.19 — Pattern-length distribution.
+104. Figure 6.20 — Top-10 patterns Sankey.
+105. Figure 6.21 — Pattern × cluster overlay heat-map.
+106. Figure 6.22 — Question-category × pass-rate bar chart.
+107. Figure 6.23 — Retry distribution histogram.
+108. Figure 6.24 — End-to-end latency boxplot.
+109. Figure 6.25 — Failure-mode pareto.
+110. Figure 6.26 — End-to-end pipeline timing breakdown.
+111. Figure 6.27 — Gower silhouette: naive vs. vectorised.
+112. Figure 6.28 — Observation-load chunk progress.
+113. Figure 6.29 — Smoke-test sequence diagram.
+114. Figure 6.30 — Container healthcheck timeline.
+115. Figure 6.31 — Event-fan-out latency distribution.
+116. Figure 6.32 — RabbitMQ queue depth under workload.
+117. Figure 6.33 — Per-service request-rate dashboard.
+
+**Grand total: 117 figures + 6 algorithm listings = 123 visual artefacts** spanning theory (50), design/implementation (34 figures + 6 listings), and validation (33). This is the upper bound — a thesis at 70 % three-chapter density typically retains 40–60 of these; the rest are reserved for the appendix or omitted depending on page budget.

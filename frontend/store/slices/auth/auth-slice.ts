@@ -6,6 +6,8 @@ export interface AuthUser {
   role: UserRole;
   patientId?: string;
   providerId?: string;
+  accessToken?: string;
+  mustChangePassword?: boolean;
 }
 
 interface AuthState {

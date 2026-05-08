@@ -144,7 +144,7 @@ services:
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
     ports:
       - "5672:5672"
-      - "15672:15672"
+      - "15673:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -421,6 +421,10 @@ services:
       MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-587}
       MAIL_SMTP_USER: ${MAIL_SMTP_USER:-}
       MAIL_SMTP_PASSWORD: ${MAIL_SMTP_PASSWORD:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Hospital Analytics}
+      MAIL_USE_TLS: ${MAIL_USE_TLS:-true}
+      MAIL_TIMEOUT: ${MAIL_TIMEOUT:-10}
       GPT_KEY: ${GPT_KEY}
     labels:
       - "traefik.enable=true"
@@ -474,6 +478,33 @@ services:
           ignore: ["**/__pycache__", "**/*.pyc"]
         - action: rebuild
           path: ./services/queue-service/requirements.txt
+
+  ###################################################
+  # ETL — opt-in (profile: etl). Reuses clinical-core's image because it
+  # already has pandas + the ETL script. Bind-mounts the host synthea CSV
+  # folder read-only so the ~80GB dataset is not copied into the image.
+  # Run with: docker compose --profile etl run --rm etl
+  ###################################################
+  etl:
+    build: ./services/clinical-core
+    container_name: hospital_etl
+    profiles: ["etl"]
+    networks:
+      - hospital-net
+    depends_on:
+      clinical-db:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: clinical-core
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: clinical-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: clinical
+    volumes:
+      - ${SYNTHEA_CSV_PATH:-./dataset}:/synthea/output/csv:ro
+      - ./dataset/cleaned:/dataset/cleaned
+    command: ["python", "/app/app/db/etl_script.py"]
 
   ###################################################
   # FRONTEND

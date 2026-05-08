@@ -1,0 +1,40 @@
+%% Figure 4.8 / 5.23 — k-Prototypes orchestrator activity diagram
+%% run_kprototypes(df, num_cols, cat_cols, init=Huang, scaler, n_clusters)
+
+flowchart TB
+  classDef in fill:#bfdbfe,stroke:#1e3a8a,color:#000
+  classDef trn fill:#fde68a,stroke:#a16207,color:#000
+  classDef fit fill:#fecaca,stroke:#7f1d1d,color:#000
+  classDef out fill:#bbf7d0,stroke:#14532d,color:#000
+
+  s((Start))
+  s --> v["Validate config<br/>(severity_score not co-listed<br/>with its raw inputs)"]:::in
+
+  v --> dual["Split frames<br/>df_work (raw) | df_scaled (clustering)"]:::in
+
+  dual --> log1p["log1p on skewed cols<br/>(total_medications,<br/>lifetime_medication_days,<br/>total_encounter_duration_hours)"]:::trn
+
+  log1p --> sev{"clinical_severity_score<br/>in numerical_cols?"}
+  sev -->|yes| pca["PCA(n=1) on<br/>log1p(procedures,<br/>medications, conditions)<br/>→ z-scored css"]:::trn
+  sev -->|no| skip[skip]
+  pca --> scale
+  skip --> scale
+
+  scale["Fit MinMaxScaler / Robust / Standard<br/>on numerical cols<br/>(severity_score bypassed — already z-scored)"]:::trn
+
+  scale --> mat["Build matrix<br/>numerical (float64) ⊕ categorical (str)<br/>cat_positions = range(n_num, n_num+n_cat)"]:::trn
+
+  mat --> elbow{elbow_plot == 'on'?}
+  elbow -->|yes| elb["Loop k=2..9<br/>save elbow_*.png<br/>RETURN early"]:::out
+  elbow -->|no| fit
+
+  fit["KPrototypes(n_clusters=k,<br/>init='Huang', random_state=42,<br/>n_jobs=-1, gamma=auto).fit_predict<br/>(matrix, categorical=cat_positions)"]:::fit
+
+  fit --> plot["Plot suite:<br/>FAMD scatter | heatmap |<br/>bar chart | categorical stacked bars"]:::out
+
+  plot --> eval["full_evaluation_report<br/>silhouette, gower silhouette,<br/>CH, DB, FAMD CH/DB,<br/>per-cluster sil, η², Cramér's V"]:::out
+
+  eval --> ret(["Return:<br/>(df_work_with_label, X_num_scaled,<br/>clusters, cost, gamma_used)"]):::out
+
+  ret --> e((End))
+  elb --> e

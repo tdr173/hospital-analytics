@@ -1,0 +1,84 @@
+@startuml backend_package_diagram
+' Figure 5.9 — Backend Package Diagram (per service)
+' Strict layered architecture: api → service → repository → domain. No upward imports.
+
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+package "app" as APP {
+
+  package "api" as API_PKG <<Frame>> {
+    [auth router]
+    [patients router]
+    [clusters router]
+    [statistics router]
+    [sequences router]
+    [_scope dependency]
+  }
+
+  package "service" as SVC_PKG <<Frame>> {
+    [auth_service]
+    [patient_service]
+    [cluster_service]
+    [statistics_service]
+    [sequence_service]
+    [lllm_sql_agent_service]
+  }
+
+  package "repository" as REPO_PKG <<Frame>> {
+    [auth_repository]
+    [patient_repository]
+    [cluster_repository]
+    [statistics_repository]
+    [sequence_repository]
+  }
+
+  package "domain" as DOM_PKG <<Frame>> {
+    package "models" {
+      [SQLModel ORM]
+    }
+    package "schemas" {
+      [Pydantic request]
+      [Pydantic response]
+    }
+  }
+
+  package "db" as DB_PKG <<Frame>> {
+    [db_connector]
+    [model_registry]
+    [etl_script]
+  }
+
+  package "messaging" as MSG_PKG <<Frame>> {
+    [publisher]
+    [consumer]
+  }
+
+  package "clustering_algorithms" as ALG_PKG <<Frame>> {
+    [k_prototypes]
+    [prefix_span]
+    [save_results]
+  }
+}
+
+' --- Allowed import direction (downward only) ---
+API_PKG -down-> SVC_PKG : uses
+API_PKG -down-> DOM_PKG : Pydantic schemas
+SVC_PKG -down-> REPO_PKG : uses
+SVC_PKG -down-> DOM_PKG : models / schemas
+SVC_PKG -down-> ALG_PKG : optional
+REPO_PKG -down-> DOM_PKG : models
+REPO_PKG -down-> DB_PKG : engine, sessions
+ALG_PKG -down-> DB_PKG : engine
+MSG_PKG -down-> DOM_PKG : event payloads
+
+' --- Forbidden directions (drawn for emphasis but visually crossed) ---
+note as N1
+  Forbidden upward imports:
+   • repository → service
+   • domain → repository / service / api
+   • db → anything else in /app
+end note
+
+@enduml

@@ -12,11 +12,7 @@ import useClasses from "@/utils/useClasses";
 import { LoginPageStyles } from "./styles";
 import { AppDispatch } from "@/store";
 import { login } from "@/store/slices/auth/auth-slice";
-import {
-  SEEDED_USERS,
-  fetchDemoPatientId,
-  fetchDemoProviderId,
-} from "@/store/slices/auth/thunks";
+import { loginUser, type UserRole } from "@/store/slices/auth/thunks";
 
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
@@ -39,11 +35,14 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {},
   );
+  const [submitError, setSubmitError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const classes = useClasses(LoginPageStyles, { name: "LoginPage" });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    setSubmitError("");
 
     try {
       await loginSchema.validate({ email, password }, { abortEarly: false });
@@ -58,24 +57,31 @@ export default function LoginPage() {
       return;
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const role = SEEDED_USERS[normalizedEmail];
-    if (!role) {
-      setErrors({
-        email: "Email not recognized. Use one of the seed accounts.",
-      });
+    setSubmitting(true);
+    const result = await loginUser(email.trim().toLowerCase(), password);
+    setSubmitting(false);
+
+    if (!result.ok) {
+      setSubmitError(result.error.message);
       return;
     }
 
-    let patientId: string | undefined;
-    let providerId: string | undefined;
-    if (role === "PATIENT") {
-      patientId = await fetchDemoPatientId();
-    } else if (role === "DOCTOR") {
-      providerId = await fetchDemoProviderId();
-    }
+    const { data } = result;
+    dispatch(
+      login({
+        email: data.email,
+        role: data.role as UserRole,
+        patientId: data.patientId ?? undefined,
+        providerId: data.providerId ?? undefined,
+        accessToken: data.accessToken,
+        mustChangePassword: data.mustChangePassword,
+      }),
+    );
 
-    dispatch(login({ email: normalizedEmail, role, patientId, providerId }));
+    if (data.mustChangePassword) {
+      router.push("/forgot-password");
+      return;
+    }
     router.push("/home");
   };
 
@@ -99,6 +105,23 @@ export default function LoginPage() {
         noValidate
         className={classes.form}
       >
+        {submitError ? (
+          <div
+            role="alert"
+            style={{
+              fontFamily: '"Inter", sans-serif',
+              fontSize: "0.85rem",
+              color: "#b91c1c",
+              backgroundColor: "#fef2f2",
+              border: "1px solid #fee2e2",
+              padding: "10px 12px",
+              borderRadius: "8px",
+            }}
+          >
+            {submitError}
+          </div>
+        ) : null}
+
         <StyledInput
           label="Email Address"
           type="email"
@@ -129,6 +152,7 @@ export default function LoginPage() {
         <StyledButton
           variant="secondary"
           type="submit"
+          disabled={submitting}
           sx={{
             width: "100%",
             padding: "12px",
@@ -139,9 +163,12 @@ export default function LoginPage() {
             "&:hover": {
               backgroundColor: "#0e7490",
             },
+            "&:disabled": {
+              backgroundColor: "#a3d4e0",
+            },
           }}
         >
-          Sign in
+          {submitting ? "Signing in…" : "Sign in"}
         </StyledButton>
       </form>
 

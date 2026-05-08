@@ -1,0 +1,182 @@
+@startuml clinical_schema_er
+' Figure 5.5 — Clinical-schema ER Diagram (clinical-db)
+' Owned by clinical-core. ETL writes here; analytics + ml-batch read here.
+
+skinparam shadowing false
+skinparam linetype ortho
+hide circle
+
+entity "patient" as patient {
+  * patient_id : UUID <<PK>>
+  --
+  birthdate : date
+  deathdate : date
+  first_name : str
+  last_name : str
+  marital : str
+  gender : str
+  race : str
+  ethnicity : str
+  city : str
+  age : int
+}
+
+entity "organization" as organization {
+  * organization_id : UUID <<PK>>
+  --
+  name : str
+  city : str
+  phone : str
+  utilization : int
+}
+
+entity "provider" as provider {
+  * provider_id : UUID <<PK>>
+  --
+  organization_id : UUID <<FK>>
+  first_name : str
+  last_name : str
+  gender : str
+  speciality : str
+  city : str
+  encounters : int
+  procedures : int
+}
+
+entity "encounter" as encounter {
+  * encounter_id : UUID <<PK>>
+  --
+  patient_id : UUID <<FK>>
+  organization_id : UUID <<FK>>
+  provider_id : UUID <<FK>>
+  start_date : timestamp
+  end_date : timestamp
+  duration : float
+  encounter_class : str
+  description : str
+  reason_description : str
+}
+
+entity "patient_provider" as pp {
+  * patient_id : UUID <<FK>>
+  * provider_id : UUID <<FK>>
+}
+
+entity "condition" as condition {
+  * id : int <<PK>>
+  --
+  patient_id : UUID <<FK>>
+  encounter_id : UUID <<FK>>
+  start_date : timestamp
+  end_date : timestamp
+  condition_code : str
+  description : str
+}
+
+entity "medication" as medication {
+  * id : int <<PK>>
+  --
+  patient_id : UUID <<FK>>
+  encounter_id : UUID <<FK>>
+  start_date : timestamp
+  end_date : timestamp
+  medication_code : str
+  description : str
+  reason_description : str
+  duration_days : int
+}
+
+entity "procedure" as procedure {
+  * id : int <<PK>>
+  --
+  patient_id : UUID <<FK>>
+  encounter_id : UUID <<FK>>
+  start_date : timestamp
+  end_date : timestamp
+  procedure_code : str
+  description : str
+  reason_description : str
+}
+
+entity "careplan" as careplan {
+  * id : int <<PK>>
+  --
+  patient_id : UUID <<FK>>
+  encounter_id : UUID <<FK>>
+  start_date : timestamp
+  end_date : timestamp
+  careplan_code : str
+  description : str
+  reason_code : str
+  reason_description : str
+  duration_days : int
+}
+
+entity "allergy" as allergy {
+  * id : int <<PK>>
+  --
+  patient_id : UUID <<FK>>
+  encounter_id : UUID <<FK>>
+  start_date : timestamp
+  end_date : timestamp
+  allergy_code : str
+  description : str
+}
+
+entity "immunization" as immunization {
+  * id : int <<PK>>
+  --
+  patient_id : UUID <<FK>>
+  encounter_id : UUID <<FK>>
+  date : timestamp
+  immunization_code : str
+  description : str
+}
+
+entity "observation" as observation {
+  * id : int <<PK>>
+  --
+  patient_id : UUID <<FK>>
+  encounter_id : UUID <<FK>>
+  date : timestamp
+  observation_code : str
+  description : str
+  value : str
+  value_numeric : float
+  units : str
+}
+
+' --- Cardinalities ---
+organization ||--o{ provider
+organization ||--o{ encounter
+patient ||--o{ encounter
+provider ||--o{ encounter
+
+patient ||--o{ pp
+provider ||--o{ pp
+
+encounter ||--o{ condition
+encounter ||--o{ medication
+encounter ||--o{ procedure
+encounter ||--o{ careplan
+encounter ||--o{ allergy
+encounter ||--o{ immunization
+encounter ||--o{ observation
+
+patient ||--o{ allergy
+patient ||--o{ condition
+patient ||--o{ medication
+patient ||--o{ procedure
+patient ||--o{ careplan
+patient ||--o{ immunization
+patient ||--o{ observation
+
+note bottom of observation
+  Largest table (10–20M rows).
+  Loaded in 10,000-row chunks.
+  Materialised views: mv_obs_totals,
+  mv_obs_per_patient, mv_obs_top_types,
+  mv_obs_numeric_stats, mv_obs_categorical_stats.
+end note
+
+@enduml

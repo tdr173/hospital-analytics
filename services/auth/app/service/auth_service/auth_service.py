@@ -1,20 +1,29 @@
 """Authentication service.
 
-Handles login, set-password, and account-invite flows. The invite flow is
-called from the patient/provider create endpoints when an email is provided
-on the create payload: a temporary "partial" password is generated, hashed,
-stored, and emailed to the new user along with a link to set their real
-password.
+Handles login, password set/reset, and account-invite flows.
+
+Token-based flow (10-minute JWT, purpose=password_reset):
+  - Invite (auto from patient.created / provider.created): a reset token is
+    issued and emailed as `/set-password?token=<jwt>`. The account is created
+    with an *unusable* random password, so the only path in is the token.
+  - Forgot-password: same token, same endpoint. The user submits the new
+    password through the same /auth/set-password endpoint.
+
+Tokens carry `purpose=password_reset` and a 10-minute `exp`. They are stateless
+(no DB row) - one-time use is enforced indirectly: after the reset succeeds
+the password hash changes, so a replay would still need a valid (unexpired)
+token plus a not-yet-changed password, which doesn't help an attacker.
 """
 from __future__ import annotations
 
 import logging
 import os
 import secrets
-import string
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import bcrypt
+import jwt
 from fastapi import HTTPException
 from starlette import status
 
@@ -31,6 +40,10 @@ from mail_sender import send_mail, MailSendError
 logger = logging.getLogger(__name__)
 
 
+RESET_TOKEN_TTL_MINUTES = 10
+RESET_TOKEN_PURPOSE = "password_reset"
+
+
 def _hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
@@ -42,52 +55,81 @@ def _verify_password(plain: str, hashed: str) -> bool:
         return False
 
 
-def _generate_partial_password(length: int = 12) -> str:
-    """Random alphanumeric password with mixed case + digits.
-
-    Avoids ambiguous characters (0/O, 1/l/I) so users can transcribe it
-    from the email if their mail client mangles formatting.
-    """
-    alphabet = "".join(c for c in string.ascii_letters + string.digits if c not in "0O1lI")
-    return "".join(secrets.choice(alphabet) for _ in range(length))
+def _unusable_password_hash() -> str:
+    """A bcrypt hash of random bytes nobody will ever guess. Stored on
+    invite-provisioned accounts so login is impossible until the user
+    completes the token-based set-password flow."""
+    return _hash_password(secrets.token_urlsafe(32))
 
 
 def _frontend_url() -> str:
     return os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
 
-def _send_invite_email(email: str, partial_password: str) -> None:
-    """Best-effort send. Logs and swallows so a broken SMTP doesn't block
-    account creation. The temporary password is still persisted, so the
-    admin can resend or share it manually."""
-    link = f"{_frontend_url()}/set-password?email={email}"
-    body = (
-        "Welcome to Hospital Analytics.\n\n"
-        "An account has been created for you. Use the temporary password below\n"
-        "to set your permanent password.\n\n"
-        f"Temporary password: {partial_password}\n\n"
-        f"Set your new password here:\n{link}\n\n"
-        "This temporary password is single-use. After you set your new password,\n"
-        "log in normally with that one.\n"
-    )
-    html = (
-        "<p>Welcome to Hospital Analytics.</p>"
-        "<p>An account has been created for you. Use the temporary password below "
-        "to set your permanent password.</p>"
-        f"<p><b>Temporary password:</b> <code>{partial_password}</code></p>"
-        f'<p><a href="{link}">Set your new password</a></p>'
-        "<p style=\"color:#6b7280;font-size:0.85em\">This temporary password is single-use. "
-        "After you set your new password, log in normally with that one.</p>"
+def _jwt_config() -> tuple[str, str]:
+    secret = os.getenv("SECRET_KEY", "dev-insecure-change-me")
+    algo = os.getenv("ALGORITHM", "HS256")
+    return secret, algo
+
+
+def _create_reset_token(user_id: int, email: str) -> str:
+    secret, algo = _jwt_config()
+    payload = {
+        "sub": str(user_id),
+        "email": email,
+        "purpose": RESET_TOKEN_PURPOSE,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_TTL_MINUTES),
+    }
+    return jwt.encode(payload, secret, algorithm=algo)
+
+
+def _decode_reset_token(token: str) -> dict:
+    secret, algo = _jwt_config()
+    invalid = HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Invalid or expired token",
     )
     try:
-        send_mail(
-            to=email,
-            subject="Set your Hospital Analytics password",
-            body=body,
-            html=html,
-        )
+        payload = jwt.decode(token, secret, algorithms=[algo])
+    except jwt.ExpiredSignatureError:
+        raise invalid
+    except jwt.InvalidTokenError:
+        raise invalid
+    if payload.get("purpose") != RESET_TOKEN_PURPOSE:
+        raise invalid
+    return payload
+
+
+def _send_password_link_email(email: str, token: str, *, is_invite: bool) -> None:
+    """Best-effort send. Logs and swallows so a broken SMTP doesn't block
+    account creation or password reset. Link expires in 10 minutes."""
+    link = f"{_frontend_url()}/set-password?token={token}"
+    if is_invite:
+        subject = "Set your Hospital Analytics password"
+        intro = ("Welcome to Hospital Analytics.\n\n"
+                 "An account has been created for you. Click the link below "
+                 "to set your password and log in.")
+    else:
+        subject = "Reset your Hospital Analytics password"
+        intro = ("A password reset was requested for your Hospital Analytics "
+                 "account. Click the link below to set a new password.")
+    body = (
+        f"{intro}\n\n"
+        f"Set your password here:\n{link}\n\n"
+        f"This link expires in {RESET_TOKEN_TTL_MINUTES} minutes.\n"
+        "If you didn't request this, you can safely ignore the email.\n"
+    )
+    html = (
+        f"<p>{intro.replace(chr(10) + chr(10), '</p><p>')}</p>"
+        f'<p><a href="{link}">Set your password</a></p>'
+        f'<p style="color:#6b7280;font-size:0.85em">This link expires in '
+        f"{RESET_TOKEN_TTL_MINUTES} minutes. If you didn't request this, "
+        "you can safely ignore the email.</p>"
+    )
+    try:
+        send_mail(to=email, subject=subject, body=body, html=html)
     except MailSendError as e:
-        logger.warning("Invite email send failed for %s: %s", email, e)
+        logger.warning("password-link email failed for %s: %s", email, e)
 
 
 class AuthService:
@@ -120,24 +162,42 @@ class AuthService:
         )
 
     def set_password(self, dto: SetPasswordRequest) -> dict:
-        user = self.repo.get_by_email(dto.email)
-        # Identical error message for "user not found" and "wrong temp password"
-        # to avoid email enumeration.
-        invalid = HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid email or temporary password",
-        )
-        if not user or not user.must_change_password:
-            raise invalid
-        if not _verify_password(dto.temp_password, user.password):
-            raise invalid
-        if dto.new_password == dto.temp_password:
+        payload = _decode_reset_token(dto.token)
+        try:
+            user_id = int(payload["sub"])
+        except (KeyError, ValueError, TypeError):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="New password must differ from the temporary password",
+                detail="Invalid or expired token",
+            )
+        user = self.repo.get_by_id(user_id)
+        # Token must still match a real user *and* the email claim, so a
+        # leaked-and-then-reused token after account deletion can't resurrect.
+        if not user or user.email != payload.get("email"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired token",
             )
         self.repo.update_password(user, _hash_password(dto.new_password))
         return {"success": True}
+
+    def forgot_password(self, email: str) -> dict:
+        """Issue a reset token and email a /set-password link.
+
+        Always returns 200 with the same response - we don't reveal whether
+        the email maps to an account, to avoid email enumeration.
+        """
+        user = self.repo.get_by_email(email)
+        if user:
+            token = _create_reset_token(user.user_id, user.email)
+            _send_password_link_email(user.email, token, is_invite=False)
+        return {
+            "success": True,
+            "message": (
+                "If an account exists for that email, a password reset link "
+                "has been sent. The link expires in 10 minutes."
+            ),
+        }
 
     def me(self, jwt_user: dict) -> CurrentUserResponse:
         user_id = jwt_user.get("user_id")
@@ -186,14 +246,14 @@ class AuthService:
                 status_code=status.HTTP_409_CONFLICT,
                 detail="An auth account with this email already exists",
             )
-        partial = _generate_partial_password()
         instance = self.repo.create(
             email=email,
-            password_hash=_hash_password(partial),
+            password_hash=_unusable_password_hash(),
             role=role,
             patient_id=patient_id,
             provider_id=provider_id,
             must_change_password=True,
         )
-        _send_invite_email(email, partial)
+        token = _create_reset_token(instance.user_id, email)
+        _send_password_link_email(email, token, is_invite=True)
         return instance

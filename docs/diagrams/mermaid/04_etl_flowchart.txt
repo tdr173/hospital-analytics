@@ -1,0 +1,54 @@
+%% Figure 4.5 — ETL truncate/load order flowchart
+%% Child-first truncate, parent-first load. Idempotent.
+
+flowchart TB
+  classDef tr fill:#fecaca,stroke:#7f1d1d,color:#000
+  classDef ld fill:#bbf7d0,stroke:#14532d,color:#000
+  classDef mv fill:#fde68a,stroke:#a16207,color:#000
+
+  start((Start ETL))
+
+  subgraph trunc["Phase 1 — TRUNCATE (child-first, RESTART IDENTITY CASCADE)"]
+    direction TB
+    t1[observation]:::tr --> t2[condition]:::tr --> t3[careplan]:::tr --> t4[immunization]:::tr
+    t4 --> t5[medication]:::tr --> t6[procedure]:::tr --> t7[allergy]:::tr --> t8[encounter]:::tr
+    t8 --> t9[patient_provider]:::tr --> t10[patient]:::tr --> t11[provider]:::tr --> t12[organization]:::tr
+  end
+
+  subgraph load["Phase 2 — LOAD (parent-first, with semantic imputation)"]
+    direction TB
+    l1[load_patients<br/>strip_digits, age=days/365]:::ld
+    l2[load_organizations<br/>single org with max utilization]:::ld
+    l3[load_providers<br/>top-300 by encounter freq]:::ld
+    l4[load_encounters<br/>redistribute dropped providers,<br/>clamp future dates,<br/>cap duration per class]:::ld
+    l5[load_patient_providers<br/>distinct pairs from cleaned_encounters]:::ld
+    l6[load_allergies]:::ld
+    l7[load_procedures]:::ld
+    l8[load_medications<br/>+duration_days]:::ld
+    l9[load_immunizations]:::ld
+    l10[load_careplans<br/>+duration_days]:::ld
+    l11[load_conditions]:::ld
+    l12[load_observations<br/>10,000-row chunks,<br/>value_numeric coerce]:::ld
+
+    l1 --> l2 --> l3 --> l4 --> l5
+    l5 --> l6 --> l7 --> l8 --> l9
+    l9 --> l10 --> l11 --> l12
+  end
+
+  subgraph mv["Phase 3 — REFRESH MATERIALIZED VIEW"]
+    direction TB
+    m1[mv_obs_totals]:::mv
+    m2[mv_obs_per_patient]:::mv
+    m3[mv_obs_top_types]:::mv
+    m4[mv_obs_numeric_stats]:::mv
+    m5[mv_obs_categorical_stats]:::mv
+  end
+
+  done(((End)))
+
+  start --> trunc --> load --> mv --> done
+  l12 --> mv
+
+  %% Each loader writes a cleaned_*.csv audit
+  noteAudit["Every loader emits dataset/cleaned/cleaned_&ltname&gt.csv before bulk insert"]
+  load -.-> noteAudit

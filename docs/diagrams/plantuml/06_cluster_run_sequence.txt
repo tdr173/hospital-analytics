@@ -1,0 +1,50 @@
+@startuml cluster_run_sequence
+' Figure 5.19 — Cluster-run end-to-end sequence
+' Manager triggers k-Prototypes; ml-batch reads clinical-db and writes ml-db.
+
+skinparam shadowing false
+skinparam sequenceArrowThickness 1.4
+
+actor "Manager" as M
+participant "Frontend" as FE
+participant "ml-batch" as ML
+database "clinical-db\n(read-only engine)" as CDB
+participant "k_prototypes\nrunner" as KP
+participant "cluster_evaluation" as EVAL
+participant "LLM Adapter\n(Gemini → GPT)" as LLM
+database "ml-db" as MLDB
+
+M -> FE : open /clusters → "Run new clustering"
+FE -> ML : POST /clusters/run\n?role=MANAGER&version=55&k=4
+
+ML -> CDB : execute 22 SQL feature frames
+CDB --> ML : raw feature dataframe (~22k patients)
+ML -> ML : merge frames + derive compound features\n(routine_care, severity, bucket categoricals)
+
+ML -> KP : run_kprototypes(df, num_cols, cat_cols, init=Huang)
+KP -> KP : log1p skewed cols
+KP -> KP : severity PCA (1 component)
+KP -> KP : MinMaxScaler.fit_transform
+KP -> KP : fit_predict (gamma=auto)
+KP --> ML : (df_with_labels, X_num, clusters, cost, gamma)
+
+ML -> EVAL : full_evaluation_report(...)
+EVAL -> EVAL : silhouette + Gower silhouette
+EVAL -> EVAL : Calinski-Harabasz, Davies-Bouldin
+EVAL -> EVAL : FAMD-based CH/DB
+EVAL -> EVAL : per-cluster silhouette, η², Cramér's V
+EVAL --> ML : conclusions.txt + xlsx
+
+ML -> LLM : ask_ai(cluster_summary_prompt)
+LLM --> ML : pipe-delimited rows\n(id | hex | title | desc | insight | rec)
+
+ML -> MLDB : TRUNCATE cluster_meta, cluster, cluster_patient
+ML -> MLDB : INSERT cluster_meta (k, gamma, metrics, pca_image, ai_analysis)
+ML -> MLDB : INSERT cluster (id, color, title, ...) × (k+1)
+ML -> MLDB : INSERT cluster_patient (patient_id, cluster_id, is_outlier, features JSONB)\n× N rows
+MLDB --> ML : ok
+
+ML --> FE : 200 OK\n{ cluster_meta_id, k, silhouette, gower_silhouette }
+FE --> M : redirect to /clusters with new run loaded
+
+@enduml

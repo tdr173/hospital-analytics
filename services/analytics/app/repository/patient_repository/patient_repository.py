@@ -59,7 +59,11 @@ class PatientRepository:
         self.db = db
 
     def _has_cluster_data(self) -> bool:
-        return self.db.query(ClusterPatientModel).count() > 0
+        try:
+            return self.db.query(ClusterPatientModel).count() > 0
+        except Exception:
+            self.db.rollback()
+            return False
 
     def _patient_query_with_cluster(self, base_cols: list):
         if self._has_cluster_data():
@@ -200,11 +204,15 @@ class PatientRepository:
         return PatientDetailResponse(**row._asdict())
 
     def get_patient_summary(self, patient_id: str) -> PatientSummaryResponse:
-        cp = (
-            self.db.query(ClusterPatientModel)
-            .filter(ClusterPatientModel.patient_id == patient_id)
-            .first()
-        )
+        try:
+            cp = (
+                self.db.query(ClusterPatientModel)
+                .filter(ClusterPatientModel.patient_id == patient_id)
+                .first()
+            )
+        except Exception:
+            self.db.rollback()
+            cp = None
         f = cp.features if cp and cp.features else {}
 
         qaly = self._cached_or_scalar(f, "qaly", lambda: (
@@ -544,7 +552,11 @@ class PatientRepository:
                 PrefixSpanPatternModel.rank.asc(),
             )
         )
-        rows, has_more = self._paginate(q, page, page_size)
+        try:
+            rows, has_more = self._paginate(q, page, page_size)
+        except Exception:
+            self.db.rollback()
+            return [], False
         items = [
             SequenceListItem(
                 id=r.id,

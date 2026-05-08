@@ -1,0 +1,98 @@
+@startuml deployment_diagram
+' Figure 5.2 — Deployment Diagram
+' Docker host with all containers, port mappings, and Traefik routing rules.
+
+skinparam shadowing false
+skinparam linetype ortho
+
+node "Developer Laptop\n(Docker Host, Windows 11)" as HOST {
+
+  node "hospital-net (bridge network)" as NET {
+
+    node "Traefik" as T <<container>> {
+      component "traefik:v3.1" as traefik
+      port "80" as p80
+      port "8090" as p8090
+    }
+
+    node "Frontend" as FE <<container>> {
+      component "next:16 (build-bundled)" as next
+      port "3000" as p3000
+    }
+
+    node "auth" as AUTH <<container>> {
+      component "fastapi (uvicorn)" as auth_app
+    }
+    node "users" as USERS <<container>> {
+      component "fastapi (uvicorn)" as users_app
+    }
+    node "clinical-core" as CC <<container>> {
+      component "fastapi (uvicorn)" as cc_app
+    }
+    node "analytics" as AN <<container>> {
+      component "fastapi (uvicorn)" as an_app
+    }
+    node "ml-batch" as ML <<container>> {
+      component "fastapi (uvicorn)" as ml_app
+    }
+    node "mail-service" as MAIL <<container>> {
+      component "fastapi + aio-pika" as mail_app
+    }
+    node "queue-service" as Q <<container>> {
+      component "fastapi + APScheduler" as q_app
+    }
+
+    database "auth-db\n(postgres:16)" as AUTHDB
+    database "clinical-db\n(postgres:16)\n[5432→host]" as CCDB
+    database "analytics-db\n(postgres:16)" as ANDB
+    database "ml-db\n(postgres:16)" as MLDB
+    database "queue-db\n(postgres:16)" as QDB
+
+    node "rabbitmq\n(rabbitmq:3-management)" as RMQ {
+      port "5672 (AMQP)" as p5672
+      port "15672→15673" as p15672
+    }
+  }
+}
+
+' --- Traefik HTTP routing (Host-based) ---
+traefik --> auth_app : Host(auth.localhost):8000
+traefik --> users_app : Host(users.localhost):8000
+traefik --> cc_app : Host(clinical.localhost):8000
+traefik --> an_app : Host(analytics.localhost):8000
+traefik --> ml_app : Host(ml.localhost):8000
+traefik --> mail_app : Host(mail.localhost):8000
+traefik --> q_app : Host(queue.localhost):8000
+traefik --> next : Host(app.localhost):3000
+
+' --- Database ownership (writable) ---
+auth_app --> AUTHDB : R/W
+cc_app --> CCDB : R/W
+an_app --> ANDB : R/W
+ml_app --> MLDB : R/W
+q_app --> QDB : R/W
+
+' --- Cross-DB read-only engines ---
+an_app ..> CCDB : read-only
+an_app ..> MLDB : read-only
+ml_app ..> CCDB : read-only
+users_app ..> AUTHDB : read-only
+
+' --- AMQP messaging ---
+auth_app -[#blue]-> RMQ : pub/sub
+cc_app -[#blue]-> RMQ : publish
+ml_app -[#blue]-> RMQ : subscribe
+mail_app -[#blue]-> RMQ : subscribe
+q_app -[#blue]-> RMQ : subscribe
+
+' --- Host-exposed ports ---
+note right of HOST
+  Externally exposed ports:
+  • 80 → Traefik (HTTP routing)
+  • 8090 → Traefik dashboard
+  • 5432 → clinical-db (ETL access)
+  • 5672 → RabbitMQ (AMQP)
+  • 15673 → RabbitMQ management UI
+end note
+
+@enduml

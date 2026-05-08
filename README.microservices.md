@@ -15,7 +15,7 @@
 | `mail-service` | http://mail.localhost | (RabbitMQ consumer) | — |
 | `queue-service` | http://queue.localhost | (placeholder) | `queue-db` |
 | Traefik dashboard | http://localhost:8090 | | |
-| RabbitMQ UI | http://localhost:15672 | guest/guest | |
+| RabbitMQ UI | http://localhost:15673 | guest/guest | |
 
 ## Repo layout
 
@@ -94,6 +94,25 @@ analytics container env:
 
 `frontend/utils/apiBases.ts` exports `apiUrl(path)` which routes by path prefix to the correct service base. Every `thunks.ts` calls `apiUrl("/...")`. Override per-service URLs via `NEXT_PUBLIC_*_URL`.
 
+## ETL (loading synthea CSVs into clinical-db)
+
+The synthea export is too large (~80GB) to copy into the docker image, so the `etl` service bind-mounts it read-only from the host.
+
+1. Set the absolute path to the CSV folder in `.env`:
+   ```
+   SYNTHEA_CSV_PATH=C:/Users/me/synthea/output/csv
+   ```
+   Use forward slashes on Windows. The folder must directly contain `patients.csv`, `encounters.csv`, `observations.csv`, etc.
+
+2. Run the loader (one-shot, exits when done):
+   ```powershell
+   docker compose --profile etl run --rm etl
+   ```
+
+   It connects to `clinical-db` over the docker network, truncates the ETL-managed tables, loads all rows, and writes cleaned/derived CSVs to `./dataset/cleaned/` on the host (also bind-mounted).
+
+The `etl` service is gated behind a profile, so it does **not** start with `docker compose up`.
+
 ## Caveats
 
 - **`*.localhost` browser support.** Chrome resolves any `*.localhost` host to 127.0.0.1 automatically. Firefox/Safari may not — add the entries to `C:\Windows\System32\drivers\etc\hosts` (see step 2 above) to be safe.
@@ -107,4 +126,4 @@ analytics container env:
 - Replace query-param scope (`role=`, `patientId=`) with JWT claims.
 - Wire APScheduler in `queue-service` for nightly recluster.
 - Production: Traefik + Let's Encrypt.
-- ETL: `db/etl_script.py` currently expects a single Postgres — point it at `clinical-db` (port 5432 exposed on host) and add a separate ml-loader at `ml-db`.
+- ETL only loads clinical tables. A separate ml-loader for `ml-db` (cluster_*, prefix_span_*) is still pending.

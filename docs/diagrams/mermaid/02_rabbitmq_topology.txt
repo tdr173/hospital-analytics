@@ -1,0 +1,42 @@
+%% Figure 5.25 — RabbitMQ topology map
+%% Single topic exchange clinical.events; three durable queues with selective bindings.
+
+flowchart LR
+
+  classDef pub fill:#bfdbfe,stroke:#1e3a8a,color:#000
+  classDef ex fill:#fde68a,stroke:#a16207,color:#000
+  classDef q fill:#fecaca,stroke:#7f1d1d,color:#000
+  classDef sub fill:#bbf7d0,stroke:#14532d,color:#000
+
+  cc["clinical-core<br/>(publisher)"]:::pub
+  any["any service<br/>(publisher of notification.send)"]:::pub
+
+  ex{{"exchange<br/>clinical.events<br/>type: topic, durable"}}:::ex
+
+  q1["queue<br/>auth.account_sync<br/>durable, 1 consumer"]:::q
+  q2["queue<br/>mail.notifications<br/>durable, 1 consumer"]:::q
+  q3["queue<br/>ml.clinical_sync<br/>durable, 1 consumer"]:::q
+
+  auth["auth<br/>(consumer)"]:::sub
+  mail["mail-service<br/>(consumer)"]:::sub
+  ml["ml-batch<br/>(consumer)"]:::sub
+
+  %% Publisher → exchange
+  cc -->|"patient.created"| ex
+  cc -->|"patient.deleted"| ex
+  cc -->|"provider.created"| ex
+  cc -->|"provider.deleted"| ex
+  any -->|"notification.send"| ex
+
+  %% Exchange → queues (topic-key bindings)
+  ex -->|"binding key:<br/>patient.created<br/>patient.deleted<br/>provider.created<br/>provider.deleted"| q1
+  ex -->|"binding key:<br/>notification.send"| q2
+  ex -->|"binding key:<br/>patient.deleted"| q3
+
+  %% Queue → consumer
+  q1 --> auth
+  q2 --> mail
+  q3 --> ml
+
+  %% Side-effects emitted by consumers
+  auth -.->|"on patient.created:<br/>emit notification.send"| ex

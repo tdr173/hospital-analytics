@@ -1,0 +1,30 @@
+%% Figure 4.25 — LLM SQL Agent state graph (LangGraph)
+%% Up to 3 retries on validation OR execution failure; ends gracefully if exhausted.
+
+stateDiagram-v2
+  direction LR
+
+  [*] --> process_input
+  process_input --> answer_general : MEDICAL_GENERAL
+  process_input --> generate_query : DB_RETRIEVAL
+  process_input --> not_medical_end : NOT_MEDICAL
+
+  answer_general --> [*]
+  not_medical_end --> [*] : polite refusal
+
+  generate_query --> validate_query
+
+  validate_query --> execute_query : CORRECT
+  validate_query --> generate_query : INCORRECT<br/>retry < 3 (with feedback)
+  validate_query --> retry_exhausted : INCORRECT<br/>retry >= 3
+
+  execute_query --> summarise : OK
+  execute_query --> generate_query : ExecError<br/>retry < 3 (with feedback)
+  execute_query --> retry_exhausted : ExecError<br/>retry >= 3
+
+  summarise --> doctor_scope_check
+  doctor_scope_check --> [*] : provider_id verified<br/>(or role != DOCTOR)
+  doctor_scope_check --> abort : provider_id not in SQL
+
+  retry_exhausted --> [*] : "couldn't build a valid query"
+  abort --> [*] : refuse to answer

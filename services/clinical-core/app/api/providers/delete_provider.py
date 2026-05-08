@@ -5,6 +5,7 @@ from db.db_connector import get_db
 from repository import ProviderRepository
 from service import ProviderService
 from api._scope import Scope, scope_dep, require_manager
+from messaging import publish_event_nowait, EventAction
 from .provider_router import provider_router
 
 
@@ -21,4 +22,12 @@ async def delete_provider(
         msg = str(e)
         status = 409 if "cannot delete" in msg else 404
         raise HTTPException(status_code=status, detail=msg)
+
+    # Cross-service sync: tell auth to drop the linked DOCTOR account.
+    publish_event_nowait(
+        "provider",
+        EventAction.DELETED,
+        extra={"provider_id": provider_id},
+    )
+
     return Response(status_code=204)
