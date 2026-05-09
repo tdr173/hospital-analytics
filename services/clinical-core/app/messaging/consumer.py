@@ -51,8 +51,15 @@ class Consumer:
             await self.handle_message(payload, message.routing_key or "")
 
     async def run(self) -> None:
+        from .config import RECONNECT_INTERVAL_SECONDS
         url = rabbitmq_url()
-        connection = await aio_pika.connect_robust(url)
+        while True:
+            try:
+                connection = await aio_pika.connect_robust(url)
+                break
+            except Exception:
+                logger.warning("RabbitMQ not ready, retrying in %ss", RECONNECT_INTERVAL_SECONDS)
+                await asyncio.sleep(RECONNECT_INTERVAL_SECONDS)
         try:
             channel = await connection.channel()
             await channel.set_qos(prefetch_count=self.prefetch)

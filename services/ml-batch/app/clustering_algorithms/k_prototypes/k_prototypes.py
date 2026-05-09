@@ -1253,10 +1253,11 @@ CLUSTER DATA SUMMARIES:
 if __name__ == "__main__":
     load_dotenv()
 
-    from db import engine as db_engine, SessionLocal
+    from db import engine as db_engine, clinical_read_engine, SessionLocal
     from configs import CONFIGS
 
-    df = build_patient_features(db_engine)
+    clinical_engine = clinical_read_engine or db_engine
+    df = build_patient_features(clinical_engine)
 
     # SCALERS = ["robust", "standard", "minmax"]
     SCALERS = ["minmax"]
@@ -1362,6 +1363,7 @@ if __name__ == "__main__":
                                 if ELBOW_PLOT == "on":
                                     continue
 
+                                print("  [*] computing evaluation metrics...")
                                 report, eval_metrics = full_evaluation_report(
                                     df=df_result,
                                     X_numerical_scaled=X_num_scaled,
@@ -1369,6 +1371,7 @@ if __name__ == "__main__":
                                     numerical_cols=num_cols,
                                     categorical_cols=cat_cols,
                                 )
+                                print("  [*] evaluation done")
 
                                 metrics_row = {
                                     "kproto_cost": kproto_cost,
@@ -1403,7 +1406,9 @@ if __name__ == "__main__":
                                     **metrics_row,
                                 })
 
-                                summary_text = get_clusters_summary(df_result, df_outliers, db_engine)
+                                print("  [*] generating LLM cluster summary...")
+                                summary_text = get_clusters_summary(df_result, df_outliers, clinical_engine)
+                                print("  [*] LLM summary done")
                                 with open(location / "llm_summary.txt", "w", encoding="utf-8") as f:
                                     f.write(summary_text)
 
@@ -1413,6 +1418,7 @@ if __name__ == "__main__":
                                 heatmap_bytes = heatmap_path.read_bytes() if heatmap_path.exists() else None
                                 pca_image_bytes = famd_path.read_bytes() if famd_path.exists() else None
 
+                                print("  [*] saving to database...")
                                 with SessionLocal() as session:
                                     save_cluster_results(
                                         db=session,
@@ -1437,7 +1443,9 @@ if __name__ == "__main__":
                                     )
 
                             except Exception as e:
+                                import traceback
                                 print(f"  [!] {run_tag} failed: {e}")
+                                traceback.print_exc()
                                 general_rows.append({
                                     "version": version_tag,
                                     "scaler": scaler_name,

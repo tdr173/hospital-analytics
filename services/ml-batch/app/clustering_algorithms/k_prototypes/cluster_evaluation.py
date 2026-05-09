@@ -65,7 +65,7 @@ def _fast_gower_matrix(df, numerical_cols, categorical_cols):
     return dist
 
 
-def compute_gower_silhouette(df, numerical_cols, categorical_cols, clusters, max_sample=23000, random_state=42):
+def compute_gower_silhouette(df, numerical_cols, categorical_cols, clusters, max_sample=5000, random_state=42):
     # silhouette on gower distance matrix (mixed numerical + categorical).
     # Gower is O(n^2) in memory and time; for n > max_sample we stratified-
     # subsample across clusters so each cluster keeps its proportion and the
@@ -98,7 +98,7 @@ def compute_gower_silhouette(df, numerical_cols, categorical_cols, clusters, max
     return round(sil, 4)
 
 
-def compute_gower_mixed_metrics(df, numerical_cols, categorical_cols, clusters, max_sample=23000, random_state=42):
+def compute_gower_mixed_metrics(df, numerical_cols, categorical_cols, clusters, max_sample=5000, random_state=42):
     # Compute Gower-based silhouette (global) and per-cluster silhouette from a
     # single shared distance matrix. Stratified-subsampled exactly like
     # compute_gower_silhouette so cost stays O(max_sample^2).

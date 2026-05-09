@@ -503,7 +503,6 @@ services:
       POSTGRES_DB: clinical
     volumes:
       - ${SYNTHEA_CSV_PATH:-./dataset}:/synthea/output/csv:ro
-      - ./dataset/cleaned:/dataset/cleaned
     command: ["python", "/app/app/db/etl_script.py"]
 
   ###################################################

@@ -1,4 +1,3 @@
-import os
 import re
 import pandas as pd
 from pathlib import Path
@@ -7,18 +6,12 @@ from db import engine as db_engine
 
 dataset_path = Path(__file__).parent.parent.parent.parent.parent / "synthea" / "output" / "csv"
 print(dataset_path)
-cleaned_path = Path(__file__).parent.parent.parent.parent / "dataset" / "cleaned"
 
 
 def _strip_digits(s: str) -> str:
     if not isinstance(s, str):
         return s
     return re.sub(r"\d+", "", s).strip()
-
-
-def clear_existing_cleaned_csv(cleaned_name: str):
-    if os.path.exists(cleaned_path / cleaned_name):
-        os.remove(cleaned_path / cleaned_name)
 
 
 def load_patients(engine):
@@ -52,21 +45,11 @@ def load_patients(engine):
         if patients_df[col].isnull().any():
             patients_df[col] = patients_df[col].fillna(patients_df[col].mode()[0])
 
-
-    clear_existing_cleaned_csv("cleaned_patients.csv")
-    patients_df.to_csv(cleaned_path / "cleaned_patients.csv", index=False)
-
-    patients_df.to_sql(
-        name="patient",
-        con=engine,
-        if_exists="append",
-        index=False,
-    )
+    patients_df.to_sql(name="patient", con=engine, if_exists="append", index=False)
     print(f"Loaded {len(patients_df)} patients.")
 
 
 def _pick_single_org() -> dict:
-    """Return the single organization row with highest utilization."""
     df = pd.read_csv(dataset_path / "organizations.csv")
     row = df.loc[df["UTILIZATION"].idxmax()]
     return {
@@ -81,7 +64,6 @@ def _pick_single_org() -> dict:
 
 
 def _pick_top_provider_ids(max_providers: int = 300) -> list[str]:
-    """Return up to max_providers provider IDs ranked by encounter frequency."""
     enc_df = pd.read_csv(dataset_path / "encounters.csv", usecols=["PROVIDER"])
     counts = enc_df["PROVIDER"].value_counts()
     return counts.head(max_providers).index.tolist()
@@ -90,16 +72,19 @@ def _pick_top_provider_ids(max_providers: int = 300) -> list[str]:
 def load_organizations(engine):
     org = _pick_single_org()
     orgs_df = pd.DataFrame([org])
-
-    cols_to_drop = ["latitude", "longitude"]
-    orgs_df = orgs_df.drop(columns=[col for col in cols_to_drop if col in orgs_df.columns])
-
+    orgs_df = orgs_df.drop(columns=[c for c in ["latitude", "longitude"] if c in orgs_df.columns])
     orgs_df.to_sql(name="organization", con=engine, if_exists="append", index=False)
     print(f"Loaded 1 organization: {org['name']} (utilization={org['utilization']}).")
 
 
 def load_providers(engine):
     df = pd.read_csv(dataset_path / "providers.csv")
+
+    # Synthea older exports have ENCOUNTERS/PROCEDURES; newer exports have UTILIZATION only
+    if "ENCOUNTERS" in df.columns:
+        activity_cols = {"ENCOUNTERS": "encounters", "PROCEDURES": "procedures"}
+    else:
+        activity_cols = {"UTILIZATION": "encounters"}
 
     keep_cols = {
         "Id": "provider_id",
@@ -108,11 +93,12 @@ def load_providers(engine):
         "GENDER": "gender",
         "SPECIALITY": "speciality",
         "CITY": "city",
-        "ENCOUNTERS": "encounters",
-        "PROCEDURES": "procedures",
+        **activity_cols,
     }
 
     providers_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
+    if "procedures" not in providers_df.columns:
+        providers_df["procedures"] = 0
 
     kept_ids = set(_pick_top_provider_ids())
     providers_df = providers_df[providers_df["provider_id"].isin(kept_ids)].copy()
@@ -123,25 +109,15 @@ def load_providers(engine):
     providers_df["last_name"] = name_parts.str[1].apply(_strip_digits)
     providers_df = providers_df.drop(columns=["name"])
 
-    categorical_cols = ["gender", "speciality"]
-    for col in categorical_cols:
+    for col in ["gender", "speciality"]:
         if providers_df[col].isnull().any():
             providers_df[col] = providers_df[col].fillna(providers_df[col].mode()[0])
 
-    numerical_cols = ["encounters", "procedures"]
-    for col in numerical_cols:
+    for col in ["encounters", "procedures"]:
         if providers_df[col].isnull().any():
             providers_df[col] = providers_df[col].fillna(providers_df[col].median())
 
-    clear_existing_cleaned_csv("cleaned_providers.csv")
-    providers_df.to_csv(cleaned_path / "cleaned_providers.csv", index=False)
-
-    providers_df.to_sql(
-        name="provider",
-        con=engine,
-        if_exists="append",
-        index=False,
-    )
+    providers_df.to_sql(name="provider", con=engine, if_exists="append", index=False)
     print(f"Loaded {len(providers_df)} providers.")
 
 
@@ -151,7 +127,6 @@ def load_encounters(engine):
     kept_ids = set(_pick_top_provider_ids())
     single_org_id = _pick_single_org()["organization_id"]
 
-    # Build year → ordered list of kept providers (most active first) for redistribution
     enc_year = pd.to_datetime(df["START"], utc=True).dt.year
     kept_mask = df["PROVIDER"].isin(kept_ids)
     year_provider_counts = (
@@ -181,10 +156,8 @@ def load_encounters(engine):
     }
 
     encounters_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
-
     encounters_df["organization_id"] = single_org_id
 
-    # Redistribute encounters from dropped providers round-robin across kept providers that year
     dropped_mask = ~encounters_df["provider_id"].isin(kept_ids)
     if dropped_mask.any():
         years = pd.to_datetime(encounters_df.loc[dropped_mask, "start_date"], utc=True).dt.year
@@ -199,52 +172,33 @@ def load_encounters(engine):
         print(f"Redistributed {dropped_mask.sum():,} encounters from dropped providers.")
 
     today = pd.Timestamp.now(tz="UTC").normalize()
-
-    encounters_df["start_date"] = pd.to_datetime(encounters_df["start_date"])
-    encounters_df["end_date"] = pd.to_datetime(encounters_df["end_date"])
-
-    # Clamp future dates to today (synthetic data artifact)
-    encounters_df["start_date"] = encounters_df["start_date"].clip(upper=today)
-    encounters_df["end_date"] = encounters_df["end_date"].clip(upper=today)
-
+    encounters_df["start_date"] = pd.to_datetime(encounters_df["start_date"]).clip(upper=today)
+    encounters_df["end_date"] = pd.to_datetime(encounters_df["end_date"]).clip(upper=today)
     encounters_df["duration"] = (encounters_df["end_date"] - encounters_df["start_date"]).dt.total_seconds() / 60
 
-    # Cap durations at reasonable maximums per encounter class
     duration_caps = {
-        "wellness": 120,        # 2 hours
-        "ambulatory": 480,      # 8 hours
-        "outpatient": 1440,     # 1 day
-        "urgentcare": 1440,     # 1 day
-        "emergency": 4320,      # 3 days
-        "inpatient": 43200,     # 30 days
+        "wellness": 120, "ambulatory": 480, "outpatient": 1440,
+        "urgentcare": 1440, "emergency": 4320, "inpatient": 43200,
     }
     for enc_class, max_minutes in duration_caps.items():
         mask = (encounters_df["encounter_class"] == enc_class) & (encounters_df["duration"] > max_minutes)
         encounters_df.loc[mask, "duration"] = max_minutes
 
-    categorical_cols = ["encounter_class", "description", "reason_description"]
-    for col in categorical_cols:
+    for col in ["encounter_class", "description", "reason_description"]:
         encounters_df[col] = encounters_df[col].fillna("no_reason_specified")
-
     if encounters_df["duration"].isnull().any():
         encounters_df["duration"] = encounters_df["duration"].fillna(encounters_df["duration"].median())
 
-    clear_existing_cleaned_csv("cleaned_encounters.csv")
-    encounters_df.to_csv(cleaned_path / "cleaned_encounters.csv", index=False)
-
-    encounters_df.to_sql(
-        name="encounter",
-        con=engine,
-        if_exists="append",
-        index=False,
-    )
+    encounters_df.to_sql(name="encounter", con=engine, if_exists="append", index=False)
     print(f"Loaded {len(encounters_df)} encounters.")
 
 
 def load_patient_providers(engine):
     print("Loading patient-provider relationships...")
-    enc = pd.read_csv(cleaned_path / "cleaned_encounters.csv", usecols=["patient_id", "provider_id"])
-    pp = enc.drop_duplicates().dropna()
+    enc = pd.read_csv(dataset_path / "encounters.csv", usecols=["PATIENT", "PROVIDER"])
+    enc = enc.rename(columns={"PATIENT": "patient_id", "PROVIDER": "provider_id"})
+    kept_ids = set(_pick_top_provider_ids())
+    pp = enc[enc["provider_id"].isin(kept_ids)].drop_duplicates().dropna()
     pp.to_sql("patient_provider", con=engine, if_exists="append", index=False)
     print(f"  {len(pp)} patient-provider pairs loaded.")
 
@@ -262,32 +216,26 @@ def load_allergies(engine):
     }
 
     allergies_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
-
     allergies_df["start_date"] = pd.to_datetime(allergies_df["start_date"])
     allergies_df["end_date"] = pd.to_datetime(allergies_df["end_date"])
-
     if allergies_df["description"].isnull().any():
         allergies_df["description"] = allergies_df["description"].fillna("unknown_allergy")
 
-    clear_existing_cleaned_csv("cleaned_allergies.csv")
-    allergies_df.to_csv(cleaned_path / "cleaned_allergies.csv", index=False)
-
-    allergies_df.to_sql(
-        name="allergy",
-        con=engine,
-        if_exists="append",
-        index=True,
-        index_label="id",
-    )
+    allergies_df.to_sql(name="allergy", con=engine, if_exists="append", index=True, index_label="id")
     print(f"Loaded {len(allergies_df)} allergy records.")
 
 
 def load_procedures(engine):
     df = pd.read_csv(dataset_path / "procedures.csv")
 
+    # Synthea older exports have START/STOP; newer exports have only DATE
+    if "START" in df.columns:
+        date_cols = {"START": "start_date", "STOP": "end_date"}
+    else:
+        date_cols = {"DATE": "start_date"}
+
     keep_cols = {
-        "START": "start_date",
-        "STOP": "end_date",
+        **date_cols,
         "PATIENT": "patient_id",
         "ENCOUNTER": "encounter_id",
         "CODE": "procedure_code",
@@ -296,24 +244,16 @@ def load_procedures(engine):
     }
 
     procedures_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
-
     procedures_df["start_date"] = pd.to_datetime(procedures_df["start_date"])
-    procedures_df["end_date"] = pd.to_datetime(procedures_df["end_date"])
+    if "end_date" not in procedures_df.columns:
+        procedures_df["end_date"] = pd.NaT
+    else:
+        procedures_df["end_date"] = pd.to_datetime(procedures_df["end_date"])
 
-    categorical_cols = ["description", "reason_description"]
-    for col in categorical_cols:
+    for col in ["description", "reason_description"]:
         procedures_df[col] = procedures_df[col].fillna("routine_procedure")
 
-    clear_existing_cleaned_csv("cleaned_procedures.csv")
-    procedures_df.to_csv(cleaned_path / "cleaned_procedures.csv", index=False)
-
-    procedures_df.to_sql(
-        name="procedure",
-        con=engine,
-        if_exists="append",
-        index=True,
-        index_label="id",
-    )
+    procedures_df.to_sql(name="procedure", con=engine, if_exists="append", index=True, index_label="id")
     print(f"Loaded {len(procedures_df)} procedures.")
 
 
@@ -331,25 +271,14 @@ def load_medications(engine):
     }
 
     medications_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
-
     medications_df["start_date"] = pd.to_datetime(medications_df["start_date"])
     medications_df["end_date"] = pd.to_datetime(medications_df["end_date"])
     medications_df["duration_days"] = (medications_df["end_date"] - medications_df["start_date"]).dt.days.fillna(0).astype(int)
 
-    categorical_cols = ["description", "reason_description"]
-    for col in categorical_cols:
+    for col in ["description", "reason_description"]:
         medications_df[col] = medications_df[col].fillna("no_reason_specified")
 
-    clear_existing_cleaned_csv("cleaned_medications.csv")
-    medications_df.to_csv(cleaned_path / "cleaned_medications.csv", index=False)
-
-    medications_df.to_sql(
-        name="medication",
-        con=engine,
-        if_exists="append",
-        index=True,
-        index_label="id",
-    )
+    medications_df.to_sql(name="medication", con=engine, if_exists="append", index=True, index_label="id")
     print(f"Loaded {len(medications_df)} medications.")
 
 
@@ -365,22 +294,11 @@ def load_immunizations(engine):
     }
 
     immunizations_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
-
     immunizations_df["date"] = pd.to_datetime(immunizations_df["date"])
-
     if immunizations_df["description"].isnull().any():
         immunizations_df["description"] = immunizations_df["description"].fillna("unknown_vaccine")
 
-    clear_existing_cleaned_csv("cleaned_immunizations.csv")
-    immunizations_df.to_csv(cleaned_path / "cleaned_immunizations.csv", index=False)
-
-    immunizations_df.to_sql(
-        name="immunization",
-        con=engine,
-        if_exists="append",
-        index=True,
-        index_label="id",
-    )
+    immunizations_df.to_sql(name="immunization", con=engine, if_exists="append", index=True, index_label="id")
     print(f"Loaded {len(immunizations_df)} immunizations.")
 
 
@@ -399,24 +317,13 @@ def load_careplans(engine):
     }
 
     careplans_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
-
     careplans_df["start_date"] = pd.to_datetime(careplans_df["start_date"])
-    careplans_df["end_date"] = pd.to_datetime(careplans_df["end_date"], errors='coerce')
+    careplans_df["end_date"] = pd.to_datetime(careplans_df["end_date"], errors="coerce")
     careplans_df["duration_days"] = (careplans_df["end_date"] - careplans_df["start_date"]).dt.days.fillna(0).astype(int)
-
     careplans_df["reason_description"] = careplans_df["reason_description"].fillna("no_reason_specified")
     careplans_df["description"] = careplans_df["description"].fillna("unknown_careplan")
 
-    clear_existing_cleaned_csv("cleaned_careplans.csv")
-    careplans_df.to_csv(cleaned_path / "cleaned_careplans.csv", index=False)
-
-    careplans_df.to_sql(
-        name="careplan",
-        con=engine,
-        if_exists="append",
-        index=True,
-        index_label="id",
-    )
+    careplans_df.to_sql(name="careplan", con=engine, if_exists="append", index=True, index_label="id")
     print(f"Loaded {len(careplans_df)} careplans.")
 
 
@@ -433,14 +340,10 @@ def load_conditions(engine):
     }
 
     conditions_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
-
     conditions_df["start_date"] = pd.to_datetime(conditions_df["start_date"])
-    conditions_df["end_date"] = pd.to_datetime(conditions_df["end_date"], errors='coerce')
-
+    conditions_df["end_date"] = pd.to_datetime(conditions_df["end_date"], errors="coerce")
     conditions_df["description"] = conditions_df["description"].fillna("unknown_condition")
 
-    clear_existing_cleaned_csv("cleaned_conditions.csv")
-    conditions_df.to_csv(cleaned_path / "cleaned_conditions.csv", index=False)
     conditions_df.to_sql(name="condition", con=engine, if_exists="append", index=True, index_label="id")
     print(f"Loaded {len(conditions_df)} conditions.")
 
@@ -459,44 +362,23 @@ def load_observations(engine):
     }
 
     obs_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
-
-    obs_df["value_numeric"] = pd.to_numeric(obs_df["value"], errors='coerce')
-
-    clear_existing_cleaned_csv("cleaned_observations.csv")
-    obs_df.to_csv(cleaned_path / "cleaned_observations.csv", index=False)
-
-    from sqlalchemy import text
-    with engine.connect() as conn:
-        conn.execute(text("TRUNCATE TABLE observation RESTART IDENTITY CASCADE"))
-        conn.commit()
-    print("Observation table truncated.")
+    obs_df["value_numeric"] = pd.to_numeric(obs_df["value"], errors="coerce")
 
     total = len(obs_df)
     chunk_size = 10_000
     print(f"Observations ETL started: {total:,} rows, chunk size {chunk_size:,}.")
-
     for i in range(0, total, chunk_size):
-        chunk = obs_df.iloc[i: i + chunk_size]
-        chunk.to_sql(
-            name="observation",
-            con=engine,
-            if_exists="append",
-            index=True,
-            index_label="id",
+        obs_df.iloc[i: i + chunk_size].to_sql(
+            name="observation", con=engine, if_exists="append", index=True, index_label="id"
         )
         print(f"  Inserted rows {i:,} – {min(i + chunk_size, total):,} / {total:,}")
-
     print(f"Loaded {total:,} observations.")
 
 
 def _refresh_observation_views(engine):
-    """Refresh observation materialized views after data reload."""
     views = [
-        "mv_obs_totals",
-        "mv_obs_per_patient",
-        "mv_obs_top_types",
-        "mv_obs_numeric_stats",
-        "mv_obs_categorical_stats",
+        "mv_obs_totals", "mv_obs_per_patient", "mv_obs_top_types",
+        "mv_obs_numeric_stats", "mv_obs_categorical_stats",
     ]
     try:
         with engine.connect() as conn:
@@ -509,7 +391,6 @@ def _refresh_observation_views(engine):
 
 
 def _truncate_all_tables(engine):
-    """Truncate all ETL-managed tables in child-first order to satisfy FK constraints."""
     tables = [
         "observation", "condition", "careplan", "immunization",
         "medication", "procedure", "allergy", "encounter",
@@ -518,8 +399,14 @@ def _truncate_all_tables(engine):
     ]
     from sqlalchemy import text
     with engine.connect() as conn:
+        existing = {
+            row[0] for row in conn.execute(text(
+                "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
+            ))
+        }
         for table in tables:
-            conn.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE"))
+            if table in existing:
+                conn.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE"))
         conn.commit()
     print("All tables truncated.")
 
@@ -527,7 +414,7 @@ def _truncate_all_tables(engine):
 def run_etl(engine):
     _truncate_all_tables(engine)
     load_patients(engine)
-    load_organizations(engine)  # <--- Added this line
+    load_organizations(engine)
     load_providers(engine)
     load_encounters(engine)
     load_patient_providers(engine)

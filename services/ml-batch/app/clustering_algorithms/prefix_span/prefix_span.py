@@ -39,7 +39,7 @@ from dotenv import load_dotenv
 from prefixspan import PrefixSpan
 from sqlalchemy import text
 
-from db import engine, SessionLocal
+from db import engine, SessionLocal, clinical_read_engine
 from save_results import save_prefix_span_results
 
 
@@ -492,4 +492,4 @@ def run(engine, db_session) -> None:
 if __name__ == "__main__":
     load_dotenv()
     with SessionLocal() as db:
-        run(engine, db)
+        run(clinical_read_engine, db)
