@@ -1,0 +1,19 @@
+\subsection{Feature Engineering for Clustering}
+
+k-Prototypes is a flat, single-vector algorithm: each patient must be condensed into a single row of mixed numerical and categorical columns. The function \texttt{build\_patient\_features(engine)} in \texttt{k\_prototypes.py} issues twenty-one independent SQL queries against \texttt{clinical-db}, each returning a small \texttt{DataFrame} keyed on \texttt{patient\_id}, and left-joins them into a master frame.
+
+The features fall into eight families:
+\begin{enumerate}
+    \item \textbf{Demographics}: \texttt{age}, \texttt{gender}, \texttt{race}, \texttt{ethnicity}, \texttt{marital}, \texttt{pregnancy\_history}.
+    \item \textbf{Encounter aggregates}: counts per encounter class (inpatient, outpatient, emergency, urgentcare, wellness, ambulatory, snf, hospice) and derived ratios (\texttt{routine\_care\_count}, \texttt{acute\_care\_count}, \texttt{preventive\_to\_reactive\_ratio}).
+    \item \textbf{Conditions}: seven binary disease flags, a \texttt{respiratory\_disease\_profile}, the count of active conditions and the lifetime count.
+    \item \textbf{Medications}: \texttt{total\_medications}, \texttt{is\_polypharmacy} (five or more active medications), and \texttt{lifetime\_medication\_days}.
+    \item \textbf{Procedures}: \texttt{total\_procedures}.
+    \item \textbf{Vitals}: averages of BMI, systolic BP and glucose, each bucketed into a categorical risk category; QALY and DALY indices.
+    \item \textbf{Behavioural}: \texttt{substance\_use\_profile}, \texttt{pain\_management\_tier}, \texttt{out\_of\_hours\_flyer}, \texttt{smoking\_status}.
+    \item \textbf{Care focus and continuity}: \texttt{readmission\_risk\_tier}, \texttt{dominant\_careplan}, \texttt{dominant\_encounter\_class}, \texttt{distinct\_providers\_seen}, \texttt{has\_inpatient\_history}, \texttt{days\_since\_last\_encounter}.
+\end{enumerate}
+
+\subsubsection*{Imputation policy}
+
+Missing values are filled deterministically rather than dropped, so the result has exactly one row per patient. Counts are filled with $0$ (a patient with no recorded medications has zero medications, not an unknown value); sparse categoricals are filled with the literal string \texttt{"Unknown"} (then treated as a regular category); heavily-skewed numerics (\texttt{total\_medications}, \texttt{lifetime\_medication\_days}, \texttt{total\_encounter\_duration\_hours}) are passed through \texttt{log1p} downstream so the Euclidean term of the distance is not dominated by a single tail patient.

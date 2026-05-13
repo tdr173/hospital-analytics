@@ -61,9 +61,10 @@ async def lifespan(app: FastAPI):
     async def _start_sync_consumers():
         import asyncio as _asyncio
         if SERVICE_NAME in ("auth", "monolith"):
-            from sync.account_consumer import AccountSyncConsumer
+            from sync.account_consumer import AccountSyncConsumer, UserDeletedConsumer
             sync_tasks.append(_asyncio.create_task(AccountSyncConsumer().run()))
-            logger.info("started AccountSyncConsumer")
+            sync_tasks.append(_asyncio.create_task(UserDeletedConsumer().run()))
+            logger.info("started AccountSyncConsumer + UserDeletedConsumer")
         if SERVICE_NAME in ("ml-batch", "monolith"):
             from sync.ml_consumer import MlSyncConsumer
             sync_tasks.append(_asyncio.create_task(MlSyncConsumer().run()))

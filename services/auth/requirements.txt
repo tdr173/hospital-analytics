@@ -8,6 +8,7 @@ python-dotenv
 psycopg2-binary
 uvicorn[standard]
 email-validator
+httpx
 openai
 langgraph
 google-genai

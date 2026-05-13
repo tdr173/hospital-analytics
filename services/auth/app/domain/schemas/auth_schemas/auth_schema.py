@@ -10,6 +10,16 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=120)
 
 
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    role: str = Field(pattern="^(MANAGER|DOCTOR|PATIENT)$")
+    patient_id: Optional[str] = None
+    provider_id: Optional[str] = None
+    display_name: Optional[str] = None
+    phone: Optional[str] = None
+    job_title: Optional[str] = None
+
+
 class LoginResponse(CamelModel):
     access_token: str
     token_type: str = "bearer"

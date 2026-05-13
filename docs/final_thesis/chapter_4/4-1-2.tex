@@ -1,0 +1,36 @@
+\subsection{Algorithmic Strategies for Clinical Analytics}
+
+Given the limitations discovered earlier in this paper, it becomes clear that a singular computational approach will not perform well under the limitations of the Electronic Health Records in their natural state. Patient data can be expressed in several formats and states, ranging from continuous numerical variables to textual data and non-uniform timelines. In light of this observation, it becomes necessary to adopt an architectural strategy for solving this problem. Through the abstraction of the original problem statement, the architecture we suggest below allows distributing the workload onto specialized mathematical algorithms. As pointed out by Dash et al. \cite{dash2019}, a proven strategy for dealing with such complexity is through machine learning pipelines.
+
+\textbf{Formal Problem Abstraction} \\
+Essentially, the proposed system models the hospital population as a finite set $P = \{p_1, p_2, \dots, p_n\}$. Every individual patient will be modelled using two different mathematical structures:
+\begin{enumerate}
+    \item A feature vector $p_i = \langle x_i^{(1)}, \dots, x_i^{(m)} \rangle$, that belongs to the combined feature space, containing both numerical and categorical features.
+    \item A temporal event sequence $S_i = \langle e_{i,1}, e_{i,2}, \dots, e_{i,l_i} \rangle$, indicating a strict chronological order of events.
+\end{enumerate}
+
+\vspace{1em}
+
+Since these two data structures cannot be analyzed by a single mathematical model, the suggested solution builds its analysis based on three orthogonal models. Each of the three pillars attempts to answer one basic question related to the patient pool:
+
+\vspace{1em}
+
+\begin{itemize}
+    \item \textbf{Pillar I: Population Stratification (Who are the patients?)} \\
+    For analyzing the demographics and characteristics of hospital patient population, patients have to be divided into specific phenotypes based on their static feature vectors ($p_i$). Since there is a combination of both continuous and categorical data types involved in this, traditional distance measure methods would fail from a mathematical perspective. Hence, mixed data type cluster analysis approach is required in this regard.
+
+    \vspace{0.5em}
+
+    \item \textbf{Pillar II: Clinical Trajectory Mining (What care pathways do they follow?)} \\
+    The exact sequence of occurrence of the event sequences ($S_i$) in terms of time must be known for understanding the patient's trajectory. In a particular scenario, there might be a diagnosis that leads to the use of a specific drug that will eventually be followed by some procedure, and the order of these events holds significance and cannot be broken or altered.
+
+    \vspace{0.5em}
+
+    \item \textbf{Pillar III: Semantic Query Translation (How can clinicians access this data?)} \\
+    The results of the statistical clustering algorithm and sequence mining are not natively understandable by non-technical medical staff. As a solution, a LLM given enough context can be used to interpret the results. In addition, conventional database queries are subject to the accessibility bottleneck issue for administrators without any expertise in query languages as SQL. The solution to this problem involves implementing the concept of autonomous reasoning agents (LLMs), which can be represented as deterministic finite-state machines. They convert natural language queries to proper relational algebra and statistical results to clinical text.
+\end{itemize}
+
+\vspace{1em}
+
+These three pillars are highly interdependent because clustering reduces the noise in the population, sequence mining identifies the pathways from those particular clusters, and the semantic agent allows a common interface for querying the output. The following sections will provide a formal definition of the mathematics behind each one of these analytical paradigms.
+

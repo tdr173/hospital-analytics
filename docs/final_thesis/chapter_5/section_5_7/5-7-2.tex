@@ -1,0 +1,5 @@
+\subsection{State Management and Styling}
+
+All server-side data is held in Redux Toolkit slices under \texttt{frontend/store/slices/}, organised by domain (auth, clinical entities, clustering, sequences, statistics, the conversational SQL agent, dashboard summaries, UI state). Each domain has a \texttt{*-slice.ts} for the state shape and a \texttt{thunks.ts} for the asynchronous fetches, all routed through a single \texttt{get<T>(url, label)} helper that attaches the \texttt{Authorization: Bearer <jwt>} header and shows a deduplicated \texttt{toast.error()} on failure.
+
+Styling is done per component, not through a global CSS file. A custom hook \texttt{useClasses}, wrapping Emotion's \texttt{css()}, consumes a single theme defined in \texttt{utils/theme.ts} (colours, a five-step spacing scale, typography, border-radius and shadow scales) and memoises class names so re-renders do not produce new CSS hashes. Two cases stay inline: MUI \texttt{sx} props and dynamic API-driven values such as a cluster card's background colour, which is only known at runtime.

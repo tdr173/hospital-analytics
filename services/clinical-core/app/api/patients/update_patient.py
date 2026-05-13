@@ -6,7 +6,7 @@ from domain import PatientDetailResponse
 from domain.schemas.patient_schemas.patient_schema import PatientUpdateRequest
 from repository import PatientRepository
 from service import PatientService
-from api._scope import Scope, scope_dep
+from api._scope import Scope, scope_dep, require_doctor
 from .patient_router import patient_router
 
 
@@ -17,8 +17,7 @@ async def update_patient(
     db: Session = Depends(get_db),
     scope: Scope = Depends(scope_dep),
 ):
-    if scope.is_patient:
-        raise HTTPException(status_code=403, detail="Patients cannot edit patient records")
+    require_doctor(scope)
     try:
         return PatientService(PatientRepository(db)).update_patient(patient_id, payload)
     except ValueError as e:

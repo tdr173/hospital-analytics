@@ -1,0 +1,170 @@
+\subsection{Mixed-Type Clustering Validation Metrics}
+
+According to Section 4.1.3, the $K$-prototypes method can successfully classify mixed-type Electronic Health Records data. Nevertheless, since the algorithms that do not require labels, it will automatically generate clusters regardless. Since no ground truth data exists, internal measures of validation are indispensable. The following section introduces six such measures and their ranges.
+
+These metrics fall into three functional categories: the Silhouette and Gower Silhouette Scores assess geometric cohesion and separation; the Calinski-Harabasz and Davies-Bouldin Indices evaluate the ratio of inter-cluster to intra-cluster dispersion; and Cramér's $V$ and Eta Squared ($\eta^2$) quantify the statistical effect size of individual features on cluster membership.
+
+\subsubsection*{Silhouette Score}
+
+The Silhouette Score, introduced by Rousseeuw\cite{rousseeuw1987}, measures how well an item fits into the cluster it belongs to. A high score means that the patient is close to other patients in the same cluster and far away from patients in neighboring clusters. For a data point $i$ assigned to cluster $C_a$, two quantities are defined.
+
+\vspace{1em}
+
+The \emph{intra-cluster distance} $a(i)$ is the mean distance from point $i$ to all other points in its own cluster:
+
+\begin{equation}
+    a(i) = \frac{1}{|C_a| - 1} \sum_{j \in C_a,\; j \neq i} d(i, j)
+    \label{eq:silhouette_a}
+\end{equation}
+
+\vspace {1em}
+
+The \emph{inter-cluster distance} $b(i)$ evaluates the proximity of point $i$ to its closest neighboring group. It is defined as the minimum average distance between $i$ and all instances belonging to any other cluster $C_b \neq C_a$:
+
+\begin{equation}
+    b(i) = \min_{C_b \neq C_a} \frac{1}{|C_b|} \sum_{j \in C_b} d(i, j)
+    \label{eq:silhouette_b}
+\end{equation}
+
+The silhouette coefficient of point $i$ is then:
+
+\begin{equation}
+    s(i) = \frac{b(i) - a(i)}{\max\bigl(a(i),\; b(i)\bigr)}
+    \label{eq:silhouette_si}
+\end{equation}
+
+The global Silhouette Score $S$ is the arithmetic mean over all $n$ points:
+
+\begin{equation}
+    S = \frac{1}{n} \sum_{i=1}^{n} s(i)
+    \label{eq:silhouette_global}
+\end{equation}
+
+$s(i)$ is bounded in $[-1, 1]$. When the result for $s(i)$ is near $+1$, this means that data point $i$ has been matched to its proper cluster and is far away from other clusters. If the result is near $0$, it shows that data point $i$ belongs to the border of clusters. Lastly, when the result is near $-1$, it means that the data point has been misclassified. Similarly, $S$ is interpreted in the same way. Values greater than $0.5$ for $S$ suggest a reasonable clustering process, while those above $0.7$ imply very good clustering results, as pointed out by Kaufman et al.\cite{kaufman1990}.
+
+In its standard form, the Silhouette Score uses Euclidean distance as $d(i,j)$, which restricts its applicability to purely numerical data.
+
+\subsubsection*{Gower Silhouette Score}
+
+In the case where we have mixed types in the feature space, the Euclidean distance used in the conventional Silhouette Score is not anymore defined on all features. So we have to define the Gower distance \cite{gower1971} instead, which is defined for any mixture of quantitative and qualitative variables. The Gower distance between two data points $i$ and $j$ with $p$ features is:
+
+\begin{equation}
+    d_G(i, j) = \frac{1}{p} \sum_{m=1}^{p} d_m(i, j)
+    \label{eq:gower}
+\end{equation}
+
+where the per-feature contribution $d_m(i, j)$ is defined according to the feature type:
+
+\begin{equation}
+    d_m(i, j) =
+    \begin{cases}
+        \dfrac{|x_{im} - x_{jm}|}{R_m} & \text{if feature } m \text{ is numerical} \\[8pt]
+        \mathbf{1}[x_{im} \neq x_{jm}]  & \text{if feature } m \text{ is categorical}
+    \end{cases}
+    \label{eq:gower_dm}
+\end{equation}
+
+Here $R_m=\max_i(x_{im})-\min_i(x_{im})$ is the range of values that the variable takes in the whole data set. As a result, each element $d_m(i,j)$ will take a value in $[0,1]$, and thus the Gower distance $d_G(i,j)\in[0,1]$.
+
+The $n\times n$ pairwise distance matrix is built using equation~\eqref{eq:gower}, and the silhouette formulae of Equations~\eqref{eq:silhouette_a}~-~\eqref{eq:silhouette_global} are directly used on it. While the calculated value of the Gower Silhouette Score $S_G$ still lies within the theoretical interval of [-1, 1], the standard textbook conditions (where scores $S > 0.7$ are required to achieve successful clustering) do not apply to the true nature of clinical data. As has been stated before, the datasets used clinically are naturally characterized by certain amounts of noise and sparsity, along with naturally overlapping clusters in biological features. Given the extreme multidimensional nature of these datasets, it is simply not feasible to obtain any $S_G$ > $0.5$.
+
+\subsubsection*{Calinski-Harabasz Index}
+
+The Calinski-Harabasz (CH) index \cite{calinski1974} measures a clustering based on the ratio of the between-cluster variance and the within-cluster variance. Assuming the dataset contains a total of $n$ data points partitioned into $k$ clusters, we define $\boldsymbol{\mu}$ as the centroid of the entire dataset, and $\boldsymbol{\mu}_j$ as the centroid of cluster $C_j$. The between-cluster scatter matrix trace is:
+
+\begin{equation}
+    \mathrm{tr}(B_k) = \sum_{j=1}^{k} |C_j| \cdot \|\boldsymbol{\mu}_j - \boldsymbol{\mu}\|^2
+    \label{eq:ch_between}
+\end{equation}
+
+The within-cluster scatter matrix trace is:
+
+\begin{equation}
+    \mathrm{tr}(W_k) = \sum_{j=1}^{k} \sum_{i \in C_j} \|\mathbf{x}_i - \boldsymbol{\mu}_j\|^2
+    \label{eq:ch_within}
+\end{equation}
+
+The CH Index is the normalized ratio of these two quantities:
+
+\begin{equation}
+    \mathrm{CH} = \frac{\mathrm{tr}(B_k)}{\mathrm{tr}(W_k)} \cdot \frac{n - k}{k - 1}
+    \label{eq:ch}
+\end{equation}
+
+Ranging between $[0, +\infty)$, the higher the value of CH, the more clearly defined the clusters are with greater separation and less variation within themselves. Without any clear defined cutoff value, its only use is for comparison purposes.
+
+\subsubsection*{Davies-Bouldin Index}
+
+The Davies-Bouldin (DB) Index \cite{davies1979} measures clustering quality by quantifying the worst-case overlap between every cluster and its most similar neighbor. For each cluster $C_i$, the internal scatter $\sigma_i$ is the mean distance from points in $C_i$ to the centroid $\boldsymbol{\mu}_i$:
+
+\begin{equation}
+    \sigma_i = \frac{1}{|C_i|} \sum_{j \in C_i} \|\mathbf{x}_j - \boldsymbol{\mu}_i\|
+    \label{eq:db_sigma}
+\end{equation}
+
+The similarity score between two clusters $C_i$ and $C_j$ can be formulated as:
+
+\begin{equation}
+    R_{ij} = \frac{\sigma_i + \sigma_j}{\|\boldsymbol{\mu}_i - \boldsymbol{\mu}_j\|}
+    \label{eq:db_Rij}
+\end{equation}
+
+For each $C_i$, the most similar neighbor is the cluster $C_j$ that maximizes $R_{ij}$:
+
+\begin{equation}
+    D_i = \max_{j \neq i}\; R_{ij}
+    \label{eq:db_Di}
+\end{equation}
+
+The DB Index is the mean of these worst-case similarity values over all $k$ clusters:
+
+\begin{equation}
+    \mathrm{DB} = \frac{1}{k} \sum_{i=1}^{k} D_i
+    \label{eq:db}
+\end{equation}
+
+\clearpage
+
+The DB index ranges between $[0, +\infty)$. In contrast to the CH index, a smaller value is desirable because it suggests small clusters and high separation between different clusters. However, there is no predetermined upper bound to determine poor clustering results, but a value greater than $1$ generally suggests overlapping clusters.
+
+\subsubsection*{Cramér's $V$}
+
+In contrast with the previous geometric measures, the following two metrics evaluate the strength of association between cluster membership and individual attributes in terms of effect size.
+
+Cramér’s $V$ measure \cite{cramer1946} evaluates the strength of association for categorical attributes. The $\chi^2$ statistic is defined for the contingency table of observed frequencies $O_{ij}$ for $k$ clusters and $q$ categories as follows:
+
+\begin{equation}
+    \chi^2 = \sum_{i=1}^{k} \sum_{j=1}^{q} \frac{(O_{ij} - E_{ij})^2}{E_{ij}}, \qquad E_{ij} = \frac{R_i \cdot C_j}{n}
+    \label{eq:chisq}
+\end{equation}
+
+where $E_{ij}$ is the expected frequency, $R_i$ and $C_j$ are the corresponding row and column totals, and $n$ is the total number of observations. The $\chi^2$ statistic is converted into a range $[0, 1]$ using Cramér’s $V$ measure, regardless of the table dimensions:
+
+\begin{equation}
+    V = \sqrt{\frac{\chi^2}{n \cdot \min(k-1,\; q-1)}}
+    \label{eq:cramer_v}
+\end{equation}
+
+It is straightforward to understand the boundaries: $V=0$ implies no association, whereas $V=1$ implies a perfect association. In line with Cohen's guidelines \cite{cohen1988}, the effect size is considered weak ($V<0.10$), moderate ($0.10 \leq V<0.30$), or strong ($V \geq 0.30$).
+
+\subsubsection*{Eta Squared}
+
+Eta Squared ($\eta^2$) represents the relationship between clustering and the numeric attribute. This statistic captures the degree to which the variation in the feature can be attributed to the clusters and is based on a one-way analysis of variance (ANOVA).
+
+Let $\bar{x}$ denote the overall mean of the numeric attribute, $\bar{x}_j$ the intra-cluster mean of cluster $C_j$, and $x_{ij}$ the numeric attribute value of individual $i$ in cluster $j$. The inter-cluster sum of squares and the total sum of squares are defined as follows:
+
+\begin{equation}
+    \mathrm{SS}_{\mathrm{between}} = \sum_{j=1}^{k} |C_j| \cdot (\bar{x}_j - \bar{x})^2, \qquad
+    \mathrm{SS}_{\mathrm{total}} = \sum_{j=1}^{k} \sum_{i \in C_j} (x_{ij} - \bar{x})^2
+    \label{eq:ss}
+\end{equation}
+
+Eta Squared is the ratio:
+
+\begin{equation}
+    \eta^2 = \frac{\mathrm{SS}_{\mathrm{between}}}{\mathrm{SS}_{\mathrm{total}}}
+    \label{eq:eta_squared}
+\end{equation}
+
+The value of $\eta^2$ lies in the interval [0, 1]. An $\eta^2$ value of 0 indicates that there is no relationship between the partitioning and the variance of the feature, whereas an $\eta^2$ value of 1 implies that the numeric attribute value depends entirely on the cluster assignment. Based on Cohen's guidelines \cite{cohen1988}, an effect size of $\eta^2 < 0.01$ is considered trivial, $0.01 \leq \eta^2 < 0.06$ small, $0.06 \leq \eta^2 < 0.14$ medium, and $\eta^2 \geq 0.14$ large.
+

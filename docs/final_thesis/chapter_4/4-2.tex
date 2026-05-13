@@ -1,0 +1,384 @@
+\section{Analysis}
+
+This section analyses the system's functional behaviour by means of a use-case decomposition and demonstrates how each requirement is satisfied.
+
+\subsection{Use-Case Analysis}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\linewidth]{figs/use_case.png}
+\caption{Use case diagram}
+\label{fig:usecase}
+\end{figure}
+
+This sub-section discusses the main use cases found during the analysis process. As shown in Figure~\ref{fig:usecase}, the functionality of the system is divided into three distinct roles, \emph{Manager}, \emph{Doctor}, and \emph{Patient}, each having certain access privileges. The eleven use cases identified during analysis are described below.
+
+\vspace{1em}
+
+\begin{enumerate}
+
+\item \textbf{Use Case Title: Discover sequential patterns}
+\begin{itemize}
+    \item \textbf{Brief description}: The Manager consults the sequential care patterns discovered by the PrefixSpan algorithm on the longitudinal histories of the patients in each cluster.
+    \item \textbf{Primary actor}: Manager
+    \item \textbf{Pre-conditions}: The actor is authenticated and has the Manager role. The clustering has been executed and the sequential pattern mining has been run on each cluster.
+    \item \textbf{Post-conditions}: The selected closed sequential patterns are displayed, grouped by cluster.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor opens the Sequences page.
+        \item The actor selects the cluster of interest.
+        \item The system displays the closed patterns retained after mining, ordered by descending support; the actor may switch the metric (support, length) and the sort direction in the UI.
+        \item The actor selects a pattern to view the corresponding AI-generated clinical interpretation.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[3a.] \textit{No pattern meets the support threshold for the selected cluster.}
+        \begin{enumerate}
+            \item The system displays an empty-state message.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Explore patient clusters}
+\begin{itemize}
+    \item \textbf{Brief description}: The Manager examines the output from the K-Prototypes clustering analysis, including the cluster list, prototypes, feature distributions, comparative heatmaps, PCA scatter plots, and AI-generated cluster summaries.
+    \item \textbf{Primary actor}: Manager
+    \item \textbf{Pre-conditions}: The actor is logged into the application as a Manager and the clustering script has been executed and results stored in the database.
+    \item \textbf{Post-conditions}: Cluster views are shown.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor navigates to the Clusters tab.
+        \item The application shows the list of clusters and general information about the clusters.
+        \item The actor chooses one of the clusters.
+        \item The application shows the cluster prototype with feature distributions and the AI-generated summary.
+        \item The actor opens the cluster comparison plots (heatmap and PCA scatter plot) or the dedicated plots for numerical and categorical features.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[1a.] \textit{No clustering result available yet.}
+        \begin{enumerate}
+            \item The application shows the empty-state message.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: View statistical dashboards}
+\begin{itemize}
+    \item \textbf{Brief description}: The actor reviews the statistical dashboards containing aggregate information on patients, encounters, conditions, medications, observations, procedures, allergies, immunisations, care plans, and providers.
+    \item \textbf{Primary actor}: Manager
+    \item \textbf{Pre-conditions}: The actor is logged in as a Manager. The dataset has been loaded into the database.
+    \item \textbf{Post-conditions}: Statistical views are displayed within the application.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor navigates to the Statistics page.
+        \item The actor selects a required dimension (e.g., conditions, medications, observations).
+        \item The system retrieves aggregate data from the database.
+        \item The system displays the charts and tables with aggregate information.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[3a.] \textit{There is no data available for this dimension.}
+        \begin{enumerate}
+            \item The system displays the corresponding empty-state message.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Manage provider records}
+\begin{itemize}
+    \item \textbf{Brief description}: The Manager views the list of providers (doctors and other healthcare workers) and makes changes to the provider records.
+    \item \textbf{Primary actor}: Manager
+    \item \textbf{Pre-conditions}: The actor is logged in and holds the Manager role.
+    \item \textbf{Post-conditions}: The change made by the actor is committed to the database and reflected in the providers list.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor navigates to the Providers page.
+        \item The system presents the list of providers on a paginated table.
+        \item The actor decides whether to create, modify, or delete a provider record.
+        \item The actor fills out the form and presses the submit button.
+        \item The system validates the input and commits the change to the list.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[3a.] \textit{The actor decides to remove the record.}
+        \begin{enumerate}
+            \item The system prompts for confirmation.
+            \item The actor confirms the decision.
+            \item The system removes the record and refreshes the list.
+        \end{enumerate}
+        \item[5a.] \textit{Validation error.}
+        \begin{enumerate}
+            \item The system displays the errors.
+            \item The actor corrects the errors.
+            \item The actor proceeds from step 4.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Register a new user}
+\begin{itemize}
+    \item \textbf{Brief description}: The Manager registers a new user and assigns the role (Manager, Doctor, or Patient); alternatively, a Doctor registers a Patient account through a restricted variant of the same flow in which the role is fixed to Patient. The system then triggers delivery of the initial credentials.
+    \item \textbf{Primary actor}: Manager, Doctor
+    \item \textbf{Pre-conditions}: The actor must be logged in and must hold the Manager or Doctor role.
+    \item \textbf{Post-conditions}: A new user record is persisted with the assigned role, and an e-mail containing a single-use credential-reset link valid for ten minutes is dispatched to the registered address. The user is required to set a new password on first login.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor accesses the registration page.
+        \item The actor enters first name and last name.
+        \item The actor enters email address and phone number.
+        \item The actor enters position and, when permitted by the variant, chooses the role to be assigned. In the Doctor variant the role selector is hidden and the role is fixed to Patient.
+        \item The actor presses the submit button.
+        \item The system validates the input and persists the new user.
+        \item The system dispatches an e-mail containing the credential-reset link.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[6a.] \textit{One of the fields is either empty or has an incorrect value.}
+        \begin{enumerate}
+            \item The system displays an error message next to the field that requires correction.
+            \item The actor rectifies the field.
+            \item The actor resumes with step 5.
+        \end{enumerate}
+        \item[6b.] \textit{The entered email address is already registered.}
+        \begin{enumerate}
+            \item The system notifies the actor that the email address is already registered.
+            \item The actor resumes with step 3.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Register a clinical encounter}
+\begin{itemize}
+    \item \textbf{Brief description}: The Doctor creates, modifies, or deletes the encounter together with its sub-records: observations (presented in the UI as \emph{Test Results}), conditions, medications, procedures, immunisations, care plans, and allergies.
+    \item \textbf{Primary actor}: Doctor
+    \item \textbf{Pre-conditions}: The actor must be authenticated into the system. Both the Patient and Provider must already exist in the system.
+    \item \textbf{Post-conditions}: The encounter and the associated records are created, modified, or deleted depending on the actual operation performed by the actor.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor gets directed to the Encounters page or the Patient page.
+        \item The actor gets directed to the form for adding a new encounter or editing an existing one.
+        \item The actor provides the details of the patient, provider, encounter type, and its date.
+        \item The actor populates the corresponding fields for observations, conditions, medications, procedures, immunisations, care plans, and allergies.
+        \item The actor clicks on the submit button of the form.
+        \item The system validates the provided information.
+        \item The system persists the encounter and its sub-records to the database.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[2a.] \textit{The actor chooses to delete an existing encounter record.}
+        \begin{enumerate}
+            \item The system asks the actor to confirm the action.
+            \item The actor confirms the action.
+            \item The system deletes the encounter.
+        \end{enumerate}
+        \item[6a.] \textit{The data is not valid.}
+        \begin{enumerate}
+            \item The system presents the actor with the validation error message.
+            \item The actor corrects the data.
+            \item The actor continues with step 5.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Navigate patient records}
+\begin{itemize}
+    \item \textbf{Brief description}: The Manager browses the paginated list of patients in read-only mode, filters the list by demographic and clinical criteria, and reviews each patient's longitudinal record.
+    \item \textbf{Primary actor}: Manager
+    \item \textbf{Pre-conditions}: The actor is authenticated and holds the Manager role.
+    \item \textbf{Post-conditions}: The selected patient's profile and longitudinal history are displayed in read-only mode.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor accesses the Patients page.
+        \item The system shows the list of patients in paginated form.
+        \item The actor may apply filters to the list based on demographic and clinical criteria.
+        \item The actor chooses a patient.
+        \item The system shows the patient's profile together with their encounters, conditions, medications, allergies, procedures, immunisations, and care plans. Observations are accessed within the encounter.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[2a.] \textit{The filtered list is empty.}
+        \begin{enumerate}
+            \item The system displays an empty-state message.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Manage patient records}
+\begin{itemize}
+    \item \textbf{Brief description}: The Doctor examines the paginated list of patients, filters the records, reviews detailed clinical histories, and applies modifications to the patient database.
+    \item \textbf{Primary actor}: Doctor
+    \item \textbf{Pre-conditions}: The actor should be logged in and must hold the Doctor role.
+    \item \textbf{Post-conditions}: All modifications are saved both in the database and in the UI.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor accesses the Patients page.
+        \item The system shows the list of patients in paginated form.
+        \item The actor may apply filters to the list based on demographic and clinical criteria.
+        \item The actor chooses a patient.
+        \item The system shows the patient's profile as well as their encounters, conditions, medications, allergies, procedures, immunisations, and care plans. Observations are accessed within the encounter.
+        \item The actor modifies the record and clicks save, or goes back to the list to add another record.
+        \item The system validates and registers the changes, and refreshes the views.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[6a.] \textit{The actor confirms the deletion of the data entry.}
+        \begin{enumerate}
+            \item The system prompts the actor for confirmation.
+            \item The actor confirms.
+            \item The system deletes the data entry and removes it from the list.
+        \end{enumerate}
+        \item[7a.] \textit{The data entered is invalid on creation or modification.}
+        \begin{enumerate}
+            \item The system displays the error message.
+            \item The actor corrects the data.
+            \item The actor proceeds to step 6.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Query data in natural language}
+\begin{itemize}
+    \item \textbf{Brief description}: The actor provides a question in natural language, which is converted into a read-only SQL query, executed against the database, and the result is returned as a natural-language answer.
+    \item \textbf{Primary actor}: Manager, Doctor
+    \item \textbf{Pre-conditions}: The actor is logged in and holds the Manager or Doctor role.
+    \item \textbf{Post-conditions}: The natural-language answer derived from the executed query is returned to the user interface. The generated SQL is logged server-side for audit but is not displayed to the actor.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor navigates to the Ask AI page.
+        \item The actor provides the question in natural language.
+        \item The actor submits the question.
+        \item The system converts the provided question into SQL using the LLM agent.
+        \item The system validates the generated query against the read-only fragment and the database schema; for Doctor actors the query is additionally scoped to their own provider.
+        \item The system executes the validated query.
+        \item The system returns the natural-language answer derived from the result.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[5a.] \textit{The generated query fails validation.}
+        \begin{enumerate}
+            \item The system requests a regenerated query from the agent, up to three attempts.
+            \item If all attempts fail, the system informs the actor that the question could not be answered safely.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Authenticate}
+\begin{itemize}
+    \item \textbf{Brief description}: The user logs into the platform using their email and password to access their assigned functionalities.
+    \item \textbf{Primary actor}: Manager, Doctor, Patient
+    \item \textbf{Pre-conditions}: The user has a valid account registered in the platform.
+    \item \textbf{Post-conditions}: An access token is provided to the client, role information is loaded for the user, and the user is navigated to the corresponding role page.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor visits the login page.
+        \item The actor enters the email.
+        \item The actor enters the password.
+        \item The actor presses the Sign In button.
+        \item The platform authenticates the actor.
+        \item The platform creates an access token, retrieves the actor's role, and redirects to the corresponding home page.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[4a.] \textit{The actor forgot the password.}
+        \begin{enumerate}
+            \item The actor clicks the \textit{``Forgot Password?''} link.
+            \item The actor enters the email address.
+            \item The system sends a password reset link valid for ten minutes.
+            \item The actor clicks the link and sets a new password.
+            \item The actor returns to step 1 of the basic flow with the new credentials.
+        \end{enumerate}
+        \item[5a.] \textit{Invalid credentials.}
+        \begin{enumerate}
+            \item The platform provides an error message regarding the unsuccessful authentication.
+            \item The actor resumes the process from step 2.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: View own records}
+\begin{itemize}
+    \item \textbf{Brief description}: The Patient reviews their personal record, which only includes the information related to the account that they have created: encounters, conditions, medications, allergies, procedures, immunisations, and care plans.
+    \item \textbf{Primary actor}: Patient
+    \item \textbf{Pre-conditions}: The actor should be logged in, and must hold the role of Patient.
+    \item \textbf{Post-conditions}: The personal record is presented in a read-only mode.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor goes to the personal records section.
+        \item The system presents the list of encounters owned by the actor.
+        \item The actor chooses one of the encounters.
+        \item The system presents the sub-records for the chosen encounter, including the observations associated with it.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[2a.] \textit{The actor has no encounters recorded.}
+        \begin{enumerate}
+            \item The system displays an empty-state message.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\end{enumerate}
+
+\subsection{Functional and Non-Functional Requirements}
+
+\subsubsection*{Functional requirements}
+
+\begin{itemize}
+    \item \textbf{User Authentication and Account Management.} The application shall provide secure email/password authentication, password reset via single-use ten-minute links, and role management for Manager, Doctor, or Patient. Managers may create accounts for any role; Doctors may create Patient accounts only.
+
+    \item \textbf{Access Control Based on User Roles.} All pages of the UI and API endpoints shall enforce strict access control based on the user role. Patients view only their own data; Doctors manage clinical data; Managers retain administrative and read-only visibility.
+
+    \item \textbf{Patient management.} Doctors shall have CRUD operations over patient information, list filtering, and detailed patient history (encounters, conditions, medications, etc.). Managers retain read-only access to the same views. Observations are categorised under specific encounters.
+
+    \item \textbf{Provider management.} Managers shall have CRUD capabilities over clinicians' information and may view their encounters.
+
+    \item \textbf{Clinical encounter management.} Doctors shall manage clinical encounters and their sub-records (observations, conditions, medications, procedures, immunisations, care plans, and allergies).
+
+    \item \textbf{Patient self-service view.} Patients shall have read-only access to their own clinical history.
+
+    \item \textbf{Statistical dashboards.} The system shall present, to the Manager role, graphical and tabular summaries of the major clinical dimensions of the dataset (patients, encounters, conditions, medications, observations, procedures, allergies, immunisations, care plans, and providers).
+
+    \item \textbf{Cluster exploration.} The system shall display the results of the K-Prototypes clustering, including prototypes, distributions, comparative heatmaps, PCA scatter plot, and AI-generated cluster descriptions.
+
+    \item \textbf{Sequential patterns exploration.} The system shall present the closed sequential patterns discovered by the PrefixSpan algorithm, ordered by support, along with AI-generated explanations.
+
+    \item \textbf{Natural language querying.} Managers and Doctors may pose questions in natural language, which are then translated into read-only SQL queries and answered by the system.
+\end{itemize}
+
+\subsubsection*{Non-functional requirements}
+
+\begin{itemize}
+    \item \textbf{Performance}. The application shall paginate long collections (patients, providers, encounters, sequences), cache pre-computed cluster features to amortise K-Prototypes inference cost, and serve dashboard aggregates with sub-second latency to support interactive exploration.
+
+    \item \textbf{Security \& Confidentiality}. All clinical data shall be served over JWT-authenticated, TLS-encrypted channels. Role-based access control is enforced via per-endpoint FastAPI dependencies so that no actor may reach resources outside their authorised scope; Doctors are further scoped to their own provider identity in the natural-language query agent.
+
+    \item \textbf{Usability}. The UI shall minimise actor interaction by aggregating data server-side and shall surface validation errors inline within forms; long-running operations (clustering, sequence mining) are pre-computed offline so that the interface remains responsive.
+
+    \item \textbf{Safety \& Reliability}. Every SQL statement produced by the natural-language agent shall be screened by a deterministic read-only validator (an AST-level whitelist restricted to \texttt{SELECT} constructs) before execution. A bounded retry loop (up to three regenerations) requests a new query on validation failure; persistent failures are reported to the actor without the database ever being reached in a writable state.
+
+    \item \textbf{Scalability.} The architecture --- independent \emph{auth}, \emph{clinical-core}, and \emph{analytics} services communicating via REST and a message bus --- shall sustain growth to the order of $10^{4}$ longitudinal patient records and tens of concurrent sessions without degradation of interactive response time.
+
+    \item \textbf{Maintainability.} The backend enforces strict layering (\emph{api} $\to$ \emph{service} $\to$ \emph{repository} $\to$ \emph{domain}) and the frontend co-locates styles next to their components, both of which contain the blast-radius of changes and accommodate bug fixes, new analysis techniques, and new language models.
+
+    \item \textbf{Portability.} The system shall be deployable on any platform supporting Docker, with no source modification, on Linux, macOS, and Windows hosts.
+\end{itemize}

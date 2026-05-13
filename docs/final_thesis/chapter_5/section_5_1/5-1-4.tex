@@ -1,0 +1,38 @@
+\subsection{Database Design and Schema}
+
+Data is split across three logical database families, each owned by a different microservice:
+\begin{itemize}
+    \item \textbf{\texttt{auth-db}} (owned by \texttt{auth}) --- identity and access management.
+    \item \textbf{\texttt{clinical-db}} (owned by \texttt{clinical-core}) --- the FHIR-derived system of record.
+    \item \textbf{\texttt{ml-db}} (owned by \texttt{ml-batch}) --- analytical artefacts produced by the batch pipelines.
+\end{itemize}
+
+Each schema is normalised to the \textbf{Third Normal Form (3NF)}: every non-key attribute depends only on the primary key, derivable values (counts, ratios, totals) are computed by the pipelines and stored in \texttt{ml-db} rather than denormalised into the clinical tables, and the cross-cutting JSONB columns (\texttt{features}, \texttt{ai\_analysis}) are deliberately confined to the analytical schema where their schema-less nature does not threaten transactional integrity. The clinical schema is shown in Figure~\ref{fig:er-clinical}; it mirrors the subset of FHIR resources produced by Synthea.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\linewidth]{figs/clinical_schema_er.png}
+\caption{Entity-relationship diagram of \texttt{clinical-db} (Third Normal Form).}
+\label{fig:er-clinical}
+\end{figure}
+
+\subsubsection*{Clinical entities}
+
+\texttt{patient} holds demographics (birthdate, deathdate, age, name, marital status, race, ethnicity, gender, city). \texttt{encounter} records every visit and carries foreign keys to \texttt{patient}, \texttt{organization} and \texttt{provider}, together with an indexed \texttt{encounter\_class} and a duration. \texttt{condition}, \texttt{observation}, \texttt{medication}, \texttt{procedure}, \texttt{allergy}, \texttt{careplan} and \texttt{immunization} all share the same shape: an FHIR code, a start and (nullable) end date, a free-text description, and foreign keys to \texttt{patient} and \texttt{encounter}. A \texttt{NULL} \texttt{end\_date} marks an entry as currently active.
+
+\subsubsection*{Machine learning artefacts}
+
+\texttt{ml-db} is fully regenerated on every run.
+\begin{itemize}
+    \item \texttt{cluster\_meta} --- a \textbf{singleton table} (exactly one row) describing the current run: algorithm, $k$, feature lists, metrics, the rendered PCA scatter (\texttt{pca\_image BYTEA}) and the categorical heatmap. A JSONB \texttt{ai\_analysis} column caches the LLM narrative.
+    \item \texttt{cluster} --- one row per cluster label, with \texttt{color}, \texttt{title}, \texttt{description}, \texttt{insight}, \texttt{recommendation} from the LLM (Section~\ref{subsec:cluster-llm}).
+    \item \texttt{cluster\_patient} --- assignment: \texttt{patient\_id}, \texttt{cluster\_label}, \texttt{is\_outlier}, \texttt{pca\_x}, \texttt{pca\_y}, and a JSONB \texttt{features} blob caching every per-patient feature. The cache makes per-cluster summary queries fast.
+    \item \texttt{prefix\_span\_pattern} --- one row per mined sequence: \texttt{rank}, \texttt{pattern\_str}, \texttt{length}, \texttt{support\_count}, \texttt{support\_pct}.
+    \item \texttt{prefix\_span\_patient\_pattern} --- junction \texttt{(pattern\_id, patient\_id)}.
+\end{itemize}
+
+The three \texttt{ai\_analysis} columns and the \texttt{pca\_image} column are added at startup by an idempotent \texttt{ALTER TABLE \ldots ADD COLUMN IF NOT EXISTS} block in \texttt{app/main.py}, so fresh databases pick them up without a migration framework.
+
+\subsubsection*{Identity}
+
+\texttt{auth-db} contains a single table, \texttt{auth\_user}, holding the email, bcrypt hash, role enum (\texttt{MANAGER}, \texttt{DOCTOR}, \texttt{PATIENT}), and optional \texttt{patient\_id} / \texttt{provider\_id} references. Those are plain strings because the databases are physically separate Postgres instances.

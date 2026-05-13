@@ -3,7 +3,7 @@
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from domain import AuthModel, UserRole
+from domain import AuthModel
 
 
 class AuthRepository:
@@ -31,17 +31,11 @@ class AuthRepository:
         *,
         email: str,
         password_hash: str,
-        role: UserRole,
-        patient_id: Optional[str] = None,
-        provider_id: Optional[str] = None,
         must_change_password: bool = True,
     ) -> AuthModel:
         instance = AuthModel(
             email=email,
             password=password_hash,
-            role=role,
-            patient_id=patient_id,
-            provider_id=provider_id,
             must_change_password=must_change_password,
         )
         self.db.add(instance)
@@ -56,19 +50,11 @@ class AuthRepository:
         self.db.refresh(user)
         return user
 
-    def get_by_patient_id(self, patient_id: str) -> Optional[AuthModel]:
-        return (
-            self.db.query(AuthModel)
-            .filter(AuthModel.patient_id == patient_id)
-            .first()
-        )
-
-    def get_by_provider_id(self, provider_id: str) -> Optional[AuthModel]:
-        return (
-            self.db.query(AuthModel)
-            .filter(AuthModel.provider_id == provider_id)
-            .first()
-        )
+    def delete_by_id(self, user_id: int) -> None:
+        user = self.get_by_id(user_id)
+        if user:
+            self.db.delete(user)
+            self._commit()
 
     def delete(self, user: AuthModel) -> None:
         self.db.delete(user)

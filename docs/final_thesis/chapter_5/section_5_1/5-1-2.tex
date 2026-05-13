@@ -1,0 +1,22 @@
+\subsection{Microservices Topology}
+
+Seven FastAPI services run side-by-side, each owning its own database and exposing its own subset of the public API. The deployment diagram in Figure~\ref{fig:deployment} shows the services together with their databases and the Traefik gateway.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\linewidth]{figs/deployment_diagram.png}
+\caption{Containerised deployment topology with Traefik routing and RabbitMQ fan-out.}
+\label{fig:deployment}
+\end{figure}
+
+\begin{enumerate}
+    \item \textbf{auth} --- issues JWTs, stores credentials in \texttt{auth-db}, provisions new accounts on receipt of \texttt{patient.created}, handles password reset.
+    \item \textbf{users} --- read-side view over the user catalog (lookup by id, email, role).
+    \item \textbf{clinical-core} --- system of record for FHIR-derived entities (patient, encounter, condition, observation, medication, procedure, allergy, careplan, immunization, provider, organization). Owns \texttt{clinical-db}; publishes \texttt{patient.created}, \texttt{provider.created}, \texttt{encounter.created}.
+    \item \textbf{analytics} --- statistics dashboards and the LLM SQL agent endpoint. Read-only on \texttt{clinical-db} and \texttt{ml-db}.
+    \item \textbf{ml-batch} --- home of the two batch pipelines. Writes to \texttt{ml-db}.
+    \item \textbf{mail-service} --- RabbitMQ consumer that dispatches SMTP mail.
+    \item \textbf{queue-service} --- APScheduler host for cron-driven re-clustering.
+\end{enumerate}
+
+Inter-service communication uses two patterns. Synchronous calls go through Traefik over HTTP. Anything that can tolerate latency --- account provisioning, mail delivery, re-clustering --- is published on \texttt{clinical.events} and consumed asynchronously. There are deliberately \emph{no} cross-service foreign-key constraints: consistency is achieved by the event flow rather than by database-level integrity.

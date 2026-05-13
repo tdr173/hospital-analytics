@@ -20,7 +20,7 @@ from domain import models as _all_models  # noqa: F401
 # Owner table sets, by service name. Members are __tablename__ strings.
 SERVICE_TABLES: dict[str, set[str]] = {
     "auth": {"auth_user"},
-    "users": set(),  # placeholder; will get its own profile table later
+    "users": {"user_profile"},
     "clinical-core": {
         "patient", "provider", "organization", "patient_provider",
         "encounter", "condition", "medication", "allergy",

@@ -1,0 +1,45 @@
+\subsection{LangGraph Agent --- Natural Language SQL}
+\label{subsec:sql-agent}
+
+The second LLM integration powers the \texttt{/ask} page on the front-end. A user types a question in English (or Romanian) and the back-end returns either a textual answer or, when the question implies retrieval, the SQL it ran together with a natural-language summary of the result. The implementation lives in \texttt{service/lllm\_sql\_agent\_service/agent\_service.py} (470 lines) and is organised as a small \texttt{langgraph} state machine.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\linewidth]{figs/llm_agent_state_graph.png}
+\caption{State machine of the natural-language SQL agent.}
+\label{fig:sql-agent}
+\end{figure}
+
+\subsubsection*{Nodes and routing}
+
+Five nodes are registered on the graph:
+\begin{enumerate}
+    \item \texttt{process\_input} --- classifies the user message as \texttt{DB\_RETRIEVAL}, \texttt{MEDICAL\_GENERAL} or \texttt{NOT\_MEDICAL} using \texttt{PROMPT\_TRANSLATE}, and rewrites the question into a self-contained English sentence (resolving any references to prior turns).
+    \item \texttt{answer\_general} --- handles general medical questions without touching the database.
+    \item \texttt{generate\_query} --- produces a SQL query from the rewritten question with \texttt{PROMPT\_GENERATE\_SQL}, then strips any markdown fences.
+    \item \texttt{validate\_query} --- runs a static safety check (\texttt{is\_select\_only}) and then asks the model itself to act as a SQL QA auditor through \texttt{PROMPT\_VALIDATE\_SQL}.
+    \item \texttt{execute\_query} --- runs the validated query through \texttt{\_db\_retrieve(\ldots)}, truncates the result to \texttt{MAX\_RESULT\_CHARS = 3000}, and summarises it with \texttt{PROMPT\_RESULT}.
+\end{enumerate}
+
+Two conditional edges close the loop. \texttt{route\_validation} sends a failing query back to \texttt{generate\_query} until \texttt{retry\_count} exceeds \texttt{MAX\_RETRIES = 3}; \texttt{route\_execution} does the same for runtime errors. The constants \texttt{MAX\_RESULT\_ROWS = 100} and \texttt{MAX\_HISTORY\_TURNS = 5} cap the cost of any single invocation.
+
+\subsubsection*{Prompt summaries}
+
+The four prompts share a common pattern: a strict output rule, a schema reference, and a domain-specific rulebook. Their salient instructions are summarised below.
+
+\textbf{\texttt{PROMPT\_TRANSLATE}} classifies the user input and emits exactly one of three outputs. For database questions it returns a single self-contained English sentence describing the data to retrieve, with names, ids, numbers and date ranges preserved verbatim. General medical questions are returned as \texttt{MEDICAL\_GENERAL: <question>}; anything off-topic returns the literal token \texttt{NOT\_MEDICAL}.
+
+\textbf{\texttt{PROMPT\_GENERATE\_SQL}} pins down the SQL contract: only \texttt{SELECT} or \texttt{WITH \dots SELECT}; never \texttt{INSERT/UPDATE/DELETE/DROP/ALTER/TRUNCATE/GRANT/REVOKE/EXEC}; no \texttt{SELECT *}; \texttt{LIMIT \{max\_rows\}} unless the user explicitly asks for all results or the query is purely aggregate; \texttt{ORDER BY} for any ``most'' / ``last'' phrasing. Filtering rules cover the project's enum conventions (\texttt{gender} is \texttt{'M'/'F'}; \texttt{marital} is \texttt{'M'/'S'/'D'/'W'}; \texttt{encounter\_class} has ten allowed values; alive vs deceased is \texttt{deathdate IS NULL}; active vs ended timestamped rows are flagged by \texttt{end\_date IS NULL}). Counts of patients across clinical tables must use \texttt{COUNT(DISTINCT patient\_id)}. For cluster questions, the prompt requires \texttt{NOT is\_outlier} unless the user explicitly asked about outliers, and forbids mixing the JSONB-cached \texttt{cluster\_patient.features} with raw clinical tables. For sequence questions, cluster-specific frequency must be computed by joining \texttt{prefix\_span\_patient\_pattern} with \texttt{cluster\_patient}.
+
+\textbf{\texttt{PROMPT\_VALIDATE\_SQL}} asks the model to act as a strict QA auditor against a seven-item checklist: \texttt{SELECT}-only, schema-valid references, correct JOIN keys, semantic alignment with the user's question, cluster-scope correctness, distinct-count correctness on clinical tables, and presence of the mandatory provider scope when applicable. Stylistic preferences (aliasing, ordering, \texttt{ILIKE} vs \texttt{=}, \texttt{LIMIT} on aggregates) are explicitly listed as \emph{do not flag}. The output format is rigid: line 1 is \texttt{YES} or \texttt{NO}; line 2, only on \texttt{NO}, is a one-sentence explanation of the failure.
+
+\textbf{\texttt{PROMPT\_RESULT}} summarises the database result. It must reply in the same language the user wrote in, say plainly that no matching records were found when the result is empty, state a single value in one sentence when the result has a single row and a single column, and otherwise produce a short bulleted list capped at ten items. It never mentions SQL, queries or tables.
+
+\subsubsection*{Defence in depth}
+
+Two layers protect the database from a hallucinated destructive query:
+\begin{enumerate}
+    \item \texttt{is\_select\_only(sql)} strips comments, asserts the statement starts with \texttt{SELECT} or \texttt{WITH}, and rejects \texttt{\textbackslash b(DROP\textbar DELETE\textbar TRUNCATE\textbar ALTER\textbar INSERT\textbar UPDATE\textbar CREATE\textbar GRANT\textbar REVOKE\textbar EXEC\textbar EXECUTE)\textbackslash b} anywhere in the body.
+    \item The validation node asks the model to audit the query against the schema and the role scope. A \texttt{NO} verdict re-enters the generation loop with the explanation in the \texttt{feedback} field.
+\end{enumerate}
+Both filters must agree before the SQL is executed; the validator alone is not trusted with safety.

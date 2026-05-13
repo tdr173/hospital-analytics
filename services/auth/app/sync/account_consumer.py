@@ -1,15 +1,13 @@
-"""auth service consumer: provisions auth accounts in response to clinical
-events emitted by clinical-core.
+"""auth service consumers for clinical + user lifecycle events.
 
-Bindings:
-  patient.created  -> if payload contains `email`, invite a PATIENT account
-  provider.created -> if payload contains `email`, invite a DOCTOR account
-  patient.deleted  -> deactivate / delete the linked auth account
-  provider.deleted -> deactivate / delete the linked auth account
+AccountSyncConsumer — listens to clinical-core events to provision credentials:
+  patient.created  → create auth_user + publish user.created (users-service creates profile)
+  provider.created → create auth_user + publish user.created
+  patient.deleted  → delete auth_user
+  provider.deleted → delete auth_user
 
-The consumer runs as an asyncio Task inside the auth FastAPI process. It
-acks every message; soft-fails (logging) on handler errors so a single
-poisoned message can't block the queue.
+UserDeletedConsumer — listens to users-service deletion events:
+  user.deleted     → delete auth_user by user_id
 """
 from __future__ import annotations
 
@@ -31,8 +29,6 @@ class AccountSyncConsumer(Consumer):
     )
 
     async def handle_message(self, payload: dict[str, Any], routing_key: str) -> None:
-        # Lazy imports keep this module importable even when SQLModel metadata
-        # for clinical tables hasn't been initialized in this process.
         from repository import AuthRepository
         from service import AuthService
         from domain import UserRole
@@ -64,16 +60,39 @@ class AccountSyncConsumer(Consumer):
         if action == EventAction.DELETED.value:
             db = SessionLocal()
             try:
+                from repository import AuthRepository
                 repo = AuthRepository(db)
-                target = None
-                if entity == "patient" and patient_id:
-                    target = repo.get_by_patient_id(patient_id) if hasattr(repo, "get_by_patient_id") else None
-                elif entity == "provider" and provider_id:
-                    target = repo.get_by_provider_id(provider_id) if hasattr(repo, "get_by_provider_id") else None
-                if target is not None and hasattr(repo, "delete"):
-                    repo.delete(target)
-                    logger.info("deleted auth account for %s.%s", entity, patient_id or provider_id)
+                # Look up by email if provided (patient/provider deleted events carry patient_id/provider_id,
+                # not user_id — we no longer store those on auth_user, so we can only match by email if present)
+                target_email = email or payload.get("extra", {}).get("email")
+                if target_email:
+                    target = repo.get_by_email(target_email)
+                    if target:
+                        repo.delete(target)
+                        logger.info("deleted auth account for %s", target_email)
             except Exception:
                 logger.exception("auth account deletion failed for %s", routing_key)
             finally:
                 db.close()
+
+
+class UserDeletedConsumer(Consumer):
+    """Listens for user.deleted events published by users-service when an admin deletes a user."""
+    queue_name = "auth.user_deleted"
+    binding_keys = ("user.deleted",)
+
+    async def handle_message(self, payload: dict[str, Any], routing_key: str) -> None:
+        user_id = payload.get("user_id") or payload.get("extra", {}).get("user_id")
+        if not user_id:
+            logger.warning("user.deleted event missing user_id: %s", payload)
+            return
+        db = SessionLocal()
+        try:
+            from repository import AuthRepository
+            repo = AuthRepository(db)
+            repo.delete_by_id(int(user_id))
+            logger.info("deleted auth_user for user_id=%s", user_id)
+        except Exception:
+            logger.exception("failed to delete auth_user for user_id=%s", user_id)
+        finally:
+            db.close()

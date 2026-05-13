@@ -26,6 +26,7 @@ class Scope:
     role: Optional[str] = None
     patient_id: Optional[str] = None
     provider_id: Optional[str] = None
+    user_id: Optional[str] = None
 
     @property
     def is_manager(self) -> bool:
@@ -59,6 +60,7 @@ def _scope_from_jwt(request: Request) -> Optional[Scope]:
         role=payload.get("role"),
         patient_id=payload.get("patient_id"),
         provider_id=payload.get("provider_id"),
+        user_id=payload.get("sub"),
     )
 
 
@@ -84,6 +86,11 @@ def scope_dep(
 def require_manager(scope: Scope) -> None:
     if not scope.is_manager:
         raise HTTPException(status_code=403, detail="Manager-only endpoint")
+
+
+def require_doctor(scope: Scope) -> None:
+    if not scope.is_doctor:
+        raise HTTPException(status_code=403, detail="Doctor-only endpoint")
 
 
 def require_patient_access(scope: Scope, target_patient_id: str) -> None:

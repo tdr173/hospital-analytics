@@ -1,0 +1,22 @@
+\section{Intelligent Language Layer (LLM)}
+\label{sec:llm}
+
+The two batch pipelines produce structured artefacts --- cluster assignments and mined patterns --- that are correct but hard to read at a glance. Three independent LLM integrations turn those artefacts, plus the live database, into natural-language outputs a clinician can act upon: a direct single-shot prompt for the cluster summaries, a multi-node \texttt{langgraph} agent for free-form SQL questions, and two template prompts for the dashboard summaries. All three are routed through one helper \texttt{ask\_ai(prompt)} in \texttt{llm\_models.py} that dispatches to Google GenAI (Gemini) or OpenAI based on environment configuration.
+
+\subsection{Direct Prompting --- Cluster Summaries}
+\label{subsec:cluster-llm}
+
+The simplest of the three integrations is also the most rigid. After every clustering run, \texttt{get\_clusters\_summary(\ldots)} computes a fixed set of per-cluster statistics (means, disease rates, careplan mix, top conditions/medications/procedures) and embeds them in a prompt whose output grammar is strict enough to be parsed with a regular expression. There is no agent, no retry loop: a single \texttt{ask\_ai()} call returns the entire response.
+
+The prompt instructs the model to emit one line per cluster with six pipe-separated fields:
+\begin{verbatim}
+[Cluster ID] | [#HexColor] | [Short Title] | [Description]
+            | [Insight] | [Recommendation]
+\end{verbatim}
+and pins down each field's role: a 2--4-word plain-language title, a one-to-two-sentence non-jargon description, an insight that picks the single most distinguishing signal (dominant careplan, disease prevalence, polypharmacy, vitals, recency, encounter mix) with concrete numbers, and a recommendation that ties the action to that insight (cardiac careplan dominance $\to$ cardiology follow-up; polypharmacy $\to$ medication review; long gap $\to$ outreach). Hex colours are constrained to a vivid, high-contrast palette --- red for high-risk, green for healthy, blue for elderly chronic, orange for moderate, purple for psychiatric, teal for maternal --- with the outlier cluster $-1$ forced to grey \texttt{\#9CA3AF}.
+
+Each cluster's statistics are appended in a fixed block: key averages (age, QALY, DALY, totals), demographics and disease rates, careplan mix, and the top four conditions, three medications and three procedures.
+
+\subsubsection*{Parsing the response}
+
+The response is parsed by the regular expression \texttt{\textbackslash[(-?\textbackslash d+)\textbackslash]\textbackslash s*\textbackslash|(.+)} of Section~5.3.4. The grammar guarantees one line per cluster, and the rule \emph{outlier cluster must be grey} is enforced both by the prompt and, defensively, by the persistence layer.

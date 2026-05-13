@@ -1,0 +1,14 @@
+\subsection{Outlier Handling and Scaling}
+
+Even after imputation, the feature matrix contains a small number of patients several standard deviations from the rest of the population. They are clinically interesting --- the very-high-resource cases --- but if included in the fit they pull the centroids towards themselves and degrade the silhouette of the remaining clusters. The pipeline handles them in two stages.
+
+\textbf{Stage 1 --- Z-score filter.} \texttt{remove\_outliers\_zscore(df, threshold=4)} computes a Z-score for each row over a fixed list of high-tail features: \texttt{age}, \texttt{total\_medications}, \texttt{lifetime\_medication\_days}, \texttt{total\_procedures}, \texttt{active\_conditions\_count}, \texttt{distinct\_providers\_seen}, \texttt{total\_encounter\_duration\_hours}, \texttt{wellness\_count}, \texttt{acute\_care\_count}, \texttt{severe\_care\_count}. Skewed columns are \texttt{np.log1p}-transformed inside the Z-score computation so the threshold of $4$ is meaningful regardless of scale. Any patient with $|z| > 4$ on any dimension is split into \texttt{df\_outliers}, assigned cluster $-1$, and re-attached after the fit, when the LLM cluster summary is generated.
+
+\textbf{Stage 2 --- Scaling.} Before the fit, numerical columns are passed through a configurable scaler (active: \texttt{StandardScaler}). Three columns receive an extra \texttt{log1p} transformation upstream because they are heavy-tailed counts: \texttt{total\_medications}, \texttt{lifetime\_medication\_days}, \texttt{total\_encounter\_duration\_hours}. The PCA-derived \texttt{clinical\_severity\_score} is left untouched.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\linewidth]{figs/kprototypes_flowchart.png}
+\caption{End-to-end activity flow of the k-Prototypes pipeline.}
+\label{fig:kproto-flow}
+\end{figure}

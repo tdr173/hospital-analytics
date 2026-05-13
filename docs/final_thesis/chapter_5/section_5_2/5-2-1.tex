@@ -1,0 +1,23 @@
+\section{Data Pipeline}
+
+Before any analysis is possible the raw data must be moved from a source format into the relational schema, and then re-shaped into the inputs expected by each algorithm. This section follows the data from the Synthea CSVs through to the clustering and sequence-mining steps.
+
+\subsection{Synthea Ingestion and ETL}
+
+The platform never touches real patient data; it consumes the synthetic CSVs produced by Synthea (justified in Chapter~4). Loading is the responsibility of \texttt{db/etl\_script.py}, run once during initial deployment and on demand from a dedicated \texttt{etl} Docker profile.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\linewidth]{figs/etl_flowchart.png}
+\caption{ETL flow that populates the 3NF \texttt{clinical-db} from the Synthea CSV bundle.}
+\label{fig:etl}
+\end{figure}
+
+The script proceeds in three phases:
+\begin{enumerate}
+    \item \textbf{Truncate} --- every clinical table is emptied so re-runs are idempotent.
+    \item \textbf{Bulk load} --- each CSV (\texttt{patients}, \texttt{encounters}, \texttt{conditions}, \texttt{observations}, \texttt{medications}, \texttt{procedures}, \texttt{allergies}, \texttt{careplans}, \texttt{immunizations}, \texttt{providers}, \texttt{organizations}) is read with \texttt{pandas} and written to Postgres via SQLAlchemy's \texttt{to\_sql}.
+    \item \textbf{Refresh derived state} --- the materialised views used by the dashboards are refreshed.
+\end{enumerate}
+
+A single CSV row is never split into multiple destinations; the schema mirrors the Synthea output one-to-one. This keeps the import deterministic and the data lineage auditable.

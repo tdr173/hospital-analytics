@@ -1,0 +1,28 @@
+\subsection{Clinical CRUD and Analytics Endpoints}
+\label{subsec:endpoints}
+
+The remaining back-end surface is conventional CRUD plus aggregate analytics, all implemented through the four-layer stack of Section~\ref{subsec:layering}. Every endpoint takes the \texttt{Scope} dependency of Section~\ref{subsec:authz} as a parameter; the table below summarises the principal routes and the gate each one applies.
+
+\vspace{0.3em}
+\begin{tabular}{@{}p{0.42\linewidth}p{0.18\linewidth}p{0.32\linewidth}@{}}
+\textbf{Endpoint} & \textbf{Method} & \textbf{Authorization gate} \\
+\hline
+\texttt{/auth/login}                          & \texttt{POST}   & public \\
+\texttt{/auth/forgot-password}                & \texttt{POST}   & public \\
+\texttt{/patients}                            & \texttt{GET}    & doctor-panel filter \\
+\texttt{/patients/\{id\}}                     & \texttt{GET}    & \texttt{require\_patient\_access} \\
+\texttt{/patients}                            & \texttt{POST}   & \texttt{require\_manager} + emits \texttt{patient.created} \\
+\texttt{/patients/\{id\}}                     & \texttt{PUT/DELETE} & \texttt{require\_manager} \\
+\texttt{/encounters}, \texttt{/encounters/\{id\}} & \texttt{GET}    & doctor-panel filter \\
+\texttt{/providers}, \texttt{/providers/\{id\}} & \texttt{GET}    & \texttt{require\_provider\_access} \\
+\texttt{/statistics/*}                        & \texttt{GET}    & \texttt{require\_manager} \\
+\texttt{/clusters}, \texttt{/clusters/\{id\}/*} & \texttt{GET}    & \texttt{require\_manager} \\
+\texttt{/clusters/run}                        & \texttt{POST}   & \texttt{require\_manager} + emits \texttt{cluster.run\_requested} \\
+\texttt{/sequences}, \texttt{/sequences/\{id\}/patients} & \texttt{GET} & \texttt{require\_manager} \\
+\texttt{/ask}                                 & \texttt{POST}   & manager or doctor (with scope clause) \\
+\texttt{/dashboard/personal-summary}          & \texttt{GET}    & \texttt{require\_patient\_access(self)} \\
+\texttt{/dashboard/practice-summary}          & \texttt{GET}    & doctor-panel filter \\
+\end{tabular}
+\vspace{0.4em}
+
+Two recurring details in \texttt{app/main.py}: static routes (e.g.\ \texttt{/patients/resources}) must be registered before dynamic ones (\texttt{/patients/\{id\}}), since FastAPI matches in declaration order; and the analytical columns \texttt{ai\_analysis JSONB} and \texttt{pca\_image BYTEA} are added at startup by an idempotent \texttt{ALTER TABLE \ldots ADD COLUMN IF NOT EXISTS} block, keeping the project free of an external migration framework.

@@ -1,0 +1,29 @@
+\subsection{Class Diagram and Key Methods}
+
+The clustering pipeline is implemented as a procedural script, but its top-level functions correspond cleanly to the conceptual classes shown in Figure~\ref{fig:kproto-uml}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\linewidth]{figs/kprototypes_uml.png}
+\caption{Logical class structure of the k-Prototypes pipeline.}
+\label{fig:kproto-uml}
+\end{figure}
+
+\textbf{\texttt{build\_patient\_features(engine)}} --- Section~5.2.2. Returns a \texttt{DataFrame} with one row per patient.
+
+\textbf{\texttt{remove\_outliers\_zscore(df, threshold=4)}} --- Section~5.3.2.
+
+\textbf{\texttt{run\_kprototypes(df, num\_cols, cat\_cols, k, gamma, random\_state)}} --- the core fit. In pseudocode:
+\begin{verbatim}
+df_scaled = scaler.fit_transform(df[num_cols])
+df_input  = concat(df_scaled, df[cat_cols].astype(str))
+model = KPrototypes(n_clusters=k, gamma=gamma,
+                    init="Cao", n_init=5,
+                    random_state=random_state)
+labels = model.fit_predict(df_input, categorical=cat_idx)
+return df.assign(cluster=labels), model.cost_, model.gamma
+\end{verbatim}
+
+\textbf{\texttt{get\_clusters\_summary(df\_clustered, df\_outliers, engine)}} --- aggregates per-cluster statistics (means, disease rates, careplan mix, top conditions/medications/procedures) and asks the language model to turn them into UI-card text (Section~\ref{subsec:cluster-llm}).
+
+\textbf{\texttt{save\_cluster\_results(\ldots)}} in \texttt{save\_results.py} --- the persistence step described next.

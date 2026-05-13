@@ -1,0 +1,31 @@
+\section{Sequential Pattern Mining (PrefixSpan)}
+\label{sec:prefixspan}
+
+Clusters answer the question \emph{which patients look alike}. They say nothing about \emph{the order in which clinical events unfold}. The second analytical module addresses precisely that, mining frequent ordered sub-sequences from the patient timelines built in Section~5.2.3 with \textbf{PrefixSpan}~\cite{pei2004}. The implementation is a single script, \texttt{prefix\_span.py} (496 lines).
+
+\subsection{Mining Pipeline Overview}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\linewidth]{figs/prefix_span_pipeline.png}
+\caption{Phases of the sequence-mining pipeline.}
+\label{fig:prefixspan-flow}
+\end{figure}
+
+\textbf{Integer encoding.} PrefixSpan compares items by identity; raw strings would be both slow and memory-heavy. A single bidirectional dictionary maps every unique \texttt{C:/M:/P:/CP:} item to a small integer; patient timelines are encoded to lists of integers, and the inverse map decodes mined patterns back to human-readable strings.
+
+\textbf{Top-$k$ closed mining.}
+\begin{verbatim}
+PrefixSpan(seqs).topk(
+    k=TOP_K * OVERMINE_MULTIPLIER,   # 500 * 20 = 10000
+    closed=True,
+)
+\end{verbatim}
+\texttt{closed=True} discards any pattern that is the strict prefix of another with the same support, eliminating a large class of trivial duplicates. The \texttt{OVERMINE\_MULTIPLIER} is the key idea: the algorithm is asked for twenty times more patterns than will ever be shown, so the post-mining filters of Sections~\ref{subsec:gml} and~\ref{subsec:dedup} have a healthy candidate pool.
+
+\textbf{Hard filters.} Before reranking:
+\begin{itemize}
+    \item \textbf{Support}: $\texttt{support\_pct} \geq 0.01$ and absolute support $\geq 2$.
+    \item \textbf{Length}: $3 \leq |p| \leq 5$. Shorter is too generic, longer too rare.
+    \item \textbf{Type cadence}: any pattern with three consecutive same-type items is rejected (e.g.\ three conditions in a row), since these almost always reflect a single billing episode.
+\end{itemize}

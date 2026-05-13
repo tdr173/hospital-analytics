@@ -1,0 +1,16 @@
+\subsection{Deduplication, Quotas and Patient Attribution}
+\label{subsec:dedup}
+
+The reranked list still tends to contain clusters of near-identical patterns and disproportionate amounts of Synthea's dental protocol. Four post-processing rules fix this:
+\begin{enumerate}
+    \item \textbf{Jaccard ceiling} (\texttt{JACCARD\_THRESHOLD = 0.80}) --- a candidate is rejected if its item-set has Jaccard similarity above $0.80$ with any pattern already accepted.
+    \item \textbf{Per-prefix quota} (\texttt{MAX\_PER\_PREFIX = 6}) --- at most six patterns may share the same leading item.
+    \item \textbf{Per-suffix quota} (\texttt{MAX\_PER\_SUFFIX = 20}) --- the symmetric rule for trailing items.
+    \item \textbf{Dental quota} (\texttt{MAX\_DENTAL\_PATTERNS = 15}) --- Synthea generates a deterministic dental check-up every six months for every patient; the cap lets a few representative ones through without drowning the rest.
+\end{enumerate}
+
+\subsubsection*{Patient attribution}
+
+For each surviving pattern the script records \emph{which} patients' timelines actually contain it, so the front-end can drill down to the cohort. A naive scan would re-check every pattern against every patient ($O(P \cdot N)$). The implementation avoids this with an inverted index. Once, before attribution, an \texttt{item\_to\_patients} dictionary maps every item to the set of patients containing it. For a candidate pattern $p = (i_1, \dots, i_\ell)$, intersecting the posting lists $\texttt{item\_to\_patients}[i_j]$ yields the much smaller candidate cohort that contains all items in any order; only that cohort is subsequence-checked. The cost drops from $O(P \cdot N)$ to roughly $O(P \cdot \text{supp}(p))$ --- linear in the produced support rather than in the population.
+
+The tables \texttt{prefix\_span\_pattern} and \texttt{prefix\_span\_patient\_pattern} are written in a single transaction with the same truncate-then-insert pattern as the clustering pipeline.

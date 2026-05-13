@@ -1,0 +1,131 @@
+\subsection{Mixed-Type Clustering and K-Prototypes}
+
+The patients stratification involves the task of breaking the entire available population into various sets of homogeneous entities. These groups known as clusters or phenotypes. While the general population is generally heterogeneous, our analytical goal is to create smaller cohorts of people who share a high degree of similarity (smaller homogeneous groups). The underlying objective of this analysis is to reveal natural groupings in the data where the population in each cluster exhibits similar characteristics (intra-cluster variance must be minimized) while patients belonging to different groups are different from each other (inter-cluster variance must be maximized). Through stratification, we are able to reduce the overall complexity of the population into several representative prototypes that can be analyzed easier.
+
+The key issue related to the problem of patient clustering is the nature of the healthcare data involved. Patient data contains not only continuous variables that include age, results of some medical tests, physiological measures, time spent per consultation, but also discrete or categorical variables such as medical codes, drug classes, gender, ethnic group, and many others. These two classes of attributes belong to different mathematical domains and thus require different handling techniques.
+
+\subsubsection{Limitations of Standard Clustering Algorithms}
+
+The most popular clustering algorithm in the existing specialized literature and certainly the most studied is k-means. It partitions a domain into K predefined cohorts, by minimizing the total within cluster squared Euclidean distance. Given a dataset $X = \{x_1, x_2, \ldots, x_n\}$ of $n$ instances over a purely numerical feature space $\mathbb{R}^m$, the $k$-means objective is:
+
+\begin{equation}
+    J_{km} = \sum_{j=1}^{k} \sum_{x_i \in C_j} \|x_i - \mu_j\|^2
+    \label{eq:kmeans}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\boldsymbol{J_{km}}$ is the total objective function value (the within-cluster sum of squared errors).
+    \item $\boldsymbol{k}$ is the predefined number of clusters.
+    \item $\boldsymbol{C_j}$ is the $j$-th cluster.
+    \item $\boldsymbol{x_i}$ is a single data point (patient instance) assigned to cluster $C_j$.
+    \item $\boldsymbol{\mu_j}$ is the centroid of cluster $C_j$, computed as the arithmetic mean of all instances assigned to it.
+    \item $\boldsymbol{m}$ is the total number of dimensions (numerical features) in the dataset.
+    \item $\boldsymbol{n}$ is the total number of instances in the dataset $X$.
+\end{itemize}
+
+\vspace{1em}
+
+The equation~\eqref{eq:kmeans} holds true from the mathematical perspective only when the underlying data set is completely made up of numeric values that are continuous in nature. When numbers are used as data, the computation of the arithmetic mean provides the ideal way to determine the centroid of the cluster. However, because categorical variables have no numerical value, it is mathematically impossible to calculate an "average" for them.
+
+When categorical variables are used as features, this algorithm becomes invalid and generates false clusters. The encoding of strings as integers to represent categorical data and the application of Equation~\eqref{eq:kmeans} leads to the creation of an artificial ordinal ranking, as the algorithm interprets the integer encodings as representing meaningful distances between categories. The resulting centroids are arithmetic averages of integer codes, which correspond to no plausible clinical profile and produce geometrically distorted cluster boundaries.
+
+To overcome the limitations of Euclidean space, the $k$-modes clustering method was designed for exclusively categorical databases. The problem of undefined mathematical centers is mitigated through the use of the mode instead of the arithmetic mean, where the most prevalent category is used to represent each cluster. Further, the algorithm replaces the Euclidean objective function with the Hamming distance, which is a simplistic binary dissimilarity metric calculated as the sum of all mismatched categorical attributes between categorical vectors. Nonetheless, incorporating the $k$-modes clustering algorithm within the framework of a heterogeneous clinical database brings about a major analytical concern. In order to incorporate continuous numeric variables, the algorithm has to convert such measurements into discrete categories (e.g. high and low blood pressure). Such an approximation would ignore the inherent variation of continuous variables, thereby stripping away the mathematical accuracy from the original data.
+
+Accordingly, using either algorithm alone fails to meet theoretical requirements when examining the complexity of EHRs. Although $k$-means fails mathematically in analyzing nominal text information, $k$-modes distorts the geometry of numeric variables. Addressing this core problem requires a new mathematical model capable of measuring the dissimilarity between variables from both data types at once.
+
+\subsubsection*{The K-Prototypes Algorithm}
+
+The K-Prototypes algorithm, proposed by Huang \cite{huang1998}, which is an extension of both the $k$-means and $k$-modes algorithms, provides a solution to this problem through the introduction of a unified dissimilarity function for the entire feature space. We assume that the features of each sample can be divided into two groups: numerical features ($N$), and categorical features ($C$). Then, we denote the vector of features of each sample $x_i$ as $x_i = (x_i^N, x_i^C)$. A prototype $q_j$ of a cluster is defined as $q_j = (q_j^N, q_j^C)$, where $q_j^N$ is a numerical centroid, and $q_j^C$ is a categorical mode. The mixed dissimilarity between an instance $x_i$ and a prototype $q_j$ is defined as:
+
+\vspace{1em}
+
+\begin{equation}
+    d(x_i,\, q_j) = \underbrace{\sum_{l=1}^{|N|} \bigl(x_{il}^{N} - q_{jl}^{N}\bigr)^2}_{\text{numerical term}} + \;\gamma \underbrace{\sum_{l=1}^{|C|} \delta\bigl(x_{il}^{C},\, q_{jl}^{C}\bigr)}_{\text{categorical term}}
+    \label{eq:kproto_dist}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\boldsymbol{d(x_i, q_j)}$ is the total mixed-type dissimilarity between a single patient instance $x_i$ and the cluster prototype $q_j$.
+    \item $\boldsymbol{|N|}$ and $\boldsymbol{|C|}$ represent the total number of continuous numerical features and discrete categorical features in the dataset, respectively.
+    \item $\boldsymbol{x_{il}^N}$ is the value of the $l$-th numerical attribute for the patient instance $x_i$.
+    \item $\boldsymbol{q_{jl}^N}$ is the corresponding $l$-th numerical centroid value for the cluster prototype $q_j$.
+    \item $\boldsymbol{x_{il}^C}$ is the value of the $l$-th categorical attribute for the patient instance $x_i$.
+    \item $\boldsymbol{q_{jl}^C}$ is the corresponding $l$-th categorical mode value for the cluster prototype $q_j$.
+    \item $\boldsymbol{\delta(x_{il}^C, q_{jl}^C)}$ is the simple matching dissimilarity function (equivalent to the Hamming distance for single attributes). It acts as a binary indicator, returning $0$ if the categories match ($x_{il}^C = q_{jl}^C$) and $1$ if they differ ($x_{il}^C \neq q_{jl}^C$).
+    \item $\boldsymbol{\gamma}$ is the scalar weight factor ($\gamma > 0$) that has been included in order to ensure that the influence of the discrete feature space does not get overshadowed by the continuous feature space.
+\end{itemize}
+
+\clearpage
+
+The ultimate mathematical aim in $K$-Prototypes is to find the optimal clustering of patients such that the dissimilarity among them is at the minimum for the whole dataset. The cost function which defines this procedure is given below:
+
+\begin{equation}
+    J = \sum_{i=1}^{n} \sum_{j=1}^{k} w_{ij}\, d(x_i,\, q_j)
+    \label{eq:kproto_obj}
+\end{equation}
+
+For minimizing the total error $J$, the algorithm updates two crucial elements. Firstly, it optimizes the set of cluster prototypes $Q = \{q_1, \ldots, q_k\}$, which represents the ideal representative in mathematical terms for every patient group. Secondly, it optimizes the assignment matrix $W = [w_{ij}]$, a binary matrix employed for monitoring patients' assignments, with $w_{ij}=1$ when $x_i$ belongs to $q_j$ and $w_{ij}=0$ otherwise.
+
+Also, there is an additional requirement, known as a hard assignment condition, formulated in the following manner: $\sum_{j=1}^k w_{ij}=1$. In medical practice, this requirement ensures that every individual patient is clearly assigned to precisely one cluster without any ambiguous overlaps or unassigned patients.
+
+\subsubsection*{The Balancing Parameter $\boldsymbol{\gamma}$}
+
+The tuning parameter $\gamma$ used in Equation \ref{eq:kproto_dist} indicates the importance of considering the categorical part over the numerical part. This cannot be stressed enough. If the value of $\gamma$ is very small, then the numerical part will dominate and totally neglect the categorical part. On the other hand, if $\gamma$ is very large, then vice versa will happen, where the variance between the continuous features will be ignored, making the algorithm behave like the k-modes algorithm again.
+
+Following the principles outlined by \cite{huang1998}, the right value for $\gamma$ should be selected in relation to the scale of the numerical attributes, being proportional to the average standard deviation of the latter:
+
+\begin{equation}
+    \gamma = \frac{1}{|N|} \sum_{l=1}^{|N|} \hat{\sigma}_l
+    \label{eq:gamma}
+\end{equation}
+
+where $\hat{\sigma}_l$ means the standard deviation of the $l$-th numerical attribute in the whole dataset. In this way, we have equal influence from each attribute type on clustering by ensuring that the mean absolute value of the numerical term is equal to that of the categorical term. As a result, the $\gamma$ calculated by Equation~\eqref{eq:gamma} depends upon the data and adjusts accordingly for the scale of the clinical attributes used in clustering.
+
+\subsubsection*{Prototype Update Rules and Convergence}
+
+In order to optimize $J$ (cost function), which is formulated using \eqref{eq:kproto_obj}, an iterative process, composed of two main parts, can be used: the \textbf{assignment step} and the \textbf{update step}. The algorithm iterates between the two parts such that at each cycle, the overall clustering error decreases to a point where patient groups become stable from a mathematical perspective.
+
+\vspace{0.5em}
+
+In the \textbf{assignment step}, each object $x_i$ gets assigned to the prototype $q_j^*$ that yields minimal mixed dissimilarity.
+
+\begin{equation}
+    j^* = \arg\min_{j \in \{1,\ldots,k\}} d(x_i,\, q_j)
+\end{equation}
+
+In the \textbf{update step}, prototypes are recalculated using their instances. In terms of the numerical component, the arithmetic average is the optimal option due to its optimal reduction of the squared Euclidean component:
+
+\begin{equation}
+    q_{jl}^{N} \;\leftarrow\; \frac{1}{|C_j|}\sum_{i:\, w_{ij}=1} x_{il}^{N}
+\end{equation}
+
+In the case of the categorical part, the best solution for updating is the mode, since it maximizes the simple matching dissimilarity:
+
+\begin{equation}
+    q_{jl}^{C} \;\leftarrow\; \operatorname{mode}\bigl(\{x_{il}^{C} : w_{ij} = 1\}\bigr)
+\end{equation}
+
+The completion of every itteration of the assignment process and the update process is guaranteed to result in an output in which J does not increase, as each of the two processes alone optimizes the objective function independently with respect to the different variables. The series $J^{(1)} \geq J^{(2)} \geq \cdots$ is thus assured to be monotonically non-increasing and lower-bounded by zero, and hence it converges to a local optimum of Equation~\eqref{eq:kproto_obj}.
+
+\subsubsection*{Initialization Strategies: Huang vs. Cao}
+
+One of the well-known weaknesses of all $k$-partitional methods is that they are highly sensitive to the initial choice of centroids. In case the prototypes for the clusters are selected poorly, the iteration process will fast lead to an inferior local minimum that is far from being the global one. The random initialization method performs poorly on mixed-type clinical data because a randomly selected prototype can be placed within an area with minimal data points, resulting in empty clusters during the iteration process.
+
+\vspace{1em}
+
+There are two prominent initialization techniques for the $K$-Prototypes algorithm proposed in literature:
+
+\begin{itemize}
+    \item \textbf{Initialization by Huang \cite{huang1998}:} First introduced with the algorithm itself, this approach is based on frequencies and uses the calculation of the frequency of each category to select its most common ones as the initialization for the categorical components ($q_j^C$). The initialization of the numerical component ($q_j^N$) is usually done with local means. Although highly computationally efficient, the biggest problem of Huang's initialization from a clinical perspective is that it performs frequency calculations independently. As a result, the algorithm risks initializing with fictitious patient profiles, constructing mathematical centroids out of high-frequency attributes that do not naturally coexist in any actual clinical observation. Besides, it does not guarantee geometric separation of the centers either.
+
+    \item \textbf{Initialization by Cao \cite{cao2009}:} To address the above issues with this geometrical aspect, the authors suggested a density-based initialization approach. Rather than building artificial prototypes, the algorithm selects real records from the dataset as the initial prototypes. The co-occurrence density of the records is calculated, and the first prototype is selected to be the record located in the absolutely densest point. Importantly, following prototypes are selected taking into account not only the local density but also the mathematical distance from all previously selected prototypes.
+\end{itemize}
+
+\vspace{1em}
+
+Even though the approach outlined in \cite{cao2009}, which utilizes density and distance metrics, is often mentioned as having the theoretical superiority in the presence of mixed data types, theoretical assumptions are not always reflective of what constitutes the best possible performance in specific clinical contexts. Given the unique nature of the Electronic Health Records' topology, which can be described as being extremely dimensional, sparse in categories, and highly skewed clinically, it is vital to adopt an empirical approach, rather than relying blindly on theoretical assumptions.
+
+As such, rather than arbitrarily choosing between one initialization process and the other, the methodology adopted in this study incorporates the frequency-based Huang approach, along with the density-based Cao approach. By using both methods to conduct the internal validation procedures outlined in the previous sections, the system is intended to identify which process leads the $K$-Prototypes algorithm towards its best convergent trajectory.
+

@@ -1,0 +1,43 @@
+\section{Supporting Back-end Functionality}
+
+\subsection{Authentication and Authorization}
+\label{subsec:authz}
+
+The \texttt{auth} service is the only writer of \texttt{auth-db} and the only issuer of JSON Web Tokens. Passwords are hashed with bcrypt at \texttt{cost=12}; the JWT algorithm is configurable (\texttt{HS256} in development, \texttt{RS256} in production). The token payload carries \texttt{user\_id}, \texttt{email}, \texttt{role}, and at most one of \texttt{patient\_id} or \texttt{provider\_id}.
+
+Three roles drive every authorisation decision. \textbf{\texttt{MANAGER}} has system-wide visibility and is the only role that can launch a re-clustering run or browse global statistics. \textbf{\texttt{DOCTOR}} is restricted to their own panel. \textbf{\texttt{PATIENT}} sees only their own record.
+
+\subsubsection*{The \texttt{Scope} dependency}
+
+Every protected back-end service exposes the same FastAPI dependency, \texttt{scope\_dep}, defined in \texttt{api/\_scope.py}. The dependency reads the \texttt{Authorization: Bearer <jwt>} header, decodes the token with the service's shared \texttt{SECRET\_KEY}, and returns a frozen \texttt{Scope} dataclass with three fields and three boolean properties:
+\begin{verbatim}
+@dataclass
+class Scope:
+    role: Optional[str]
+    patient_id: Optional[str]
+    provider_id: Optional[str]
+
+    is_manager / is_doctor / is_patient
+\end{verbatim}
+An invalid or expired token degrades to anonymous (manager-default) scope rather than a 401, so a stale-token front-end hitting a non-protected route still gets through. Every endpoint then enforces its own constraint through one of three helpers:
+\begin{itemize}
+    \item \texttt{require\_manager(scope)} --- raises 403 if the caller is not a manager. Guards the re-clustering trigger, the global statistics endpoints, and every write on the clustering and sequence tables.
+    \item \texttt{require\_patient\_access(scope, target\_patient\_id)} --- raises 403 if a \texttt{PATIENT} scope tries to read a record other than their own. Used by every patient-detail endpoint.
+    \item \texttt{require\_provider\_access(scope, target\_provider\_id)} --- raises 403 if a \texttt{DOCTOR} scope tries to read another provider's record.
+\end{itemize}
+
+\subsubsection*{Doctor-panel filtering}
+
+For the doctor role, refusing on mismatch is not enough --- the list endpoints must silently restrict their result set. The repository layer therefore inspects \texttt{scope.is\_doctor} and, when true, appends a parameterised condition such as
+\begin{verbatim}
+patient_id IN (
+    SELECT DISTINCT patient_id
+    FROM encounter
+    WHERE provider_id = :scope_provider_id
+)
+\end{verbatim}
+to the \texttt{conditions: list[str]} that drives every dynamic query. The same constraint shape is what \texttt{DOCTOR\_SCOPE\_CLAUSE} (Section~5.5.3) instructs the LLM agent to emit, so the natural-language SQL agent and the hand-written CRUD repositories enforce identical row-level visibility.
+
+\subsubsection*{Provisioning and password reset}
+
+The login endpoint is a single synchronous round-trip. The password reset path is asynchronous: \texttt{POST /auth/forgot-password} emits \texttt{password.reset\_requested}; the mail service consumes it and sends the reset link; \texttt{POST /auth/set-password} updates the hash. Account provisioning is event-driven: when a manager creates a patient through \texttt{clinical-core}, the row is committed and \texttt{patient.created} is published on \texttt{clinical.events}; \texttt{auth} consumes the event, creates a corresponding \texttt{auth\_user} row with a temporary password and the \texttt{must\_change\_password} flag, and emits \texttt{notification.send} so the mail service delivers the welcome email.

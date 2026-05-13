@@ -1,0 +1,19 @@
+\section{Patient Cohort Discovery (k-Prototypes)}
+\label{sec:kproto}
+
+The first analytical module groups the patient population into a small number of homogeneous cohorts. The input is genuinely mixed: roughly half the discriminative features are numerical (age, counts, ratios) and half are categorical (gender, BMI bucket, dominant care plan). A classical k-Means would not handle the categoricals; a categorical-only algorithm would discard the numerical signal. The chosen compromise is \textbf{k-Prototypes}~\cite{huang1998}, which minimises a weighted distance over both data types:
+\begin{equation}
+    D(x, c) \;=\; \sum_{j \in \mathcal{N}} (x_j - c_j)^2 \;+\; \gamma \sum_{j \in \mathcal{C}} \delta(x_j, c_j)
+    \label{eq:kproto-distance}
+\end{equation}
+where $\mathcal{N}$ is the set of numerical features, $\mathcal{C}$ the categorical, $\delta$ the indicator distance, and $\gamma$ a per-run weight balancing the two terms.
+
+\subsection{Algorithm Choice and Active Configuration}
+
+The implementation comes from the \texttt{kmodes} package, which ships a Cython backend for the inner loop. The orchestrating function \texttt{run\_kprototypes(\ldots)} lives at lines 968--1112 of \texttt{k\_prototypes.py}. Every configuration tried is kept in \texttt{configs.py} (1394 lines, 55 named configurations); the one run in production is \textbf{v55}.
+
+\textbf{Numerical features} (5): \texttt{age}, \texttt{active\_conditions\_count}, \texttt{total\_medications}, \texttt{total\_procedures}, \texttt{preventive\_to\_reactive\_ratio}.
+
+\textbf{Categorical features} (8): \texttt{gender}, \texttt{pregnancy\_history}, \texttt{has\_heart\_disease}, \texttt{has\_diabetes}, \texttt{has\_hypertension}, \texttt{condition\_burden}, \texttt{bmi\_type}, \texttt{dominant\_careplan}.
+
+\textbf{$k$}: $4$ clusters plus an outlier label of $-1$. \textbf{$\gamma$}: derived per run from the standard deviation of the scaled numerical columns, logged in \texttt{cluster\_meta.params} alongside the silhouette and Calinski-Harabasz scores so earlier configurations remain comparable.

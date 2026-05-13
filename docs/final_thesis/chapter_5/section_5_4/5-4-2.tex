@@ -1,0 +1,17 @@
+\subsection{Reranking with Geometric Mean Lift}
+\label{subsec:gml}
+
+Raw support is a poor ranking signal on a clinical dataset because the most frequent patterns are almost always degenerate (the same routine wellness observation repeated for half the population). To surface patterns that are \emph{both} frequent \emph{and} non-trivial, the script reranks them with a \textbf{Geometric Mean Lift} (GML) score.
+
+For a pattern $p = (i_1, \dots, i_\ell)$ over $N$ patients, with $\text{supp}(p)$ the number of patient timelines containing $p$ and $\text{supp}(i_j)$ the marginal support of item $i_j$,
+\begin{equation}
+    \text{GML}(p) \;=\; \frac{\text{supp}(p)/N}{\sqrt[\ell]{\;\prod_{j=1}^{\ell} \text{supp}(i_j)/N\;}}
+    \label{eq:gml}
+\end{equation}
+The numerator is the joint probability of the pattern; the denominator is what the joint probability would be under independence. A score of $1$ means \emph{exactly as frequent as chance}; a score of $5$ means \emph{five times more frequent than chance} after controlling for individual item popularity.
+
+A pattern made of four different event types (a condition, a medication, a procedure, a care plan) is clinically more informative than one composed of four condition codes. The GML is therefore multiplied by a diversity factor
+\begin{equation*}
+    \text{div}(p) \;=\; 1 + \beta \cdot \frac{\#\text{distinct\_types}(p) - 1}{3}, \quad \beta = 0.3
+\end{equation*}
+so a four-type pattern receives a $1.9\times$ boost over a one-type one. A final closedness pass eliminates any pattern $p$ for which a strictly longer pattern $q$ exists with the same support and $p$ is a contiguous subsequence of $q$.

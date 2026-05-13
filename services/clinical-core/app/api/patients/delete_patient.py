@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from db.db_connector import get_db
 from repository import PatientRepository
 from service import PatientService
-from api._scope import Scope, scope_dep
+from api._scope import Scope, scope_dep, require_doctor
 from messaging import publish_event_nowait, EventAction
 from .patient_router import patient_router
 
@@ -15,8 +15,7 @@ async def delete_patient(
     db: Session = Depends(get_db),
     scope: Scope = Depends(scope_dep),
 ):
-    if scope.is_patient:
-        raise HTTPException(status_code=403, detail="Patients cannot delete patient records")
+    require_doctor(scope)
     try:
         PatientService(PatientRepository(db)).delete_patient(patient_id)
     except ValueError as e:

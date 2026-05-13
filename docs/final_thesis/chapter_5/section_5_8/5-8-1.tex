@@ -1,0 +1,20 @@
+\section{Deployment and Configuration}
+
+The platform is shipped as a single \texttt{docker-compose.yml} file that brings up every back-end service, every database, the message broker and the gateway. A developer with Docker installed can clone the repository, run \texttt{docker compose up}, wait for the health checks, and obtain a fully functional environment.
+
+\subsection{Containerized Topology}
+
+The compose file declares sixteen containers across four concerns.
+
+\textbf{Gateway and broker.} \texttt{traefik} (image \texttt{traefik:v3.1}) is the reverse proxy and service discovery; it reads its routing rules from Docker labels on the other containers, with no static configuration file. \texttt{docker-proxy} (image \texttt{haproxy:3.0-alpine}) is a thin proxy in front of the Docker Unix socket so Traefik talks to Docker through a restricted-permissions channel rather than mounting the socket directly. \texttt{rabbitmq} (image \texttt{rabbitmq:3-management}) hosts the topic exchange of Section~5.6.2; the management UI is exposed on port \texttt{15673} for development.
+
+\textbf{Databases.} Five separate PostgreSQL~16 instances, each owned by exactly one service: \texttt{auth-db}, \texttt{clinical-db}, \texttt{ml-db}, \texttt{analytics-db}, \texttt{queue-db}. Each has a named Docker volume so data survives \texttt{docker compose down}. Only \texttt{clinical-db} exposes its TCP port on the host, and only to let the ETL profile load the Synthea CSVs from outside the container.
+
+\textbf{Application services.} The seven FastAPI services share an identical Dockerfile template: \texttt{python:3.11-slim} base, \texttt{pip install -r requirements.txt}, copy of the \texttt{app/} folder, \texttt{uvicorn} as the entrypoint. The ETL itself is a separate one-shot container guarded by the \texttt{etl} compose profile, so production deployments do not load it by accident.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\linewidth]{figs/deployment_diagram.png}
+\caption{Containerised deployment with Traefik routing, separated databases and the RabbitMQ broker.}
+\label{fig:deployment-final}
+\end{figure}

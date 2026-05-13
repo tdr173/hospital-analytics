@@ -1,0 +1,16 @@
+\subsection{Internal Layering of a Service}
+\label{subsec:layering}
+
+Every back-end service follows the same four-layer structure, with imports flowing in a single direction:
+\begin{equation*}
+\texttt{api/} \;\longrightarrow\; \texttt{service/} \;\longrightarrow\; \texttt{repository/} \;\longrightarrow\; \texttt{domain/}
+\end{equation*}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\linewidth]{figs/backend_package_diagram.png}
+\caption{Package diagram of a typical back-end service.}
+\label{fig:backend-pkg}
+\end{figure}
+
+The \texttt{api/} layer holds one file per endpoint --- a thin FastAPI router that parses the request, resolves the JWT scope, validates with a Pydantic schema and delegates. The \texttt{service/} layer contains domain logic; it talks only to repositories and never imports SQLAlchemy or FastAPI symbols. The \texttt{repository/} layer is the only one allowed to talk to the database: SQLAlchemy \texttt{text()} queries for analytical reads, SQLModel sessions for CRUD. Dynamic WHERE clauses are built by appending to a \texttt{conditions: list[str]} and a \texttt{params: dict}, joined with \texttt{AND} just before execution --- a pattern that keeps everything parameterised and SQL-injection-safe. The \texttt{domain/} layer is pure data: SQLModel ORM classes and Pydantic schemas.

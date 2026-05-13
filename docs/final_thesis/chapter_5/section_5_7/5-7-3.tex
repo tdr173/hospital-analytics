@@ -1,0 +1,3 @@
+\subsection{The SQL Agent Page}
+
+The \texttt{/ask} page is the front-end of the conversational SQL agent of Section~\ref{subsec:sql-agent}. The user types a question in a single chat input; submission dispatches a thunk that POSTs the question (plus the last \texttt{MAX\_HISTORY\_TURNS} turns) to the analytics service. While the request is in flight, the page renders a typing indicator; on response, the answer paragraph appears with the executed SQL collapsed in a chevron-toggled block, so a manager can audit exactly what was run. A toast surfaces any back-end refusal (off-topic, unsafe, or out-of-scope). The chat history lives in the \texttt{sql-agent} slice and is cleared on logout.

@@ -68,7 +68,7 @@ function PatientsPageContent() {
     (state: RootState) => state.patients,
   );
   const role = useSelector((state: RootState) => state.auth.user?.role);
-  const canManagePatients = role === "MANAGER" || role === "DOCTOR";
+  const canManagePatients = role === "DOCTOR";
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<PatientListItem | null>(null);

@@ -1,0 +1,71 @@
+import { Theme } from "@/utils/theme";
+
+export const UsersPageStyles = (theme: Theme) => ({
+  pageContainer: {
+    display: "flex",
+    flexDirection: "column" as const,
+    height: "100%",
+    overflow: "hidden",
+    fontFamily: theme.typography.fontFamily,
+  },
+  tableArea: {
+    flex: 1,
+    overflow: "hidden",
+    padding: theme.spacing.lg,
+  },
+  loading: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%",
+    width: "100%",
+    color: theme.colors.text.secondary,
+    fontFamily: theme.typography.fontFamily,
+  },
+  roleBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    fontSize: "0.7rem",
+    fontWeight: theme.typography.fontWeight.bold,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.05em",
+    borderRadius: theme.borderRadius.full,
+    padding: "2px 9px",
+  },
+  roleBadgeManager: {
+    color: "#1e40af",
+    backgroundColor: "#dbeafe",
+  },
+  roleBadgeDoctor: {
+    color: "#065f46",
+    backgroundColor: "#d1fae5",
+  },
+  roleBadgePatient: {
+    color: "#92400e",
+    backgroundColor: "#fef3c7",
+  },
+  statusBadgeActive: {
+    display: "inline-flex",
+    alignItems: "center",
+    fontSize: "0.7rem",
+    fontWeight: theme.typography.fontWeight.bold,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.05em",
+    color: "#166534",
+    backgroundColor: "#dcfce7",
+    borderRadius: theme.borderRadius.full,
+    padding: "2px 9px",
+  },
+  statusBadgeBanned: {
+    display: "inline-flex",
+    alignItems: "center",
+    fontSize: "0.7rem",
+    fontWeight: theme.typography.fontWeight.bold,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.05em",
+    color: "#991b1b",
+    backgroundColor: "#fee2e2",
+    borderRadius: theme.borderRadius.full,
+    padding: "2px 9px",
+  },
+});

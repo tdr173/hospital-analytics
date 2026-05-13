@@ -1,0 +1,25 @@
+\section{System Architecture and Design}
+
+This chapter documents the implemented platform in enough detail that a future developer, opening the repository for the first time, can identify the main components, understand how they communicate, and locate the algorithms and prompts that drive the analytical behaviour. The presentation moves top-down from the architecture to the database, then walks the two batch pipelines (clustering and sequential pattern mining), continues with the language layer that wraps both algorithms in natural-language outputs, and finishes with the front-end and the deployment topology.
+
+\subsection{Architectural Overview}
+
+The platform follows a \textbf{microservices} architectural style behind a single-page \textbf{Next.js} front-end. The split has two justifications. The analytical workload (k-Prototypes, PrefixSpan, LLM calls) differs from the transactional CRUD workload both in resource profile and in deployment cadence; isolating the batch jobs keeps the latency of the clinical API predictable. The data domains themselves --- identity, FHIR clinical records, and clustering artefacts --- map cleanly onto a per-service Postgres instance.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{figs/system_architecture.png}
+\caption{High-level deployment of the hospital analytics platform.}
+\label{fig:sys-arch}
+\end{figure}
+
+The technology stack:
+\begin{itemize}
+    \item \textbf{Front-end}: Next.js~16 (App Router), Redux Toolkit, Emotion CSS, MUI form primitives, ECharts/Recharts.
+    \item \textbf{Back-end}: seven FastAPI services in Python~3.11, all sharing the layered structure of Section~\ref{subsec:layering}.
+    \item \textbf{Data store}: PostgreSQL~16, one instance per service.
+    \item \textbf{Messaging}: RabbitMQ~3, topic exchange \texttt{clinical.events}.
+    \item \textbf{Gateway}: Traefik~3.1, hostname routing through Docker labels.
+    \item \textbf{Machine learning}: \texttt{kmodes}, \texttt{prefixspan}, \texttt{scikit-learn}.
+    \item \textbf{Language models}: Google GenAI (Gemini) and OpenAI behind a single \texttt{ask\_ai()} helper; the SQL agent is orchestrated with \texttt{langgraph}.
+\end{itemize}

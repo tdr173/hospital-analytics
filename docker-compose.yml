@@ -8,6 +8,7 @@ volumes:
   ml_pg:
   analytics_pg:
   queue_pg:
+  users_pg:
   rabbitmq_data:
 
 x-pg-base: &pg-base
@@ -133,6 +134,21 @@ services:
       timeout: 3s
       retries: 30
 
+  users-db:
+    <<: *pg-base
+    container_name: hospital_users_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: users
+    volumes:
+      - users_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d users"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
   ###################################################
   # RABBITMQ
   ###################################################
@@ -183,6 +199,7 @@ services:
       GPT_KEY: ${GPT_KEY}
       CORS_ORIGINS: http://app.localhost,http://localhost:3000
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      USERS_SERVICE_URL: http://users:8000
       MAIL_SMTP_HOST: ${MAIL_SMTP_HOST:-}
       MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-587}
       MAIL_SMTP_USER: ${MAIL_SMTP_USER:-}
@@ -215,21 +232,17 @@ services:
     networks:
       - hospital-net
     depends_on:
-      auth-db:
+      users-db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     environment:
       SERVICE_NAME: users
-      # users service has no primary DB; point at auth-db read-only for now
       POSTGRES_USERNAME: ${POSTGRES_USERNAME}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: auth-db
+      POSTGRES_HOST: users-db
       POSTGRES_PORT: 5432
-      POSTGRES_DB: auth
-      AUTH_DB_USER: ${POSTGRES_USERNAME}
-      AUTH_DB_PASSWORD: ${POSTGRES_PASSWORD}
-      AUTH_DB_HOST: auth-db
-      AUTH_DB_PORT: 5432
-      AUTH_DB_NAME: auth
+      POSTGRES_DB: users
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
       SECRET_KEY: ${SECRET_KEY}
       ALGORITHM: ${ALGORITHM:-HS256}

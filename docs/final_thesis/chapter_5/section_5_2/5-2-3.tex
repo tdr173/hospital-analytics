@@ -1,0 +1,15 @@
+\subsection{Event Sequence Construction}
+
+PrefixSpan operates on \emph{sequences of items}, not on rows of features. Every patient is therefore projected into an ordered list of clinical events by \texttt{prefix\_span.py} using a single vectorised \texttt{pandas} pipeline.
+
+A single \texttt{UNION ALL} pulls four event types out of \texttt{clinical-db} and prefixes every item with its type: \texttt{C:} for conditions, \texttt{M:} for medications, \texttt{P:} for procedures, \texttt{CP:} for care plans. Rows are ordered by \texttt{(patient\_id, event\_date, type\_rank, item)} so that, for any single date, events of the same type cluster together. The prefix convention is part of the public contract with the front-end --- the React component \texttt{parsePattern.ts} relies on it to colour-code sequences.
+
+Three filters are applied before the sequence is handed to the mining algorithm:
+\begin{enumerate}
+    \item \textbf{Item blacklist} --- protocol noise (e.g.\ \texttt{"medication review due"}, \texttt{"history of"}) is dropped.
+    \item \textbf{Two-year rolling window} (\texttt{WINDOW\_DAYS = 730}) --- only events within 730 days before the most recent event are kept. This bounds the per-patient sequence length and focuses the mining on clinically recent patterns.
+    \item \textbf{Consecutive-duplicate collapse} --- a second occurrence of the same item by the same patient on adjacent dates is removed, to avoid polluting support counts with simple repetition.
+    \item \textbf{Per-patient cap} (\texttt{MAX\_EVENTS\_PER\_PATIENT = 25}) --- the most recent events are retained so the mining cost stays linear in the patient count.
+\end{enumerate}
+
+The output is a list of lists, ready to be integer-encoded and fed into the PrefixSpan top-$k$ miner of Section~\ref{sec:prefixspan}.

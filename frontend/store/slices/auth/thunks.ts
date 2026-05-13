@@ -89,18 +89,31 @@ export interface RegisterUserPayload {
   phone: string;
   jobTitle: string;
   role: UserRole;
+  clinicalId?: string;
 }
 
-export async function registerUser(_payload: RegisterUserPayload): Promise<void> {
-  // await fetch(apiUrl(`/create-user`), {
-  //   method: "POST",
-  //   headers: {
-  //     "Content-Type": "application/json",
-  //     "ngrok-skip-browser-warning": "true",
-  //   },
-  //   body: JSON.stringify(_payload),
-  // });
-  void _payload;
+export async function registerUser(payload: RegisterUserPayload): Promise<void> {
+  const res = await fetch(apiUrl("/auth/register"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
+    },
+    body: JSON.stringify({
+      email: payload.email,
+      role: payload.role,
+      display_name: `${payload.firstName} ${payload.lastName}`,
+      phone: payload.phone,
+      job_title: payload.jobTitle,
+      patient_id: payload.role === "PATIENT" ? payload.clinicalId : undefined,
+      provider_id: payload.role === "DOCTOR" ? payload.clinicalId : undefined,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const detail = typeof body?.detail === "string" ? body.detail : `Registration failed (HTTP ${res.status})`;
+    throw new Error(detail);
+  }
 }
 
 const defaultHeaders: Record<string, string> = {

@@ -14,7 +14,8 @@ export const ROUTE_ROLES: RouteRoles[] = [
   { prefix: "/encounters", allowed: ["MANAGER", "DOCTOR", "PATIENT"] },
   { prefix: "/providers", allowed: ["MANAGER", "DOCTOR"] },
   { prefix: "/ask", allowed: ["MANAGER", "DOCTOR"] },
-  { prefix: "/register-user", allowed: ["MANAGER", "DOCTOR", "PATIENT"] },
+  { prefix: "/register-user", allowed: ["MANAGER"] },
+  { prefix: "/users", allowed: ["MANAGER"] },
 ];
 
 export function isRouteAllowedForRole(

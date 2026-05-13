@@ -1,0 +1,11 @@
+\subsection{Persistence of Cluster Artefacts}
+
+Results are written to three tables in \texttt{ml-db}; the system only ever stores \emph{one} live run --- the most recent one. \texttt{save\_cluster\_results(\ldots)} opens a single transaction and performs in order:
+\begin{enumerate}
+    \item \texttt{TRUNCATE cluster\_meta, cluster, cluster\_patient RESTART IDENTITY CASCADE} --- the only place in the system that drops live analytical data.
+    \item \texttt{INSERT INTO cluster\_meta} --- one row with the algorithm name, $k$, feature lists, parameters, metrics, the PCA scatter as PNG bytes, and the categorical heatmap.
+    \item \texttt{INSERT INTO cluster\_patient} --- one row per patient with \texttt{patient\_id}, \texttt{cluster\_label}, \texttt{is\_outlier}, \texttt{pca\_x}, \texttt{pca\_y}, and the cached \texttt{features} JSONB.
+    \item \texttt{INSERT INTO cluster} --- one row per cluster label with the colour, title, description, insight and recommendation parsed from the LLM output.
+\end{enumerate}
+
+The LLM is asked to produce a strictly-formatted, pipe-separated line per cluster. The helper \texttt{\_parse\_cluster\_summaries(text)} recovers structured rows with the regular expression \texttt{\textbackslash[(-?\textbackslash d+)\textbackslash]\textbackslash s*\textbackslash|(.+)}. A defensive check forces the colour to start with \texttt{\#}, otherwise it falls back to the project default; duplicate cluster ids in the LLM response are deduplicated by keeping the first occurrence.

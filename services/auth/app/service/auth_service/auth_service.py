@@ -1,18 +1,10 @@
 """Authentication service.
 
-Handles login, password set/reset, and account-invite flows.
+Handles login, registration, password set/reset, and account-invite flows.
 
-Token-based flow (10-minute JWT, purpose=password_reset):
-  - Invite (auto from patient.created / provider.created): a reset token is
-    issued and emailed as `/set-password?token=<jwt>`. The account is created
-    with an *unusable* random password, so the only path in is the token.
-  - Forgot-password: same token, same endpoint. The user submits the new
-    password through the same /auth/set-password endpoint.
-
-Tokens carry `purpose=password_reset` and a 10-minute `exp`. They are stateless
-(no DB row) - one-time use is enforced indirectly: after the reset succeeds
-the password hash changes, so a replay would still need a valid (unexpired)
-token plus a not-yet-changed password, which doesn't help an attacker.
+auth_user stores only credentials (email, password). Role and profile data
+live in users-service (users-db). Auth fetches profile via internal HTTP at
+login time; all other cross-service communication is async via RabbitMQ.
 """
 from __future__ import annotations
 
@@ -23,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import bcrypt
+import httpx
 import jwt
 from fastapi import HTTPException
 from starlette import status
@@ -31,6 +24,7 @@ from domain import AuthModel, UserRole
 from domain.schemas.auth_schemas.auth_schema import (
     LoginRequest,
     LoginResponse,
+    RegisterRequest,
     SetPasswordRequest,
     CurrentUserResponse,
 )
@@ -39,9 +33,10 @@ from mail_sender import send_mail, MailSendError
 
 logger = logging.getLogger(__name__)
 
-
 RESET_TOKEN_TTL_MINUTES = 10
 RESET_TOKEN_PURPOSE = "password_reset"
+
+_USERS_SERVICE_URL = os.getenv("USERS_SERVICE_URL", "http://users:8000")
 
 
 def _hash_password(plain: str) -> str:
@@ -56,9 +51,6 @@ def _verify_password(plain: str, hashed: str) -> bool:
 
 
 def _unusable_password_hash() -> str:
-    """A bcrypt hash of random bytes nobody will ever guess. Stored on
-    invite-provisioned accounts so login is impossible until the user
-    completes the token-based set-password flow."""
     return _hash_password(secrets.token_urlsafe(32))
 
 
@@ -101,8 +93,6 @@ def _decode_reset_token(token: str) -> dict:
 
 
 def _send_password_link_email(email: str, token: str, *, is_invite: bool) -> None:
-    """Best-effort send. Logs and swallows so a broken SMTP doesn't block
-    account creation or password reset. Link expires in 10 minutes."""
     link = f"{_frontend_url()}/set-password?token={token}"
     if is_invite:
         subject = "Set your Hospital Analytics password"
@@ -132,32 +122,103 @@ def _send_password_link_email(email: str, token: str, *, is_invite: bool) -> Non
         logger.warning("password-link email failed for %s: %s", email, e)
 
 
+def _fetch_user_profile(user_id: int) -> dict:
+    """Synchronous HTTP call to users-service to get role + entity IDs."""
+    url = f"{_USERS_SERVICE_URL}/users/profile/{user_id}"
+    try:
+        resp = httpx.get(url, timeout=5.0)
+    except httpx.RequestError as exc:
+        logger.error("users-service unreachable: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="User profile service is temporarily unavailable.",
+        )
+    if resp.status_code == 404:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No user profile found for these credentials.",
+        )
+    if not resp.is_success:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="User profile service returned an error.",
+        )
+    return resp.json()
+
+
 class AuthService:
     def __init__(self, repo: AuthRepository):
         self.repo = repo
 
+    def register(self, dto: RegisterRequest) -> dict:
+        from api._security import create_access_token
+        from messaging import publish_event_nowait, EventAction
+
+        if self.repo.email_exists(dto.email):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An account with this email already exists.",
+            )
+        instance = self.repo.create(
+            email=dto.email,
+            password_hash=_unusable_password_hash(),
+            must_change_password=True,
+        )
+        token = _create_reset_token(instance.user_id, dto.email)
+
+        publish_event_nowait(
+            "user",
+            EventAction.CREATED,
+            extra={
+                "user_id": instance.user_id,
+                "email": dto.email,
+                "role": dto.role,
+                "patient_id": dto.patient_id,
+                "provider_id": dto.provider_id,
+                "display_name": dto.display_name,
+                "phone": dto.phone,
+                "job_title": dto.job_title,
+                "invite_token": token,
+            },
+        )
+        return {"user_id": instance.user_id, "email": instance.email}
+
     def login(self, dto: LoginRequest) -> LoginResponse:
         from api._security import create_access_token
+
         user = self.repo.get_by_email(dto.email)
         if not user or not _verify_password(dto.password, user.password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password",
             )
+
+        profile = _fetch_user_profile(user.user_id)
+
+        if not profile.get("isActive", profile.get("is_active", True)):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This account has been suspended.",
+            )
+
+        role = profile.get("role", "")
+        patient_id = profile.get("patientId") or profile.get("patient_id")
+        provider_id = profile.get("providerId") or profile.get("provider_id")
+
         token = create_access_token(
             user.user_id,
-            user.role.value if isinstance(user.role, UserRole) else str(user.role),
+            role,
             email=user.email,
-            patient_id=user.patient_id,
-            provider_id=user.provider_id,
+            patient_id=patient_id,
+            provider_id=provider_id,
         )
         return LoginResponse(
             access_token=token,
             token_type="bearer",
-            role=user.role.value if isinstance(user.role, UserRole) else str(user.role),
+            role=role,
             must_change_password=user.must_change_password,
-            patient_id=user.patient_id,
-            provider_id=user.provider_id,
+            patient_id=patient_id,
+            provider_id=provider_id,
             email=user.email,
         )
 
@@ -171,8 +232,6 @@ class AuthService:
                 detail="Invalid or expired token",
             )
         user = self.repo.get_by_id(user_id)
-        # Token must still match a real user *and* the email claim, so a
-        # leaked-and-then-reused token after account deletion can't resurrect.
         if not user or user.email != payload.get("email"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -182,11 +241,6 @@ class AuthService:
         return {"success": True}
 
     def forgot_password(self, email: str) -> dict:
-        """Issue a reset token and email a /set-password link.
-
-        Always returns 200 with the same response - we don't reveal whether
-        the email maps to an account, to avoid email enumeration.
-        """
         user = self.repo.get_by_email(email)
         if user:
             token = _create_reset_token(user.user_id, user.email)
@@ -204,12 +258,18 @@ class AuthService:
         user = self.repo.get_by_id(int(user_id)) if user_id else None
         if not user:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+        profile = _fetch_user_profile(user.user_id)
+        role = profile.get("role", "")
+        patient_id = profile.get("patientId") or profile.get("patient_id")
+        provider_id = profile.get("providerId") or profile.get("provider_id")
+
         return CurrentUserResponse(
             email=user.email,
-            role=user.role.value if isinstance(user.role, UserRole) else str(user.role),
+            role=role,
             must_change_password=user.must_change_password,
-            patient_id=user.patient_id,
-            provider_id=user.provider_id,
+            patient_id=patient_id,
+            provider_id=provider_id,
         )
 
     def create_account_for_patient(self, email: str, patient_id: str) -> Optional[AuthModel]:
@@ -241,6 +301,8 @@ class AuthService:
         patient_id: Optional[str],
         provider_id: Optional[str],
     ) -> Optional[AuthModel]:
+        from messaging import publish_event_nowait, EventAction
+
         if self.repo.email_exists(email):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -249,11 +311,20 @@ class AuthService:
         instance = self.repo.create(
             email=email,
             password_hash=_unusable_password_hash(),
-            role=role,
-            patient_id=patient_id,
-            provider_id=provider_id,
             must_change_password=True,
         )
         token = _create_reset_token(instance.user_id, email)
-        _send_password_link_email(email, token, is_invite=True)
+
+        publish_event_nowait(
+            "user",
+            EventAction.CREATED,
+            extra={
+                "user_id": instance.user_id,
+                "email": email,
+                "role": role.value if isinstance(role, UserRole) else str(role),
+                "patient_id": patient_id,
+                "provider_id": provider_id,
+                "invite_token": token,
+            },
+        )
         return instance

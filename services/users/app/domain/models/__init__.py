@@ -16,3 +16,4 @@ from .prefix_span_pattern_model import PrefixSpanPatternModel
 from .prefix_span_patient_pattern_model import PrefixSpanPatientPatternModel
 from .patient_provider_model import PatientProviderModel
 from .auth_model import AuthModel, UserRole
+from .user_profile_model import UserProfile
