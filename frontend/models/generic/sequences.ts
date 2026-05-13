@@ -39,4 +39,5 @@ export interface FetchSequencesArgs {
   sortType: "asc" | "desc";
   page: number;
   rows: number;
+  clusterLabels?: number[];
 }

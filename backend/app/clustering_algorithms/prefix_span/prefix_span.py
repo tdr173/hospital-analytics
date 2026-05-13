@@ -31,7 +31,7 @@ Algorithmic notes:
 """
 
 from collections import defaultdict
-from typing import Iterable
+from typing import Iterable, Optional
 
 import numpy as np
 import pandas as pd
@@ -141,11 +141,30 @@ def _load_events(engine) -> pd.DataFrame:
 
 # ------------------------ sequence construction --------------------------------------
 
-def build_sequences(engine) -> tuple[list[list[str]], list[str]]:
-    """Return (sequences, patient_ids) — vectorised, no per-patient Python loop."""
+def build_sequences(
+    engine,
+    cluster_label: Optional[int] = None,
+) -> tuple[list[list[str]], list[str]]:
+    """Return (sequences, patient_ids) — vectorised, no per-patient Python loop.
+
+    When `cluster_label` is provided, only patients assigned to that cluster
+    (as recorded in the cluster_patient table) are included.
+    """
     events = _load_events(engine)
     if events.empty:
         return [], []
+
+    if cluster_label is not None:
+        print(f"  Filtering to cluster_label={cluster_label}...")
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("SELECT patient_id FROM cluster_patient WHERE cluster_label = :label"),
+                {"label": cluster_label},
+            )
+            cluster_pids = {str(row[0]) for row in result}
+        events = events[events["patient_id"].astype(str).isin(cluster_pids)]
+        print(f"    {len(cluster_pids):,} patients in cluster, "
+              f"{events['patient_id'].nunique():,} with events")
 
     events["_pref"] = events["item"].str.split(":", n=1).str[0]
     events["_pref_rank"] = events["_pref"].map(_PREFIX_ORDER).fillna(99).astype(int)
@@ -224,6 +243,7 @@ def mine_patterns(
     min_pattern_length: int = MIN_PATTERN_LENGTH,
     max_pattern_length: int = MAX_PATTERN_LENGTH,
     top_k: int = TOP_K,
+    cluster_label: Optional[int] = None,
 ) -> list[tuple[int, list[str]]]:
     """Run PrefixSpan and return [(support_count, pattern_items), ...] sorted by rank."""
     if not sequences:
@@ -398,7 +418,7 @@ def mine_patterns(
         lines.append(line)
     print("--- end of pattern list ---\n")
 
-    out_path = "patterns.txt"
+    out_path = "patterns_global.txt" if cluster_label is None else f"patterns_cluster_{cluster_label}.txt"
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
     print(f"  Patterns saved to {out_path}")
@@ -453,23 +473,25 @@ def pattern_to_str(pattern: Iterable[str]) -> str:
 
 # ------------------------ orchestrator -----------------------------------------------
 
-def run(engine, db_session) -> None:
-    print("Loading clinical events...")
-    sequences, patient_ids = build_sequences(engine)
+def _run_single(engine, db_session, cluster_label: Optional[int]) -> None:
+    """Mine and persist patterns for a single scope (global or one cluster)."""
+    label_tag = "global" if cluster_label is None else f"cluster {cluster_label}"
+    print(f"Loading clinical events ({label_tag})...")
+    sequences, patient_ids = build_sequences(engine, cluster_label=cluster_label)
     n_patients = len(sequences)
     print(f"  {n_patients} patients with at least one event")
     if n_patients == 0:
-        print("  nothing to mine — aborting")
+        print("  nothing to mine — skipping")
         return
 
     avg_len = sum(len(s) for s in sequences) / n_patients
     print(f"  avg sequence length: {avg_len:.1f}")
 
     print(f"Mining patterns (min_support={MIN_SUPPORT_PCT:.0%}, top_k={TOP_K})...")
-    mined = mine_patterns(sequences)
+    mined = mine_patterns(sequences, cluster_label=cluster_label)
     print(f"  {len(mined)} patterns kept after filtering")
     if not mined:
-        print("  no patterns met thresholds — aborting write")
+        print("  no patterns met thresholds — skipping write")
         return
 
     print("Resolving patient memberships...")
@@ -486,10 +508,44 @@ def run(engine, db_session) -> None:
         })
 
     print("Writing to database...")
-    save_prefix_span_results(db_session, rows, memberships)
+    save_prefix_span_results(db_session, rows, memberships, cluster_label=cluster_label)
+
+
+def run(engine, db_session, n_clusters: Optional[int] = None) -> None:
+    """Orchestrate mining for all requested scopes.
+
+    `n_clusters=None` → single global run (original behaviour).
+    `n_clusters=4`    → mines clusters 0, 1, 2, 3 plus -1 (outliers).
+    """
+    if n_clusters is None:
+        _run_single(engine, db_session, cluster_label=None)
+    else:
+        labels = list(range(n_clusters)) + [-1]
+        print(f"Per-cluster mining: labels={labels}")
+        for label in labels:
+            print(f"\n{'='*60}")
+            print(f"  Mining cluster_label={label}")
+            print(f"{'='*60}")
+            _run_single(engine, db_session, cluster_label=label)
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Mine frequent clinical-event sequences with PrefixSpan."
+    )
+    parser.add_argument(
+        "--n-clusters",
+        type=int,
+        default=None,
+        dest="n_clusters",
+        help=(
+            "When provided, mine patterns separately for each cluster label "
+            "[0 .. n_clusters-1] plus -1 (outliers). "
+            "Reads cluster assignments from the cluster_patient table."
+        ),
+    )
+    args = parser.parse_args()
     load_dotenv()
     with SessionLocal() as db:
-        run(engine, db)
+        run(engine, db, n_clusters=args.n_clusters)

@@ -17,8 +17,13 @@ async def get_sequences(
     sort_type: str = Query(default="desc", alias="sortType"),
     page: int = Query(default=1, ge=1),
     rows: int = Query(default=8, ge=1, le=100),
+    cluster_labels: Optional[str] = Query(default=None, alias="clusterLabels"),
     db: Session = Depends(get_db),
 ):
+    labels: Optional[list[int]] = None
+    if cluster_labels:
+        labels = [int(x) for x in cluster_labels.split(",") if x.strip()]
+
     repo = SequenceRepository(db)
     service = SequenceService(repo)
     return service.get_sequences(
@@ -28,4 +33,5 @@ async def get_sequences(
         sort_type=sort_type,
         page=page,
         rows=rows,
+        cluster_labels=labels,
     )

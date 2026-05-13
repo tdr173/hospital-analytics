@@ -68,6 +68,7 @@ class SequenceService:
         sort_type: str = "desc",
         page: int = 1,
         rows: int = 8,
+        cluster_labels: Optional[list[int]] = None,
     ):
         return self.repo.get_sequences(
             search=search,
@@ -76,6 +77,7 @@ class SequenceService:
             sort_type=sort_type,
             page=page,
             rows=rows,
+            cluster_labels=cluster_labels,
         )
 
     def get_ai_analysis(self, pattern_id: int) -> dict:

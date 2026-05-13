@@ -62,6 +62,9 @@ export const fetchSequences = createAsyncThunk<
     q.set("sortType", args.sortType);
     q.set("page", args.page.toString());
     q.set("rows", args.rows.toString());
+    if (args.clusterLabels && args.clusterLabels.length > 0) {
+      q.set("clusterLabels", args.clusterLabels.join(","));
+    }
     const response = await fetch(`${API_BASE}/sequences?${q.toString()}`, {
       headers: defaultHeaders,
     });

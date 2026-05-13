@@ -35,7 +35,7 @@ class SequenceRepository:
         row = self.db.query(
             func.min(PrefixSpanPatternModel.length).label("min_len"),
             func.max(PrefixSpanPatternModel.length).label("max_len"),
-        ).first()
+        ).filter(PrefixSpanPatternModel.cluster_label == None).first()
         min_len = int(row.min_len) if row and row.min_len is not None else 1
         max_len = int(row.max_len) if row and row.max_len is not None else 1
         return SequenceResourcesResponse(
@@ -53,10 +53,17 @@ class SequenceRepository:
         sort_type: str = "desc",
         page: int = 1,
         rows: int = 8,
+        cluster_labels: Optional[list[int]] = None,
     ) -> SequenceListResponse:
         q = self.db.query(PrefixSpanPatternModel).filter(
             PrefixSpanPatternModel.length >= min_length,
         )
+
+        if cluster_labels is not None:
+            q = q.filter(PrefixSpanPatternModel.cluster_label.in_(cluster_labels))
+        else:
+            q = q.filter(PrefixSpanPatternModel.cluster_label == None)
+
         if search:
             q = q.filter(PrefixSpanPatternModel.pattern_str.ilike(f"%{search}%"))
 

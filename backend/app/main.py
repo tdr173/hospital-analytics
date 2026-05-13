@@ -40,6 +40,8 @@ async def lifespan(app: FastAPI):
             conn.execute(text("ALTER TABLE cluster ADD COLUMN IF NOT EXISTS ai_analysis JSONB"))
             conn.execute(text("ALTER TABLE cluster ADD COLUMN IF NOT EXISTS detail_cache JSONB"))
             conn.execute(text("ALTER TABLE prefix_span_pattern ADD COLUMN IF NOT EXISTS ai_analysis JSONB"))
+            conn.execute(text("ALTER TABLE prefix_span_pattern ADD COLUMN IF NOT EXISTS cluster_label INT NULL"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_prefix_span_pattern_cluster_label ON prefix_span_pattern (cluster_label)"))
             # NOT VALID skips the check on existing rows; new inserts are still validated.
             conn.execute(text("""
                 DO $$

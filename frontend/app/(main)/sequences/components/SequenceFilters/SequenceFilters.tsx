@@ -10,7 +10,9 @@ import {
   SequenceResourcesResponse,
   SequenceSortOption,
 } from "@/models/generic/sequences";
+import { ClusterSummary } from "@/models/generic/clusters";
 import { SequenceFiltersStyles } from "./SequenceFiltersStyles";
+import ClusterMultiSelect from "../ClusterMultiSelect/ClusterMultiSelect";
 
 interface Props {
   search: string;
@@ -22,6 +24,10 @@ interface Props {
   onMinLengthChange: (value: number) => void;
   onSortByChange: (value: string) => void;
   onSortTypeChange: (value: "asc" | "desc") => void;
+  activeTab?: "global" | "cluster";
+  clusters?: ClusterSummary[];
+  selectedClusterIds?: number[];
+  onClusterIdsChange?: (ids: number[]) => void;
 }
 
 export default function SequenceFilters({
@@ -34,6 +40,10 @@ export default function SequenceFilters({
   onMinLengthChange,
   onSortByChange,
   onSortTypeChange,
+  activeTab = "global",
+  clusters = [],
+  selectedClusterIds = [],
+  onClusterIdsChange,
 }: Props) {
   const classes = useClasses(SequenceFiltersStyles, {
     name: "SequenceFilters",
@@ -54,8 +64,17 @@ export default function SequenceFilters({
     { value: "length", label: "Sequence Steps" },
   ];
 
+  const showClusterPicker = activeTab === "cluster";
+
   return (
-    <div className={classes.bar}>
+    <div
+      className={classes.bar}
+      style={{
+        gridTemplateColumns: showClusterPicker
+          ? "1fr auto auto auto auto"
+          : "1fr auto auto auto",
+      }}
+    >
       <div className={classes.fieldGroup}>
         <label className={classes.fieldLabel}>Search</label>
         <StyledInput
@@ -96,6 +115,17 @@ export default function SequenceFilters({
           onClear={() => onSortByChange("")}
         />
       </div>
+
+      {showClusterPicker && onClusterIdsChange && (
+        <div className={classes.fieldGroup}>
+          <label className={classes.fieldLabel}>Clusters</label>
+          <ClusterMultiSelect
+            clusters={clusters}
+            selectedIds={selectedClusterIds}
+            onChange={onClusterIdsChange}
+          />
+        </div>
+      )}
 
       <div className={classes.fieldGroup}>
         <label className={classes.fieldLabel}>Order</label>

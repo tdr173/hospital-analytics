@@ -15,3 +15,4 @@ class PrefixSpanPatternModel(SQLModel, table=True):
     support_count: int
     support_pct: float
     ai_analysis: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
+    cluster_label: Optional[int] = Field(default=None, index=True)

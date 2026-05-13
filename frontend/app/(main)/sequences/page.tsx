@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
 import { RootState, AppDispatch } from "@/store";
 import {
   fetchSequences,
   fetchSequenceResources,
   getSequenceAiAnalysis,
 } from "@/store/slices/sequences/thunks";
+import { getClustersOverview } from "@/store/slices/clusters/thunks";
 import { openSequenceAnalysis } from "@/store/slices/sequences/sequence-ai-slice";
 import useClasses from "@/utils/useClasses";
 import { SequencesPageStyles } from "./styles";
@@ -19,6 +22,8 @@ import SequenceAiModal from "./components/SequenceAiModal/SequenceAiModal";
 const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 const ROWS_PER_PAGE = 8;
 const SEARCH_DEBOUNCE_MS = 300;
+
+type ActiveTab = "global" | "cluster";
 
 export default function SequencesPage() {
   const classes = useClasses(SequencesPageStyles, { name: "SequencesPage" });
@@ -32,6 +37,7 @@ export default function SequencesPage() {
   const listLoading = useSelector((s: RootState) => s.sequenceList.loading);
   const listError = useSelector((s: RootState) => s.sequenceList.error);
   const aiCache = useSelector((s: RootState) => s.sequenceAi.cache);
+  const clustersData = useSelector((s: RootState) => s.clusters.data);
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -39,6 +45,8 @@ export default function SequencesPage() {
   const [sortBy, setSortBy] = useState("support");
   const [sortType, setSortType] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
+  const [activeTab, setActiveTab] = useState<ActiveTab>("global");
+  const [selectedClusterIds, setSelectedClusterIds] = useState<number[]>([]);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,9 +76,18 @@ export default function SequencesPage() {
         sortType,
         page,
         rows: ROWS_PER_PAGE,
+        clusterLabels: activeTab === "cluster" ? selectedClusterIds : undefined,
       }),
     );
-  }, [dispatch, debouncedSearch, effectiveMinLength, sortBy, sortType, page]);
+  }, [dispatch, debouncedSearch, effectiveMinLength, sortBy, sortType, page, activeTab, selectedClusterIds]);
+
+  const handleTabChange = (_: React.SyntheticEvent, value: ActiveTab) => {
+    setActiveTab(value);
+    setPage(1);
+    if (value === "cluster" && !clustersData) {
+      dispatch(getClustersOverview());
+    }
+  };
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -88,6 +105,10 @@ export default function SequencesPage() {
     setSortType(value);
     setPage(1);
   };
+  const handleClusterIdsChange = (ids: number[]) => {
+    setSelectedClusterIds(ids);
+    setPage(1);
+  };
 
   const handleAnalyse = (sequence: NonNullable<typeof list>["items"][number]) => {
     dispatch(openSequenceAnalysis(sequence));
@@ -99,10 +120,30 @@ export default function SequencesPage() {
   const items = list?.items ?? [];
   const total = list?.total ?? 0;
   const colors = resources?.colors ?? {};
+  const allClusters = clustersData?.clusters ?? [];
 
   return (
     <div className={classes.container}>
       <div className={classes.content} ref={contentRef}>
+        <Tabs
+          value={activeTab}
+          onChange={handleTabChange}
+          sx={{
+            minHeight: "36px",
+            "& .MuiTabs-indicator": { height: "2px" },
+            "& .MuiTab-root": {
+              minHeight: "36px",
+              textTransform: "none",
+              fontWeight: 600,
+              fontSize: "0.85rem",
+              padding: "6px 20px",
+            },
+          }}
+        >
+          <Tab value="global" label="Global" disableRipple />
+          <Tab value="cluster" label="Per Cluster" disableRipple />
+        </Tabs>
+
         <SequenceFilters
           search={search}
           minLength={effectiveMinLength}
@@ -113,6 +154,10 @@ export default function SequencesPage() {
           onMinLengthChange={handleMinLengthChange}
           onSortByChange={handleSortByChange}
           onSortTypeChange={handleSortTypeChange}
+          activeTab={activeTab}
+          clusters={allClusters}
+          selectedClusterIds={selectedClusterIds}
+          onClusterIdsChange={handleClusterIdsChange}
         />
 
         {listError && <div className={classes.error}>{listError}</div>}
@@ -123,7 +168,9 @@ export default function SequencesPage() {
 
         {!listLoading && !listError && !!list && items.length === 0 && (
           <div className={classes.empty}>
-            No care sequences match the current filters.
+            {activeTab === "cluster" && selectedClusterIds.length === 0
+              ? "Select one or more clusters to view their sequences."
+              : "No care sequences match the current filters."}
           </div>
         )}
 
