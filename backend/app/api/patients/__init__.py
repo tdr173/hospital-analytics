@@ -11,6 +11,7 @@ from .get_patient_allergies import *
 from .get_patient_careplans import *
 from .get_patient_encounters import *
 from .get_patient_sequences import *
+from .get_patient_continuations import *
 from .get_patient_observations import *
 from .create_patient import *
 from .update_patient import *

@@ -1,4 +1,4 @@
-"""Cluster detail queries — joins cluster_patient with source tables.
+"""Cluster detail queries - joins cluster_patient with source tables.
 
 JSONB is only used for features guaranteed to be in every run:
   gender, condition_burden, dominant_careplan.
@@ -82,7 +82,7 @@ def cluster_size(db: Session, cluster_id: int) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Vitals — patient + observation tables
+# Vitals - patient + observation tables
 # ---------------------------------------------------------------------------
 
 def get_vitals(db: Session, cluster_id: int) -> dict:
@@ -132,7 +132,7 @@ def get_vitals(db: Session, cluster_id: int) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Utilization — condition, medication, procedure, encounter tables
+# Utilization - condition, medication, procedure, encounter tables
 # ---------------------------------------------------------------------------
 
 def get_utilization(db: Session, cluster_id: int) -> dict:
@@ -183,7 +183,7 @@ def get_utilization(db: Session, cluster_id: int) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Disease prevalence — condition + medication tables
+# Disease prevalence - condition + medication tables
 # ---------------------------------------------------------------------------
 
 def get_disease_prevalence(db: Session, cluster_id: int) -> dict:
@@ -244,7 +244,7 @@ def get_disease_prevalence(db: Session, cluster_id: int) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Dominant categoricals — JSONB for careplan, source tables for the rest
+# Dominant categoricals - JSONB for careplan, source tables for the rest
 # ---------------------------------------------------------------------------
 
 def get_dominant_categoricals(db: Session, cluster_id: int) -> dict:
@@ -283,7 +283,7 @@ def get_dominant_categoricals(db: Session, cluster_id: int) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Gender — JSONB (always stored in every run)
+# Gender - JSONB (always stored in every run)
 # ---------------------------------------------------------------------------
 
 def get_gender_distribution(db: Session, cluster_id: int) -> dict:
@@ -303,7 +303,7 @@ def get_gender_distribution(db: Session, cluster_id: int) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Marital distribution — patient table
+# Marital distribution - patient table
 # ---------------------------------------------------------------------------
 
 def get_marital_distribution(db: Session, cluster_id: int) -> dict:
@@ -333,7 +333,7 @@ def get_marital_distribution(db: Session, cluster_id: int) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Smoking distribution — observation table
+# Smoking distribution - observation table
 # ---------------------------------------------------------------------------
 
 def get_smoking_distribution(db: Session, cluster_id: int) -> dict:
@@ -373,7 +373,7 @@ def get_smoking_distribution(db: Session, cluster_id: int) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Condition burden — JSONB (always stored in every run)
+# Condition burden - JSONB (always stored in every run)
 # ---------------------------------------------------------------------------
 
 def get_condition_burden_distribution(db: Session, cluster_id: int) -> dict:
@@ -394,7 +394,7 @@ def get_condition_burden_distribution(db: Session, cluster_id: int) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Population stats — for AI prompt baseline (non-outlier patients only)
+# Population stats - for AI prompt baseline (non-outlier patients only)
 # ---------------------------------------------------------------------------
 
 def get_population_stats(db: Session) -> dict:

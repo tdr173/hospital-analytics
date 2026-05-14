@@ -1,0 +1,93 @@
+\subsection{K-Prototypes Pipeline Implementation}
+
+The clustering pipeline is implemented as a standalone script, \texttt{app/clustering\_algorithms/k\_prototypes/k\_prototypes.py}, run directly with \texttt{python k\_prototypes.py} from its own folder rather than via FastAPI. This separation keeps the model training loop, which is computationally expensive and meant to run offline, decoupled from the request lifecycle of the analytical API. The algorithm itself is provided by \texttt{kmodes.kprototypes.KPrototypes}; the surrounding code handles feature extraction, scaling, dimensionality projection, evaluation, plotting, and persistence.
+
+\subsubsection*{Feature Construction}
+
+\texttt{build\_patient\_features(engine)} executes a battery of independent SQL queries through \texttt{pandas.read\_sql(text(\dots), engine)}, one per logical feature group (patient demographics, encounter counts, condition flags, BMI/BP/glucose averages, careplan, providers seen, out-of-hours flag, substance use, pain tier, readmission tier, etc.). Each query returns a small dataframe keyed on \texttt{patient\_id}; the function then \texttt{LEFT JOIN}s them by chained \texttt{df.merge(right\_df, on="patient\_id", how="left")} calls and applies type-aware imputation:
+
+\begin{verbatim}
+for col in ["wellness_count", "inpatient_count", ...]:
+    df[col] = df[col].fillna(0)        # zero is semantically correct
+df["dominant_careplan"] = df["dominant_careplan"].fillna("None")
+df["bmi_type"] = pd.cut(df["avg_bmi"], bins=[...],
+                        labels=["Underweight", "Normal", ...]) \
+                  .where(df["avg_bmi"].notna(), "Unknown")
+\end{verbatim}
+
+The bucketing rule is deliberate: numerics that come from sparse observation tables (BMI, blood pressure, glucose, cholesterol) are never mean-imputed, because K-Prototypes interprets the numerical centroid as an actual measurement, so injecting the mean for missing values would pull centroids towards a value that no patient actually has. Sparse measurements are instead binned with \texttt{pd.cut} and routed to an explicit \texttt{Unknown} category. Conversely, count-like numerics (encounter counts) are filled with \texttt{0}, since the absence of a record is genuinely zero occurrences. Aggregated indicators (\texttt{routine\_care\_count}, \texttt{acute\_care\_count}, \texttt{severe\_care\_count}) are computed directly on the dataframe after merging.
+
+\subsubsection*{Configuration Loop and Benchmarking}
+
+A list of feature configurations is kept in \texttt{configs.py} as \texttt{CONFIGS = [\{"version": \dots, "numerical": [\dots], "categorical": [\dots]\}]}. The main entry point iterates over the Cartesian product of \texttt{CONFIGS}, scalers, gamma values, random seeds, and outlier z-score thresholds:
+
+\begin{verbatim}
+for threshold in THRESHOLDS:
+    df_cleaned, df_outliers = remove_outliers_zscore(df, threshold=threshold)
+    for cfg in CONFIGS:
+        for scaler_name in SCALERS:
+            for gamma in GAMMAS:
+                for rs in RANDOM_STATES:
+                    for k in k_values:
+                        run_kprototypes(df_cleaned, ...)
+\end{verbatim}
+
+\noindent Every run writes its own \texttt{conclusions.txt}, \texttt{conclusions.xlsx}, FAMD scatter, heatmap, bar chart, and stacked categorical distribution into a per-run folder under \texttt{outputs/}; a single \texttt{general\_conclusion.xlsx} aggregates the metrics across all runs so that configurations can be compared row-by-row. This loop is what produced the 629 distinct runs referenced in Section~5.1.2.
+
+\subsubsection*{Outlier Removal}
+
+Outlier filtering is implemented in \texttt{remove\_outliers\_zscore(df, threshold)}. The function computes z-scores on a fixed list of numerical features, but applies a \texttt{np.log1p} transform to the three heavily right-skewed columns (\texttt{total\_medications}, \texttt{lifetime\_medication\_days}, \texttt{total\_encounter\_duration\_hours}) before computing the score, because raw skewed counts flag a large fraction of the tail as outliers purely on distribution shape. A patient is kept iff every column's z-score is below the threshold. Outliers are not discarded outright: they are returned as \texttt{df\_outliers}, later assigned the special label \(-1\), and carried through both the LLM summary and the database persistence step.
+
+\subsubsection*{Scaling and Dimensionality Projection}
+
+Three scalers are exposed through a name-to-instance map and chosen per run:
+
+\begin{verbatim}
+_SCALER_MAP = {"minmax": MinMaxScaler(),
+               "robust": RobustScaler(),
+               "standard": StandardScaler()}
+\end{verbatim}
+
+\noindent The final pipeline uses \texttt{MinMaxScaler}. The decision is driven by how K-Prototypes mixes distances: the algorithm sums a squared-Euclidean numerical term with a \(\gamma\)-weighted Hamming categorical term, and the latter is bounded in \([0, n_{\text{cat}}]\). Scaling numerics to the same bounded \([0, 1]\) range with min--max keeps the two terms on comparable magnitudes regardless of feature spread, so \(\gamma\) can be auto-tuned by \texttt{kmodes} without one side dominating. \texttt{StandardScaler} centres around zero but leaves heavy tails that inflate the numerical cost on outlier-rich features, and \texttt{RobustScaler}, while resistant to outliers, leaves a small fraction of extreme rows with values well outside \([0,1]\), which empirically produced less stable clusterings on the benchmark.
+
+The \texttt{clinical\_severity\_score} composite feature, when present in a configuration, is built by first \texttt{log1p}-transforming three raw severity counts, then standardising with \texttt{StandardScaler}, then projecting to a single principal component with \texttt{sklearn.decomposition.PCA(n\_components=1)}. Because the resulting axis is already a z-score by construction, the outer min--max scaler skips it:
+
+\begin{verbatim}
+sev_input = np.log1p(df[sev_cols].clip(lower=0).values.astype(float))
+sev_standardized = StandardScaler().fit_transform(sev_input)
+css = PCA(n_components=1).fit_transform(sev_standardized)[:, 0]
+df_scaled["clinical_severity_score"] = css
+cols_to_scale = [c for c in numerical_cols if c != "clinical_severity_score"]
+df_scaled[cols_to_scale] = scaler.fit_transform(df_scaled[cols_to_scale].values)
+\end{verbatim}
+
+\noindent A safety check rejects any configuration that includes both \texttt{clinical\_severity\_score} and its raw component columns, since that would double-count the same variance.
+
+For two-dimensional visualisation, \texttt{prince.FAMD} (Factor Analysis of Mixed Data) is preferred over PCA because the input is genuinely heterogeneous: PCA operates only on numerics and would force categorical features through an ordinal encoding, which collapses the categorical-distance geometry that K-Prototypes uses for clustering. FAMD treats numerical and categorical variables symmetrically (numerics are standardised; categoricals are one-hot-coded and re-weighted by inverse category frequency) and produces a projection that reflects the same mixed-distance space the algorithm clusters in. A UMAP-on-Gower variant was implemented but kept commented out because the \(\sim\)\,2\,GB Gower distance matrix it required dominated runtime without improving cluster visibility.
+
+\subsubsection*{Running the Algorithm}
+
+The clustering call assembles a \texttt{numpy} matrix where numerical columns come first as \texttt{float64} and categorical columns are appended as strings; the indices of the categorical columns are passed via the \texttt{categorical=} argument. Building the matrix block-by-block (rather than as a single object array) keeps the internal Cython loop of \texttt{kmodes} fast:
+
+\begin{verbatim}
+num_matrix = df_scaled[numerical_cols].to_numpy(dtype=np.float64)
+cat_matrix = df_scaled[categorical_cols].astype(str).to_numpy()
+matrix = np.concatenate([num_matrix, cat_matrix], axis=1)
+cat_positions = list(range(len(numerical_cols),
+                           len(numerical_cols) + len(categorical_cols)))
+kproto = KPrototypes(n_clusters=k, init="Huang",
+                     random_state=rs, n_jobs=-1, gamma=gamma)
+clusters = kproto.fit_predict(matrix, categorical=cat_positions)
+\end{verbatim}
+
+\noindent \texttt{init="Huang"} (the categorical-aware variant of K-Means++ initialisation) is used to seed centroids deterministically given a random state. When \texttt{gamma=None}, the library derives \(\gamma\) automatically from the standard deviation of the numerical features, which interacts cleanly with the min--max scaling.
+
+\subsubsection*{Evaluation}
+
+After fitting, \texttt{full\_evaluation\_report} computes silhouette and Calinski--Harabasz / Davies--Bouldin both on the raw numerical space and on the mixed Gower / FAMD spaces, returning the metrics that the loop persists to the benchmark spreadsheet. The elbow plot referenced in Section~5.1.2 is produced by the same machinery: when \texttt{elbow\_plot="on"}, \texttt{plot\_elbow\_kproto} replays the exact transform pipeline (log1p, severity PCA, scaler) and fits \texttt{KPrototypes} for \(k \in \{2,\dots,9\}\), recording \texttt{kproto.cost\_} for each value.
+
+\subsubsection*{Persistence and LLM Summary}
+
+Results are stored through \texttt{save\_cluster\_results} in \texttt{save\_results.py}, which writes a single row into the singleton \texttt{cluster\_meta} table (truncated and re-inserted on each run), one row per cluster into \texttt{cluster}, and one row per patient into \texttt{cluster\_patient}. The per-patient computed feature vector is serialised into the \texttt{features JSONB} column so that the API layer can answer summary requests without recomputing the SQL feature pipeline. The FAMD scatter and heatmap are read from disk as raw bytes and stored in \texttt{cluster\_meta.pca\_image} (\texttt{BYTEA}). Cluster narratives are produced by \texttt{get\_clusters\_summary}, which formats per-cluster numerical means, categorical mixes, top conditions/medications/procedures, and the careplan distribution into a prompt sent through the same \texttt{ask\_ai} helper used by the SQL agent. The output is parsed into the structured \texttt{[id] | colour | title | description | insight | recommendation} format and stored verbatim under \texttt{cluster\_meta.ai\_analysis}.
+
+The principal libraries used are \texttt{kmodes} (algorithm), \texttt{scikit-learn} (scalers, PCA, evaluation metrics), \texttt{prince} (FAMD), \texttt{matplotlib} and \texttt{seaborn} (plots), \texttt{pandas}/\texttt{numpy} (feature pipeline), and \texttt{SQLAlchemy} for the read/write paths.

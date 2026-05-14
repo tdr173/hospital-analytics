@@ -21,7 +21,7 @@ from save_results import save_cluster_results
 current_folder = Path(__file__).parent
 
 # Columns used for global z-score outlier detection. The three _SKEWED ones are
-# log1p'd internally inside remove_outliers_zscore — z-scores on raw long-tailed
+# log1p'd internally inside remove_outliers_zscore - z-scores on raw long-tailed
 # counts flag too many "outliers" just for being on the tail.
 OUTLIER_NUMERICAL_FEATURES = [
     "age",
@@ -662,7 +662,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         df = df.merge(right_df, on="patient_id", how="left")
 
     # --- Encounter-count aggregates ------------------------------------------------
-    # 0 = "no encounters of that class", semantically correct — no imputation bias.
+    # 0 = "no encounters of that class", semantically correct - no imputation bias.
     for col in ["ambulatory_count", "outpatient_count", "emergency_count", "urgentcare_count",
                 "wellness_count", "inpatient_count", "snf_count", "hospice_count"]:
         df[col] = df[col].fillna(0)
@@ -672,7 +672,7 @@ def build_patient_features(engine) -> pd.DataFrame:
     df["severe_care_count"] = df["inpatient_count"] + df["snf_count"] + df["hospice_count"]
     df["preventive_to_reactive_ratio"] = df["wellness_count"] / (df["acute_care_count"] + df["severe_care_count"] + 1)
 
-    # Fill severity-count NaNs to 0 — needed here because several downstream
+    # Fill severity-count NaNs to 0 - needed here because several downstream
     # categorical bins (medication_intensity, condition_burden) read these raw
     # counts. The clinical_severity_score PCA is now computed inside run_kprototypes
     # so df itself stays fully unscaled.
@@ -680,7 +680,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         df[col] = df[col].fillna(0)
 
     # --- Categorical bins from sparse observation numerics -------------------------
-    # Rule: NEVER mean-impute sparse numerics — the artificial values shift k-prototypes
+    # Rule: NEVER mean-impute sparse numerics - the artificial values shift k-prototypes
     # centroids. Instead, we bucket raw values and route unmeasured patients to "Unknown".
     df["bmi_type"] = pd.cut(
         df["avg_bmi"],
@@ -701,7 +701,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         labels=["Normal", "Prediabetic", "Diabetic"],
     ).astype(object).where(df["avg_glucose"].notna(), "Unknown").astype(str)
 
-    # qaly/daly are Synthea-complete numerics — if any NaN appears, 0 is the neutral default.
+    # qaly/daly are Synthea-complete numerics - if any NaN appears, 0 is the neutral default.
     for col in ["qaly", "daly"]:
         df[col] = df[col].fillna(0)
 
@@ -757,7 +757,7 @@ def build_patient_features(engine) -> pd.DataFrame:
                 "days_since_last_encounter"]:
         df[col] = df[col].fillna(0)
 
-    # Keep raw vitals for FE display — only drop the intermediate polypharmacy helper.
+    # Keep raw vitals for FE display - only drop the intermediate polypharmacy helper.
     # avg_bmi / avg_systolic_bp / avg_glucose stay in df so they can be passed as
     # extra_feature_cols to save_cluster_results without affecting clustering.
     df = df.drop(columns=["is_polypharmacy_raw"], errors="ignore")
@@ -985,7 +985,7 @@ def run_kprototypes(
     if "clinical_severity_score" in numerical_cols and _css_raw & set(numerical_cols):
         raise ValueError(
             f"{version_name}: clinical_severity_score and its raw inputs "
-            f"({_css_raw & set(numerical_cols)}) are both in numerical_cols — "
+            f"({_css_raw & set(numerical_cols)}) are both in numerical_cols - "
             "this double-counts severity variance."
         )
 
@@ -1015,7 +1015,7 @@ def run_kprototypes(
 
     # Derive clinical_severity_score from raw severity counts when the config
     # includes it. We ALSO write it to df_work so plots / FE / features JSONB
-    # still have the value — it's a standardized PCA score by construction, so
+    # still have the value - it's a standardized PCA score by construction, so
     # "unscaled" doesn't apply; raw severity inputs (total_procedures,
     # total_medications, active_conditions_count) remain in df_work for the LLM.
     if "clinical_severity_score" in numerical_cols:
@@ -1029,7 +1029,7 @@ def run_kprototypes(
         df_scaled["clinical_severity_score"] = css
 
     # Scale all numerical features except clinical_severity_score, which is
-    # already a StandardScaler+PCA z-score — re-scaling it with a second scaler
+    # already a StandardScaler+PCA z-score - re-scaling it with a second scaler
     # would distort its meaning without adding information.
     cols_to_scale = [c for c in numerical_cols if c != "clinical_severity_score"]
     if cols_to_scale:
@@ -1039,7 +1039,7 @@ def run_kprototypes(
     X_num_scaled = df_scaled[numerical_cols].values.astype(np.float64)
 
     # Build the clustering matrix. Numerical columns are cast to float64 first,
-    # then categorical columns appended as strings — avoids a mixed object array
+    # then categorical columns appended as strings - avoids a mixed object array
     # that slows down the KPrototypes Cython backend.
     num_matrix = df_scaled[numerical_cols].to_numpy(dtype=np.float64)
     cat_matrix = df_scaled[categorical_cols].astype(str).to_numpy()
@@ -1181,7 +1181,7 @@ Insight rules: pick the MOST distinguishing signal for this cluster (dominant ca
 Recommendation rules: tie the action to that insight (e.g. cardiac careplan dominance -> cardiology follow-up; polypharmacy -> medication review; long gap since last visit -> outreach).
 
 Choose a suggestive hex color for each cluster that reflects its clinical profile (e.g. red tones for high-risk, green for healthy, blue for elderly chronic, orange for moderate, purple for psychiatric, teal for maternal).
-Use strong, vivid, fully-saturated colors with high contrast — avoid pastel, washed-out, or faded tones. Prefer colors like #DC2626, #16A34A, #2563EB, #D97706, #7C3AED, #0891B2. The outlier cluster (-1) should always be gray (#9CA3AF).
+Use strong, vivid, fully-saturated colors with high contrast - avoid pastel, washed-out, or faded tones. Prefer colors like #DC2626, #16A34A, #2563EB, #D97706, #7C3AED, #0891B2. The outlier cluster (-1) should always be gray (#9CA3AF).
 
 Example output:
 [0] | #DC2626 | Older Adults with Many Conditions | Elderly patients who visit the hospital often and take many medications. | Cardiac careplan dominant, 85% hypertensive, average 12 active medications. | Coordinate cardiology follow-up and run medication reviews to reduce emergency visits.
@@ -1197,7 +1197,7 @@ CLUSTER DATA SUMMARIES:
         c_size = len(c_df)
         c_pct = (c_size / total_patients) * 100
 
-        # clinical_severity_score is a standardized PCA z-score (~N(0,1)) — not
+        # clinical_severity_score is a standardized PCA z-score (~N(0,1)) - not
         # interpretable in absolute terms, so omit it. The LLM gets the raw severity
         # inputs (total_procedures, total_medications, active_conditions_count) instead.
         mean_cols = [col for col in [
@@ -1266,7 +1266,7 @@ if __name__ == "__main__":
     RANDOM_STATES = [42]
     # THRESHOLDS = [4, 6]
     THRESHOLDS = [6]
-    ELBOW_PLOT = "off"
+    ELBOW_PLOT = "on"
 
     _SCALER_MAP = {
         "minmax": MinMaxScaler(),

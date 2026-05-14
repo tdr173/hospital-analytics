@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import func, case, cast, Numeric, desc, asc
+from sqlalchemy import func, case, cast, Numeric, desc, asc, text
 from sqlalchemy.orm import Session
 
 from domain import (
@@ -7,6 +7,7 @@ from domain import (
     PrefixSpanPatientPatternModel,
     ClusterPatientModel,
     SequenceListItem,
+    SequenceContinuationItem,
     SequenceListResponse,
     SequenceResourcesResponse,
     SequenceSortOption,
@@ -118,6 +119,83 @@ class SequenceRepository:
         if not pattern:
             raise ValueError(f"Pattern {pattern_id} not found")
         return pattern.ai_analysis
+
+    def get_patient_continuations(
+        self,
+        patient_id: str,
+        min_matched: int = 2,
+    ) -> list[SequenceContinuationItem]:
+        _BLACKLIST = frozenset({
+            "assessment of health and social care needs",
+            "medication review due",
+            "medication reconciliation",
+        })
+        _MAX_EVENTS = 25
+
+        rows = self.db.execute(text("""
+            SELECT start_date AS event_date, 'C:' || TRIM(description) AS item, 0 AS pref_rank
+            FROM condition
+            WHERE patient_id = :pid AND description IS NOT NULL AND start_date IS NOT NULL
+            UNION ALL
+            SELECT start_date, 'M:' || TRIM(description), 1
+            FROM medication
+            WHERE patient_id = :pid AND description IS NOT NULL AND start_date IS NOT NULL
+            UNION ALL
+            SELECT start_date, 'P:' || TRIM(description), 2
+            FROM "procedure"
+            WHERE patient_id = :pid AND description IS NOT NULL AND start_date IS NOT NULL
+            UNION ALL
+            SELECT start_date, 'CP:' || TRIM(description), 3
+            FROM careplan
+            WHERE patient_id = :pid AND description IS NOT NULL AND start_date IS NOT NULL
+            ORDER BY event_date, pref_rank, item
+        """), {"pid": patient_id}).fetchall()
+
+        events = [r.item for r in rows if not any(bl in r.item.lower() for bl in _BLACKLIST)]
+
+        deduped: list[str] = []
+        for e in events:
+            if not deduped or deduped[-1] != e:
+                deduped.append(e)
+
+        patient_events = deduped[-_MAX_EVENTS:]
+        if len(patient_events) < min_matched:
+            return []
+
+        completed_ids = {
+            row[0]
+            for row in self.db.query(PrefixSpanPatientPatternModel.pattern_id)
+            .filter(PrefixSpanPatientPatternModel.patient_id == patient_id)
+            .all()
+        }
+
+        all_patterns = self.db.query(PrefixSpanPatternModel).all()
+
+        results: list[SequenceContinuationItem] = []
+        for pattern in all_patterns:
+            if pattern.id in completed_ids:
+                continue
+            steps = pattern.pattern_str.split(" -> ")
+            if len(steps) <= min_matched:
+                continue
+            max_k = min(len(steps) - 1, len(patient_events))
+            for k in range(max_k, min_matched - 1, -1):
+                if patient_events[-k:] == steps[:k]:
+                    results.append(SequenceContinuationItem(
+                        id=pattern.id,
+                        rank=pattern.rank,
+                        pattern_str=pattern.pattern_str,
+                        length=pattern.length,
+                        support_count=pattern.support_count,
+                        support_pct=pattern.support_pct,
+                        has_ai_analysis=pattern.ai_analysis is not None,
+                        matched_steps=k,
+                        matched_pattern_str=" -> ".join(steps[:k]),
+                    ))
+                    break
+
+        results.sort(key=lambda x: (-x.matched_steps, -x.support_count))
+        return results
 
     def save_pattern_ai_analysis(self, pattern_id: int, analysis: dict) -> None:
         self.db.query(PrefixSpanPatternModel).filter(

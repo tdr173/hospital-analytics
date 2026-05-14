@@ -19,6 +19,11 @@ class SequenceListItem(CamelModel):
     has_ai_analysis: bool
 
 
+class SequenceContinuationItem(SequenceListItem):
+    matched_steps: int
+    matched_pattern_str: str
+
+
 class SequenceListResponse(CamelModel):
     total: int
     items: List[SequenceListItem]

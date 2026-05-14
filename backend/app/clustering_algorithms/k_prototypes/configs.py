@@ -1,5 +1,5 @@
 CONFIGS = [
-#     # v1 — Adjusted Baseline with Maternity  (6+4)
+#     # v1 - Adjusted Baseline with Maternity  (6+4)
 #     # Isolates the 100% maternity cluster from other high-utilizers to prevent skew.
 #     {
 #         "version": 1,
@@ -12,7 +12,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v2 — Raw severity, no CSS  (5+6)
+#     # v2 - Raw severity, no CSS  (5+6)
 #     # Hypothesis: does active_conditions_count + lifetime_medication_days beat the
 #     # PCA compression of clinical_severity_score at separating chronic archetypes?
 #     # Utilization: severe_care_count + distinct_providers_seen = 2  ✓
@@ -35,7 +35,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v3 — Behavioral + readmission focus  (5+7)
+#     # v3 - Behavioral + readmission focus  (5+7)
 #     # Hypothesis: substance use, pain tier, and out-of-hours behaviour separate
 #     # high-risk patients more cleanly than utilization counts alone.
 #     # Utilization: acute_care_count = 1  ✓
@@ -59,7 +59,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v4 — Cardiometabolic deep-dive  (5+7)
+#     # v4 - Cardiometabolic deep-dive  (5+7)
 #     # Hypothesis: combining the three chronic disease flags with cholesterol risk
 #     # and care focus separates the cardio-metabolic patient spectrum cleanly.
 #     # Utilization: distinct_providers_seen + total_encounter_duration_hours = 2  ✓
@@ -83,7 +83,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v5 — Respiratory + behavioral, lean numerical  (4+7)
+#     # v5 - Respiratory + behavioral, lean numerical  (4+7)
 #     # Hypothesis: a thin numerical side lets 7 strong categoricals dominate;
 #     # respiratory profile and substance use should split the acute cluster.
 #     # Utilization: acute_care_count = 1  ✓
@@ -106,7 +106,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v6 — QALY replaces age  (5+6)
+#     # v6 - QALY replaces age  (5+6)
 #     # Hypothesis: quality-adjusted life-years carries a different life-stage signal
 #     # than raw age and may produce better separation for elderly/frail patients.
 #     # Utilization: severe_care_count + distinct_providers_seen = 2  ✓
@@ -129,7 +129,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v7 — Care-continuity / system engagement  (5+6)
+#     # v7 - Care-continuity / system engagement  (5+6)
 #     # Hypothesis: how patients interact with the system (fragmented vs. loyal,
 #     # preventive vs. reactive) is a stronger clustering axis than disease flags.
 #     # Utilization: distinct_providers_seen + total_encounter_duration_hours = 2  ✓
@@ -152,7 +152,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v8 — Dense categorical  (4+8)
+#     # v8 - Dense categorical  (4+8)
 #     # Hypothesis: 4 strong numericals + 8 well-chosen categoricals give the
 #     # categorical side enough weight to drive richer clinical archetypes.
 #     # Utilization: acute_care_count = 1  ✓
@@ -176,7 +176,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v9 — Chronic disease flags + raw burden  (5+7)
+#     # v9 - Chronic disease flags + raw burden  (5+7)
 #     # Hypothesis: raw active_conditions_count + disease flags (no CSS) combined
 #     # with metabolic categoricals separates chronic subtypes better than PCA.
 #     # Utilization: total_encounter_duration_hours + distinct_providers_seen = 2  ✓
@@ -200,7 +200,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v10 — Pain + substance + cholesterol  (5+7)
+#     # v10 - Pain + substance + cholesterol  (5+7)
 #     # Hypothesis: chronic pain management tier and cholesterol risk have not been
 #     # combined before; this tests whether metabolic-behavioral overlap forms a
 #     # distinct archetype separate from the standard chronic cluster.
@@ -225,8 +225,8 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v11 — Lean categorical, rich numerical  (6+4)
-#     # Hypothesis: tests the opposite extreme of v8 — 6 numericals drive separation
+#     # v11 - Lean categorical, rich numerical  (6+4)
+#     # Hypothesis: tests the opposite extreme of v8 - 6 numericals drive separation
 #     # while 4 strong categoricals anchor interpretation.
 #     # Utilization: acute_care_count + distinct_providers_seen = 2  ✓
 #     {
@@ -247,7 +247,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v12 — Balanced clinical + behavioral  (5+7)
+#     # v12 - Balanced clinical + behavioral  (5+7)
 #     # Hypothesis: 4 orthogonal axes (demographic, clinical, metabolic, behavioral)
 #     # with no signal duplication; preventive_to_reactive_ratio replaces raw utilization.
 #     {
@@ -270,7 +270,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v13 — Care Continuity & System Engagement
+#     # v13 - Care Continuity & System Engagement
 #     {
 #         "version": 13,
 #         "numerical": [
@@ -289,10 +289,10 @@ CONFIGS = [
 #         ]
 #     },
 #
-#     # v14 — Canonical comprehensive — severity PCA + aggregated utilization
+#     # v14 - Canonical comprehensive - severity PCA + aggregated utilization
 #     {
 #         "version": 14,
-#         "description": "Canonical comprehensive — severity PCA + aggregated utilization",
+#         "description": "Canonical comprehensive - severity PCA + aggregated utilization",
 #         "numerical": [
 #             "age",
 #             "clinical_severity_score",
@@ -313,7 +313,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v15 — Severity via raw components (meds + conditions) instead of PCA
+#     # v15 - Severity via raw components (meds + conditions) instead of PCA
 #     {
 #         "version": 15,
 #         "description": "Severity via raw components (meds + conditions) instead of PCA",
@@ -337,7 +337,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v16 — Chronicity via lifetime_medication_days + severe utilization split
+#     # v16 - Chronicity via lifetime_medication_days + severe utilization split
 #     {
 #         "version": 16,
 #         "description": "Chronicity via lifetime_medication_days + severe utilization split",
@@ -361,7 +361,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v17 — Cardio-metabolic emphasis within a full comprehensive frame
+#     # v17 - Cardio-metabolic emphasis within a full comprehensive frame
 #     {
 #         "version": 17,
 #         "description": "Cardio-metabolic emphasis within a full comprehensive frame",
@@ -385,7 +385,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v18 — Behavioral-health emphasis (MH + substance + pain)
+#     # v18 - Behavioral-health emphasis (MH + substance + pain)
 #     {
 #         "version": 18,
 #         "description": "Behavioral-health emphasis (MH + substance + pain)",
@@ -409,7 +409,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v19 — Metabolic / diabetes-glucose emphasis in comprehensive frame
+#     # v19 - Metabolic / diabetes-glucose emphasis in comprehensive frame
 #     {
 #         "version": 19,
 #         "description": "Metabolic / diabetes-glucose emphasis in comprehensive frame",
@@ -433,7 +433,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v20 — Full utilization axes (routine / acute / severe) with PCA severity
+#     # v20 - Full utilization axes (routine / acute / severe) with PCA severity
 #     {
 #         "version": 20,
 #         "description": "Full utilization axes (routine / acute / severe) with PCA severity",
@@ -457,7 +457,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v21 — Raw encounter counts (emergency / inpatient / wellness) + raw severity
+#     # v21 - Raw encounter counts (emergency / inpatient / wellness) + raw severity
 #     {
 #         "version": 21,
 #         "description": "Raw encounter counts (emergency / inpatient / wellness) + raw severity",
@@ -481,7 +481,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v22 — Preventive-to-reactive ratio added (separates healthy preventive)
+#     # v22 - Preventive-to-reactive ratio added (separates healthy preventive)
 #     {
 #         "version": 22,
 #         "description": "Preventive-to-reactive ratio added (separates healthy preventive)",
@@ -505,7 +505,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v23 — Respiratory / oncology / renal emphasis (high-acuity detection)
+#     # v23 - Respiratory / oncology / renal emphasis (high-acuity detection)
 #     {
 #         "version": 23,
 #         "description": "Respiratory / oncology / renal emphasis (high-acuity detection)",
@@ -529,7 +529,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v24 — Demographic / ethnic disparity axis added to comprehensive frame
+#     # v24 - Demographic / ethnic disparity axis added to comprehensive frame
 #     {
 #         "version": 24,
 #         "description": "Demographic / ethnic disparity axis added to comprehensive frame",
@@ -553,7 +553,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v25 — Pain / opioid profile within severity-aware comprehensive frame
+#     # v25 - Pain / opioid profile within severity-aware comprehensive frame
 #     {
 #         "version": 25,
 #         "description": "Pain / opioid profile within severity-aware comprehensive frame",
@@ -577,10 +577,10 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v26 — QALY-driven life-stage (replaces age) — independent life-stage signal
+#     # v26 - QALY-driven life-stage (replaces age) - independent life-stage signal
 #     {
 #         "version": 26,
-#         "description": "QALY-driven life-stage (replaces age) — independent life-stage signal",
+#         "description": "QALY-driven life-stage (replaces age) - independent life-stage signal",
 #         "numerical": [
 #             "qaly",
 #             "total_medications",
@@ -601,7 +601,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v27 — Medication intensity as categorical (bucketed) instead of raw count
+#     # v27 - Medication intensity as categorical (bucketed) instead of raw count
 #     {
 #         "version": 27,
 #         "description": "Medication intensity as categorical (bucketed) instead of raw count",
@@ -625,7 +625,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v28 — Preventive-ratio + active_conditions raw, lightest severity frame
+#     # v28 - Preventive-ratio + active_conditions raw, lightest severity frame
 #     {
 #         "version": 28,
 #         "description": "Preventive-ratio + active_conditions raw, lightest severity frame",
@@ -649,7 +649,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v29 — Baseline refined: tightest proven feature set
+#     # v29 - Baseline refined: tightest proven feature set
 #     {
 #         "version": 29,
 #         "description": "Baseline refined: tightest proven feature set",
@@ -673,7 +673,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v30 — v29 with PCA severity swap (clinical_severity_score instead of raw conditions)
+#     # v30 - v29 with PCA severity swap (clinical_severity_score instead of raw conditions)
 #     {
 #         "version": 30,
 #         "description": "v29 with PCA severity swap (clinical_severity_score instead of raw conditions)",
@@ -697,7 +697,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v31 — v29 + condition_burden bucketed (swap active_conditions_count → condition_burden categorical)
+#     # v31 - v29 + condition_burden bucketed (swap active_conditions_count → condition_burden categorical)
 #     {
 #         "version": 31,
 #         "description": "v29 + condition_burden bucketed (swap active_conditions_count → condition_burden categorical)",
@@ -721,7 +721,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v32 — v29 trimmed to 5+7 features (removes weakest slot each side)
+#     # v32 - v29 trimmed to 5+7 features (removes weakest slot each side)
 #     {
 #         "version": 32,
 #         "description": "v29 trimmed to 5+7 features (removes weakest slot each side)",
@@ -743,7 +743,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v33 — v29 + cholesterol_risk_category (swap bmi_type for best untested metabolic categorical)
+#     # v33 - v29 + cholesterol_risk_category (swap bmi_type for best untested metabolic categorical)
 #     {
 #         "version": 33,
 #         "description": "v29 + cholesterol_risk_category (swap bmi_type for best untested metabolic categorical)",
@@ -767,7 +767,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v34 — v29 with glucose_risk_category replacing has_diabetes (graded vs binary)
+#     # v34 - v29 with glucose_risk_category replacing has_diabetes (graded vs binary)
 #     {
 #         "version": 34,
 #         "description": "v29 with glucose_risk_category replacing has_diabetes (graded vs binary)",
@@ -791,7 +791,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v35 — v29 + routine_care_count replacing wellness_count (broader preventive signal)
+#     # v35 - v29 + routine_care_count replacing wellness_count (broader preventive signal)
 #     {
 #         "version": 35,
 #         "description": "v29 + routine_care_count replacing wellness_count (broader preventive signal)",
@@ -815,7 +815,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v36 — Dual-severity stress test (violates redundancy rule — diagnostic only)
+#     # v36 - Dual-severity stress test (violates redundancy rule - diagnostic only)
 #     {
 #         "version": 36,
 #         "description": "Corrected config: Kept clinical_severity_score, removed raw conditions to fix redundancy error",
@@ -838,7 +838,7 @@ CONFIGS = [
 #         ]
 #     },
 #
-#     # v37 — Maximal high-k config: 3 chronic flags + 2 graded metabolic (pushes k>=5 separation)
+#     # v37 - Maximal high-k config: 3 chronic flags + 2 graded metabolic (pushes k>=5 separation)
 #     {
 #         "version": 37,
 #         "description": "Maximal high-k config: 3 chronic flags + 2 graded metabolic (pushes k>=5 separation)",
@@ -862,10 +862,10 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v38 — Minimal 4+4 ablation — does k=4 survive feature starvation?
+#     # v38 - Minimal 4+4 ablation - does k=4 survive feature starvation?
 #     {
 #         "version": 38,
-#         "description": "Minimal 4+4 ablation — does k=4 survive feature starvation?",
+#         "description": "Minimal 4+4 ablation - does k=4 survive feature starvation?",
 #         "numerical": [
 #             "age",
 #             "active_conditions_count",
@@ -880,10 +880,10 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v39 — Redundancy-free canonical reference — the clean baseline
+#     # v39 - Redundancy-free canonical reference - the clean baseline
 #     {
 #         "version": 39,
-#         "description": "Redundancy-free canonical reference — the clean baseline",
+#         "description": "Redundancy-free canonical reference - the clean baseline",
 #         "numerical": [
 #             "age",
 #             "active_conditions_count",
@@ -904,11 +904,11 @@ CONFIGS = [
 #         ],
 #     },
 #
-# #     # v40 — Severity-only — drop all utilization signals ############### GOOD
+# #     # v40 - Severity-only - drop all utilization signals ############### GOOD
 #     {
 #         "version": 40,
 #         "preferred_k": 5,
-#         "description": "Severity-only — drop all utilization signals",
+#         "description": "Severity-only - drop all utilization signals",
 #         "numerical": [
 #             "age",
 #             "active_conditions_count",
@@ -927,10 +927,10 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v41 — Utilization-only — drop severity/chronicity signals
+#     # v41 - Utilization-only - drop severity/chronicity signals
 #     {
 #         "version": 41,
-#         "description": "Utilization-only — drop severity/chronicity signals",
+#         "description": "Utilization-only - drop severity/chronicity signals",
 #         "numerical": [
 #             "age",
 #             "distinct_providers_seen",
@@ -949,7 +949,7 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v42 — Demographics-only sanity baseline (expect worst result)
+#     # v42 - Demographics-only sanity baseline (expect worst result)
 #     {
 #         "version": 42,
 #         "description": "Demographics-only sanity baseline (expect worst result)",
@@ -964,10 +964,10 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v43 — Bucketed-categorical emphasis — condition_burden + medication_intensity
+#     # v43 - Bucketed-categorical emphasis - condition_burden + medication_intensity
 #     {
 #         "version": 43,
-#         "description": "Bucketed-categorical emphasis — condition_burden + medication_intensity",
+#         "description": "Bucketed-categorical emphasis - condition_burden + medication_intensity",
 #         "numerical": [
 #             "age",
 #             "lifetime_medication_days",
@@ -987,10 +987,10 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v44 — Balanced axes — one feature per clinical dimension, nothing duplicated
+#     # v44 - Balanced axes - one feature per clinical dimension, nothing duplicated
 #     {
 #         "version": 44,
-#         "description": "Balanced axes — one feature per clinical dimension, nothing duplicated",
+#         "description": "Balanced axes - one feature per clinical dimension, nothing duplicated",
 #         "numerical": [
 #             "age",
 #             "active_conditions_count",
@@ -1008,10 +1008,10 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v45 — No disease flags — test whether clusters survive without direct condition labels
+#     # v45 - No disease flags - test whether clusters survive without direct condition labels
 #     {
 #         "version": 45,
-#         "description": "No disease flags — test whether clusters survive without direct condition labels",
+#         "description": "No disease flags - test whether clusters survive without direct condition labels",
 #         "numerical": [
 #             "age",
 #             "active_conditions_count",
@@ -1029,10 +1029,10 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v46 — No age — does life-stage re-emerge from medical features alone?
+#     # v46 - No age - does life-stage re-emerge from medical features alone?
 #     {
 #         "version": 46,
-#         "description": "No age — does life-stage re-emerge from medical features alone?",
+#         "description": "No age - does life-stage re-emerge from medical features alone?",
 #         "numerical": [
 #             "active_conditions_count",
 #             "lifetime_medication_days",
@@ -1052,10 +1052,10 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v47 — Thesis final candidate — the configuration to defend in Chapter 4
+#     # v47 - Thesis final candidate - the configuration to defend in Chapter 4
 #     {
 #         "version": 47,
-#         "description": "Thesis final candidate — the configuration to defend in Chapter 4",
+#         "description": "Thesis final candidate - the configuration to defend in Chapter 4",
 #         "numerical": [
 #             "age",
 #             "active_conditions_count",

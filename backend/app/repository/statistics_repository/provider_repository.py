@@ -12,7 +12,7 @@ from repository.statistics_repository._common import (
 class ProviderRepository:
     def __init__(self, db: Session, range_str: str = "all"):
         self.db = db
-        # Providers have no intrinsic date column — range narrows to the set
+        # Providers have no intrinsic date column - range narrows to the set
         # of providers who had encounters within the window.
         min_date = compute_min_date(db, EncounterModel.start_date, range_str)
         if min_date is not None:

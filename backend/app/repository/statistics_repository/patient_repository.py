@@ -12,7 +12,7 @@ from repository.statistics_repository._common import (
 class PatientRepository:
     def __init__(self, db: Session, range_str: str = "all"):
         self.db = db
-        # Patients have no intrinsic date column — range filters down to the set
+        # Patients have no intrinsic date column - range filters down to the set
         # of patients who had encounters within the window.
         min_date = compute_min_date(db, EncounterModel.start_date, range_str)
         if min_date is not None:

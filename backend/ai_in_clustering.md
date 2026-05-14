@@ -17,15 +17,15 @@ For each cluster (including cluster `-1` for outliers), the prompt contains:
 | Field | Meaning |
 |---|---|
 | `age` | Mean patient age in years |
-| `qaly` | Quality-Adjusted Life Year — 1.0 = perfect health, 0 = death |
-| `daly` | Disability-Adjusted Life Years — years of healthy life lost; higher = more disease burden |
+| `qaly` | Quality-Adjusted Life Year - 1.0 = perfect health, 0 = death |
+| `daly` | Disability-Adjusted Life Years - years of healthy life lost; higher = more disease burden |
 | `total_procedures` | Total number of medical procedures across the patient's history |
 | `total_medications` | Total distinct medications ever prescribed |
 | `active_conditions_count` | Number of currently open (unresolved) conditions |
 | `lifetime_medication_days` | Cumulative days of medication coverage across all prescriptions (active meds counted to today) |
 | `total_encounter_duration_hours` | Sum of all encounter durations in hours |
 
-> `clinical_severity_score` is intentionally excluded from the LLM prompt — it is a standardized PCA z-score and not interpretable in absolute terms. The raw inputs (`total_procedures`, `total_medications`, `active_conditions_count`) are used instead.
+> `clinical_severity_score` is intentionally excluded from the LLM prompt - it is a standardized PCA z-score and not interpretable in absolute terms. The raw inputs (`total_procedures`, `total_medications`, `active_conditions_count`) are used instead.
 
 **Demographics and disease rates (categorical summaries):**
 
@@ -66,10 +66,10 @@ Additional rules injected into the prompt:
 
 - **Title**: 2-4 words, plain everyday language, no medical jargon (e.g. "Older Adults with Chronic Conditions").
 - **Description**: 1-2 short sentences understandable by a non-medical reader.
-- **Insight**: The single most distinguishing signal for this cluster — must include a concrete number (e.g. disease rate, average medication count).
+- **Insight**: The single most distinguishing signal for this cluster - must include a concrete number (e.g. disease rate, average medication count).
 - **Recommendation**: One action tied directly to the insight.
 - **Color**: A strong, vivid, fully-saturated hex color that reflects the clinical profile. The prompt provides guidance: red tones for high-risk, green for healthy, blue for elderly chronic, orange for moderate, purple for psychiatric, teal for maternal. Cluster `-1` (outliers) is always `#9CA3AF` (gray).
-- Em dashes (`-`) are explicitly forbidden — the AI must use commas or plain sentence structure.
+- Em dashes (`-`) are explicitly forbidden - the AI must use commas or plain sentence structure.
 
 An example output line is included in the prompt so the AI has a concrete template to follow.
 
@@ -90,17 +90,17 @@ The parsed rows are inserted into the `cluster` table.
 ## 2. The `/clusters/ai-analysis/{cluster_id}` endpoint
 
 **Route:** `GET /clusters/ai-analysis/{cluster_id}`  
-**Auth:** Requires manager role (`require_manager(scope)` — doctors cannot access this endpoint).  
+**Auth:** Requires manager role (`require_manager(scope)` - doctors cannot access this endpoint).  
 **Response model:** `AiAnalysisResponse`
 
 ### What the endpoint does
 
-This endpoint produces a **deep per-cluster analysis** — richer and more clinically detailed than the summary generated during the clustering run. Results are cached in the `cluster.ai_analysis` JSONB column so the LLM is only called once per cluster per run.
+This endpoint produces a **deep per-cluster analysis** - richer and more clinically detailed than the summary generated during the clustering run. Results are cached in the `cluster.ai_analysis` JSONB column so the LLM is only called once per cluster per run.
 
 **Execution flow:**
 
-1. **Fast path (cache hit):** `repo.get_cluster_ai_analysis(cluster_id)` reads `cluster.ai_analysis`. If it is not null, return immediately — no LLM call.
-2. **Slow path — row lock:** `repo.lock_cluster_ai_analysis(cluster_id)` acquires a `SELECT ... FOR UPDATE` lock on the cluster row and rechecks the cache. This prevents multiple concurrent requests from all triggering a separate LLM call.
+1. **Fast path (cache hit):** `repo.get_cluster_ai_analysis(cluster_id)` reads `cluster.ai_analysis`. If it is not null, return immediately - no LLM call.
+2. **Slow path - row lock:** `repo.lock_cluster_ai_analysis(cluster_id)` acquires a `SELECT ... FOR UPDATE` lock on the cluster row and rechecks the cache. This prevents multiple concurrent requests from all triggering a separate LLM call.
 3. **Context assembly:** `repo.get_ai_context(cluster_id)` fetches all statistics from the database (see below).
 4. **Prompt construction:** `ClusterService._build_prompt(ctx)` fills `PROMPT_AI_ANALYSIS` (defined in `cluster_service.py`) with the fetched statistics.
 5. **LLM call:** `ask_ai(prompt)` sends the filled prompt to GPT (`gpt-5.4` via the OpenAI client in `llm_models.py`, 60 s timeout, 2 retries).
@@ -114,12 +114,12 @@ This endpoint produces a **deep per-cluster analysis** — richer and more clini
 
 | Parameter | Meaning |
 |---|---|
-| `silhouette` | Silhouette score — ranges -1 to 1; values near 1 mean well-separated, cohesive clusters |
-| `davies_bouldin` | Davies-Bouldin index — lower is better; measures within-cluster scatter vs between-cluster separation |
+| `silhouette` | Silhouette score - ranges -1 to 1; values near 1 mean well-separated, cohesive clusters |
+| `davies_bouldin` | Davies-Bouldin index - lower is better; measures within-cluster scatter vs between-cluster separation |
 
 These two metrics are shown so the AI can calibrate how confident to be about cluster boundaries.
 
-**Population baseline** (computed across all non-outlier patients — used as comparison deltas):
+**Population baseline** (computed across all non-outlier patients - used as comparison deltas):
 
 | Parameter | Meaning |
 |---|---|
@@ -155,7 +155,7 @@ These two metrics are shown so the AI can calibrate how confident to be about cl
 | `avg_conditions` | `condition` (end_date IS NULL) | Mean active (open) conditions per patient |
 | `avg_meds` | `medication` | Mean total medications per patient |
 | `avg_procedures` | `procedure` | Mean total procedures per patient |
-| `avg_days_since` | `encounter.end_date` | Mean days since last completed encounter — proxy for care recency / follow-up gaps |
+| `avg_days_since` | `encounter.end_date` | Mean days since last completed encounter - proxy for care recency / follow-up gaps |
 | `dominant_encounter_class` | `encounter` (mode) | Most frequent encounter type across the cluster |
 | `dominant_careplan` | `cluster_patient.features` JSONB (mode) | Most common dominant careplan category |
 | `dominant_marital` | `patient.marital` (mode) | Most common marital status |
@@ -184,7 +184,7 @@ Respond ONLY with valid JSON (no markdown, no extra text):
 ```
 
 Rules injected into the prompt:
-- Every claim must be grounded in the provided numbers — no inferred traits.
+- Every claim must be grounded in the provided numbers - no inferred traits.
 - Gender: "balanced" if 40-60%, "more female/male" if 60-70%, "predominantly female/male" only if >70%.
 - Comparisons must use the "vs population avg" deltas explicitly provided.
 - Vitals must be translated to plain risk language (systolic ≥140 = hypertensive range, glucose ≥126 = diabetic range, BMI ≥30 = obese).

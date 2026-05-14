@@ -19,6 +19,7 @@ import {
   fetchPatientCareplans,
   fetchPatientEncounters,
   fetchPatientSequences,
+  fetchPatientContinuations,
   fetchPatientObservations,
   PatientObservationItem,
 } from "@/store/slices/patients/thunks";
@@ -146,6 +147,7 @@ export default function PatientDetailPage() {
     careplans,
     encounters,
     sequences,
+    continuations,
     observations,
     loading,
     error,
@@ -183,7 +185,10 @@ export default function PatientDetailPage() {
       case 3: dispatch(fetchPatientImmunizations({ patientId: id, page: 1 })); break;
       case 4: dispatch(fetchPatientAllergies({ patientId: id, page: 1 })); break;
       case 5: dispatch(fetchPatientCareplans({ patientId: id, page: 1 })); break;
-      case 7: dispatch(fetchPatientSequences({ patientId: id, page: 1 })); break;
+      case 7:
+        dispatch(fetchPatientSequences({ patientId: id, page: 1 }));
+        dispatch(fetchPatientContinuations({ patientId: id }));
+        break;
       case 8: dispatch(fetchPatientObservations({ patientId: id, page: 1 })); break;
     }
   }, [tab, id, dispatch, loadedTabs]);
@@ -528,7 +533,7 @@ export default function PatientDetailPage() {
     4: renderAllergies(),
     5: renderCareplans(),
     6: renderEncounters(),
-    7: <SequencesTab data={sequences.items} />,
+    7: <SequencesTab data={sequences.items} continuations={continuations} />,
     8: renderObservations(),
   };
 

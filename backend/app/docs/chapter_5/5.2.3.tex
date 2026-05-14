@@ -1,0 +1,91 @@
+\subsection{PrefixSpan Pipeline Implementation}
+
+The pattern mining pipeline lives in \texttt{app/clustering\_algorithms/prefix\_span/prefix\_span.py} and is executed as a standalone script, optionally per-cluster via the \texttt{--n-clusters N} CLI flag. The mining algorithm itself is provided by the \texttt{prefixspan} package; the surrounding code performs event extraction, sequence construction, candidate scoring, deduplication, patient attribution, and database persistence.
+
+\subsubsection*{Event Extraction}
+
+A single \texttt{UNION ALL} over \texttt{condition}, \texttt{medication}, \texttt{procedure}, and \texttt{careplan} produces a unified event stream. Each row's \texttt{description} is prefixed with the source-table tag (\texttt{C:}, \texttt{M:}, \texttt{P:}, \texttt{CP:}) so the same string appearing in two tables is treated as two distinct events:
+
+\begin{verbatim}
+SELECT patient_id, start_date AS event_date,
+       'C:' || TRIM(description) AS item
+FROM condition
+WHERE description IS NOT NULL AND start_date IS NOT NULL
+UNION ALL
+SELECT patient_id, start_date, 'M:' || TRIM(description) FROM medication
+UNION ALL ...
+\end{verbatim}
+
+\subsubsection*{Sequence Construction}
+
+\texttt{build\_sequences} sorts the event frame deterministically by \texttt{(patient\_id, event\_date, \_pref\_rank, item)} using \texttt{kind="mergesort"} for stability, so ties on the same calendar day always resolve in the fixed order C \(<\) M \(<\) P \(<\) CP. Three filters are applied in sequence:
+
+\begin{enumerate}
+    \item a substring blacklist (\texttt{ITEM\_BLACKLIST\_SUBSTRINGS}) removes generic encounter noise such as ``medication reconciliation'';
+    \item a recency window keeps only events within \texttt{WINDOW\_DAYS=730} of each patient's last event, implemented via \texttt{groupby(patient\_id).transform("max")} so the cut-off is per-patient and avoids leaking dataset-wide dates;
+    \item consecutive duplicate items within the same patient are dropped using a paired \texttt{Series.shift} comparison, and finally each timeline is capped at \texttt{MAX\_EVENTS\_PER\_PATIENT=25} via \texttt{groupby(\dots).tail(25)}.
+\end{enumerate}
+
+\noindent The remaining events are grouped back into \texttt{list[list[str]]} sequences indexed by patient id.
+
+\subsubsection*{Mining Loop}
+
+Sequences are encoded into integer ids through a one-pass vocabulary builder (\texttt{\_encode}) so the underlying \texttt{prefixspan.PrefixSpan} runs on compact arrays. The library is invoked with the closed top-\(k\) primitive, requesting a pool that is \texttt{OVERMINE\_MULTIPLIER=20} times larger than the desired final count, so that downstream scoring and deduplication can prune aggressively without exhausting candidates:
+
+\begin{verbatim}
+ps = PrefixSpan(int_seqs)
+ps.minlen, ps.maxlen = MIN_PATTERN_LENGTH, MAX_PATTERN_LENGTH
+raw = ps.topk(top_k * OVERMINE_MULTIPLIER, closed=True)
+raw = [(sup, pat) for sup, pat in raw if sup >= abs_minsup]
+\end{verbatim}
+
+\noindent The absolute support floor is computed as \(\max(2, \lfloor n \cdot 0.01 \rfloor)\), which is the integer form of the 1\,\% \texttt{MIN\_SUPPORT\_PCT} threshold.
+
+\subsubsection*{Scoring}
+
+Each candidate is rescored with a geometric-mean-lift (GML) measure that contrasts the observed support against the product of the marginal frequencies of the constituent items:
+
+\begin{verbatim}
+log_item_freqs = np.log(np.maximum(single_support[unique_items], 1)) - log_n
+raw_gml = np.exp(np.log(sup) - log_n - np.mean(log_item_freqs))
+gml = raw_gml * (1.0 + TYPE_DIVERSITY_BONUS * (n_types - 1))
+\end{verbatim}
+
+\noindent A multiplicative bonus is applied per additional event type (C/M/P/CP) present in the pattern, so a cross-domain sequence like \texttt{C: \(\rightarrow\) M: \(\rightarrow\) P:} outranks a same-type chain of comparable raw support. A pre-filter removes any candidate that contains three consecutive events of the same type, which empirically corresponds to noisy intra-domain repetitions.
+
+\subsubsection*{Closedness and Deduplication}
+
+The candidate pool is first reduced to a closed set: a pattern \(p\) is dropped if there exists a strictly longer pattern \(p'\) with identical support whose item set contains \(p\)'s and where \(p\) is a sub-sequence of \(p'\). The check is bucketed by support count to keep the comparison \(O(\text{bucket}^2)\) rather than quadratic over the full pool. A second round of deduplication walks the sorted pool and uses Jaccard similarity on the item sets to suppress near-duplicates:
+
+\begin{verbatim}
+def _jaccard(a, a_len, b, b_len):
+    inter = len(a & b); denom = a_len + b_len - inter
+    return inter / denom if denom else 0.0
+
+if all(_jaccard(pat_set, pat_len, s, s_len) < JACCARD_THRESHOLD
+       for s, s_len in chosen_sets):
+    chosen.append(entry)
+\end{verbatim}
+
+\noindent Two final caps prevent any single starting or ending item from dominating the output (\texttt{MAX\_PER\_PREFIX=6}, \texttt{MAX\_PER\_SUFFIX=20}); a separate cap (\texttt{MAX\_DENTAL\_PATTERNS=15}) limits the number of dental-dominated patterns retained, because the Synthea fluoride protocol otherwise floods the top-\(k\) list with near-identical sequences.
+
+\subsubsection*{Patient Attribution}
+
+Once the final pattern list is fixed, \texttt{attribute\_patients} builds an inverted index from item to the list of patient indices containing that item, then for each pattern intersects the postings of its items (rarest first) to obtain a small candidate set, and finally verifies sub-sequence containment exactly with \texttt{\_is\_subsequence}. The two-step design (cheap set intersection \(\rightarrow\) ordered containment check) avoids running the \(O(\sum |s|)\) containment test against every patient.
+
+\subsubsection*{Persistence and Scope}
+
+Results are written through \texttt{save\_prefix\_span\_results} into \texttt{prefix\_span\_pattern} (one row per pattern, with \texttt{rank}, \texttt{pattern\_str}, \texttt{length}, \texttt{support\_count}, \texttt{support\_pct}, \texttt{cluster\_label}) and \texttt{prefix\_span\_patient\_pattern} (the junction table). The \texttt{run} entry point handles both scopes:
+
+\begin{verbatim}
+def run(engine, db_session, n_clusters=None):
+    if n_clusters is None:
+        _run_single(engine, db_session, cluster_label=None)
+    else:
+        for label in list(range(n_clusters)) + [-1]:
+            _run_single(engine, db_session, cluster_label=label)
+\end{verbatim}
+
+\noindent The \(-1\) label reuses the outlier convention from the clustering step, so the same script produces population-wide patterns, per-cluster patterns, and outlier-specific patterns in a single pass. As with cluster narratives, AI analysis for each pattern is produced lazily on the first request to the corresponding endpoint and cached in \texttt{prefix\_span\_pattern.ai\_analysis} (JSONB).
+
+The principal libraries used are \texttt{prefixspan} (mining), \texttt{pandas}/\texttt{numpy} (event handling and scoring), and \texttt{SQLAlchemy} for the read/write paths.

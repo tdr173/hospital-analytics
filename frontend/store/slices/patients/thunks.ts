@@ -17,7 +17,7 @@ import {
   PagedResponse,
 } from "@/models/generic/patients";
 import { ErrorResponse } from "@/models/generic/generic";
-import { SequenceListItem } from "@/models/generic/sequences";
+import { SequenceListItem, SequenceContinuationItem } from "@/models/generic/sequences";
 import { API_BASE } from "@/store/slices/clusters/thunks";
 import { appendScopeToUrl } from "@/utils/authScope";
 import { apiPost, apiPatch, apiDelete } from "@/store/slices/_apiClient";
@@ -269,5 +269,17 @@ export const fetchPatientSequences = createAsyncThunk<
     return await get<PagedResponse<SequenceListItem>>(`${API_BASE}/patients/${patientId}/sequences?page=${page}`, "patient sequences");
   } catch {
     return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patient sequences" });
+  }
+});
+
+export const fetchPatientContinuations = createAsyncThunk<
+  SequenceContinuationItem[],
+  { patientId: string },
+  { rejectValue: ErrorResponse }
+>("patients/fetchPatientContinuations", async ({ patientId }, thunkAPI) => {
+  try {
+    return await get<SequenceContinuationItem[]>(`${API_BASE}/patients/${patientId}/continuations`, "patient continuations");
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patient continuations" });
   }
 });

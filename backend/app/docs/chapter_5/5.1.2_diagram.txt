@@ -1,0 +1,54 @@
+@startuml feature_pipeline
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam ArrowColor #555555
+skinparam rectangleBorderColor #555555
+skinparam rectangleBackgroundColor #F5F5F5
+
+title Feature Engineering Pipeline
+
+rectangle "Raw Database Tables" as raw {
+    rectangle "patient" as t_patient
+    rectangle "condition" as t_condition
+    rectangle "medication" as t_medication
+    rectangle "procedure" as t_procedure
+    rectangle "encounter" as t_encounter
+    rectangle "observation" as t_observation
+    rectangle "careplan" as t_careplan
+}
+
+rectangle "Feature Extraction" as extract {
+    rectangle "Direct attributes\n(age, gender)" as direct
+    rectangle "Count aggregates\n(active_conditions_count,\ntotal_medications,\ntotal_procedures)" as counts
+    rectangle "Encounter ratios\n(preventive_to_reactive_ratio)" as ratios
+    rectangle "Keyword-matched flags\n(has_diabetes, has_hypertension,\nhas_heart_disease, pregnancy_history)" as flags
+    rectangle "Observation averages\n(avg_bmi)" as vitals
+    rectangle "Care plan descriptions\n(40+ raw values)" as careplan_raw
+}
+
+rectangle "Bucketing Layer" as bucket {
+    rectangle "bmi_type\n(WHO categories + Unknown)" as bmi_bucket
+    rectangle "condition_burden\n(low / medium / high)" as burden_bucket
+    rectangle "dominant_careplan\n(6 clinical categories,\nseverity-ranked)" as careplan_bucket
+}
+
+rectangle "Numerical Features (5)" as num {
+    rectangle "age\nactive_conditions_count\ntotal_medications\ntotal_procedures\npreventive_to_reactive_ratio" as num_list
+}
+
+rectangle "Categorical Features (8)" as cat {
+    rectangle "gender\npregnancy_history\nhas_heart_disease\nhas_diabetes\nhas_hypertension\ncondition_burden\nbmi_type\ndominant_careplan" as cat_list
+}
+
+rectangle "K-Prototypes Input Matrix" as matrix
+
+raw --> extract
+extract --> bucket : sparse / high-cardinality\nfeatures
+extract --> num : direct numerics
+extract --> cat : direct categoricals
+bucket --> cat : bucketed categoricals
+num --> matrix
+cat --> matrix
+
+@enduml

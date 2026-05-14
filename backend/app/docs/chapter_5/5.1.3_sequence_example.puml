@@ -1,0 +1,71 @@
+@startuml SequenceConstructionExample
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #2B2B2B
+skinparam defaultFontSize 13
+skinparam defaultFontName "Arial"
+skinparam ArrowColor #6B6B6B
+skinparam ArrowThickness 1.4
+skinparam ArrowFontColor #555555
+skinparam ArrowFontSize 11
+skinparam RoundCorner 8
+skinparam shadowing false
+
+hide stereotype
+
+<style>
+rectangle {
+  LineThickness 1.4
+}
+.cond {
+  BackGroundColor #FCE4D6
+  LineColor #E8A87C
+  FontColor #6B3410
+}
+.med {
+  BackGroundColor #D6E9FC
+  LineColor #7CB0E8
+  FontColor #103E6B
+}
+.proc {
+  BackGroundColor #FCF4D6
+  LineColor #E8C97C
+  FontColor #6B5510
+}
+.care {
+  BackGroundColor #E8D6FC
+  LineColor #B07CE8
+  FontColor #3E106B
+}
+.legendbox {
+  BackGroundColor #FFFFFF
+  LineColor #BDBDBD
+  FontColor #2B2B2B
+  LineThickness 1.0
+}
+</style>
+
+' ════════════════════════════════════════════════════════════
+'  CONSTRUCTED SEQUENCE FOR PATIENT #7421
+' ════════════════════════════════════════════════════════════
+
+rectangle "**C:** Hypertension\n2024-01-15"                  <<cond>> as S1
+rectangle "**M:** Lisinopril\n2024-01-22"                    <<med>>  as S2
+rectangle "**CP:** Chronic Cardio-\nMetabolic Plan\n2024-02-03" <<care>> as S3
+rectangle "**P:** Blood Pressure\nCheck\n2024-03-10"         <<proc>> as S4
+rectangle "**M:** Atorvastatin\n2024-04-18"                  <<med>>  as S5
+
+S1 -right-> S2
+S2 -right-> S3
+S3 -right-> S4
+S4 -right-> S5
+
+' ════════════════════════════════════════════════════════════
+'  LEGEND
+' ════════════════════════════════════════════════════════════
+
+rectangle "**Event type prefixes**\n\n<back:#FCE4D6>  </back>  **C:**   condition\n<back:#D6E9FC>  </back>  **M:**   medication\n<back:#FCF4D6>  </back>  **P:**   procedure\n<back:#E8D6FC>  </back>  **CP:**  care plan" <<legendbox>> as LEG
+
+S5 -[hidden]right- LEG
+
+@enduml

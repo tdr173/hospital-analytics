@@ -9,43 +9,48 @@ import { colorWithAlpha } from "../../utils/colorWithAlpha";
 interface Props {
   patternStr: string;
   colors: Record<string, string>;
+  dimAfter?: number;
 }
 
 const FALLBACK_COLOR = "#6b7280";
 
-export default function SequenceChipRow({ patternStr, colors }: Props) {
+export default function SequenceChipRow({ patternStr, colors, dimAfter }: Props) {
   const classes = useClasses(SequenceChipRowStyles, { name: "SequenceChipRow" });
   const steps = parsePattern(patternStr);
 
   return (
     <div className={classes.wrapper}>
     <div className={classes.row}>
-      {steps.map((step, stepIdx) => (
-        <React.Fragment key={stepIdx}>
-          <span className={classes.step}>
-            {step.map((token, tokenIdx) => {
-              const color = colors[token.prefix] ?? FALLBACK_COLOR;
-              return (
-                <span
-                  key={tokenIdx}
-                  className={classes.chip}
-                  style={{
-                    backgroundColor: colorWithAlpha(color, 0.12),
-                    color,
-                    borderColor: colorWithAlpha(color, 0.3),
-                  }}
-                >
-                  <span className={classes.chipPrefix}>{token.prefix}:</span>
-                  <span className={classes.chipValue}>{token.value}</span>
-                </span>
-              );
-            })}
-          </span>
-          {stepIdx < steps.length - 1 && (
-            <span className={classes.arrow}>→</span>
-          )}
-        </React.Fragment>
-      ))}
+      {steps.map((step, stepIdx) => {
+        const isDimmed = dimAfter !== undefined && stepIdx >= dimAfter;
+        return (
+          <React.Fragment key={stepIdx}>
+            <span className={classes.step} style={isDimmed ? { opacity: 0.4 } : undefined}>
+              {step.map((token, tokenIdx) => {
+                const color = colors[token.prefix] ?? FALLBACK_COLOR;
+                return (
+                  <span
+                    key={tokenIdx}
+                    className={classes.chip}
+                    style={{
+                      backgroundColor: colorWithAlpha(color, isDimmed ? 0.06 : 0.12),
+                      color,
+                      borderColor: colorWithAlpha(color, isDimmed ? 0.15 : 0.3),
+                      borderStyle: isDimmed ? "dashed" : "solid",
+                    }}
+                  >
+                    <span className={classes.chipPrefix}>{token.prefix}:</span>
+                    <span className={classes.chipValue}>{token.value}</span>
+                  </span>
+                );
+              })}
+            </span>
+            {stepIdx < steps.length - 1 && (
+              <span className={classes.arrow}>→</span>
+            )}
+          </React.Fragment>
+        );
+      })}
     </div>
     </div>
   );

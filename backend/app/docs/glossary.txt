@@ -1,0 +1,85 @@
+Hospital Analytics - Requirements Glossary
+
+Synthea
+An open-source patient population simulator used as the source of synthetic but realistic clinical data for this work. Produces patient demographics, encounters, conditions, medications, procedures, observations, and care plans as CSV files.
+
+ETL Pipeline
+The standalone ingestion process that reads Synthea CSVs, normalises them into a relational PostgreSQL schema, materialises derived columns (e.g. patient age, encounter counts), and installs foreign-key constraints. Runs once per dataset refresh, independently of the FastAPI application.
+
+PostgreSQL
+The relational database management system used to persist all ingested clinical data, clustering results, and mined sequence patterns. Accessed from Python through SQLAlchemy and SQLModel.
+
+SQLModel
+The ORM layer used to declare the analytical schema. Provides both Pydantic-style validation for request/response models and SQLAlchemy-style table definitions in a single class.
+
+Normalised Schema
+The relational schema produced by the ETL step. Every table has a well-defined primary key, every non-key attribute is fully dependent on it, and many-to-many relationships are resolved through dedicated junction tables (e.g. patient_provider).
+
+Patient Feature Vector
+The per-patient row produced by the feature-engineering layer of the K-Prototypes pipeline. Mixes direct attributes pulled from the database (age, gender) with clinical signals derived from event tables (active conditions count, dominant care plan, BMI bucket, etc.).
+
+K-Prototypes
+The clustering algorithm chosen to group patients. Extends K-Means by adding a Hamming-based categorical distance term so that numerical and categorical features can be clustered jointly without artificial encodings. Provided by the kmodes Python library.
+
+Cluster
+A group of patients identified by the K-Prototypes algorithm as sharing similar clinical characteristics. Each cluster is persisted as a row in the cluster table together with its narrative summary, suggested colour, and size.
+
+Outlier Cluster
+The special cluster with label -1. Holds patients removed by z-score filtering before the K-Prototypes fit; they are still persisted and surfaced in the UI so that unusual care trajectories remain visible.
+
+cluster_meta
+A singleton table holding the metadata of the current clustering run (chosen feature set, scaler, number of clusters, evaluation metrics, FAMD scatter image). Truncated and re-inserted on every new run.
+
+MinMax Scaler
+The scikit-learn scaler used to map numerical features into [0, 1] before clustering. Chosen so that the numerical squared-Euclidean term and the gamma-weighted categorical Hamming term in the K-Prototypes cost function remain on comparable magnitudes.
+
+Clinical Severity Score (CSS)
+A composite numerical feature produced by log1p-transforming three raw severity counts (total procedures, total medications, active conditions count), standardising them, and projecting to a single principal component with PCA.
+
+FAMD (Factor Analysis of Mixed Data)
+The dimensionality reduction technique used to project the mixed numerical and categorical feature space into two dimensions for cluster visualisation. Chosen over PCA because it treats both data types symmetrically. Provided by the prince Python library.
+
+Elbow Plot
+The diagnostic chart used to choose the number of clusters k. Plots the K-Prototypes cost as k varies over a fixed range and surfaces the point of diminishing returns.
+
+PrefixSpan
+The sequential pattern mining algorithm used to discover frequent ordered sequences of clinical events. Provided by the prefixspan Python library and run as a standalone script after the clustering step.
+
+Clinical Event
+A single entry in a patient's timeline drawn from one of four source tables (condition, medication, procedure, careplan). Tagged with a type prefix (C:, M:, P:, CP:) so that the same description appearing in two tables is treated as two distinct events.
+
+Patient Sequence
+A patient's clinical history represented as an ordered list of clinical events. Constructed deterministically by chronological sorting with a fixed secondary order on event type, capped at a maximum length, and bounded to a recent time window.
+
+Pattern
+An ordered subsequence of clinical events whose elements must appear in the correct order in a patient's timeline but need not be adjacent. Each pattern is scored by support and by a geometric-mean-lift measure that penalises co-occurrences of individually common events.
+
+Patient Continuation
+A secondary feature built on top of the pattern index. Given a patient's most recent clinical events, the system surfaces stored patterns whose prefix matches those events and exposes the unmatched suffix as a candidate next step in the patient's care trajectory.
+
+LLM SQL Agent
+The natural-language-to-SQL component exposed via the statistics router. Translates user questions into validated PostgreSQL SELECT queries, executes them, and summarises the result in the user's original language. Built as a LangGraph state machine.
+
+LangGraph
+The Python library used to express the SQL agent as a directed state machine with five nodes (input classification, general answer, query generation, query validation, query execution) and three conditional routers.
+
+Doctor Scope Clause
+A role-based restriction injected into both the SQL generation and the SQL validation prompts when the requesting user is a doctor. Forces every generated query to filter by the doctor's provider_id and triggers a post-execution textual check before returning results.
+
+FastAPI
+The Python web framework that exposes the analytical API consumed by the Next.js frontend. Hosts the patient, cluster, statistics, and sequence routers.
+
+Next.js Frontend
+The React-based web application that consumes the FastAPI endpoints, renders patient lists, cluster dashboards, sequence views, and the SQL agent chat. Uses Redux Toolkit for state management and Emotion for styling.
+
+End User
+The primary actor of the analytical platform. Submits questions through the SQL agent, browses clusters, inspects patient profiles, and reviews mined sequence patterns. No technical knowledge of the underlying pipeline is required.
+
+Clinician
+A stakeholder interested in ensuring that clusters, patterns, and LLM-generated narratives are clinically meaningful and consistent with established care pathways.
+
+Data Engineer
+A stakeholder responsible for maintaining the ETL script, schema migrations, and database connectivity. Ensures that new Synthea releases can be ingested without breaking downstream analytics.
+
+ML Researcher
+A stakeholder interested in ensuring that the clustering and sequence mining pipelines produce stable, reproducible results across configurations, scalers, random seeds, and outlier thresholds.

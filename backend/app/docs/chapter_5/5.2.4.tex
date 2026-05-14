@@ -1,0 +1,94 @@
+\subsection{LLM SQL Agent Implementation}
+
+The natural-language-to-SQL agent lives in \texttt{app/service/lllm\_sql\_agent\_service/}. It is built as a LangGraph state machine on top of either the Google GenAI or OpenAI Python SDK (selectable through \texttt{llm\_models.ask\_ai}), exposed to the frontend through the \texttt{statistics\_router}. The agent is the only path through which untyped natural-language queries reach the database, so its safety and validation logic is more elaborate than a single prompt would require.
+
+\subsubsection*{Graph Topology}
+
+The control flow is a directed graph with five nodes - \texttt{process\_input}, \texttt{answer\_general}, \texttt{generate\_query}, \texttt{validate\_query}, \texttt{execute\_query} - and three conditional routers. The structure is sketched in Figure~\ref{fig:ch5_sql_agent_graph}.
+
+\begin{figure}[H]
+\centering
+% TODO: insert mermaid diagram here
+\caption{LangGraph state machine for the SQL agent}
+\label{fig:ch5_sql_agent_graph}
+\end{figure}
+
+The shared state is a \texttt{TypedDict} carrying the SQLAlchemy session, the raw user prompt, the rewritten prompt, the role-based scope clause, the current SQL draft, the execution result, validation feedback, and the retry counter.
+
+\subsubsection*{Input Classification}
+
+The first node, \texttt{process\_input}, sends the user message through a classifier prompt that returns exactly one of three tokens: \texttt{DB\_RETRIEVAL} (a rewritten standalone English question fit for SQL generation), \texttt{MEDICAL\_GENERAL: <question>} (a general medical question to be answered without touching the database), or \texttt{NOT\_MEDICAL} (out-of-scope input). The classifier also resolves references against the recent chat history (capped at \texttt{MAX\_HISTORY\_TURNS=5}) so multi-turn questions become self-contained.
+
+\begin{verbatim}
+result = ask_ai(PROMPT_TRANSLATE.format(...)).strip()
+if result.startswith("MEDICAL_GENERAL:"):
+    return {"translated_prompt": result[len("MEDICAL_GENERAL:"):].strip(),
+            "error_message": "MEDICAL_GENERAL"}
+if "NOT_MEDICAL" in result:
+    return {"error_message": "NOT_MEDICAL"}
+return {"translated_prompt": result, "retry_count": 0, "feedback": ""}
+\end{verbatim}
+
+\noindent A conditional edge then routes to \texttt{answer\_general} (for medical questions), to \texttt{generate\_query} (for database questions), or to \texttt{END} (for unrelated input).
+
+\subsubsection*{SQL Generation}
+
+\texttt{generate\_query} builds the \texttt{PROMPT\_GENERATE\_SQL} prompt with the full schema (\texttt{DB\_SCHEMA} from \texttt{db.db\_data}), the role-scope clause, and the previous failure's feedback if any. The prompt enforces a strict ruleset: \texttt{SELECT}/\texttt{WITH} only, no \texttt{SELECT *}, explicit \texttt{LIMIT}, mandatory ILIKE on free-text fields, exact equality on enumerated codes, and \texttt{COUNT(DISTINCT patient\_id)} when aggregating across clinical tables. The model output is run through \texttt{extract\_clean\_sql}, which strips Markdown fences:
+
+\begin{verbatim}
+def extract_clean_sql(text):
+    match = re.search(r"```(?:sql)?\s*(.*?)\s*```", text,
+                      re.DOTALL | re.IGNORECASE)
+    return match.group(1).strip() if match else text.strip()
+\end{verbatim}
+
+\subsubsection*{Validation}
+
+\texttt{validate\_query} performs two independent checks. The first is a static safety filter, \texttt{is\_select\_only}, which strips comments, removes the trailing semicolon, requires the statement to start with \texttt{SELECT} or \texttt{WITH}, and rejects anything that matches a regex of dangerous keywords:
+
+\begin{verbatim}
+DANGEROUS_KEYWORDS = re.compile(
+    r"\b(DROP|DELETE|TRUNCATE|ALTER|INSERT|UPDATE|"
+    r"CREATE|GRANT|REVOKE|EXEC|EXECUTE)\b", re.IGNORECASE)
+\end{verbatim}
+
+\noindent The second check is semantic: a second LLM call (\texttt{PROMPT\_VALIDATE\_SQL}) is given the user question, the candidate SQL, and the same schema, and replies \texttt{YES} on the first line or \texttt{NO} plus a one-sentence explanation. The explanation is fed back into the retry counter and re-injected into the next \texttt{generate\_query} call as \texttt{retry\_context}, so the model can correct itself with concrete feedback rather than regenerating blindly. The retry budget is \texttt{MAX\_RETRIES=3}.
+
+\subsubsection*{Execution and Summarisation}
+
+\texttt{execute\_query} runs the validated SQL through \texttt{\_db\_retrieve}, which uses the request-scoped SQLAlchemy session. The result is stringified and truncated to \texttt{MAX\_RESULT\_CHARS=3000} to keep the downstream summarisation prompt within token budget. A database exception is caught, formatted, and pushed back into the validation/retry loop as \texttt{feedback}, so e.g. an invalid column name triggers a corrective regeneration instead of bubbling up to the user.
+
+The final response is produced by \texttt{PROMPT\_RESULT}, which instructs the model to summarise the result in natural language, in the user's original language, without referring to SQL or table internals.
+
+\subsubsection*{Role-Based Scoping}
+
+When the request reaches \texttt{run\_agent} with \texttt{role="DOCTOR"} and a \texttt{provider\_id}, a \texttt{DOCTOR\_SCOPE\_CLAUSE} is injected into both the generation and validation prompts. The clause forces every generated query to either include \texttt{WHERE provider\_id = '<id>'} on \texttt{encounter} or constrain patient lookups to the set of patients seen by that provider. A post-execution sanity check verifies textually that the final SQL contains the provider id; if not, the response is replaced with a refusal:
+
+\begin{verbatim}
+if scope_clause:
+    if provider_id not in (final_state.get("sql_query", "") or ""):
+        return {"response": "Unable to answer under doctor scope..."}
+\end{verbatim}
+
+\subsubsection*{Graph Compilation and Routing}
+
+The state graph is compiled once at import time:
+
+\begin{verbatim}
+builder.add_edge(START, "process_input")
+builder.add_conditional_edges("process_input", route_input,
+    {"GENERATE": "generate_query", "MEDICAL": "answer_general",
+     "NOT_MEDICAL": END})
+builder.add_edge("answer_general", END)
+builder.add_edge("generate_query", "validate_query")
+builder.add_conditional_edges("validate_query", route_validation,
+    {"EXECUTE": "execute_query", "RETRY": "generate_query",
+     "MAX_RETRIES": END})
+builder.add_conditional_edges("execute_query", route_execution,
+    {"END": END, "RETRY": "generate_query"})
+graph = builder.compile()
+\end{verbatim}
+
+\noindent A recursion limit of 20 protects against pathological retry loops; together with \texttt{MAX\_RETRIES} this caps the worst-case number of LLM round-trips per request at four generations and four validations.
+
+The principal libraries used are \texttt{langgraph} (state machine), the Google GenAI / OpenAI SDKs (model calls), \texttt{SQLAlchemy} (session and query execution), and the standard \texttt{re} module for the static safety filter.

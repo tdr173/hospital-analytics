@@ -48,7 +48,7 @@ def pick_hospital(orgs: pd.DataFrame) -> pd.Series:
     """Return the single org row with the highest UTILIZATION (tie → first)."""
     top = orgs.sort_values("UTILIZATION", ascending=False, kind="stable").iloc[0]
     log.info(
-        "Chosen hospital: %s (%s) — UTILIZATION=%s",
+        "Chosen hospital: %s (%s) - UTILIZATION=%s",
         top["NAME"], top["Id"], top["UTILIZATION"],
     )
     return top
@@ -146,7 +146,7 @@ def reassign_encounters(
     for year, group in enc.groupby("_year", sort=False):
         pool = active_by_year.get(int(year))
         if pool is None or len(pool) == 0:
-            raise RuntimeError(f"No active doctors for year {year} — should not happen.")
+            raise RuntimeError(f"No active doctors for year {year} - should not happen.")
         new_providers[group.index] = rng.choice(pool, size=len(group))
 
     enc["PROVIDER"] = new_providers

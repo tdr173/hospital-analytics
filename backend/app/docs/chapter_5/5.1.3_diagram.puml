@@ -1,0 +1,66 @@
+@startuml PatternMiningStages
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #2B2B2B
+skinparam defaultFontSize 12
+skinparam defaultFontName "Arial"
+skinparam ArrowColor #6B6B6B
+skinparam ArrowThickness 1.4
+skinparam ArrowFontColor #6B6B6B
+skinparam ArrowFontSize 11
+skinparam RoundCorner 8
+skinparam shadowing false
+
+hide stereotype
+
+<style>
+database {
+  LineThickness 1.4
+}
+rectangle {
+  LineThickness 1.4
+}
+.peach {
+  BackGroundColor #FCE4D6
+  LineColor #E8A87C
+  FontColor #6B3410
+}
+.sky {
+  BackGroundColor #D6E9FC
+  LineColor #7CB0E8
+  FontColor #103E6B
+}
+.butter {
+  BackGroundColor #FCF4D6
+  LineColor #E8C97C
+  FontColor #6B5510
+}
+.lilac {
+  BackGroundColor #E8D6FC
+  LineColor #B07CE8
+  FontColor #3E106B
+}
+.mint {
+  BackGroundColor #D6FCE4
+  LineColor #7CE8A8
+  FontColor #106B34
+}
+</style>
+
+left to right direction
+
+database "Clinical Events\n(condition, medication,\nprocedure, careplan)" <<peach>> as DB
+
+rectangle "**Stage 1**\nSequence\nConstruction" <<sky>> as BUILD
+rectangle "**Stage 2**\nPattern Mining\n(PrefixSpan)" <<butter>> as MINE
+rectangle "**Stage 3**\nScoring &\nReranking" <<butter>> as SCORE
+rectangle "**Stage 4**\nQuality\nFiltering" <<lilac>> as FILTER
+rectangle "**Ranked**\n**Pattern Index**\nglobal + per-cluster" <<mint>> as OUT
+
+DB     --> BUILD  : raw\nevents
+BUILD  --> MINE   : patient\nsequences
+MINE   --> SCORE  : candidate\npatterns
+SCORE  --> FILTER : scored\npatterns
+FILTER --> OUT    : curated\npathways
+
+@enduml

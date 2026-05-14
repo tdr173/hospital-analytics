@@ -1,0 +1,49 @@
+\subsection{Pattern Mining Design}
+
+The results from the Clustering process are in fact static representations of patients. They tell us which category the patients fit, but do not tell \emph{how} patients travel across the care system. In order to identify recurrent temporal patterns of clinical events, an additional layer of pattern mining was developed that would take advantage of the clustered patients. PrefixSpan algorithm (Section~\ref{ch:prefix_span_theory}) was selected for use in this case because of its efficient projection-based growth method in handling large vocabularies of hundreds of clinical event codes, making algorithms such as GSP infeasible.
+
+The four-stage pipeline for the mining process can be seen in Figure~\ref{fig:ch5_pattern_pipeline}. At each stage, the implementation focuses on solving one unique challenge associated with the process. For instance, the process starts with organizing clinical data into patient sequences (Stage 1). Using the PrefixSpan approach, the data miner extracts frequent pattern candidates (Stage 2). In order to ensure the clinical significance of the findings, the candidates go through a process of ranking and scoring (Stage 3). Following this, a filtering process removes any duplicates (Stage 4), ensuring that the best results are obtained.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_5/pattern_pipeline.png}
+\caption{Pattern mining pipeline stages}
+\label{fig:ch5_pattern_pipeline}
+\end{figure}
+
+\subsubsection*{Sequence Construction}
+
+The clinical events are generated from four different tables (\texttt{condition}, \texttt{medication}, \texttt{procedure}, \texttt{careplan}) and have been annotated with a type tag, thereby treating events with identical descriptions present in two different tables as two different clinical events. The process has been depicted in Fig.~\ref{fig:ch5_sequence_example} for a sample individual, where five raw rows from four different tables get condensed into one clinical sequence.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_5/sequence_example.png}
+\caption{Example of a length 5 sequence}
+\label{fig:ch5_sequence_example}
+\end{figure}
+
+\subsubsection*{Mining and Filtering}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\linewidth]{figs/chapter_5/prefixspan_tree.png}
+\caption{PrefixSpan projection tree}
+\label{fig:ch5_prefixspan_tree}
+\end{figure}
+
+The PrefixSpan algorithm is applied on the generated clinical event sequences for the identification of the frequent paths. Figure~\ref{fig:ch5_prefixspan_tree} shows how the algorithm is carried out on a sample dataset of four sequences with minimum support of 2. Beginning from the empty prefix, the algorithm scans through the dataset and counts the occurrences of each item. The algorithm successfully identifies three frequent length 1 prefixes (\texttt{<C>}, \texttt{<M>}, and \texttt{<P>}, all with a support of 4), while immediately pruning infrequent items, such as \texttt{<CP>}, that fall below the required threshold.
+
+After detecting these preliminary elements, PrefixSpan will recursively construct projected sub-databases for each of the frequent prefixes. For example, the projected sub-database $S|\texttt{<C>}$ contains only the suffixes of the sequences following the first occurrence of \texttt{C}. By processing this reduced-size database, PrefixSpan can incrementally generate longer patterns and hence find \texttt{<C, M>} and \texttt{<C, P>} (support = 3). The process of projection followed by growth is performed recursively as can be seen from the generation of $S|\texttt{<C, M>}$ to yield a three-length pattern, \texttt{<C, M, P>}. This continues until there are no more frequent items to append. Since each projected sub-database is necessarily smaller than its predecessor, the search space will naturally become smaller and smaller.
+
+One important feature of the architecture in this pipeline is the use of post-process clinical quality filters \emph{after} candidate generation and not through embedded in-loop constraints. With the use of a fully heuristic-independent approach in the pattern mining phase, the pipeline becomes very flexible, as clinical scoring and filtering can be optimized incrementally, without the overhead of re-executing the PrefixSpan algorithm.
+
+\subsubsection*{Dual Scope Mining}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.67\linewidth]{figs/chapter_5/sequence_modes.png}
+\caption{Sequence Mining Operating Modes}
+\label{fig:ch5_sequence_modes}
+\end{figure}
+
+In order to capture trends at both macro and micro levels (as shown in Figure~\ref{fig:ch5_sequence_modes}), the pattern mining process is performed in two modes. One mode is a global run that performs its process on the complete patient set, whereas another one is a cluster-specific run which runs the process on selected patients. The generated patterns are then indexed using their corresponding scopes, allowing for the incorporation of both global and cluster-level pathways in the same index structure. In addition to this, the outlier data is not ignored but is instead clustered separately.

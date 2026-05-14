@@ -47,21 +47,21 @@ User message: "{initial_prompt}"
 Schema reference (for term disambiguation only, do NOT copy into output):
 {db_schema}
 
-Classification rules — return EXACTLY one of the three outputs below:
+Classification rules - return EXACTLY one of the three outputs below:
 
-1. DB_RETRIEVAL  — the user is asking for data that exists in the hospital database (patient counts,
+1. DB_RETRIEVAL  - the user is asking for data that exists in the hospital database (patient counts,
    encounter stats, medications, conditions, clusters, sequences, provider info, etc.).
    Output: a single standalone English sentence describing what data to retrieve.
    - Resolve any references to prior turns so the sentence is self-contained with no history needed.
    - Preserve specific entities (names, ids, numbers, date ranges) exactly.
 
-2. MEDICAL_GENERAL — the user is asking a general medical/health question that does NOT require
+2. MEDICAL_GENERAL - the user is asking a general medical/health question that does NOT require
    querying the database (e.g. "what is diabetes?", "how is hypertension treated?",
    "what are symptoms of COVID-19?", "explain BMI", medical advice questions, etc.).
    Output the literal token followed by a colon and the standalone question in English:
    MEDICAL_GENERAL: <question>
 
-3. NOT_MEDICAL — the input is completely unrelated to medicine or the hospital database
+3. NOT_MEDICAL - the input is completely unrelated to medicine or the hospital database
    (greetings, small talk, coding help, math, opinions, commands to modify data, etc.).
    Output the literal token: NOT_MEDICAL
 
@@ -411,7 +411,7 @@ def build_history_string(history: list[dict]) -> str:
 
 DOCTOR_SCOPE_CLAUSE = """\
 
-MANDATORY ROLE SCOPE — DOCTOR (provider_id = '{provider_id}'):
+MANDATORY ROLE SCOPE - DOCTOR (provider_id = '{provider_id}'):
 - Every SQL query you generate MUST restrict results to encounters where provider_id = '{provider_id}'.
 - When the question is about patients, restrict to patients who have at least one encounter with that provider_id. Use: patient.patient_id IN (SELECT DISTINCT patient_id FROM encounter WHERE provider_id = '{provider_id}').
 - Never expose other doctors' patients, encounters, or aggregate counts. If the question cannot be answered under this scope, say so in the final answer.
@@ -451,7 +451,7 @@ def run_agent(db: Session, prompt: str, history=None, role: str = None, provider
         sql = final_state.get("sql_query", "") or ""
         if provider_id not in sql:
             return {
-                "response": "Unable to answer under doctor scope — the generated query did not reference your provider id. Try rephrasing.",
+                "response": "Unable to answer under doctor scope - the generated query did not reference your provider id. Try rephrasing.",
             }
 
     if final_state.get("query_result"):

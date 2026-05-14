@@ -13,7 +13,7 @@ _DELTAS = {
 def compute_min_date(db: Session, date_col, range_str: str):
     """Return inclusive lower bound for the requested range, or None for `all`.
 
-    Anchored on MAX(date_col) — the dataset spans a 100-year synthetic timeline
+    Anchored on MAX(date_col) - the dataset spans a 100-year synthetic timeline
     so today-relative ranges would be empty.
     """
     delta = _DELTAS.get(range_str)

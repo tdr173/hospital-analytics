@@ -1,0 +1,116 @@
+@startuml PrefixSpanProjectionTree
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #2B2B2B
+skinparam defaultFontSize 14
+skinparam defaultFontName "Arial"
+skinparam ArrowColor #6B6B6B
+skinparam ArrowThickness 1.3
+skinparam ArrowFontColor #555555
+skinparam ArrowFontSize 11
+skinparam RoundCorner 8
+skinparam shadowing false
+
+hide stereotype
+
+<style>
+rectangle {
+  LineThickness 1.3
+}
+.peach {
+  BackGroundColor #FCE4D6
+  LineColor #E8A87C
+  FontColor #6B3410
+}
+.sky {
+  BackGroundColor #D6E9FC
+  LineColor #7CB0E8
+  FontColor #103E6B
+}
+.butter {
+  BackGroundColor #FCF4D6
+  LineColor #E8C97C
+  FontColor #6B5510
+}
+.lilac {
+  BackGroundColor #E8D6FC
+  LineColor #B07CE8
+  FontColor #3E106B
+}
+.mint {
+  BackGroundColor #D6FCE4
+  LineColor #7CE8A8
+  FontColor #106B34
+}
+.rose {
+  BackGroundColor #FCD6DE
+  LineColor #E87C95
+  FontColor #6B1028
+}
+.legendbox {
+  BackGroundColor #FFFFFF
+  LineColor #BDBDBD
+  FontColor #2B2B2B
+  LineThickness 1.0
+}
+</style>
+
+' ════════════════════════════════════════════════════════════
+'  LEVEL 0 - input database, root, and floating legend
+' ════════════════════════════════════════════════════════════
+
+rectangle "**Sequence Database**   -   min_support = 2  (≥ 2 of 4 sequences)\n\nS1: < C, M, P, M >        S2: < C, M, CP, P >\nS3: < M, C, P >              S4: < C, P, M >" <<peach>> as DB
+
+rectangle "**Legend**\n\n<back:#E8D6FC>  </back>  current prefix being grown\n<back:#D6E9FC>  </back>  frequent length-k prefix\n<back:#FCF4D6>  </back>  projected sub-database\n<back:#D6FCE4>  </back>  discovered frequent pattern\n<back:#FCD6DE>  </back>  pruned (below min_support)" <<legendbox>> as LEG
+
+rectangle "**< >**   empty prefix\n\n**Step 1 - scan database**\nitem counts: { C:4, M:4, P:4, CP:1 }\nfrequent length-1 items: C, M, P" <<lilac>> as ROOT
+
+DB --> ROOT : initial scan
+
+' ════════════════════════════════════════════════════════════
+'  LEVEL 1 - length-1 prefixes  +  projections
+' ════════════════════════════════════════════════════════════
+
+rectangle "**< C >**\nsup = 4" <<sky>> as C
+rectangle "**< M >**\nsup = 4" <<sky>> as M
+rectangle "**< P >**\nsup = 4" <<sky>> as P
+rectangle "**< CP >**\nsup = 1\n**pruned**" <<rose>> as CP
+
+ROOT --> C  : grow
+ROOT --> M  : grow
+ROOT --> P  : grow
+ROOT --> CP : grow
+
+rectangle "**S | < C >**\nsuffixes after first C\n\n< M, P, M >\n< M, CP, P >\n< P >\n< P, M >" <<butter>> as CPROJ
+rectangle "**S | < M >**\nsuffixes after first M\n\n< P, M >\n< CP, P >\n< C, P >" <<butter>> as MPROJ
+rectangle "**S | < P >**\nsuffixes after first P\n\n< M >\n< M >" <<butter>> as PPROJ
+
+C --> CPROJ : project
+M --> MPROJ : project
+P --> PPROJ : project
+
+' ════════════════════════════════════════════════════════════
+'  LEVEL 2 - items frequent inside the < C > projection
+' ════════════════════════════════════════════════════════════
+
+rectangle "**< C, M >**\nsup = 3" <<mint>> as CM
+rectangle "**< C, P >**\nsup = 3" <<mint>> as CP2
+
+CPROJ --> CM  : M appears\nin 3 / 4
+CPROJ --> CP2 : P appears\nin 3 / 4
+
+' ════════════════════════════════════════════════════════════
+'  LEVEL 3 - recurse on < C, M >
+' ════════════════════════════════════════════════════════════
+
+rectangle "**S | < C, M >**\nsuffixes after < C, M >\n\n< P, M >\n< CP, P >" <<butter>> as CMPROJ
+rectangle "**< C, M, P >**\nsup = 2" <<mint>> as CMP
+
+CM     --> CMPROJ : project
+CMPROJ --> CMP    : P appears\nin 2 / 3
+
+' anchor the legend into the bottom-right whitespace
+PPROJ  -[hidden]down- LEG
+MPROJ  -[hidden]down- LEG
+
+@enduml

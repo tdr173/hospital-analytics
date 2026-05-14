@@ -32,6 +32,11 @@ export interface SequenceAiAnalysisResponse {
   recommendations: string[];
 }
 
+export interface SequenceContinuationItem extends SequenceListItem {
+  matchedSteps: number;
+  matchedPatternStr: string;
+}
+
 export interface FetchSequencesArgs {
   search?: string;
   minLength: number;

@@ -80,6 +80,9 @@ class SequenceService:
             cluster_labels=cluster_labels,
         )
 
+    def get_patient_continuations(self, patient_id: str, min_matched: int = 2):
+        return self.repo.get_patient_continuations(patient_id, min_matched)
+
     def get_ai_analysis(self, pattern_id: int) -> dict:
         cached = self.repo.get_pattern_ai_analysis(pattern_id)
         if cached:

@@ -1,4 +1,4 @@
-# SQL Agent — Architecture & Design
+# SQL Agent - Architecture & Design
 
 **File:** `app/service/lllm_sql_agent_service/agent_service.py`  
 **Model:** OpenAI GPT (configured in `llm_models.py` via `GPT_KEY` env var)  
@@ -70,7 +70,7 @@ Every node reads from and writes to a shared `AgentState` TypedDict that flows t
 
 ## Prompts
 
-### 1. `PROMPT_TRANSLATE` — Classification & Rewrite
+### 1. `PROMPT_TRANSLATE` - Classification & Rewrite
 
 **Node:** `process_input`  
 **Purpose:** Classifies the incoming message into one of three categories and rewrites DB retrieval questions into standalone English sentences.
@@ -81,9 +81,9 @@ Every node reads from and writes to a shared `AgentState` TypedDict that flows t
 |---|---|---|
 | `{initial_prompt}` | `state['user_prompt']` (+ scope clause prepended when role = DOCTOR) | The user's message, optionally prefixed with the doctor scope clause so the classifier knows the data access context |
 | `{chat_context}` | `build_history_string(history)` formatted by `format_chat_context()` | Last 5 Q+A pairs as `User: ... / Assistant: ...` lines, wrapped in a "Conversation history" header; empty string if no history |
-| `{db_schema}` | `DB_SCHEMA` from `db/db_data.py` | Full database schema used for term disambiguation only — the model is instructed not to copy it into the output |
+| `{db_schema}` | `DB_SCHEMA` from `db/db_data.py` | Full database schema used for term disambiguation only - the model is instructed not to copy it into the output |
 
-**Output — exactly one of:**
+**Output - exactly one of:**
 
 | Output | Routing | Meaning |
 |---|---|---|
@@ -92,13 +92,13 @@ Every node reads from and writes to a shared `AgentState` TypedDict that flows t
 | `NOT_MEDICAL` | → `END` | Completely off-topic; rejected |
 
 The classification boundary is:
-- **DB_RETRIEVAL**: anything that asks for data present in the hospital database — patient counts, encounter statistics, medication lists, cluster analysis, care trajectories, provider information, etc.
+- **DB_RETRIEVAL**: anything that asks for data present in the hospital database - patient counts, encounter statistics, medication lists, cluster analysis, care trajectories, provider information, etc.
 - **MEDICAL_GENERAL**: questions about medical concepts, diseases, symptoms, treatments, or health topics that do not require querying the database (e.g. "what is diabetes?", "how is hypertension treated?").
 - **NOT_MEDICAL**: greetings, small talk, coding questions, math, opinions, requests to modify data, or anything unrelated to medicine.
 
 ---
 
-### 2. `PROMPT_MEDICAL_ANSWER` — General Medical Q&A
+### 2. `PROMPT_MEDICAL_ANSWER` - General Medical Q&A
 
 **Node:** `answer_general`  
 **Purpose:** Answers general medical knowledge questions directly from the model, without touching the database.
@@ -112,14 +112,14 @@ The classification boundary is:
 
 **Constraints applied in the prompt:**
 - Reply in the same language the user wrote in.
-- 2–5 sentences or a short bulleted list — no long essays.
+- 2–5 sentences or a short bulleted list - no long essays.
 - Do not invent treatments or diagnoses not medically established.
 - If the question implies a personal health situation, add a note advising the user to consult a doctor.
 - Never mention SQL, databases, or any system internals.
 
 ---
 
-### 3. `PROMPT_GENERATE_SQL` — SQL Generation
+### 3. `PROMPT_GENERATE_SQL` - SQL Generation
 
 **Node:** `generate_query`  
 **Purpose:** Produces a raw PostgreSQL `SELECT` query that answers the translated retrieval question.
@@ -135,9 +135,9 @@ The classification boundary is:
 | `{max_rows}` | `MAX_RESULT_ROWS` (100) | The default LIMIT value to use unless the question asks for all results or uses only aggregate functions |
 
 **Rules enforced in the prompt:**
-- Output raw SQL only — no markdown fences, no prose.
+- Output raw SQL only - no markdown fences, no prose.
 - Only `SELECT` or `WITH ... SELECT` (CTEs). All DML/DDL keywords are forbidden.
-- Never `SELECT *` — only needed columns.
+- Never `SELECT *` - only needed columns.
 - `LIMIT {max_rows}` unless the query is purely aggregate or the user asked for all results.
 - Meaningful aliases on computed columns; `ORDER BY` to make the answer self-evident.
 - `ILIKE '%...%'` for free-text fields; exact enum values for categorical fields (gender `'M'`/`'F'`, encounter_class `'inpatient'`/`'ambulatory'`/etc.).
@@ -149,7 +149,7 @@ The classification boundary is:
 
 ---
 
-### 4. `PROMPT_VALIDATE_SQL` — SQL Validation
+### 4. `PROMPT_VALIDATE_SQL` - SQL Validation
 
 **Node:** `validate_query`  
 **Purpose:** A second LLM call acts as a QA auditor, independently checking that the generated SQL is safe and actually answers the user's question.
@@ -164,7 +164,7 @@ The classification boundary is:
 | `{scope_clause}` | `state['scope_clause']` | Doctor scope clause if applicable; empty otherwise |
 
 **Checklist enforced:**
-1. Must be a single `SELECT` or `WITH ... SELECT` — no data-modifying statements.
+1. Must be a single `SELECT` or `WITH ... SELECT` - no data-modifying statements.
 2. Every table and column referenced must exist in the schema.
 3. JOINs must use documented foreign-key paths.
 4. Query logic must match the question (right table, right filter, right aggregation).
@@ -179,7 +179,7 @@ Stylistic differences (aliasing, whitespace, `ILIKE` vs `=`) are explicitly not 
 
 ---
 
-### 5. `PROMPT_RESULT` — Result Summarisation
+### 5. `PROMPT_RESULT` - Result Summarisation
 
 **Node:** Called inline in `run_agent` after successful execution  
 **Purpose:** Converts the raw list of database row dicts into a concise natural-language answer.
@@ -188,7 +188,7 @@ Stylistic differences (aliasing, whitespace, `ILIKE` vs `=`) are explicitly not 
 
 | Placeholder | Source | Content |
 |---|---|---|
-| `{initial_prompt}` | `state['original_prompt']` | The original user question — always the clean question, never the scope-injected variant — so the summary reads naturally |
+| `{initial_prompt}` | `state['original_prompt']` | The original user question - always the clean question, never the scope-injected variant - so the summary reads naturally |
 | `{result}` | `state['query_result']` | Stringified list of row dicts, truncated to `MAX_RESULT_CHARS` (3000 characters) |
 
 **Rules enforced:**
@@ -205,13 +205,13 @@ Stylistic differences (aliasing, whitespace, `ILIKE` vs `=`) are explicitly not 
 
 The agent enforces a strict two-level medical scope:
 
-**Level 1 — Topic classification (PROMPT_TRANSLATE)**  
+**Level 1 - Topic classification (PROMPT_TRANSLATE)**  
 Every incoming message is classified before any other step. If the model returns `NOT_MEDICAL`, the graph routes directly to `END` and `run_agent` returns the message:
 > "I can only help with medical and hospital data questions. Please ask something related to medicine or the hospital database."
 
 No SQL is generated. No DB is touched.
 
-**Level 2 — General medical vs. DB retrieval split**  
+**Level 2 - General medical vs. DB retrieval split**  
 Questions classified as `MEDICAL_GENERAL` bypass the entire SQL pipeline and go to `answer_general`, which answers from the model's medical knowledge. This allows questions like "what is diabetes?" or "how is hypertension treated?" to be answered without fabricating database queries.
 
 Together these two levels mean the agent accepts exactly:
@@ -223,7 +223,7 @@ Together these two levels mean the agent accepts exactly:
 
 ## Conversation Memory
 
-Memory is **stateless on the backend** — no database table or server-side session stores history. The frontend is responsible for accumulating the conversation and sending it with every request in the `history` field of `AskAIRequest`.
+Memory is **stateless on the backend** - no database table or server-side session stores history. The frontend is responsible for accumulating the conversation and sending it with every request in the `history` field of `AskAIRequest`.
 
 **API contract (`POST /sql-agent`):**
 ```json
@@ -242,7 +242,7 @@ Memory is **stateless on the backend** — no database table or server-side sess
 3. The resulting string is stored in `state['chat_history']` and injected into both `PROMPT_TRANSLATE` and `PROMPT_MEDICAL_ANSWER` via `format_chat_context()`.
 
 **How history is used:**  
-The translate prompt instructs the model to resolve references to prior turns ("what about them?", "same for females?", "and those patients?") using the conversation history, then produce a fully standalone sentence that requires no history to understand. This means `generate_query` and subsequent steps always receive a self-contained question — history is consumed once at the entry point and does not leak into the SQL or validation steps.
+The translate prompt instructs the model to resolve references to prior turns ("what about them?", "same for females?", "and those patients?") using the conversation history, then produce a fully standalone sentence that requires no history to understand. This means `generate_query` and subsequent steps always receive a self-contained question - history is consumed once at the entry point and does not leak into the SQL or validation steps.
 
 ---
 
@@ -251,7 +251,7 @@ The translate prompt instructs the model to resolve references to prior turns ("
 When the API caller has the `DOCTOR` role and a `provider_id` is present, a scope clause is built from `DOCTOR_SCOPE_CLAUSE` and stored in `state['scope_clause']`:
 
 ```
-MANDATORY ROLE SCOPE — DOCTOR (provider_id = '<uuid>'):
+MANDATORY ROLE SCOPE - DOCTOR (provider_id = '<uuid>'):
 - Every SQL query you generate MUST restrict results to encounters where provider_id = '<uuid>'.
 - When the question is about patients, restrict to patients who have at least one encounter with that
   provider_id. Use: patient.patient_id IN (SELECT DISTINCT patient_id FROM encounter WHERE provider_id = '<uuid>').
@@ -259,13 +259,13 @@ MANDATORY ROLE SCOPE — DOCTOR (provider_id = '<uuid>'):
 ```
 
 This clause is injected into:
-- `PROMPT_TRANSLATE` — prepended to the user message so the classifier sees the access context.
-- `PROMPT_GENERATE_SQL` — included before the output rules so the model hard-wires the filter.
-- `PROMPT_VALIDATE_SQL` — included so the auditor rejects any query missing the `provider_id` filter (checklist item 7).
+- `PROMPT_TRANSLATE` - prepended to the user message so the classifier sees the access context.
+- `PROMPT_GENERATE_SQL` - included before the output rules so the model hard-wires the filter.
+- `PROMPT_VALIDATE_SQL` - included so the auditor rejects any query missing the `provider_id` filter (checklist item 7).
 
 After the graph completes, `run_agent` performs a final regex check: if `provider_id` is not present anywhere in the generated SQL string, the response is replaced with an error message regardless of what the LLM returned.
 
-Doctor scope does **not** apply to `MEDICAL_GENERAL` paths — a doctor asking a general medical knowledge question receives a normal answer without triggering the scope check.
+Doctor scope does **not** apply to `MEDICAL_GENERAL` paths - a doctor asking a general medical knowledge question receives a normal answer without triggering the scope check.
 
 ---
 

@@ -158,7 +158,7 @@ def compute_famd_metrics(df, numerical_cols, categorical_cols, clusters, n_compo
         return none_result
 
     # Keep only columns actually present, drop zero-variance ones (FAMD cannot
-    # decompose a constant column — no dispersion to explain).
+    # decompose a constant column - no dispersion to explain).
     num_cols = [c for c in numerical_cols if c in df.columns]
     cat_cols = [c for c in categorical_cols if c in df.columns]
 
