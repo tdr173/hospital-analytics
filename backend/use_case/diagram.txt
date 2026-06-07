@@ -1,0 +1,57 @@
+@startuml
+skinparam backgroundColor white
+skinparam activity {
+    BackgroundColor #FFFFFF
+    BorderColor #000000
+    FontColor #000000
+    FontSize 12
+}
+skinparam activityDiamond {
+    BackgroundColor #FFFFFF
+    BorderColor #000000
+    FontColor #000000
+}
+skinparam arrowColor #000000
+
+start
+
+:Manager triggers ETL pipeline;
+:System validates and loads patient data into PostgreSQL;
+
+if (Data valid?) then ([No])
+    :System rejects run and notifies Manager;
+    stop
+else ([Yes])
+endif
+
+:Manager initiates K-Prototypes clustering;
+:System clusters patients by clinical similarity;
+
+if (Clustering\nsuccessful?) then ([No])
+    :System displays failure message;
+    stop
+else ([Yes])
+endif
+
+if (LLM\navailable?) then ([No])
+    :System saves results without summaries\nand notifies Manager;
+else ([Yes])
+    :System generates cluster summaries via Gemini LLM;
+endif
+
+:System displays clustering results and visualizations;
+:Manager explores clusters and requests heatmap and PCA plots;
+
+:Manager selects a cluster in Frequent Sequences view;
+:System runs PrefixSpan and displays patterns by support;
+
+if (Patterns found\nabove threshold?) then ([No])
+    :System displays empty-state message;
+    stop
+else ([Yes])
+endif
+
+:Manager reviews patterns and AI-generated\nclinical interpretations;
+
+stop
+@enduml

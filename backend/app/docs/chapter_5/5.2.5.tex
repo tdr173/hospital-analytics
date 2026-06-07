@@ -1,0 +1,157 @@
+\subsection{LLM SQL Agent Implementation}
+
+The SQL agent itself can be found in \texttt{app/service/lllm\_sql\_agent\_service/}, inside the \texttt{analytics microservice}, and is the gateway through which free-form natural-language questions can be posed to the database. The SQL agent is built on \textbf{LangGraph}, which represents the workflow as a directed graph of node functions operating on a typed shared state, compiled once at import time and run per request by invoking \texttt{graph.invoke(initial\_state, \{"recursion\_limit": 20\})}. A schematic of the graph can be seen in Figure~\ref{fig:ch5_sql_agent_graph}. Each node accepts the current state as input, issues at most one LLM call (using \texttt{llm\_models.ask\_ai}, a wrapper around the OpenAI Python SDK, configured with \texttt{timeout=60s} and \texttt{max\_retries=2}), and emits a partial state update. The entire database context injected into every prompt - 15 tables, all column types, each categorical value set, every foreign-key mapping, and the \texttt{cluster\_patient.features} JSONB access convention - is materialised as the string constant \texttt{DB\_SCHEMA} in \texttt{db/db\_data.py}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.90\linewidth]{figs/chapter_5/sql_graph.png}
+\caption{LangGraph state machine for the SQL agent}
+\label{fig:ch5_sql_agent_graph}
+\end{figure}
+
+First, \texttt{process\_input} classifies the user message into one of three categories: \texttt{DB\_\allowbreak RETRIEVAL} (rewritten against the previous 5 chat turns), \texttt{MEDICAL\_\allowbreak GENERAL} (health-related query that does not require the database), or \texttt{NOT\_\allowbreak MEDICAL} (any other query, treated as out of scope). For database-bound queries, \texttt{generate\_query} drafts a SELECT-only SQL statement, \texttt{validate\_query} applies a static safety filter followed by a second-LLM semantic audit, and finally \texttt{execute\_query} runs the validated SQL through the request-scoped SQLAlchemy session, truncating the raw result to 3000 characters before \texttt{PROMPT\_RESULT} summarises it in the user's original language. On failure at any of these steps, the error message is fed back into the next round of query generation. The cycle is bounded by \texttt{MAX\_RETRIES=3}. If the calling user has role \texttt{DOCTOR}, then \texttt{DOCTOR\_\allowbreak SCOPE\_\allowbreak CLAUSE}, which carries the \texttt{provider\_id} of that particular doctor, is injected into both the generation and validation prompts, and a post-execution textual check refuses to return the answer if the final SQL does not reference that provider id.
+
+A single end-to-end prompt would be inadequate for three reasons addressed by the architecture. First, a one-shot prompt could never guarantee safety: the static regular-expression filter (rejecting \texttt{DROP/DELETE/TRUNCATE/ALTER/INSERT/UPDATE/CREATE/GRANT/REVOKE/EXEC} and requiring the statement to start with \texttt{SELECT} or \texttt{WITH}) is deterministic Python that no amount of prompt injection could convince to do otherwise. Second, even when the SQL is safe, the model can hallucinate columns, omit the \texttt{NOT is\_outlier} filter required for cluster queries, or use \texttt{COUNT(*)} when it should have \texttt{COUNT(DISTINCT patient\_id)}; the validator acts as a second pair of eyes independent of the generator's context biases. Third, on failed validation or failed execution, the agent does not merely retry blindly; it regenerates with the exact previous SQL and the exact cause of the failure injected as a \texttt{retry\_context} block in the prompt. The synergy of the following three properties is what gives the agent the robustness to self-correct: (a) schema injection as static context, (b) separation of generation and auditing into cooperating LLM calls, and (c) feedback-driven regeneration on the retry path.
+
+\subsubsection*{Database Context Asset}
+
+Every prompt requiring reasoning about the database is grounded against one static resource, \texttt{DB\_\allowbreak SCHEMA}, declared in \texttt{db/db\_data.py}. It is a meticulously curated description of all 15 tables (4 infrastructure, 7 clinical, 2 for sequence mining, and 3 for clustering) that enumerates every column, type, foreign-key relationship, and JSONB access convention. \texttt{DB\_\allowbreak SCHEMA} is injected verbatim into \texttt{PROMPT\_\allowbreak TRANSLATE}, \texttt{PROMPT\_\allowbreak GENERATE\_\allowbreak SQL}, and \texttt{PROMPT\_\allowbreak VALIDATE\_\allowbreak SQL}:
+
+\begin{lstlisting}[style=pythonstyle]
+DB_SCHEMA = """
+=== HOSPITAL ANALYTICS DATABASE SCHEMA ===
+
+OVERVIEW:
+- 15 tables total: 4 infrastructure (patient, organization, provider, encounter)
+  + 7 clinical (observation, condition, medication, procedure, immunization,
+    allergy, careplan) + 2 sequence-mining + 3 clustering ...
+- The central entity is Patient. Encounters link Patients to Providers ...
+
+--- TABLES ---
+TABLE: patient
+  - patient_id (str, PK) - UUID. Never treat as integer.
+  - gender (str) - Values: 'M' (Male), 'F' (Female). Do NOT use 'Male'/'Female'.
+  - ...
+TABLE: encounter
+  - encounter_class - 'inpatient', 'ambulatory', 'outpatient', 'wellness', ...
+  - ...
+"""
+\end{lstlisting}
+
+\subsubsection*{Prompts Used by the SQL Agent}
+
+\paragraph{\texttt{PROMPT\_TRANSLATE} - input classifier and rewriter.} Classifies all messages as belonging to one of three categories, rewriting database queries into complete English sentences using past conversation turns and the schema to resolve term ambiguity.
+
+\begin{lstlisting}[style=pythonstyle]
+PROMPT_TRANSLATE = """
+You classify and rewrite user messages for a hospital analytics assistant.
+User message: "{initial_prompt}"
+{chat_context}
+Schema reference (for term disambiguation only, do NOT copy into output):
+{db_schema}
+
+Classification rules - return EXACTLY one of:
+1. DB_RETRIEVAL  -> a single standalone English sentence describing what data to retrieve.
+2. MEDICAL_GENERAL: <question>
+3. NOT_MEDICAL
+Output ONLY the chosen output. No markdown, no quotes, no extra explanation.
+"""
+\end{lstlisting}
+
+\paragraph{\texttt{PROMPT\_\allowbreak MEDICAL\_\allowbreak ANSWER} - non-DB medical answer.} Triggered whenever the classifier produces \texttt{MEDICAL\_\allowbreak GENERAL}. Ensures the answer stays in the user's language and appends a safety nudge for personal health-related questions.
+
+\begin{lstlisting}[style=pythonstyle]
+PROMPT_MEDICAL_ANSWER = """
+You are a medical assistant for a hospital analytics platform.
+{chat_context}
+Question: {question}
+Rules:
+- Reply in the SAME language the user wrote in.
+- Be accurate and concise: 2-5 sentences or a short bulleted list.
+- If the question implies a personal health situation, advise to consult a doctor.
+- Never mention SQL, databases, or technical system internals.
+"""
+\end{lstlisting}
+
+\paragraph{\texttt{PROMPT\_\allowbreak GENERATE\_\allowbreak SQL} - SELECT generator.} Writes the SQL query based on the schema, optionally including a role scope and any feedback from past failures. Incorporates every idiosyncrasy of the project: \texttt{LIMIT}, \texttt{ILIKE} for free text, exact enums for categorical codes, \texttt{COUNT(DISTINCT patient\_id)}, JSONB accessors for \texttt{cluster\_patient.features}, the mandatory \texttt{NOT is\_outlier} filter, and the cluster/sequence join rules.
+
+\begin{lstlisting}[style=pythonstyle]
+PROMPT_GENERATE_SQL = """
+You are a PostgreSQL expert writing a SELECT query against a hospital analytics database.
+Question: "{prompt}"
+Schema: {db_schema}
+{scope_clause}{retry_context}
+
+Output rules:
+1. Return ONLY the raw SQL. No markdown, no prose.
+2. ONLY SELECT, or WITH ... SELECT. Never INSERT/UPDATE/DELETE/DROP/...
+3. Select only the columns needed; never SELECT *.
+4. Add LIMIT {max_rows} unless the user asks for "all" or it's aggregate-only.
+...
+Filtering rules:
+7. Free-text fields - use ILIKE with %...% wildcards.
+8. Categorical codes - use `=` with exact values (gender 'M'/'F', encounter_class ...).
+...
+Clustering rules:
+13. cluster_patient: always filter `NOT is_outlier` unless the user asks about outliers.
+14. cluster_patient.features is JSONB. Use features->>'key' / (features->>'key')::numeric.
+...
+"""
+\end{lstlisting}
+
+\paragraph{\texttt{PROMPT\_\allowbreak VALIDATE\_\allowbreak SQL} - second-LLM auditor.} Independent semantic verification. Responds \texttt{YES} on line 1 or \texttt{NO} along with a one-sentence rationale on line 2, which serves as feedback for the subsequent attempt.
+
+\begin{lstlisting}[style=pythonstyle]
+PROMPT_VALIDATE_SQL = """
+You are a SQL QA auditor. Decide if the SQL is safe AND correctly answers the request.
+User Request: "{prompt}"
+Generated SQL: {sql_query}
+Schema: {db_schema}
+{scope_clause}
+
+Validation checklist (reject if ANY fails):
+1. Must be a single SELECT or WITH ... SELECT.
+2. Every referenced table and column must exist in the schema.
+3. JOIN conditions must use documented foreign-key relationships.
+4. Query logic must answer THIS specific question.
+5. Cluster questions: reject if `NOT is_outlier` is missing.
+6. Patient counts across clinical tables: reject COUNT(*) where COUNT(DISTINCT patient_id) is needed.
+7. If a MANDATORY ROLE SCOPE is present: reject if the provider_id filter is missing.
+
+Do NOT flag: ILIKE vs =, aliasing, ordering, whitespace, LIMIT on aggregate-only.
+
+Output format (strict):
+Line 1: YES or NO
+Line 2 (only if NO): one-sentence explanation.
+"""
+\end{lstlisting}
+
+\paragraph{\texttt{PROMPT\_\allowbreak RESULT} - natural-language summariser.} Runs once after a successful execution. Phrases the answer as a data analyst would, never as a DBA.
+
+\begin{lstlisting}[style=pythonstyle]
+PROMPT_RESULT = """
+Summarise database results for the user in natural language.
+User question: "{initial_prompt}"
+Database result (list of row dicts): {result}
+
+Rules:
+- Reply in the SAME language the user wrote in.
+- Empty result -> say plainly that no matching records were found.
+- Single value -> one sentence with the number and unit.
+- Multi-row -> short bulleted/numbered list; truncate to top ~10.
+- Never mention SQL, queries, JOINs, tables, columns, or technical internals.
+- Do not invent or extrapolate values beyond what the result contains.
+"""
+\end{lstlisting}
+
+\paragraph{\texttt{DOCTOR\_\allowbreak SCOPE\_\allowbreak CLAUSE} - role-based scope injection.} Conditionally prepended to both \texttt{PROMPT\_\allowbreak GENERATE\_\allowbreak SQL} and \texttt{PROMPT\_\allowbreak VALIDATE\_\allowbreak SQL} depending on whether the call was initiated by a doctor. A post-execution textual check then refuses the answer if the final SQL does not reference the doctor's \texttt{provider\_id}.
+
+\begin{lstlisting}[style=pythonstyle]
+DOCTOR_SCOPE_CLAUSE = """
+MANDATORY ROLE SCOPE - DOCTOR (provider_id = '{provider_id}'):
+- Every SQL query MUST restrict results to encounters where provider_id = '{provider_id}'.
+- For patient questions, restrict to: patient.patient_id IN
+  (SELECT DISTINCT patient_id FROM encounter WHERE provider_id = '{provider_id}').
+- Never expose other doctors' patients, encounters, or aggregate counts.
+"""
+\end{lstlisting}

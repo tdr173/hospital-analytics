@@ -23,7 +23,7 @@ class Scope:
         return self.role is not None and self.role.upper() == "PATIENT"
 
 
-DEFAULT_PROVIDER_ID = "21ac7fa4-a452-3556-b812-f84c92369a6c"
+DEFAULT_PROVIDER_ID = "1dc97cc3-c9d9-341b-9b32-a34b4c4b79ff"
 
 
 def scope_dep(

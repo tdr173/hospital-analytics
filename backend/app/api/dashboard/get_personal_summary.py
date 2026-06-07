@@ -19,9 +19,9 @@ async def get_personal_summary(
         raise HTTPException(status_code=404, detail=str(e))
 
     summary = repo.get_patient_summary(patientId)
-    conditions = repo.get_patient_conditions(patientId)
-    medications = repo.get_patient_medications(patientId)
-    encounters = repo.get_patient_encounters(patientId)
+    conditions, _ = repo.get_patient_conditions(patientId)
+    medications, _ = repo.get_patient_medications(patientId)
+    encounters, _ = repo.get_patient_encounters(patientId)
 
     data = {
         "name": f"{patient.first_name} {patient.last_name}",

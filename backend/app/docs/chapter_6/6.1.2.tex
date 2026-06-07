@@ -1,0 +1,163 @@
+\subsection{Sequence Mining Results}
+\label{ch:results_sequences}
+
+PrefixSpan (Section~\ref{ch:prefix_span_theory}, pipeline in Section~\ref{ch:pattern_mining_design}) was applied per scope: each of the four clinical clusters from Section~\ref{ch:results_clustering} produced its own pattern set, and the cohort of IQR-flagged outliers (\texttt{cluster\_id = -1}) was mined separately as a fifth pseudo-cluster, since these patients carry exactly the high-acuity signal that k-prototypes was designed to discard. The mining produced 175--252 frequent patterns per scope; we report the \textbf{top 15} of each, ranked by geometric mean lift (\texttt{gml}), which is the metric that promotes patterns whose every step is unusually frequent within the scope rather than merely globally common. Each row in the tables below carries the support count (\texttt{pts}), its share of the scope (\texttt{\%}), the \texttt{gml} score, and the ordered itemset using the prefix convention \texttt{C:}~condition, \texttt{M:}~medication, \texttt{P:}~procedure, \texttt{CP:}~careplan; the \texttt{[dental]} tag marks patterns flagged as dental-only by the post-mining filter. Long generic drug names are abbreviated to their international nonproprietary names for legibility.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\arraystretch}{1.05}
+\begin{tabular}{@{}r r r r p{9.5cm}@{}}
+\toprule
+\# & pts & \% & gml & Pattern \\
+\midrule
+1  &  252 &  3.6 & 0.97 & C:Laceration $\to$ CP:Wound care $\to$ P:Suture open wound \\
+2  &  113 &  1.6 & 0.78 & C:Fracture of bone $\to$ CP:Fracture care $\to$ P:Bone immobilization \\
+3  &  106 &  1.5 & 0.96 & M:Fluticasone/salmeterol DPI $\to$ M:albuterol $\to$ P:Spirometry \\
+4  &  432 &  6.1 & 0.70 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ M:Acetaminophen \\
+5  & 2766 & 39.0 & 0.82 & [dental] M:sodium fluoride gel $\to$ P:Dental fluoride treatment $\to$ P:Oral health education \\
+6  &  295 &  4.2 & 0.62 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ P:Measurement of respiratory function \\
+7  & 2705 & 38.1 & 0.73 & [dental] P:Examination of gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+8  &  127 &  1.8 & 0.73 & C:Sprain $\to$ C:Sprain of ankle $\to$ CP:Physiotherapy care plan \\
+9  &  229 &  3.2 & 0.44 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ P:Measurement resp. function $\to$ M:Acetaminophen \\
+10 &  104 &  1.5 & 0.47 & C:Streptococcal sore throat $\to$ M:Penicillin V $\to$ P:Throat culture \\
+11 &  233 &  3.3 & 0.46 & CP:Respiratory therapy $\to$ P:Measurement resp. function $\to$ M:Acetaminophen \\
+12 &  231 &  3.3 & 0.46 & C:Acute bronchitis $\to$ P:Measurement resp. function $\to$ M:Acetaminophen \\
+13 & 2006 & 28.3 & 0.56 & [dental] C:Gingivitis $\to$ P:Patient referral for dental care $\to$ P:Dental consultation \\
+14 &  112 &  1.6 & 0.56 & C:Risk activity $\to$ P:CRAFFT screening $\to$ P:Health risks education \\
+15 &  142 &  2.0 & 0.38 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ M:Acet./Dextromethorphan/doxylamine \\
+\bottomrule
+\end{tabular}
+\caption{Cluster~0 (young / low-burden) -- top 15 patterns out of 238.}
+\label{tab:ch6_seq_c0}
+\end{table}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\arraystretch}{1.05}
+\begin{tabular}{@{}r r r r p{9.5cm}@{}}
+\toprule
+\# & pts & \% & gml & Pattern \\
+\midrule
+1  &  154 &  2.4 & 0.97 & C:Laceration $\to$ CP:Wound care $\to$ P:Suture open wound \\
+2  &  121 &  1.9 & 0.92 & C:Sterilization requested $\to$ P:Sterilization education $\to$ C:Hist. tubal ligation $\to$ CP:Minor surgery $\to$ P:Postoperative care \\
+3  &  123 &  1.9 & 0.90 & C:History of tubal ligation $\to$ CP:Minor surgery care $\to$ P:Postoperative care \\
+4  &  107 &  1.7 & 0.81 & P:Sterilization ed. $\to$ C:Hist. tubal ligation $\to$ CP:Minor surgery $\to$ P:Ligation of fallopian tubes $\to$ P:Postoperative care \\
+5  &  147 &  2.3 & 0.96 & M:Fluticasone/salmeterol DPI $\to$ M:albuterol $\to$ P:Spirometry \\
+6  &   99 &  1.5 & 0.96 & P:Prone position $\to$ M:Furosemide $\to$ P:Oxygen by mask $\to$ P:Prone position $\to$ M:Furosemide \\
+7  &  308 &  4.8 & 0.71 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ M:Acetaminophen \\
+8  & 2058 & 32.1 & 0.82 & [dental] M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+9  &  109 &  1.7 & 0.79 & CP:Minor surgery $\to$ P:Ligation of fallopian tubes $\to$ P:Postoperative care \\
+10 &  193 &  3.0 & 0.59 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ P:Measurement resp. function \\
+11 &  432 &  6.7 & 0.72 & C:Normal pregnancy $\to$ P:Standard pregnancy test $\to$ P:Ultrasound fetal viability \\
+12 &  105 &  1.6 & 0.72 & C:Sprain $\to$ C:Sprain of ankle $\to$ CP:Physiotherapy care plan \\
+13 & 1980 & 30.9 & 0.71 & [dental] P:Examination of gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+14 &   79 &  1.2 & 0.55 & C:Streptococcal sore throat $\to$ M:Penicillin V $\to$ P:Throat culture \\
+15 &  146 &  2.3 & 0.40 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ P:Measurement resp. $\to$ M:Acetaminophen \\
+\bottomrule
+\end{tabular}
+\caption{Cluster~1 (women of reproductive age, mid-burden) -- top 15 patterns out of 252.}
+\label{tab:ch6_seq_c1}
+\end{table}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\arraystretch}{1.05}
+\begin{tabular}{@{}r r r r p{9.5cm}@{}}
+\toprule
+\# & pts & \% & gml & Pattern \\
+\midrule
+1  &  154 &  4.5 & 0.95 & M:Fluticasone/salmeterol DPI $\to$ M:albuterol $\to$ P:Spirometry \\
+2  &  164 &  4.8 & 0.89 & M:Furosemide $\to$ P:Oxygen by mask $\to$ P:Prone position $\to$ M:Furosemide \\
+3  &  138 &  4.0 & 0.81 & M:Epoetin Alfa $\to$ P:Renal dialysis $\to$ M:Epoetin Alfa \\
+4  & 1222 & 35.6 & 0.80 & [dental] M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+5  & 1163 & 33.9 & 0.77 & [dental] P:Examination of gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride \\
+6  &  105 &  3.1 & 0.74 & M:albuterol $\to$ P:Pulmonary rehabilitation $\to$ P:Spirometry \\
+7  &  101 &  2.9 & 0.70 & M:Fluticasone/salmeterol DPI $\to$ M:albuterol $\to$ P:Pulmonary rehab $\to$ P:Spirometry \\
+8  & 1162 & 33.8 & 0.69 & [dental] P:Examination gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+9  & 1111 & 32.3 & 0.68 & [dental] P:Removal subgingival plaque $\to$ P:Examination gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride \\
+10 &   97 &  2.8 & 0.67 & P:Prone position $\to$ M:Furosemide $\to$ P:Heart failure education \\
+11 &   95 &  2.8 & 0.59 & P:Oxygen by mask $\to$ P:Prone position $\to$ M:Furosemide $\to$ P:Heart failure education \\
+12 &  108 &  3.1 & 0.55 & P:Plain X-ray chest $\to$ M:Furosemide $\to$ P:Oxygen by mask $\to$ P:Prone $\to$ M:Furosemide \\
+13 &  652 & 19.0 & 0.46 & [dental] C:Gingivitis $\to$ P:Patient referral for dental care $\to$ P:Dental consultation \\
+14 &  754 & 22.0 & 0.42 & [dental] M:lisinopril $\to$ P:Patient referral for dental care $\to$ P:Dental consultation \\
+15 &  815 & 23.7 & 0.41 & M:lisinopril $\to$ P:Depression screening $\to$ P:Assessment of substance use \\
+\bottomrule
+\end{tabular}
+\caption{Cluster~2 (hypertensive adults, polypharmacy) -- top 15 patterns out of 202.}
+\label{tab:ch6_seq_c2}
+\end{table}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\arraystretch}{1.05}
+\begin{tabular}{@{}r r r r p{9.5cm}@{}}
+\toprule
+\# & pts & \% & gml & Pattern \\
+\midrule
+1  &   73 &  1.6 & 1.00 & C:Acute allergic reaction $\to$ P:Injection of epinephrine $\to$ M:prednisone \\
+2  &  137 &  2.9 & 0.98 & C:Laceration $\to$ CP:Wound care $\to$ P:Suture open wound \\
+3  &  134 &  2.9 & 0.84 & CP:Self-care interventions $\to$ P:Allergy screening test $\to$ M:Epinephrine auto-injector \\
+4  &  169 &  3.6 & 0.81 & C:Fracture of bone $\to$ CP:Fracture care $\to$ P:Bone immobilization \\
+5  &  459 &  9.8 & 0.78 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ M:Acetaminophen \\
+6  &   48 &  1.0 & 0.91 & C:Fracture of clavicle $\to$ P:Admission to orthopedic dept. $\to$ P:Plain X-ray of clavicle \\
+7  &   93 &  2.0 & 0.91 & C:History of seizure $\to$ C:Seizure disorder $\to$ P:Electroencephalogram \\
+8  & 1873 & 40.1 & 0.83 & [dental] M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+9  & 1856 & 39.8 & 0.83 & [dental] P:Examination of gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride \\
+10 &   87 &  1.9 & 0.80 & C:Concussion injury $\to$ C:Concussion no LOC $\to$ CP:Head injury rehabilitation \\
+11 &  310 &  6.6 & 0.61 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ P:Measurement of respiratory function \\
+12 & 1855 & 39.7 & 0.75 & [dental] P:Examination gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+13 & 1833 & 39.3 & 0.75 & [dental] P:Removal subgingival plaque $\to$ P:Examination gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride \\
+14 &  184 &  3.9 & 0.73 & C:Sprain $\to$ C:Sprain of ankle $\to$ CP:Physiotherapy care plan \\
+15 &  232 &  5.0 & 0.45 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ P:Measurement resp. $\to$ M:Acetaminophen \\
+\bottomrule
+\end{tabular}
+\caption{Cluster~3 (pediatric / acute) -- top 15 patterns out of 175.}
+\label{tab:ch6_seq_c3}
+\end{table}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\arraystretch}{1.05}
+\begin{tabular}{@{}r r r r p{9.5cm}@{}}
+\toprule
+\# & pts & \% & gml & Pattern \\
+\midrule
+1  &    7 &  2.5 & 1.00 & P:Oxygen by mask $\to$ P:Prone position $\to$ M:Furosemide $\to$ P:Oxygen by mask $\to$ P:Prone $\to$ M:Furosemide \\
+2  &    6 &  2.1 & 1.00 & M:Fluticasone/salmeterol DPI $\to$ M:albuterol $\to$ P:Pulmonary rehab $\to$ P:Spirometry \\
+3  &  142 & 49.8 & 0.97 & P:Combined chemotherapy + radiation $\to$ M:Cisplatin $\to$ P:Combined chemotherapy + radiation \\
+4  &    9 &  3.2 & 0.90 & P:Renal disorder medication review $\to$ M:tacrolimus [Prograf] $\to$ P:Transplantation of kidney \\
+5  &  116 & 40.7 & 0.85 & M:Cisplatin $\to$ M:Paclitaxel $\to$ P:Combined chemotherapy + radiation \\
+6  &  132 & 46.3 & 0.85 & M:Cisplatin $\to$ P:Combined chemotherapy + radiation $\to$ P:Hospice care \\
+7  &   31 & 10.9 & 0.78 & P:Renal dialysis $\to$ M:Epoetin Alfa $\to$ P:Renal dialysis $\to$ M:Epoetin Alfa \\
+8  &   35 & 12.3 & 0.76 & [dental] M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+9  &  105 & 36.8 & 0.72 & P:Combined chemo+radiation $\to$ M:Cisplatin $\to$ M:Paclitaxel $\to$ P:Combined chemo+radiation $\to$ P:Hospice \\
+10 &   81 & 28.4 & 0.67 & P:Combined chemo+radiation $\to$ P:Hearing examination $\to$ M:Cisplatin $\to$ P:Combined chemo+radiation \\
+11 &   75 & 26.3 & 0.56 & P:Combined chemo+radiation $\to$ P:Hearing examination $\to$ M:Cisplatin $\to$ P:Combined chemo+radiation $\to$ P:Hospice \\
+12 &   28 &  9.8 & 0.56 & [dental] P:Examination of gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+13 &   66 & 23.2 & 0.55 & P:Combined chemo+radiation $\to$ P:Hearing exam. $\to$ M:Cisplatin $\to$ M:Paclitaxel $\to$ P:Combined chemo+radiation \\
+14 &   50 & 17.5 & 0.51 & P:HRCT chest (no contrast) $\to$ P:Hearing exam. $\to$ M:Cisplatin $\to$ P:Combined chemo+radiation \\
+15 &   54 & 18.9 & 0.49 & M:Humulin insulin $\to$ P:Morse Fall Scale assessment $\to$ P:Depression screening \\
+\bottomrule
+\end{tabular}
+\caption{Outliers, treated as cluster~$-1$ (high-acuity oncology / renal / heart failure) -- top 15 patterns out of 224.}
+\label{tab:ch6_seq_outliers}
+\end{table}
+
+\subsubsection*{Per-Cluster Reading}
+
+Looking across the five tables, each scope produces a clinically distinct dominant signal:
+
+\begin{itemize}
+    \item \textbf{Cluster~0 (young / low-burden).} The strongest patterns are episodic acute care: laceration~$\to$~suture, fracture~$\to$~immobilization, acute-bronchitis~$\to$~acetaminophen, plus the universal dental fluoride / gingivitis bundle. No chronic-disease chain rises to the top -- consistent with the cluster's near-zero \texttt{active\_conditions\_count} from Section~\ref{ch:results_clustering}.
+    \item \textbf{Cluster~1 (women of reproductive age).} Reproductive-health pathways are the discriminating signal: the tubal-ligation chain (rank~2--4, gml 0.81--0.92) and the normal-pregnancy~$\to$~ultrasound viability chain (rank~11). The cluster shares the acute-bronchitis and dental bundles with cluster~0 but is uniquely defined by these female-only sequences.
+    \item \textbf{Cluster~2 (hypertensive adults, polypharmacy).} Defined by chronic-disease management: lisinopril paired with depression and substance-use screening (rank~14--15), furosemide / prone-positioning / oxygen sequences for fluid overload (rank~2, 10--12), the renal-dialysis / Epoetin Alfa loop (rank~3), and obstructive-airway pulmonary rehabilitation (rank~6--7). The combination of dental referrals \emph{with} antihypertensives (rank~14) is a marker of the integrated preventive bundle this cluster receives.
+    \item \textbf{Cluster~3 (pediatric / acute).} Trauma- and allergy-dominated: acute allergic reaction~$\to$~epinephrine~$\to$~prednisone (rank~1, gml 1.00), epinephrine auto-injector education (rank~3), fracture chains for clavicle, forearm, ankle, bone (rank~4, 6), seizure / EEG (rank~7), and concussion rehabilitation (rank~10). Otitis-media antibiotic chains appear further down the long tail (rank 27+ in the source file).
+    \item \textbf{Outliers (cluster~$-1$).} The high-acuity tail that the IQR filter pushed out of clustering surfaces here in concentrated form: chemotherapy + radiation with cisplatin / paclitaxel and a hospice-care follow-on (rank~3, 5, 6, 9--11, 13--14), renal dialysis with Epoetin Alfa (rank~7), kidney transplantation with tacrolimus (rank~4), and a heart-failure loop of furosemide + prone-position + oxygen (rank~1). Treating outliers as a separate scope is what makes these otherwise rare but high-cost pathways visible at all -- they are below the global minimum-support floor when mined against the whole cohort.
+\end{itemize}
+
+Taken together, the five pattern sets confirm that the $k{=}4$ partition is not only metrically defensible (Section~\ref{ch:results_clustering}) but also \emph{semantically} separable: each cluster's top patterns describe a recognisably different care population, which is the precondition for cluster-scoped pathway analytics in the dashboard.

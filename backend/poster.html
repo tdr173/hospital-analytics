@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HospitAI - Thesis Poster</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+
+  :root {
+    --ink:        #10302c;
+    --teal:       #0e8276;
+    --teal-dark:  #0a564e;
+    --teal-mid:   #15a596;
+    --teal-soft:  #e7f6f3;
+    --amber:      #e08a1e;
+    --amber-deep: #b5660a;
+    --amber-soft: #fbeed6;
+    --slate:      #51625e;
+    --line:       #dcebe7;
+    --bg:         #eef6f4;
+    --card:       #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: #c5d9d4;
+  }
+
+  .poster {
+    width: 297mm; height: 210mm;
+    background: var(--bg);
+    overflow: hidden;
+    display: flex;
+  }
+  @media print {
+    html, body { width: 297mm; height: 210mm; }
+  }
+
+  /* ===================== SIDEBAR ===================== */
+  .sidebar {
+    width: 16.5%;
+    flex-shrink: 0;
+    background: linear-gradient(165deg, var(--teal-dark) 0%, var(--teal) 70%, var(--teal-mid) 100%);
+    color: #fff;
+    padding: 7mm 6mm 6mm 6mm;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .sidebar::after {
+    content: ""; position: absolute; top: 0; bottom: 0; right: 0;
+    width: 1.8mm; background: var(--amber);
+  }
+  .logo { display: flex; align-items: center; gap: 2.5mm; margin-bottom: 4.5mm; }
+  .logo .mark {
+    width: 9mm; height: 9mm; border-radius: 2.2mm;
+    background: rgba(255,255,255,0.16); border: 0.5mm solid rgba(255,255,255,0.5);
+    display: flex; align-items: center; justify-content: center; font-size: 5mm;
+  }
+  .logo .name { font-size: 7mm; font-weight: 800; letter-spacing: -0.3mm; line-height: 1; }
+  .logo .name span { color: var(--amber); }
+
+  .tagline { font-size: 3.9mm; font-weight: 700; line-height: 1.18; color: #eafaf7; margin-bottom: 2mm; }
+  .lede { font-size: 2.65mm; line-height: 1.32; color: #cdeae5; margin-bottom: 2.5mm; }
+
+  .author {
+    border-top: 0.4mm solid rgba(255,255,255,0.25);
+    border-bottom: 0.4mm solid rgba(255,255,255,0.25);
+    padding: 2.2mm 0; margin-bottom: 2.5mm;
+  }
+  .author .who { font-size: 4.2mm; font-weight: 800; color: #fff; line-height: 1.05; }
+  .author .role { font-size: 2.7mm; color: #bfe3dd; margin-top: 1.2mm; }
+
+  .flow-title {
+    font-size: 2.5mm; letter-spacing: 0.8mm; text-transform: uppercase;
+    color: var(--amber); font-weight: 700; margin-bottom: 2.2mm;
+  }
+  .flow { display: flex; flex-direction: column; gap: 0; }
+  .flow .step { display: flex; align-items: flex-start; gap: 2.6mm; position: relative; padding-bottom: 2.1mm; }
+  .flow .step:last-child { padding-bottom: 0; }
+  .flow .num {
+    width: 6mm; height: 6mm; flex-shrink: 0; border-radius: 50%;
+    background: rgba(255,255,255,0.14); border: 0.5mm solid rgba(255,255,255,0.55);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3mm; font-weight: 800; color: #fff; z-index: 1;
+  }
+  .flow .step:not(:last-child) .num::after {
+    content: ""; position: absolute; left: 3mm; top: 6mm; bottom: 0;
+    width: 0.5mm; background: rgba(255,255,255,0.3);
+  }
+  .flow .txt { padding-top: 0.3mm; }
+  .flow .txt .h { font-size: 3.0mm; font-weight: 700; color: #fff; line-height: 1.05; }
+  .flow .txt .s { font-size: 2.4mm; color: #bfe3dd; line-height: 1.18; margin-top: 0.4mm; }
+
+  .stack {
+    margin-top: auto; padding-top: 2.5mm;
+    font-size: 2.45mm; color: #aed8d1; line-height: 1.42;
+    border-top: 0.4mm solid rgba(255,255,255,0.25);
+  }
+  .stack b { color: #fff; }
+  .stack .amber { color: var(--amber); font-weight: 700; }
+
+  /* ===================== MAIN BENTO ===================== */
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr 1fr;
+    gap: 3.8mm;
+    padding: 5mm;
+    min-height: 0;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 3mm;
+    border: 0.35mm solid var(--line);
+    box-shadow: 0 1mm 2.5mm rgba(14,130,118,0.08);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .card .head {
+    display: flex; align-items: center; gap: 2.6mm;
+    padding: 2.6mm 4mm; background: var(--teal-soft);
+    border-bottom: 0.35mm solid var(--line);
+  }
+  .card .head.amber { background: var(--amber-soft); border-bottom-color: #f1ddbb; }
+  .card .head .ic { font-size: 5mm; line-height: 1; }
+  .card .head h3 { font-size: 4.1mm; font-weight: 800; color: var(--teal-dark); line-height: 1; }
+  .card .head.amber h3 { color: var(--amber-deep); }
+  .card .body { padding: 2.6mm 3.6mm 2.8mm 3.6mm; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+  .card p { font-size: 2.82mm; line-height: 1.3; color: #233e3a; margin-bottom: 1.5mm; }
+  .card p:last-child { margin-bottom: 0; }
+  .card b { color: var(--teal-dark); }
+  .muted { color: var(--slate); }
+
+  /* lists stretch to fill the card height */
+  ul.bul { list-style: none; flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 1.5mm; }
+  ul.bul li { font-size: 2.78mm; line-height: 1.26; padding-left: 3.4mm; position: relative; color: #233e3a; }
+  ul.bul li::before { content: ""; position: absolute; left: 0; top: 1.15mm; width: 1.5mm; height: 1.5mm; border-radius: 50%; background: var(--teal); }
+  ul.bul li b { color: var(--teal-dark); }
+
+  ol.num2 { list-style: none; counter-reset: c; flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 1.3mm; }
+  ol.num2 li { counter-increment: c; position: relative; padding-left: 5.6mm; font-size: 2.74mm; line-height: 1.27; color: #233e3a; }
+  ol.num2 li::before {
+    content: counter(c); position: absolute; left: 0; top: 0.1mm;
+    width: 4.2mm; height: 4.2mm; border-radius: 50%; background: var(--amber); color: #fff;
+    font-size: 2.7mm; font-weight: 800; text-align: center; line-height: 4.2mm;
+  }
+  ol.num2 li b { color: var(--teal-dark); }
+
+  .stats { display: flex; gap: 2mm; margin: 0.4mm 0 2mm; }
+  .stat { flex: 1; background: var(--teal-soft); border-radius: 1.5mm; padding: 1.7mm 1mm; text-align: center; }
+  .stat .v { font-size: 4.5mm; font-weight: 800; color: var(--teal-dark); line-height: 1; }
+  .stat .l { font-size: 2.2mm; color: var(--slate); margin-top: 0.7mm; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 1.2mm; padding-top: 2.4mm; }
+  .chip { font-size: 2.4mm; font-weight: 600; color: var(--teal-dark); background: var(--teal-soft); border-radius: 4mm; padding: 0.7mm 2.3mm; }
+  .chip.amber { color: var(--amber-deep); background: var(--amber-soft); }
+
+  .box {
+    background: #12302c; color: #cfeae5; border-radius: 1.6mm;
+    padding: 1.7mm 2.4mm; font-family: "Consolas", "Courier New", monospace;
+    font-size: 2.35mm; line-height: 1.32; margin-top: 1.5mm;
+  }
+  .box .k { color: #6fd0c4; }
+  .box .a { color: #f0b462; }
+  .box .lbl { color: #87a09b; }
+
+  /* bar chart */
+  .chart { display: flex; flex-direction: column; gap: 1.4mm; margin: 0.8mm 0 1.6mm; }
+  .bar-row { display: flex; align-items: center; gap: 1.6mm; }
+  .bar-row .nm { width: 27mm; font-size: 2.45mm; color: #233e3a; line-height: 1.02; }
+  .bar-row .tk { flex: 1; background: #e6efed; border-radius: 3mm; height: 3.2mm; overflow: hidden; }
+  .bar-row .fl { height: 100%; border-radius: 3mm; background: linear-gradient(90deg, var(--teal), var(--teal-mid)); }
+  .bar-row .vl { width: 8mm; text-align: right; font-size: 2.5mm; font-weight: 800; color: var(--teal-dark); }
+
+  table.pat { width: 100%; border-collapse: collapse; margin-top: 0.8mm; }
+  table.pat th { font-size: 2.1mm; text-transform: uppercase; letter-spacing: 0.2mm; color: var(--slate); text-align: left; padding: 0 1mm 0.9mm 0; border-bottom: 0.3mm solid var(--line); font-weight: 700; }
+  table.pat td { font-size: 2.45mm; padding: 0.9mm 1mm 0.9mm 0; border-bottom: 0.25mm solid #eef5f3; line-height: 1.12; color: #233e3a; }
+  table.pat td.c { color: var(--amber-deep); font-weight: 800; white-space: nowrap; }
+  table.pat td.n { text-align: right; font-weight: 800; color: var(--teal-dark); white-space: nowrap; }
+  table.pat tr:last-child td { border-bottom: none; }
+
+  .cap { font-size: 2.25mm; color: var(--slate); margin-top: auto; padding-top: 1.4mm; }
+
+  /* per-cluster result list (silhouette + signature trajectory) */
+  .clist { display: flex; flex-direction: column; gap: 1.1mm; margin: 1mm 0; flex: 1; justify-content: space-between; }
+  .crow { display: flex; flex-direction: column; gap: 0.3mm; }
+  .cr-top { display: flex; align-items: baseline; gap: 1.6mm; }
+  .cr-nm { flex-shrink: 0; font-size: 2.55mm; font-weight: 800; color: var(--teal-dark); line-height: 1.05; }
+  .cr-vl { margin-left: auto; font-size: 2.55mm; font-weight: 800; color: var(--amber-deep); }
+  .cr-note { flex: 1; font-size: 2.3mm; color: var(--slate); line-height: 1.05; }
+  .cr-pat { font-size: 2.32mm; color: #233e3a; line-height: 1.18; }
+  .cr-pat .ar { color: var(--amber); font-weight: 700; }
+  .cr-pts { color: var(--slate); font-weight: 700; white-space: nowrap; }
+</style>
+</head>
+<body>
+  <div class="poster">
+
+    <!-- ===================== SIDEBAR ===================== -->
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="mark">
+          <svg viewBox="0 0 24 24" width="6mm" height="6mm" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 13.5h4l1.8-6 3.4 12 2.6-8 1.6 2.5H22"/>
+          </svg>
+        </div>
+        <div class="name">Hospit<span>AI</span></div>
+      </div>
+
+      <div class="tagline">From raw electronic health records to readable clinical insight</div>
+      <div class="lede">A hospital analytics platform that groups patients by clinical profile, mines the care pathways inside each group, and explains both in plain language. Built end to end on the synthetic <b style="color:#fff">Synthea</b> dataset, with no real patient data.</div>
+
+      <div class="author">
+        <div class="who">Todor Ioan-Iulian</div>
+        <div class="role">Computer Science &middot; Diploma Thesis 2026</div>
+      </div>
+
+      <div class="flow-title">Analytical pipeline</div>
+      <div class="flow">
+        <div class="step"><div class="num">1</div><div class="txt"><div class="h">Synthea EHR</div><div class="s">22k synthetic patients, 10+ tables</div></div></div>
+        <div class="step"><div class="num">2</div><div class="txt"><div class="h">Feature building</div><div class="s">21 features / patient, JSONB</div></div></div>
+        <div class="step"><div class="num">3</div><div class="txt"><div class="h">K-Prototypes</div><div class="s">mixed numeric + categorical clustering</div></div></div>
+        <div class="step"><div class="num">4</div><div class="txt"><div class="h">PrefixSpan</div><div class="s">sequence mining, per cluster</div></div></div>
+        <div class="step"><div class="num">5</div><div class="txt"><div class="h">LLM insight</div><div class="s">cluster summaries + text-to-SQL</div></div></div>
+      </div>
+
+      <div class="stack">
+        <b>Stack</b> &nbsp;Next.js &middot; FastAPI &middot; PostgreSQL<br>
+        <span class="amber">ML</span> &nbsp;kmodes &middot; prefixspan &middot; LangGraph<br>
+        <span class="amber">Roles</span> &nbsp;patient &middot; doctor &middot; manager
+      </div>
+    </aside>
+
+    <!-- ===================== MAIN BENTO ===================== -->
+    <main class="main">
+
+      <!-- DATA -->
+      <section class="card">
+        <div class="head"><h3>Dataset &amp; Features</h3></div>
+        <div class="body">
+          <p>Real EHRs are GDPR-locked, so <b>Synthea</b> generated a synthetic cohort with deep longitudinal histories across 10+ relational tables (encounters, conditions, medications, procedures, immunizations, allergies, observations, care plans, providers, organizations).</p>
+          <div class="stats">
+            <div class="stat"><div class="v">22,284</div><div class="l">patients</div></div>
+            <div class="stat"><div class="v">10+</div><div class="l">tables</div></div>
+            <div class="stat"><div class="v">21</div><div class="l">features</div></div>
+          </div>
+          <ul class="bul">
+            <li>An ETL job loads the CSVs into <b>PostgreSQL</b>; a feature-builder aggregates every table into <b>one row per patient</b>.</li>
+            <li><b>11 numeric</b> features: age, BMI, systolic BP, active conditions, medications, procedures, ER visits, QALY, DALY.</li>
+            <li><b>10 categorical</b> features: gender, BMI type, condition burden, diabetes / hypertension / heart-disease flags, dominant care plan.</li>
+            <li>Cached as a <b>JSONB</b> column so clustering and mining never recompute it.</li>
+          </ul>
+          <div class="chips">
+            <span class="chip">Synthea</span><span class="chip">PostgreSQL</span><span class="chip amber">FastAPI ETL</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- CLUSTERING -->
+      <section class="card">
+        <div class="head"><h3>K-Prototypes Clustering</h3></div>
+        <div class="body">
+          <p><b>K-Prototypes</b> (Huang, 1998) extends K-Means to <b>mixed data</b>: squared-Euclidean distance for numerics plus matching dissimilarity for categoricals, combined in one distance.</p>
+          <ul class="bul">
+            <li>An IQR rule keeps <b>21,995</b> patients for model fitting; the <b>289</b> high-acuity outliers are retained as a separate scope.</li>
+            <li>Benchmarked <b>63 feature versions</b> &times; a sweep over scaler, &gamma;, seed, threshold and <b>k &isin; {4..7}</b>, scored on 6 cluster-quality indices.</li>
+            <li>The <b>Gower silhouette</b> is weighted highest, the only index that honours the mixed metric; FAMD projections act as tie-breakers.</li>
+            <li>Final pick <b>v55 (k=4)</b>: Gower <b>0.350</b>, with all four clusters above the 0.20 cohesion heuristic.</li>
+            <li>Top drivers: active conditions (&eta;&sup2;=0.74), age (0.66); condition burden (V=0.80), diabetes (0.69).</li>
+          </ul>
+          <div class="chips">
+            <span class="chip">mixed data</span><span class="chip">Gower silhouette</span><span class="chip amber">FAMD 2-D</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEQUENCE MINING -->
+      <section class="card">
+        <div class="head"><h3>Sequence Mining</h3></div>
+        <div class="body">
+          <p>Each patient's history becomes <b>one chronological sequence</b> of events typed by prefix (<b>C:</b>condition, <b>M:</b>medication, <b>P:</b>procedure, <b>CP:</b>care plan). <b>PrefixSpan</b> (Pei et al., 2001) mines frequent ordered sub-sequences by <b>prefix-projection</b>, growing a pattern one event at a time and recursing only on the suffixes that follow, so it never enumerates candidates. It runs <b>once per cluster</b>, so each phenotype reveals its own trajectory.</p>
+          <ul class="bul">
+            <li>Sequences are cleaned first: noise blacklisted, refills collapsed, a <b>730-day window</b> and length cap applied.</li>
+            <li><b>Closed</b> patterns are ranked by <b>geometric-mean lift</b>, which normalises by each item's baseline frequency so rare, meaningful chains beat high-support trivia.</li>
+            <li>A <b>type-diversity bonus</b> favours condition&nbsp;&rarr;&nbsp;medication&nbsp;&rarr;&nbsp;procedure chains; <b>Jaccard 0.80</b> dedup and dental caps remove the rest, then survivors are attributed back to their patients.</li>
+          </ul>
+          <div class="box">
+            <span class="lbl"># a mined trajectory is a typed, ordered chain</span><br>
+            <span class="k">C:</span>Prediabetes <span class="a">&rarr;</span> <span class="k">M:</span>Metformin <span class="a">&rarr;</span> <span class="k">P:</span>HbA1c measurement <span class="a">&rarr;</span> <span class="k">P:</span>Diabetic retinal exam
+          </div>
+        </div>
+      </section>
+
+      <!-- AI -->
+      <section class="card">
+        <div class="head"><h3>AI Interpretation</h3></div>
+        <div class="body">
+          <p>Large language models turn the platform's statistical output into language that non-technical staff can read and act on, bridging numbers to decisions.</p>
+          <ul class="bul">
+            <li><b>Cluster summaries:</b> each cluster's statistics become a <b>title</b>, a narrative description, a <b>risk level</b> and a list of recommended interventions.</li>
+            <li><b>Text-to-SQL agent</b> on <b>LangGraph</b>: a question such as <i>"patients with &gt;3 emergencies this year"</i> becomes SQL, is executed, and is answered in natural language.</li>
+            <li>The generated SQL stays <b>visible</b> as a transparency safeguard, so staff can verify exactly what ran against the data.</li>
+            <li>Outputs are strictly <b>descriptive</b>, never medical advice or a substitute for a clinician.</li>
+            <li>Three roles (<b>patient</b>, <b>doctor</b>, <b>manager</b>) each see a tailored slice of the same data.</li>
+          </ul>
+          <div class="chips">
+            <span class="chip">LangGraph</span><span class="chip">Gemini / GPT</span><span class="chip amber">text-to-SQL</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESULTS -->
+      <section class="card">
+        <div class="head amber"><h3>Results</h3></div>
+        <div class="body">
+          <p><b>k=4</b> is the smallest partition where all four clusters clear the 0.20 cohesion bar, giving a clean morbidity gradient from a healthy young majority to a small, high-burden outlier pool. The deciding metric was the <b>Gower silhouette</b> (the only index honouring the mixed numeric/categorical distance), picked among several indices of inter-cluster separation and intra-cluster cohesion.</p>
+          <div class="clist">
+            <div class="crow">
+              <div class="cr-top"><span class="cr-nm">c0 &middot; young / low-burden</span><span class="cr-vl">silhouette 0.423</span></div>
+              <div class="cr-pat">Acute bronchitis <span class="ar">&rarr;</span> Respiratory therapy <span class="ar">&rarr;</span> Acetaminophen &nbsp;<span class="cr-pts">432 pts</span></div>
+            </div>
+            <div class="crow">
+              <div class="cr-top"><span class="cr-nm">c1 &middot; reproductive women</span><span class="cr-vl">silhouette 0.199</span></div>
+              <div class="cr-pat">Normal pregnancy <span class="ar">&rarr;</span> Pregnancy test <span class="ar">&rarr;</span> Fetal-viability ultrasound &nbsp;<span class="cr-pts">432 pts</span></div>
+            </div>
+            <div class="crow">
+              <div class="cr-top"><span class="cr-nm">c2 &middot; hypertensive adults</span><span class="cr-vl">silhouette 0.320</span></div>
+              <div class="cr-pat">Furosemide IV <span class="ar">&rarr;</span> Oxygen by mask <span class="ar">&rarr;</span> Prone positioning (heart failure) &nbsp;<span class="cr-pts">164 pts</span></div>
+            </div>
+            <div class="crow">
+              <div class="cr-top"><span class="cr-nm">c3 &middot; pediatric / acute</span><span class="cr-vl">silhouette 0.396</span></div>
+              <div class="cr-pat">Otitis media <span class="ar">&rarr;</span> Amoxicillin <span class="ar">&rarr;</span> Ibuprofen &nbsp;<span class="cr-pts">320 pts</span></div>
+            </div>
+            <div class="crow">
+              <div class="cr-top"><span class="cr-nm">&minus;1 &middot; high-acuity outliers</span><span class="cr-vl">289 patients</span></div>
+              <div class="cr-pat">Chemoradiation <span class="ar">&rarr;</span> Cisplatin <span class="ar">&rarr;</span> Paclitaxel <span class="ar">&rarr;</span> Hospice care &nbsp;<span class="cr-pts">132 pts</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- KEY FINDINGS -->
+      <section class="card">
+        <div class="head amber"><h3>Key Findings &amp; Impact</h3></div>
+        <div class="body">
+          <ol class="num2">
+            <li><b>The cohorts are real, not artefacts.</b> Mixed clustering splits the hospital into four recognisable phenotypes along a morbidity gradient, each cohesive enough to clear the silhouette bar.</li>
+            <li><b>Each cohort tells its own story.</b> Mining per cluster turns every phenotype into a signature trajectory (a child's ear infection, an antenatal work-up, a heart-failure rescue) that a single global run would average away.</li>
+            <li><b>Ranking by lift makes them readable.</b> Geometric-mean lift rewards rare, meaningful chains and suppresses Synthea's 40%-support dental noise, so what surfaces is clinical, not bureaucratic.</li>
+            <li><b>The rarest patients matter most.</b> Mining the 289 outliers as their own scope exposes the high-cost oncology and renal chains that fall below any global support floor.</li>
+            <li><b>And it reaches people.</b> Clinicians see where a patient fits and the pathway their cohort follows; managers query the hospital in plain language, served fast from offline batch jobs persisted to PostgreSQL.</li>
+          </ol>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+</body>
+</html>

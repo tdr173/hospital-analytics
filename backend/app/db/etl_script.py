@@ -151,22 +151,7 @@ def load_encounters(engine):
     kept_ids = set(_pick_top_provider_ids())
     single_org_id = _pick_single_org()["organization_id"]
 
-    # Build year → ordered list of kept providers (most active first) for redistribution
-    enc_year = pd.to_datetime(df["START"], utc=True).dt.year
-    kept_mask = df["PROVIDER"].isin(kept_ids)
-    year_provider_counts = (
-        df[kept_mask]
-        .assign(year=enc_year[kept_mask])
-        .groupby(["year", "PROVIDER"])
-        .size()
-        .reset_index(name="cnt")
-        .sort_values(["year", "cnt"], ascending=[True, False])
-    )
-    year_to_providers: dict[int, list[str]] = {
-        yr: grp["PROVIDER"].tolist()
-        for yr, grp in year_provider_counts.groupby("year")
-    }
-    global_fallback = year_provider_counts.groupby("PROVIDER")["cnt"].sum().idxmax()
+    kept_ids_list = sorted(kept_ids)
 
     keep_cols = {
         "Id": "encounter_id",
@@ -184,19 +169,15 @@ def load_encounters(engine):
 
     encounters_df["organization_id"] = single_org_id
 
-    # Redistribute encounters from dropped providers round-robin across kept providers that year
+    # Redistribute encounters from dropped providers evenly across kept providers
     dropped_mask = ~encounters_df["provider_id"].isin(kept_ids)
     if dropped_mask.any():
-        years = pd.to_datetime(encounters_df.loc[dropped_mask, "start_date"], utc=True).dt.year
-        year_counters: dict[int, int] = {}
-        new_providers = []
-        for y in years:
-            providers = year_to_providers.get(y, [global_fallback])
-            idx = year_counters.get(y, 0)
-            year_counters[y] = idx + 1
-            new_providers.append(providers[idx % len(providers)])
+        n = dropped_mask.sum()
+        import numpy as np
+        rng = np.random.default_rng(seed=42)
+        new_providers = rng.choice(kept_ids_list, size=n, replace=True)
         encounters_df.loc[dropped_mask, "provider_id"] = new_providers
-        print(f"Redistributed {dropped_mask.sum():,} encounters from dropped providers.")
+        print(f"Redistributed {n:,} encounters from dropped providers.")
 
     today = pd.Timestamp.now(tz="UTC").normalize()
 

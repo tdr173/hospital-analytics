@@ -13,6 +13,7 @@ Rules:
 - Do not alarm. Do not invent risks or diagnoses that are not in the data.
 - No population comparisons. No clinical scores the patient would not recognise.
 - Keep it to 3-5 short paragraphs or bullet groups. Markdown OK.
+- Do NOT include a title or heading (no "Your Health Summary" or any ## heading).
 
 Patient data:
 {patient_data}

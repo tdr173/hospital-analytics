@@ -1,0 +1,108 @@
+\section{K-Prototypes Results}
+\label{ch:results_clustering}
+
+The objective of clustering is to partition the patients into distinct groups based on their clinical profiles so that each group can be used as a scope for pattern mining. After removing outliers using the IQR criterion described in Section~\ref{ch:z_score}, exactly 21,995 (out of a total of 22,284) patients remained for the k-prototypes clustering. Patients marked as outliers (\texttt{is\_outlier = TRUE}) are included in the analysis but not included in the model fitting phase.
+
+\subsubsection*{Benchmark Protocol}
+
+In order to decide a final configuration, we benchmarked \textbf{63 feature-engineering versions} (\texttt{v1}\,$\ldots$\,\texttt{v63}), each picking a different subset of the 11 numerical and 10 categorical features built in Section~\ref{ch:feature_construction}. For every version, we performed a parameter sweep across the five k-prototypes hyperparameters: \texttt{scaler}~$\in$~\{\texttt{minmax}, \texttt{robust}\}, \texttt{gamma}~$\in$~\{\texttt{auto}, 0.07, 0.13, 0.17\}, \texttt{random\_state}~$\in$~\{7, 42, 100\}, \texttt{threshold}~$\in$~\{4, 6\}, and \texttt{k}~$\in$~\{4, 5, 6, 7\}. Every run generated a file named \texttt{conclusions.txt}, which included standard metrics (Silhouette, Gower Silhouette, Calinski-Harabasz, projected FAMD-Calinski-Harabasz, Davies-Bouldin, projected FAMD-Davies-Bouldin), cluster-wise Gower silhouette, and feature importance values (numerical $\eta^2$, categorical Cramer's V). Each iteration was ranked within its version, and the optimal iteration for each version was aggregated into a single \texttt{general\_conclusion.xlsx} sheet for ranking.
+
+\subsubsection*{General Score and the Primacy of Gower}
+
+The composite score that determines the ranking is the normalized sum of the aforementioned six individual scores, but it gives more weight to the \textbf{Gower Silhouette}, as explained in Section~\ref{ch:gower}. As for the type of input space, we have the mixed scenario (5~numerical and 8 categorical variables), while Silhouette, Calinski-Harabasz, and Davies-Bouldin indices assume the Euclidean metric; applying them to the one-hot encoding of categoricals results in an unwarranted emphasis on the numerical spread and masks the categorical nature of the data. However, the Gower distance first scales all numerical variables by their ranges and then assesses the dissimilarity between categorical values with binary agreement, just like k-prototypes does. The 2-D projection variants of Calinski-Harabasz and Davies-Bouldin are evaluated exclusively as tie-breakers because they are based on the dimensionality-reduced representation.
+
+\subsubsection*{Feature Tuning per $k$}
+
+After calculating the final scores, the upper end of the ranking was examined for each $k$, in order to select, among every possible cardinality, the feature set that obtained the most robust partitioning. Three optimal configurations were selected, which are listed in Table~\ref{tab:ch6_per_k_winners}. Scaler, threshold, and the FAMD measures are not listed, since the three winning sets share the same \texttt{minmax} scaler, threshold equal to \texttt{6}, and FAMD-DB ranging from 0.72 to 0.83.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{@{}l c c c c c c c@{}}
+\toprule
+Config & Features ($n+c$) & $k$ & $\gamma$ & seed & Silh. & \textbf{Gower} & DB \\
+\midrule
+\textbf{v55} (final pick) & 5 + 8 & \textbf{4} & auto ($\approx$0.084) & 42 & 0.132 & \textbf{0.350} & 2.51 \\
+v40 (best $k{=}5$)        & 4 + 8 & 5            & 0.17                  & 42 & 0.095 & 0.356          & 3.11 \\
+v60 (best $k{=}6$)        & 4 + 8 & 6            & 0.17                  & 7  & 0.029 & 0.313          & 2.59 \\
+\midrule
+\multicolumn{8}{l}{\textit{Per-cluster Gower silhouette}} \\
+\textbf{v55} ($k{=}4$) & \multicolumn{7}{l}{$c_0{=}0.423$,\quad $c_1{=}0.199$,\quad $c_2{=}0.320$,\quad $c_3{=}0.396$} \\
+v40 ($k{=}5$)         & \multicolumn{7}{l}{$c_0{=}0.332$,\quad $c_1{=}0.537$,\quad $c_2{=}0.242$,\quad $c_3{=}0.203$,\quad $c_4{=}0.314$} \\
+v60 ($k{=}6$)         & \multicolumn{7}{l}{$c_0{=}0.132$,\quad $c_1{=}0.242$,\quad $c_2{=}0.172$,\quad $c_3{=}0.331$,\quad $c_4{=}0.483$,\quad $c_5{=}0.402$} \\
+\midrule
+% Titlurile coloanelor pentru features
+\multicolumn{3}{@{}l}{\textbf{v55}} & \multicolumn{3}{l}{v40} & \multicolumn{2}{l@{}}{v60} \\
+\cmidrule(r){1-3} \cmidrule(lr){4-6} \cmidrule(l){7-8}
+
+\multicolumn{8}{l}{\textit{Numerical Features}} \\
+\multicolumn{3}{@{}l}{\begin{tabular}[t]{@{}l@{}}
+\texttt{age} \\ \texttt{active\_conditions\_count} \\ \texttt{total\_medications} \\ \texttt{total\_procedures} \\ \texttt{preventive\_to\_reactive\_ratio}
+\end{tabular}} &
+\multicolumn{3}{l}{\begin{tabular}[t]{@{}l@{}}
+\texttt{age} \\ \texttt{active\_conditions\_count} \\ \texttt{total\_medications} \\ \texttt{lifetime\_medication\_days}
+\end{tabular}} &
+\multicolumn{2}{l@{}}{\begin{tabular}[t]{@{}l@{}}
+\texttt{age} \\ \texttt{active\_conditions\_count} \\ \texttt{total\_medications} \\ \texttt{preventive\_to\_reactive\_ratio}
+\end{tabular}} \\
+
+\addlinespace % Adaugă puțin spațiu între blocul numeric și cel categoric
+
+\multicolumn{8}{l}{\textit{Categorical Features}} \\
+\multicolumn{3}{@{}l}{\begin{tabular}[t]{@{}l@{}}
+\texttt{gender} \\ \texttt{pregnancy\_history} \\ \texttt{has\_heart\_disease} \\ \texttt{has\_diabetes} \\ \texttt{has\_hypertension} \\ \texttt{condition\_burden} \\ \texttt{bmi\_type} \\ \texttt{dominant\_careplan}
+\end{tabular}} &
+\multicolumn{3}{l}{\begin{tabular}[t]{@{}l@{}}
+\texttt{gender} \\ \texttt{pregnancy\_history} \\ \texttt{has\_heart\_disease} \\ \texttt{has\_diabetes} \\ \texttt{has\_hypertension} \\ \texttt{condition\_burden} \\ \texttt{bmi\_type} \\ \texttt{cholesterol\_risk\_category}
+\end{tabular}} &
+\multicolumn{2}{l@{}}{\begin{tabular}[t]{@{}l@{}}
+\texttt{gender} \\ \texttt{pregnancy\_history} \\ \texttt{has\_heart\_disease} \\ \texttt{has\_diabetes} \\ \texttt{has\_hypertension} \\ \texttt{condition\_burden} \\ \texttt{bmi\_type} \\ \texttt{cholesterol\_risk\_category}
+\end{tabular}} \\
+\bottomrule
+\end{tabular}
+\caption{Winning configurations per $k$. Base feature sets are nearly identical across the three winners, with minor substitutions in secondary numerical metrics and categorical variables (e.g., \texttt{v55} utilizes \texttt{dominant\_careplan} instead of \texttt{cholesterol\_risk\_category}).}
+\label{tab:ch6_per_k_winners}
+\end{table}
+
+\subsubsection*{Final Configuration and Rationale}
+
+\texttt{v55\_sminmax\_gauto\_rs42\_th6\_k4}, despite having a slightly lower overall Gower silhouette score of 0.350 than \texttt{v40-$k{=}5$} (0.356), has \textbf{four} clusters that all essentially meet or exceed the heuristic value of 0.20, indicating stability (\textit{min $=$~0.199, max $=$~0.423}). For the optimum with five clusters, there is only \textbf{one} cluster that has a score of 0.203, barely exceeding the heuristic threshold. As for the optimum with six clusters, there are \textbf{three} clusters with scores below the heuristic value. It is essential to select such strict criteria since the clustering process will be used in the next step of PrefixSpan mining. The best $k$ value would therefore be the smallest value for which all clusters remain structurally cohesive: \texttt{active\_conditions\_count} ($\eta^2{=}0.74$) and \texttt{age} ($\eta^2{=}0.66$) dominate the numerical contribution, while \texttt{condition\_burden} (Cramer's V $=$~0.80), \texttt{gender} (0.70), \texttt{has\_diabetes} (0.69), and \texttt{has\_heart\_disease} (0.66) dominate the categorical side.
+
+\subsubsection*{Visual Inspection of the Final Partition}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_6/clustering_famd_scatter_plot.png}
+\caption{FAMD 2-D projection of the four clusters (\texttt{v55}, $k{=}4$).}
+\label{fig:ch6_clu_famd}
+\end{figure}
+
+The scatterplot of FAMD reveals how the four clusters exhibit clear decision boundaries along the first two components of FAMD, although k-prototypes never uses such an embedding natively.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_6/clustering_heatmap.png}
+\caption{Heatmap of z-scored numerical feature means per cluster.}
+\label{fig:ch6_clu_heatmap}
+\end{figure}
+
+The heatmap indicates an obvious morbidity gradient with respect to cluster~0 representing younger patients with low morbidity and cluster~3 at the other extreme with high morbidity. Clusters~1 and ~2 represent intermediate states. However, the skew in \texttt{preventive\_to\_reactive\_ratio} is different for both clusters. In this visualization, warmer colors (red) indicate values that are higher than the average while blue colors reflect values lower than the dataset average.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_6/clustering_numerical_graphs.png}
+\caption{Per-cluster means of the five numerical features.}
+\label{fig:ch6_clu_numerical}
+\end{figure}
+
+Examining the per-cluster bar plot of the five numerical features, we can clearly see the importance of \texttt{active\_conditions\_count} and \texttt{age}. These two features primarily drive the divergence between clusters~2 and~3 from clusters~0 and~1.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_6/clustering_categorical_graphs.png}
+\caption{Per-cluster proportions of the eight categorical features.}
+\label{fig:ch6_clu_categorical}
+\end{figure}
+
+The categorical panel corroborates these findings from the other side: \texttt{condition\_burden} cleanly stratifies the four clusters, \texttt{has\_diabetes} and \texttt{has\_heart\_disease} concentrate inside the high-burden clusters, and \texttt{gender}~/~\texttt{pregnancy\_history} account for the primary variance separating cluster~1 (women of reproductive age) from the rest.
