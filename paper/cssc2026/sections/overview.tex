@@ -1,0 +1,47 @@
+\section{System Overview}\label{sec:overview}
+
+HospitAI is organized as a single \emph{layered pipeline} in which the output of
+each stage is the input of the next, and an LLM layer is attached transversally
+to every analytical stage (Fig.~\ref{fig:architecture}). The pipeline has four
+analytical stages:
+
+\begin{enumerate}
+  \item \textbf{Ingestion and feature building.} Raw Synthea CSV files are loaded
+        into a PostgreSQL database; more than ten clinical tables are aggregated
+        into one mixed-type feature vector per patient
+        (Section~\ref{sec:ingestion}).
+  \item \textbf{Mixed-type clustering.} K-Prototypes groups patients by clinical
+        profile using both numerical and categorical features
+        (Section~\ref{sec:clustering}).
+  \item \textbf{Dual-scope sequence mining.} PrefixSpan mines frequent clinical
+        trajectories globally and within each cluster
+        (Section~\ref{sec:sequences}).
+  \item \textbf{LLM interpretation.} An LLM summarizes clusters, interprets
+        sequences and answers natural-language questions over the database
+        (Section~\ref{sec:llm}).
+\end{enumerate}
+
+The clustering and sequence-mining stages run as \emph{offline batch} jobs; the
+results are persisted to PostgreSQL and served to a web front end that exposes
+three role-based views (patient, doctor, manager). Results are computed once and
+cached: per-patient features are stored as a JSON column, cluster metadata and
+metrics in a singleton table, and LLM interpretations are lazily computed on
+first request and cached in JSON columns so that repeated views incur no model
+cost. This separation keeps the interactive experience fast while the expensive
+analytics are amortized.
+
+\begin{figure}[!t]
+  \centering
+  % Replace with an exported architecture diagram. A PlantUML source exists in
+  % backend/app/docs/chapter_5/ that can be adapted.
+  \fbox{\parbox{0.92\columnwidth}{\centering\vspace{2.2cm}
+  \textbf{Architecture diagram placeholder}\\[2pt]
+  \small Synthea CSV $\rightarrow$ ETL/feature building $\rightarrow$
+  K-Prototypes $\rightarrow$ per-cluster PrefixSpan $\rightarrow$ PostgreSQL;
+  LLM layer attached to clustering, sequences and text-to-SQL.
+  \vspace{2.2cm}}}
+  \caption{The HospitAI layered pipeline. The four analytical stages run as
+  offline batch jobs and persist to PostgreSQL; the LLM layer attaches
+  transversally and its outputs are cached.}
+  \label{fig:architecture}
+\end{figure}

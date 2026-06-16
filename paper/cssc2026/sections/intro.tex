@@ -1,0 +1,72 @@
+\section{Introduction}\label{sec:intro}
+
+The medical field is one of the domains where impressive amounts of data are
+collected, ranging from general patient information (age, body mass index, blood
+type) to detailed clinical records such as treatment plans, prescribed
+medications, surgical interventions, immunizations, observations,
+hospitalizations and allergies. Properly processed, this data can help
+clinicians identify \emph{patterns that repeat across patients}, reveal groups
+that require similar care, and surface the treatments that worked best for each
+group. In practice, however, much of this data either remains on paper or sits
+untouched in hospital databases. Its potential is enormous but, as Yadav
+\emph{et al.}~\cite{Yadav2018MiningEHR} observe, largely wasted.
+
+Building a system that closes this gap raises four coupled challenges. The
+\textbf{first} is obtaining and preprocessing the heterogeneous source data. The
+\textbf{second} is grouping patients with a method that can combine
+\emph{numerical} attributes (e.g., age, number of active conditions) with
+\emph{categorical} ones (e.g., gender, dominant care-plan category, comorbidity
+flags) in a single model. The \textbf{third} is understanding the
+\emph{temporal} structure of care through sequential pattern mining. The
+\textbf{fourth} is making the resulting analytics interpretable, and the
+database queryable, for users without a technical background.
+
+Because real EHR data is hard to obtain and is protected by privacy
+regulations, we use the open-source Synthea generator~\cite{Walonoski2018Synthea}
+to produce a realistic synthetic cohort of \NPATIENTS{} patients, each with a
+deep simulated medical history spanning organizations, providers, encounters,
+conditions, allergies, observations, immunizations, care plans, procedures and
+medications. The depth of the inter-table relationships makes this dataset a
+suitable instrument for all four challenges.
+
+To address them we introduce \textbf{HospitAI}, a hospital analytics platform
+organized as a single layered pipeline. Patients are clustered with
+K-Prototypes~\cite{Huang1998KPrototypes}, which extends K-Means with a combined
+distance that uses squared Euclidean distance for numerical features and simple
+matching for categorical ones. Care trajectories are discovered with
+PrefixSpan~\cite{Pei2004PrefixSpan}, a projection-based sequential pattern miner.
+Crucially, we apply PrefixSpan both globally and \emph{per cluster}, so that
+group-characteristic trajectories can be distinguished from population-wide
+ones. Finally, a large language model (LLM) layer turns numerical outputs into
+natural language and exposes a guarded text-to-SQL interface. The use of
+unsupervised learning to discover patient clusters in EHRs is itself a promising
+direction in recent literature~\cite{Wang2020UnsupervisedEHR}; our emphasis is
+on \emph{integration} and \emph{interpretability} rather than on a new learning
+algorithm.
+
+\smallskip
+\noindent\textbf{Contributions.} This paper makes the following contributions:
+\begin{itemize}
+  \item An end-to-end, interpretation-first pipeline that reduces raw multi-table
+        EHR data to one mixed-type feature vector per patient and feeds it
+        through clustering, sequence mining and an LLM layer
+        (Sections~\ref{sec:overview}--\ref{sec:llm}).
+  \item A \emph{dual-scope} application of PrefixSpan that mines clinical
+        sequences both globally and independently within each patient cluster,
+        together with a frequency-corrected ranking based on geometric-mean lift
+        and a clinical type-diversity bonus (Section~\ref{sec:sequences}).
+  \item An LLM layer that operates at every analytical step --- cluster
+        summarization, sequence interpretation and a validate-then-execute
+        text-to-SQL agent with role-based scoping
+        (Section~\ref{sec:llm}).
+  \item A qualitative and quantitative evaluation on a \NPATIENTS{}-patient
+        synthetic cohort showing interpretable clusters and cluster-specific
+        trajectories (Section~\ref{sec:results}).
+\end{itemize}
+
+The remainder of the paper is organized as follows.
+Section~\ref{sec:related} reviews related work.
+Section~\ref{sec:overview} describes the system architecture.
+Section~\ref{sec:ingestion}--\ref{sec:llm} detail the methods.
+Section~\ref{sec:results} reports results, Section~\ref{sec:discussion}
+discusses limitations, and Section~\ref{sec:conclusion} concludes.

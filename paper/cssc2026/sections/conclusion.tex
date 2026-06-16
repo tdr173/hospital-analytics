@@ -1,0 +1,20 @@
+\section{Conclusion and Future Work}\label{sec:conclusion}
+
+We presented HospitAI, a layered, mostly unsupervised pipeline that turns raw
+multi-table EHR data into clinician-readable insight. Raw clinical events are
+reduced to one mixed-type feature vector per patient, grouped with K-Prototypes,
+and mined for frequent clinical trajectories with PrefixSpan applied both
+globally and \emph{per cluster}; a transversal LLM layer summarizes clusters,
+interprets trajectories and answers natural-language questions through a
+validate-then-execute text-to-SQL agent. On a \NPATIENTS{}-patient synthetic
+cohort the pipeline yields interpretable clusters and cluster-specific
+trajectories, and the LLM layer makes these results consumable without
+data-analysis training. The contribution is the \emph{integration}: an
+end-to-end, interpretation-first analytics flow, and the dual-scope sequence
+mining that distinguishes group-specific care progressions from population-wide
+ones.
+
+Future work includes validation on de-identified real EHRs with clinician
+review, incremental/online recomputation of clusters and patterns as new data
+arrives, principled selection of $k$ and of the categorical weight $\gamma$, and
+a tighter, formally specified safety layer around the text-to-SQL agent.

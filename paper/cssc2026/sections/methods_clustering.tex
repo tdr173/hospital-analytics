@@ -1,0 +1,43 @@
+\section{Mixed-Type Patient Clustering}\label{sec:clustering}
+
+\subsection{The K-Prototypes model}
+Patient feature vectors mix numerical and categorical attributes, so a
+purely numerical method such as K-Means is inapplicable. We use
+K-Prototypes~\cite{Huang1998KPrototypes}, which assigns each object to the
+nearest cluster prototype under a combined dissimilarity
+\begin{equation}
+  d(x,\mu) \;=\; \underbrace{\sum_{j\in N}\,(x_j-\mu_j)^2}_{\text{numerical}}
+  \;+\; \gamma \underbrace{\sum_{j\in C}\,\delta(x_j,\mu_j)}_{\text{categorical}},
+  \label{eq:kproto}
+\end{equation}
+where $N$ and $C$ index the numerical and categorical attributes, $\delta$ is
+the simple-matching dissimilarity ($\delta(a,b)=0$ if $a=b$ and $1$ otherwise),
+and $\gamma$ weights the categorical contribution relative to the numerical one.
+A cluster prototype stores the mean for numerical attributes and the mode for
+categorical ones. We use Huang's initialization, a fixed random seed for
+reproducibility, and an automatically estimated $\gamma$.
+
+\subsection{Preprocessing and configuration}
+Before clustering, numerical features are scaled to a common range so that no
+single attribute dominates the Euclidean term in~\eqref{eq:kproto}; the
+already-standardized severity score is left unscaled. Categorical features are
+kept as strings and handled natively by the matching term. Patients whose
+numerical indicators are extreme outliers (selected by a $z$-score threshold on
+log-corrected counts) are removed from model fitting and reported separately as
+an outlier group, preventing a handful of super-utilizers from distorting the
+prototypes. The active configuration uses $k=\KCLUSTERS$ clusters; $k$ is
+selected with the elbow method as a diagnostic and then fixed for the production
+run.
+
+\subsection{Evaluation and visualization}
+Because the data is mixed-type, we evaluate cluster quality with both numerical
+and mixed-distance metrics: the silhouette and Davies--Bouldin and
+Calinski--Harabasz indices on the numerical subspace, and a Gower-distance
+silhouette that accounts for categorical attributes. Per-feature discriminative
+power is quantified with $\eta^2$ for numerical features and Cram\'er's $V$ for
+categorical ones, which also tells the user \emph{why} the clusters differ. For
+visualization, the mixed feature space is projected to two dimensions with
+Factor Analysis of Mixed Data (FAMD), and cluster means are shown as a
+normalized heatmap. All metadata, metrics and rendered figures are persisted in
+a singleton cluster-metadata table, and each patient's cluster assignment and
+2-D coordinates are stored for fast retrieval.

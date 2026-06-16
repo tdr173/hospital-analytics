@@ -1,0 +1,45 @@
+\section{The LLM Interpretation Layer}\label{sec:llm}
+
+Statistical outputs --- cluster centroids, support counts, metric tables --- are
+not directly actionable for a clinician or a manager. HospitAI attaches a large
+language model (LLM), accessed through a hosted API, to every analytical stage,
+in three distinct roles. In all three, the LLM is constrained to operate over
+\emph{computed statistics or validated queries}, never over free-form clinical
+advice, and its textual output is explicitly a description of the data rather
+than a medical recommendation.
+
+\subsection{Cluster summarization}
+For each cluster the system assembles an aggregated profile --- size,
+key averages (age, severity, counts), disease prevalences, dominant care-plan
+mix, and the top conditions, medications and procedures --- and asks the LLM to
+produce a short structured summary: a plain-language title, a one- or two-sentence
+description, the most distinguishing insight (with concrete numbers), a risk
+level and a recommended intervention. The structured response is parsed and
+cached on the cluster record. This converts the numerical clustering output into
+something a non-specialist can read at a glance.
+
+\subsection{Sequence interpretation}
+On demand, a mined trajectory can be explained. The system gathers the
+demographics and comorbidity rates of the patients that follow the pattern and
+asks the LLM to produce a clinical interpretation of the trajectory (the likely
+diagnosis--workup--management story), a layperson summary, risk signals and
+recommendations. As with clusters, the result is cached on the pattern record so
+that the (cost-bearing) model call happens at most once per pattern, with
+row-level locking to serialize concurrent requests.
+
+\subsection{Guarded text-to-SQL}
+The third role lets users query the database in natural language. The agent is
+implemented as a state machine (using LangGraph) with a
+classify $\rightarrow$ generate $\rightarrow$ validate $\rightarrow$ execute
+flow. An input is first classified as a database question, a general medical
+question or off-topic. Database questions are translated into a read-only
+\texttt{SELECT} grounded in the real schema; a separate validation step then
+audits the query --- rejecting any non-\texttt{SELECT} statement, verifying that
+referenced tables and columns exist, checking that joins use documented foreign
+keys, and enforcing role-based scope (a doctor's queries are restricted to their
+own patients; aggregate roles are unrestricted; the patient role is blocked).
+Validation or execution failures feed the error back to the generation step for a
+bounded number of retries. The natural-language answer is returned together with
+the generated SQL, so a user can audit exactly what ran against the data without
+needing to understand it. This design keeps the convenience of natural-language
+access while preserving safety and grounding.

@@ -1,0 +1,34 @@
+\section{Related Work}\label{sec:related}
+
+\textbf{Mining and clustering of EHR data.} Surveys of EHR mining emphasize that
+clinical data is high-dimensional, heterogeneous and underused in
+practice~\cite{Yadav2018MiningEHR}. Unsupervised learning has been used to
+discover clinically meaningful patient subgroups directly from EHRs without
+labels~\cite{Wang2020UnsupervisedEHR}, which motivates a clustering-first
+analytics approach. A recurring obstacle is that patient records mix continuous
+measurements with categorical descriptors; classical K-Means assumes purely
+numerical input. The K-Prototypes algorithm~\cite{Huang1998KPrototypes} removes
+this restriction by combining squared Euclidean distance for numerical
+attributes with a matching dissimilarity for categorical ones, which makes it a
+natural fit for patient profiles. We adopt it for exactly this reason.
+
+\textbf{Sequential pattern mining in healthcare.} Care is inherently temporal: a
+diagnosis is followed by medication, a procedure, a follow-up. Sequential pattern
+mining captures such ordered regularities. PrefixSpan~\cite{Pei2004PrefixSpan} is
+a projection-based miner that grows patterns by recursively projecting the
+database onto frequent prefixes, avoiding repeated candidate generation. Most
+applications mine sequences over an entire population. We instead mine them
+\emph{per cluster}, treating the clusters as a stratification of the cohort, so
+that trajectories specific to a clinical subgroup become visible against the
+global background.
+
+\textbf{LLMs and natural-language interfaces to data.} Recent large language
+models can translate natural-language questions into executable SQL, enabling
+non-technical users to query relational databases. Wrapping this capability in a
+controlled workflow --- classification, generation, validation and execution
+with retry --- is necessary to keep generated queries safe and grounded in the
+real schema. We use such a workflow, orchestrated as a state machine, and pair
+it with LLM-generated summaries that translate statistical outputs into language
+a clinician can read. To our knowledge, the combination of mixed-type
+clustering, dual-scope sequence mining and an LLM interpretation layer in one
+platform has not been reported.

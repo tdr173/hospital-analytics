@@ -1,0 +1,79 @@
+\section{Results and Evaluation}\label{sec:results}
+
+We evaluate HospitAI on the synthetic cohort of \NPATIENTS{} patients. The goal
+is not to claim clinical validity on synthetic data, but to show that the
+pipeline produces \emph{interpretable, internally consistent} structure and that
+each stage feeds the next as intended.
+
+\subsection{Clustering quality}
+With $k=\KCLUSTERS$, K-Prototypes partitions the cohort into clinically
+distinguishable groups. Table~\ref{tab:metrics} reports internal validity indices
+over both the numerical subspace and the mixed (Gower) space. The per-feature
+$\eta^2$ and Cram\'er's $V$ scores identify which attributes drive the
+separation --- in our runs the dominant care-plan category, condition burden and
+the severity score are among the strongest discriminators --- which gives the
+clustering an interpretable rationale rather than an opaque label.
+
+\begin{table}[!t]
+  \caption{Internal cluster validity ($k=\KCLUSTERS$).}
+  \label{tab:metrics}
+  \centering
+  \begin{tabular}{lc}
+    \toprule
+    \textbf{Metric} & \textbf{Value} \\
+    \midrule
+    Silhouette (numerical)        & \TODO{fill from metrics} \\
+    Silhouette (Gower, mixed)     & \TODO{fill} \\
+    Davies--Bouldin (lower better)& \TODO{fill} \\
+    Calinski--Harabasz (higher better) & \TODO{fill} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+  \centering
+  % Export the FAMD scatter persisted in cluster_meta.pca_image.
+  \fbox{\parbox{0.9\columnwidth}{\centering\vspace{2.0cm}
+  \textbf{FAMD 2-D cluster scatter (placeholder)}\vspace{2.0cm}}}
+  \caption{Two-dimensional FAMD projection of the mixed feature space, coloured
+  by cluster. Replace with the figure stored during the clustering run.}
+  \label{fig:famd}
+\end{figure}
+
+\subsection{Cluster-specific trajectories}
+The central qualitative result is the contrast between global and per-cluster
+sequence mining. Table~\ref{tab:patterns} illustrates the intended finding: a
+trajectory can be dominant inside one cluster while remaining infrequent across
+the whole population, exposing a care progression that is specific to that
+patient group and would be diluted by global mining alone. The exact patterns and
+support values should be filled in from the persisted pattern tables.
+
+\begin{table}[!t]
+  \caption{Example trajectories: per-cluster vs.\ global support.
+  Fill from the mined pattern tables.}
+  \label{tab:patterns}
+  \centering
+  \footnotesize
+  \begin{tabular}{p{0.50\columnwidth}cc}
+    \toprule
+    \textbf{Pattern} & \textbf{Cluster} & \textbf{Global} \\
+    \midrule
+    \texttt{C:diabetes $\rightarrow$ M:metformin $\rightarrow$ P:foot\_exam}
+      & \TODO{\%} & \TODO{\%} \\
+    \TODO{pattern 2} & \TODO{\%} & \TODO{\%} \\
+    \TODO{pattern 3} & \TODO{\%} & \TODO{\%} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Interpretation layer}
+Qualitatively, the LLM layer renders each cluster as a titled, plain-language
+profile with a risk level and a recommended action, and each trajectory as a
+short clinical narrative. The text-to-SQL agent answers natural-language
+questions (e.g., \emph{``list patients with more than three emergency encounters
+in the past year''}) by emitting a validated read-only query whose text is shown
+alongside the answer. Because validation rejects non-\texttt{SELECT} statements
+and unknown schema elements before execution, malformed or unsafe generations are
+caught rather than run. \TODO{optionally add a small example screenshot or a
+table of representative questions, generated SQL, and whether validation passed
+on the first attempt.}

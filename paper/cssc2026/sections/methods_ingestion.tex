@@ -1,0 +1,38 @@
+\section{Data Ingestion and Feature Building}\label{sec:ingestion}
+
+\subsection{Source data and cleaning}
+The source is a Synthea-generated cohort exported as CSV. Eleven tables are
+loaded --- patients, organizations, providers, encounters, conditions,
+medications, procedures, allergies, immunizations, care plans and observations
+--- and consolidated into a single hospital so that the data resembles one
+institution rather than a national network. Cleaning addresses the
+characteristic artifacts of synthetic generation: trailing digits are stripped
+from names, future-dated events are clamped to the present, encounter durations
+are derived and capped per encounter class (e.g., wellness visits to a few
+hours, inpatient stays to a month), and missing values are imputed by mode for
+categorical fields and by median for numerical ones. Observations, the largest
+table, are inserted in chunks and aggregated through a materialized view. The
+result is a normalized relational schema with foreign keys linking every
+clinical event back to a patient and, where applicable, an encounter.
+
+\subsection{Patient-level feature engineering}
+The analytical stages operate not on raw events but on \emph{one feature vector
+per patient}, obtained by aggregating across all clinical tables. Numerical
+features include age, the count of active conditions, the number of medications
+and procedures, the number of distinct providers seen, lifetime medication days,
+total encounter duration, and ratios such as a preventive-to-reactive care
+ratio. Heavily skewed counts are log-transformed. A composite
+\emph{clinical-severity score} is derived by standardizing
+(\,procedures, medications, active conditions\,) and projecting them onto their
+first principal component, compressing three correlated severity dimensions into
+one axis.
+
+Categorical features encode clinically meaningful states: gender, pregnancy
+history, comorbidity flags (heart disease, diabetes, hypertension, and others)
+obtained by keyword matching over condition descriptions, a bucketed condition
+burden, a BMI category, and a \emph{dominant care-plan} category ranked by
+clinical severity (from general rehabilitation up to oncology and palliative
+care). Continuous vitals such as BMI, blood pressure and glucose are bucketed
+into risk tiers so that they enter the model as interpretable categories rather
+than raw numbers. The complete vector is cached as a JSON column on the patient
+record to avoid recomputation in later stages.

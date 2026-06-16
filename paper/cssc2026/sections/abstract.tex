@@ -1,0 +1,21 @@
+Hospitals accumulate vast electronic health record (EHR) data that remains
+largely unprocessed and inaccessible to the non-technical staff who could act
+on it. We present \textit{HospitAI}, a healthcare analytics platform that turns
+raw EHR data into clinician-readable insight through a single, layered, mostly
+unsupervised pipeline. Raw clinical events from more than ten heterogeneous
+tables are ingested and reduced to one feature vector per patient mixing
+numerical and categorical attributes. Patients are then grouped with the
+K-Prototypes algorithm, which handles mixed-type data within one distance
+function. On top of the resulting groups we run a \emph{dual-scope}
+sequential pattern miner: PrefixSpan is applied both globally and
+\emph{independently within each cluster}, so that care trajectories
+characteristic of a patient group can be separated from population-wide ones.
+A large language model (LLM) layer sits across every analytical step: it
+converts statistical cluster profiles into plain-language summaries, interprets
+mined clinical sequences, and exposes a natural-language text-to-SQL interface
+governed by a validate-then-execute state machine. Using a synthetic cohort of
+\NPATIENTS{} patients generated with Synthea, we obtain interpretable patient
+clusters and cluster-specific clinical trajectories, and we show how the LLM
+layer makes these results consumable by users without data-analysis training.
+The contribution is not any single algorithm but their integration into an
+end-to-end, interpretation-first analytics pipeline.

@@ -1,0 +1,53 @@
+\section{Dual-Scope Sequential Pattern Mining}\label{sec:sequences}
+
+\subsection{From events to sequences}
+Each patient's clinical history is turned into an ordered sequence of typed
+items. An item is a clinical event prefixed by its type --- \texttt{C:} for a
+condition, \texttt{M:} for a medication, \texttt{P:} for a procedure and
+\texttt{CP:} for a care plan --- so that, e.g., \texttt{C:diabetes} and a
+similarly named procedure remain distinct. Events are sorted chronologically;
+events on the same day are ordered by a clinically motivated type rank
+($C\!<\!M\!<\!P\!<\!CP$). Consecutive duplicates (such as repeated refills) are
+collapsed, a curated blacklist removes administrative noise, only the most recent
+window of history is kept, and the per-patient sequence length is capped. A
+typical sequence is
+\[
+  \texttt{C:diabetes} \rightarrow \texttt{M:metformin} \rightarrow
+  \texttt{P:foot\_exam} \rightarrow \texttt{C:hypertension}.
+\]
+
+\subsection{Dual-scope mining}
+We apply PrefixSpan~\cite{Pei2004PrefixSpan} at two scopes. \emph{Global} mining
+runs over the whole cohort and yields population-wide trajectories.
+\emph{Per-cluster} mining runs PrefixSpan independently over the patients of each
+cluster produced in Section~\ref{sec:clustering} (the outlier group included),
+yielding trajectories characteristic of that subgroup. Comparing the two scopes
+is the key analytical move: a trajectory may be dominant inside one cluster yet
+rare in the population, which signals a group-specific care progression rather
+than a generic one. Mined patterns are stored indexed by cluster label, so the
+front end can request either the global set or any cluster's set, and each
+pattern is linked to the patients that exhibit it.
+
+\subsection{Ranking and filtering}
+Frequency alone over-ranks patterns built from individually common items. We
+score each pattern $P=\langle i_1,\dots,i_n\rangle$ by its \emph{geometric-mean
+lift}, comparing the pattern's observed support to what independence would
+predict:
+\begin{equation}
+  \mathrm{GML}(P) \;=\;
+  \frac{\mathrm{supp}(P)/N}
+       {\left(\prod_{k=1}^{n}\mathrm{supp}(i_k)/N\right)^{1/n}},
+  \label{eq:gml}
+\end{equation}
+computed in log-space for numerical stability, where $N$ is the number of
+patients in scope. A pattern whose items rarely co-occur scores higher than one
+made of ubiquitous items. We further multiply the score by a
+\emph{type-diversity bonus} that rewards patterns spanning several event types
+(condition $\rightarrow$ medication $\rightarrow$ procedure), since these tell a
+richer clinical story than repetitions of a single type. Mining requests closed
+patterns of length 3--6 above a $1\%$ support floor; a larger candidate pool is
+over-mined and then reduced by the ranking above plus a set of filters: removal
+of runs of three same-type items, an explicit closedness check, Jaccard-based
+near-duplicate suppression, and per-prefix and per-suffix caps that prevent a
+single dominant condition from monopolizing the result list. The top-ranked
+patterns per scope are persisted for presentation.

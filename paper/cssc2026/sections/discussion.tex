@@ -1,0 +1,20 @@
+\section{Discussion and Limitations}\label{sec:discussion}
+
+Several limitations follow directly from the design choices. First, the cohort is
+\emph{synthetic}: Synthea produces statistically plausible but not real
+histories, so the discovered clusters and trajectories validate the
+\emph{pipeline}, not clinical hypotheses. Transfer to real EHRs would require
+re-tuning the feature definitions and re-validating with domain experts. Second,
+clustering and sequence mining run as \emph{offline batch} jobs; the platform
+does not recompute analytics in real time, which is acceptable for retrospective
+analysis but not for live decision support. Third, the LLM layer is an
+\emph{interpretation and access} aid: its summaries describe statistics and its
+text-to-SQL output is validated, but generated text is not a medical
+recommendation and the validation rules, while strict, are heuristic rather than
+a formal guarantee. Finally, the role-based views implement scoping at the query
+level rather than as a production-grade authorization module.
+
+These boundaries are deliberate: the contribution is the integrated,
+interpretation-first pipeline and the dual-scope mining idea, both of which are
+independent of the synthetic data source and would carry over to a real
+deployment.
