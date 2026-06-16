@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +8,7 @@ from sqlmodel import SQLModel
 from sqlalchemy import text
 
 from app import statistics_router, cluster_router, patient_router, provider_router, dashboard_router, encounter_router, sequence_router
-from db.db_connector import engine
+from db.db_connector import engine, SessionLocal
 import domain.models  # noqa: F401 - ensures all models are registered before create_all
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,22 @@ routers = [
     dashboard_router,
     encounter_router,
 ]
+
+
+def _warm_cluster_detail_cache() -> None:
+    """Precompute cluster detail_cache in the background so the first
+    /clusters/detail load doesn't pay the ~minute-long observation scans."""
+    from repository import ClusterRepository
+    from service import ClusterService
+
+    try:
+        with SessionLocal() as db:
+            service = ClusterService(ClusterRepository(db))
+            warmed = service.warm_detail_cache()
+        if warmed:
+            logger.info("Warmed cluster detail_cache for labels: %s", warmed)
+    except Exception:
+        logger.exception("Background cluster detail_cache warm-up failed")
 
 
 def _default_origins() -> list[str]:
@@ -81,6 +98,13 @@ async def lifespan(app: FastAPI):
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_encounter_description ON encounter (description)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_encounter_reason_description ON encounter (reason_description)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_encounter_class ON encounter (encounter_class)"))
+            # start_date indexes - the dashboard KPI query filters every big table
+            # by `start_date >= cutoff`; without these it seq-scans encounter (1.2M),
+            # condition (727k) and procedure (3.2M) on every range != "all" request.
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_encounter_start_date ON encounter (start_date)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_condition_start_date ON condition (start_date)"))
+            conn.execute(text('CREATE INDEX IF NOT EXISTS ix_procedure_start_date ON "procedure" (start_date)'))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_careplan_start_date ON careplan (start_date)"))
             # cluster indexes
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_cluster_label ON cluster (cluster_label)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_cluster_patient_label ON cluster_patient (cluster_label)"))
@@ -154,6 +178,14 @@ async def lifespan(app: FastAPI):
             conn.commit()
     except Exception:
         logger.exception("Observation materialized view creation failed")
+
+    # Warm the per-cluster detail cache in a daemon thread so startup is not
+    # blocked. New/uncached clusters get precomputed; cached ones are skipped.
+    threading.Thread(
+        target=_warm_cluster_detail_cache,
+        name="warm-cluster-detail-cache",
+        daemon=True,
+    ).start()
 
     yield
 

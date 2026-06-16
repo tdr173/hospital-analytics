@@ -23,7 +23,7 @@ from domain.schemas.encounter_schemas.encounter_schema import (
     CarePlanCreateRequest, CarePlanUpdateRequest,
     AllergyCreateRequest, AllergyUpdateRequest,
 )
-from repository._helpers import patient_name_col, provider_name_col, clamp_page_size
+from repository._helpers import patient_name_col, provider_name_col, clamp_page_size, link_patient_provider
 
 
 SUBRECORD_MODELS = {
@@ -338,6 +338,9 @@ class EncounterRepository:
         )
         self.db.add(enc)
         self.db.commit()
+        # keep the junction table in sync: the encounter's provider should see
+        # this patient in their panel even if they never shared a visit before
+        link_patient_provider(self.db, enc.patient_id, enc.provider_id)
         return self.get_encounter(enc.encounter_id)
 
     def update_encounter(self, encounter_id: str, payload: EncounterUpdateRequest, provider_id_scope: Optional[str]) -> EncounterDetailResponse:
@@ -349,6 +352,9 @@ class EncounterRepository:
             enc.duration = max((enc.end_date - enc.start_date).total_seconds() / 60.0, 0.0)
         self.db.add(enc)
         self.db.commit()
+        # if the provider was reassigned, make sure the new provider gets the
+        # patient in their panel (idempotent if unchanged)
+        link_patient_provider(self.db, enc.patient_id, enc.provider_id)
         return self.get_encounter(encounter_id)
 
     def delete_encounter(self, encounter_id: str, provider_id_scope: Optional[str]) -> None:

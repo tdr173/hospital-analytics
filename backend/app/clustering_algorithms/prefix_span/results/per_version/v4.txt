@@ -1,0 +1,228 @@
+Top 226 patterns (filtered + diversified)
+
+    1. [  581 pts,   2.7%] [gml: 1.5515] C:Laceration - injury (disorder) -> CP:Wound care (regime/therapy) -> P:Suture open wound (procedure)
+    2. [  413 pts,   1.9%] [gml: 1.2432] M:60 ACTUAT Fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT Dry Powder Inhaler -> M:albuterol 5 MG/ML Inhalation Solution -> P:Spirometry (procedure)
+    3. [  361 pts,   1.6%] [gml: 1.2060] C:Fracture of bone (disorder) -> CP:Fracture care (regime/therapy) -> P:Bone immobilization (procedure)
+    4. [  341 pts,   1.6%] [gml: 1.1995] P:Oxygen administration by mask (procedure) -> P:Placing subject in prone position (procedure) -> M:10 ML Furosemide 10 MG/ML Injection
+    5. [ 1250 pts,   5.7%] [gml: 1.1470] C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> M:Acetaminophen 325 MG Oral Tablet
+    6. [  252 pts,   1.2%] [gml: 1.0760] C:Acute infective cystitis (disorder) -> P:History taking (procedure) -> P:Discussion about signs and symptoms (procedure)
+    7. [ 7954 pts,  36.3%] [gml: 1.0639] M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Dental fluoride treatment (procedure) -> P:Oral health education (procedure)
+    8. [ 7732 pts,  35.3%] [gml: 1.0408] P:Examination of gingivae (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Dental fluoride treatment (procedure)
+    9. [  837 pts,   3.8%] [gml: 0.9756] C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> P:Measurement of respiratory function (procedure)
+   10. [  446 pts,   2.0%] [gml: 0.9464] C:Sprain (morphologic abnormality) -> C:Sprain of ankle (disorder) -> CP:Physiotherapy care plan (record artifact)
+   11. [ 7730 pts,  35.3%] [gml: 0.9424] P:Examination of gingivae (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Dental fluoride treatment (procedure) -> P:Oral health education (procedure)
+   12. [ 7549 pts,  34.5%] [gml: 0.9276] P:Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure) -> P:Examination of gingivae (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Dental fluoride treatment (procedure)
+   13. [  448 pts,   2.0%] [gml: 0.9222] C:Normal pregnancy (finding) -> P:Standard pregnancy test (procedure) -> P:Ultrasound scan for fetal viability (procedure)
+   14. [  634 pts,   2.9%] [gml: 0.8146] C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> P:Measurement of respiratory function (procedure) -> M:Acetaminophen 325 MG Oral Tablet
+   15. [  648 pts,   3.0%] [gml: 0.7305] CP:Respiratory therapy (procedure) -> P:Measurement of respiratory function (procedure) -> M:Acetaminophen 325 MG Oral Tablet
+   16. [  640 pts,   2.9%] [gml: 0.7274] C:Acute bronchitis (disorder) -> P:Measurement of respiratory function (procedure) -> M:Acetaminophen 325 MG Oral Tablet
+   17. [  332 pts,   1.5%] [gml: 0.7040] C:Risk activity involvement (finding) -> P:Assessment using Car  Relax  Alone  Forget  Friends  Trouble Screening Test (procedure) -> P:Health risks education (procedure)
+   18. [ 5163 pts,  23.6%] [gml: 0.6811] C:Gingivitis (disorder) -> P:Patient referral for dental care (procedure) -> P:Dental consultation and report (procedure)
+   19. [  426 pts,   1.9%] [gml: 0.6215] C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> M:Acetaminophen 21.7 MG/ML / Dextromethorphan Hydrobromide 1 MG/ML / doxylamine succinate 0.417 MG/ML Oral Solution
+   20. [ 4138 pts,  18.9%] [gml: 0.5852] P:Dental plain X-ray bitewing (procedure) -> P:Examination of gingivae (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Dental fluoride treatment (procedure)
+   21. [  331 pts,   1.5%] [gml: 0.5580] C:Otitis media (disorder) -> M:Amoxicillin 500 MG Oral Tablet -> M:Ibuprofen 100 MG Oral Tablet
+   22. [  331 pts,   1.5%] [gml: 0.5542] C:Otitis media (disorder) -> M:Acetaminophen 160 MG Chewable Tablet -> M:Amoxicillin 500 MG Oral Tablet
+   23. [  354 pts,   1.6%] [gml: 0.5519] C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> P:Sputum examination (procedure)
+   24. [ 3535 pts,  16.2%] [gml: 0.4540] C:Gingivitis (disorder) -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure)
+   25. [ 3414 pts,  15.6%] [gml: 0.4292] C:Gingivitis (disorder) -> P:Depression screening (procedure) -> P:Dental consultation and report (procedure)
+   26. [  339 pts,   1.5%] [gml: 0.4203] M:60 ACTUAT Fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT Dry Powder Inhaler -> M:albuterol 5 MG/ML Inhalation Solution -> P:Spirometry (procedure) -> P:Depression screening (procedure)
+   27. [  278 pts,   1.3%] [gml: 0.4192] CP:Respiratory therapy (procedure) -> P:Sputum examination (procedure) -> M:Acetaminophen 325 MG Oral Tablet
+   28. [ 2851 pts,  13.0%] [gml: 0.3939] C:Gingivitis (disorder) -> P:Assessment of substance use (procedure) -> P:Patient referral for dental care (procedure)
+   29. [ 2820 pts,  12.9%] [gml: 0.3779] C:Stress (finding) -> P:Depression screening (procedure) -> P:Assessment of substance use (procedure)
+   30. [ 2771 pts,  12.7%] [gml: 0.3747] C:Gingivitis (disorder) -> P:Assessment of substance use (procedure) -> P:Dental consultation and report (procedure)
+   31. [ 2701 pts,  12.3%] [gml: 0.3559] M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Dental fluoride treatment (procedure) -> P:Depression screening (procedure)
+   32. [  261 pts,   1.2%] [gml: 0.3418] M:60 ACTUAT Fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT Dry Powder Inhaler -> M:albuterol 5 MG/ML Inhalation Solution -> P:Spirometry (procedure) -> P:Assessment of substance use (procedure)
+   33. [ 2412 pts,  11.0%] [gml: 0.3377] C:Full-time employment (finding) -> P:Depression screening (procedure) -> P:Assessment of substance use (procedure)
+   34. [ 2510 pts,  11.5%] [gml: 0.3370] C:Stress (finding) -> P:Patient referral for dental care (procedure) -> P:Dental consultation and report (procedure)
+   35. [ 2369 pts,  10.8%] [gml: 0.3367] C:Stress (finding) -> P:Assessment of anxiety (procedure) -> P:Depression screening (procedure)
+   36. [  924 pts,   4.2%] [gml: 0.3354] C:Primary dental caries (disorder) -> P:Application of composite dental filling material to dentin of tooth following fracture of tooth (procedure) -> P:Oral health education (procedure)
+   37. [ 1844 pts,   8.4%] [gml: 0.3331] C:Stress (finding) -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+   38. [ 1832 pts,   8.4%] [gml: 0.3313] C:Stress (finding) -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+   39. [  900 pts,   4.1%] [gml: 0.3300] C:Primary dental caries (disorder) -> P:Restoration of tooth with coverage of all cusps using dental filling material (procedure) -> P:Oral health education (procedure)
+   40. [ 1091 pts,   5.0%] [gml: 0.3261] M:Hydrochlorothiazide 25 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet -> P:Depression screening (procedure)
+   41. [ 1802 pts,   8.2%] [gml: 0.3247] C:Gingival disease (disorder) -> P:Examination of gingivae (procedure) -> P:Oral health education (procedure)
+   42. [ 2452 pts,  11.2%] [gml: 0.3228] C:Gingivitis (disorder) -> P:Depression screening (procedure) -> P:Assessment of substance use (procedure)
+   43. [  352 pts,   1.6%] [gml: 0.3212] M:albuterol 5 MG/ML Inhalation Solution -> P:Spirometry (procedure) -> P:Depression screening (procedure)
+   44. [  340 pts,   1.6%] [gml: 0.3163] M:60 ACTUAT Fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT Dry Powder Inhaler -> M:albuterol 5 MG/ML Inhalation Solution -> P:Depression screening (procedure)
+   45. [ 1616 pts,   7.4%] [gml: 0.3050] C:Full-time employment (finding) -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+   46. [ 2043 pts,   9.3%] [gml: 0.3033] C:Full-time employment (finding) -> P:Assessment of anxiety (procedure) -> P:Depression screening (procedure)
+   47. [ 1581 pts,   7.2%] [gml: 0.2987] C:Full-time employment (finding) -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+   48. [  965 pts,   4.4%] [gml: 0.2977] M:amLODIPine 2.5 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet -> P:Depression screening (procedure)
+   49. [  459 pts,   2.1%] [gml: 0.2920] P:Depression screening (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> M:Acetaminophen 325 MG Oral Tablet
+   50. [ 1900 pts,   8.7%] [gml: 0.2904] C:Stress (finding) -> P:Assessment of anxiety (procedure) -> P:Assessment of substance use (procedure)
+   51. [  633 pts,   2.9%] [gml: 0.2871] CP:Respiratory therapy (procedure) -> M:Acetaminophen 325 MG Oral Tablet -> P:Dental consultation and report (procedure)
+   52. [  439 pts,   2.0%] [gml: 0.2824] P:Oral health education (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> M:Acetaminophen 325 MG Oral Tablet
+   53. [  854 pts,   3.9%] [gml: 0.2765] M:Hydrochlorothiazide 25 MG Oral Tablet -> M:amLODIPine 2.5 MG Oral Tablet -> P:Depression screening (procedure)
+   54. [  604 pts,   2.8%] [gml: 0.2758] P:Depression screening (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure)
+   55. [  836 pts,   3.8%] [gml: 0.2688] M:Hydrochlorothiazide 25 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet -> P:Assessment of substance use (procedure)
+   56. [ 1668 pts,   7.6%] [gml: 0.2676] C:Part-time employment (finding) -> P:Depression screening (procedure) -> P:Assessment of substance use (procedure)
+   57. [  272 pts,   1.2%] [gml: 0.2669] M:albuterol 5 MG/ML Inhalation Solution -> P:Spirometry (procedure) -> P:Assessment of substance use (procedure)
+   58. [  573 pts,   2.6%] [gml: 0.2655] P:Oral health education (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure)
+   59. [  401 pts,   1.8%] [gml: 0.2645] P:Patient referral for dental care (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> M:Acetaminophen 325 MG Oral Tablet
+   60. [  771 pts,   3.5%] [gml: 0.2629] M:Hydrochlorothiazide 25 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet -> P:Assessment of anxiety (procedure)
+   61. [ 1621 pts,   7.4%] [gml: 0.2589] C:Full-time employment (finding) -> P:Assessment of anxiety (procedure) -> P:Assessment of substance use (procedure)
+   62. [  578 pts,   2.6%] [gml: 0.2552] CP:Respiratory therapy (procedure) -> M:Acetaminophen 325 MG Oral Tablet -> P:Depression screening (procedure)
+   63. [ 1493 pts,   6.8%] [gml: 0.2522] M:lisinopril 10 MG Oral Tablet -> P:Depression screening (procedure) -> P:Assessment of substance use (procedure)
+   64. [  521 pts,   2.4%] [gml: 0.2496] P:Patient referral for dental care (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure)
+   65. [  750 pts,   3.4%] [gml: 0.2489] M:amLODIPine 2.5 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet -> P:Assessment of substance use (procedure)
+   66. [  685 pts,   3.1%] [gml: 0.2411] M:amLODIPine 2.5 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet -> P:Assessment of anxiety (procedure)
+   67. [ 1754 pts,   8.0%] [gml: 0.2395] C:Full-time employment (finding) -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure)
+   68. [ 1334 pts,   6.1%] [gml: 0.2390] M:lisinopril 10 MG Oral Tablet -> P:Assessment of anxiety (procedure) -> P:Depression screening (procedure)
+   69. [  353 pts,   1.6%] [gml: 0.2372] P:Assessment of substance use (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> M:Acetaminophen 325 MG Oral Tablet
+   70. [  479 pts,   2.2%] [gml: 0.2352] P:Assessment of substance use (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure)
+   71. [ 1075 pts,   4.9%] [gml: 0.2327] C:Part-time employment (finding) -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+   72. [  668 pts,   3.1%] [gml: 0.2326] M:Hydrochlorothiazide 25 MG Oral Tablet -> M:amLODIPine 2.5 MG Oral Tablet -> P:Assessment of substance use (procedure)
+   73. [ 1356 pts,   6.2%] [gml: 0.2307] C:Part-time employment (finding) -> P:Assessment of anxiety (procedure) -> P:Depression screening (procedure)
+   74. [ 1059 pts,   4.8%] [gml: 0.2290] C:Part-time employment (finding) -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+   75. [  326 pts,   1.5%] [gml: 0.2273] C:Risk activity involvement (finding) -> P:Assessment of substance use (procedure) -> P:Assessment using Car  Relax  Alone  Forget  Friends  Trouble Screening Test (procedure)
+   76. [  987 pts,   4.5%] [gml: 0.2250] M:lisinopril 10 MG Oral Tablet -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+   77. [  467 pts,   2.1%] [gml: 0.2218] CP:Respiratory therapy (procedure) -> M:Acetaminophen 325 MG Oral Tablet -> P:Assessment of substance use (procedure)
+   78. [ 1244 pts,   5.7%] [gml: 0.2205] M:Hydrochlorothiazide 25 MG Oral Tablet -> P:Depression screening (procedure) -> P:Assessment of substance use (procedure)
+   79. [  961 pts,   4.4%] [gml: 0.2188] M:lisinopril 10 MG Oral Tablet -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+   80. [ 1027 pts,   4.7%] [gml: 0.2172] M:lisinopril 10 MG Oral Tablet -> P:Depression screening (procedure) -> M:lisinopril 10 MG Oral Tablet
+   81. [  462 pts,   2.1%] [gml: 0.2141] CP:Respiratory therapy (procedure) -> M:Acetaminophen 325 MG Oral Tablet -> P:Patient referral for dental care (procedure)
+   82. [  254 pts,   1.2%] [gml: 0.2101] P:Oral health education (procedure) -> C:Sprain (morphologic abnormality) -> CP:Physiotherapy care plan (record artifact)
+   83. [  645 pts,   2.9%] [gml: 0.2088] M:amLODIPine 2.5 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet -> P:Patient referral for dental care (procedure)
+   84. [ 1118 pts,   5.1%] [gml: 0.2046] M:amLODIPine 2.5 MG Oral Tablet -> P:Depression screening (procedure) -> P:Assessment of substance use (procedure)
+   85. [ 1228 pts,   5.6%] [gml: 0.2024] M:lisinopril 10 MG Oral Tablet -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure)
+   86. [  629 pts,   2.9%] [gml: 0.1993] M:amLODIPine 2.5 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet -> P:Dental consultation and report (procedure)
+   87. [ 1079 pts,   4.9%] [gml: 0.1975] C:Part-time employment (finding) -> P:Assessment of anxiety (procedure) -> P:Assessment of substance use (procedure)
+   88. [  303 pts,   1.4%] [gml: 0.1942] P:Depression screening (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> P:Measurement of respiratory function (procedure)
+   89. [  268 pts,   1.2%] [gml: 0.1940] M:Simvastatin 10 MG Oral Tablet -> P:Assessment using Morse Fall Scale (procedure) -> M:Simvastatin 10 MG Oral Tablet
+   90. [  296 pts,   1.4%] [gml: 0.1921] P:Dental consultation and report (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> M:Acetaminophen 325 MG Oral Tablet
+   91. [  291 pts,   1.3%] [gml: 0.1886] P:Oral health education (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> P:Measurement of respiratory function (procedure)
+   92. [  490 pts,   2.2%] [gml: 0.1869] M:insulin isophane  human 70 UNT/ML / insulin  regular  human 30 UNT/ML Injectable Suspension [Humulin] -> M:lisinopril 10 MG Oral Tablet -> P:Depression screening (procedure)
+   93. [  266 pts,   1.2%] [gml: 0.1868] P:Assessment of anxiety (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> M:Acetaminophen 325 MG Oral Tablet
+   94. [ 1188 pts,   5.4%] [gml: 0.1859] C:Part-time employment (finding) -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure)
+   95. [ 1235 pts,   5.6%] [gml: 0.1845] P:Depression screening (procedure) -> C:Stress (finding) -> P:Depression screening (procedure)
+   96. [  953 pts,   4.4%] [gml: 0.1839] C:Social isolation (finding) -> P:Depression screening (procedure) -> P:Assessment of substance use (procedure)
+   97. [  351 pts,   1.6%] [gml: 0.1828] P:Assessment of anxiety (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure)
+   98. [ 1136 pts,   5.2%] [gml: 0.1812] P:Depression screening (procedure) -> C:Full-time employment (finding) -> P:Depression screening (procedure)
+   99. [  384 pts,   1.8%] [gml: 0.1800] P:Dental consultation and report (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure)
+  100. [  924 pts,   4.2%] [gml: 0.1799] C:Not in labor force (finding) -> P:Depression screening (procedure) -> P:Assessment of substance use (procedure)
+  101. [  791 pts,   3.6%] [gml: 0.1798] P:Depression screening (procedure) -> M:Hydrochlorothiazide 25 MG Oral Tablet -> P:Depression screening (procedure)
+  102. [  585 pts,   2.7%] [gml: 0.1775] P:Oral health education (procedure) -> M:Hydrochlorothiazide 25 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet
+  103. [ 1399 pts,   6.4%] [gml: 0.1769] P:Oral health education (procedure) -> C:Stress (finding) -> P:Depression screening (procedure)
+  104. [  885 pts,   4.0%] [gml: 0.1740] C:Limited social contact (finding) -> P:Depression screening (procedure) -> P:Assessment of substance use (procedure)
+  105. [  259 pts,   1.2%] [gml: 0.1721] P:Patient referral for dental care (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure) -> P:Measurement of respiratory function (procedure)
+  106. [  479 pts,   2.2%] [gml: 0.1709] P:Assessment using Morse Fall Scale (procedure) -> P:Depression screening (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  107. [  809 pts,   3.7%] [gml: 0.1655] C:Social isolation (finding) -> P:Assessment of anxiety (procedure) -> P:Depression screening (procedure)
+  108. [ 1147 pts,   5.2%] [gml: 0.1649] C:Viral sinusitis (disorder) -> P:Depression screening (procedure) -> P:Assessment of substance use (procedure)
+  109. [  585 pts,   2.7%] [gml: 0.1648] M:Simvastatin 10 MG Oral Tablet -> P:Depression screening (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  110. [  326 pts,   1.5%] [gml: 0.1642] M:Alendronic acid 10 MG Oral Tablet -> P:Assessment using Morse Fall Scale (procedure) -> P:Depression screening (procedure)
+  111. [  621 pts,   2.8%] [gml: 0.1630] C:Not in labor force (finding) -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  112. [  618 pts,   2.8%] [gml: 0.1607] C:Social isolation (finding) -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  113. [  605 pts,   2.8%] [gml: 0.1604] C:Limited social contact (finding) -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  114. [  761 pts,   3.5%] [gml: 0.1587] C:Limited social contact (finding) -> P:Assessment of anxiety (procedure) -> P:Depression screening (procedure)
+  115. [  590 pts,   2.7%] [gml: 0.1536] C:Social isolation (finding) -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  116. [  556 pts,   2.5%] [gml: 0.1534] P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  117. [  570 pts,   2.6%] [gml: 0.1498] C:Not in labor force (finding) -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  118. [  387 pts,   1.8%] [gml: 0.1485] P:Assessment using Morse Fall Scale (procedure) -> P:Assessment of substance use (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  119. [  451 pts,   2.1%] [gml: 0.1478] M:insulin isophane  human 70 UNT/ML / insulin  regular  human 30 UNT/ML Injectable Suspension [Humulin] -> P:Depression screening (procedure) -> M:insulin isophane  human 70 UNT/ML / insulin  regular  human 30 UNT/ML Injectable Suspension [Humulin]
+  120. [  470 pts,   2.1%] [gml: 0.1477] M:Simvastatin 10 MG Oral Tablet -> P:Assessment of substance use (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  121. [  323 pts,   1.5%] [gml: 0.1474] P:Measurement of respiratory function (procedure) -> M:Acetaminophen 325 MG Oral Tablet -> P:Dental consultation and report (procedure)
+  122. [  272 pts,   1.2%] [gml: 0.1473] C:Risk activity involvement (finding) -> P:Depression screening (procedure) -> P:Depression screening using Patient Health Questionnaire Nine Item score (procedure)
+  123. [  533 pts,   2.4%] [gml: 0.1469] P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  124. [  676 pts,   3.1%] [gml: 0.1466] P:Assessment of anxiety (procedure) -> P:Depression screening (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  125. [  332 pts,   1.5%] [gml: 0.1445] M:insulin isophane  human 70 UNT/ML / insulin  regular  human 30 UNT/ML Injectable Suspension [Humulin] -> M:lisinopril 10 MG Oral Tablet -> P:Assessment of anxiety (procedure)
+  126. [  393 pts,   1.8%] [gml: 0.1422] M:Ibuprofen 400 MG Oral Tablet [Ibu] -> P:Depression screening (procedure) -> M:Ibuprofen 400 MG Oral Tablet [Ibu]
+  127. [  535 pts,   2.4%] [gml: 0.1420] C:Limited social contact (finding) -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  128. [  346 pts,   1.6%] [gml: 0.1408] P:Assessment of anxiety (procedure) -> P:Assessment using Morse Fall Scale (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  129. [  376 pts,   1.7%] [gml: 0.1385] C:Acute viral pharyngitis (disorder) -> P:Throat culture (procedure) -> P:Dental consultation and report (procedure)
+  130. [  243 pts,   1.1%] [gml: 0.1373] P:Dental plain X-ray bitewing (procedure) -> C:Acute bronchitis (disorder) -> CP:Respiratory therapy (procedure)
+  131. [  898 pts,   4.1%] [gml: 0.1369] P:Assessment of anxiety (procedure) -> P:Depression screening (procedure) -> C:Viral sinusitis (disorder)
+  132. [  299 pts,   1.4%] [gml: 0.1368] C:Unhealthy alcohol drinking behavior (finding) -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  133. [  362 pts,   1.7%] [gml: 0.1363] C:Acute viral pharyngitis (disorder) -> P:Throat culture (procedure) -> P:Patient referral for dental care (procedure)
+  134. [  321 pts,   1.5%] [gml: 0.1351] C:Viral sinusitis (disorder) -> M:Amoxicillin 250 MG / Clavulanate 125 MG Oral Tablet -> P:Dental consultation and report (procedure)
+  135. [  370 pts,   1.7%] [gml: 0.1347] M:Acetaminophen 325 MG Oral Tablet [Tylenol] -> P:Depression screening (procedure) -> M:Acetaminophen 325 MG Oral Tablet [Tylenol]
+  136. [  391 pts,   1.8%] [gml: 0.1342] M:Simvastatin 10 MG Oral Tablet -> P:Assessment of anxiety (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  137. [  703 pts,   3.2%] [gml: 0.1323] C:Social isolation (finding) -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure)
+  138. [  329 pts,   1.5%] [gml: 0.1317] M:insulin isophane  human 70 UNT/ML / insulin  regular  human 30 UNT/ML Injectable Suspension [Humulin] -> M:lisinopril 10 MG Oral Tablet -> P:Patient referral for dental care (procedure)
+  139. [  271 pts,   1.2%] [gml: 0.1307] P:Patient referral for dental care (procedure) -> C:Acute bronchitis (disorder) -> P:Measurement of respiratory function (procedure)
+  140. [  557 pts,   2.5%] [gml: 0.1299] P:Assessment of anxiety (procedure) -> P:Assessment of substance use (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  141. [  328 pts,   1.5%] [gml: 0.1285] M:insulin isophane  human 70 UNT/ML / insulin  regular  human 30 UNT/ML Injectable Suspension [Humulin] -> M:lisinopril 10 MG Oral Tablet -> P:Dental consultation and report (procedure)
+  142. [  292 pts,   1.3%] [gml: 0.1256] C:Viral sinusitis (disorder) -> M:Amoxicillin 250 MG / Clavulanate 125 MG Oral Tablet -> P:Patient referral for dental care (procedure)
+  143. [  679 pts,   3.1%] [gml: 0.1251] C:Social isolation (finding) -> P:Depression screening (procedure) -> P:Dental consultation and report (procedure)
+  144. [  641 pts,   2.9%] [gml: 0.1242] P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure) -> C:Viral sinusitis (disorder)
+  145. [  646 pts,   3.0%] [gml: 0.1239] C:Limited social contact (finding) -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure)
+  146. [  302 pts,   1.4%] [gml: 0.1226] M:Acetaminophen 325 MG Oral Tablet [Tylenol] -> P:Assessment of substance use (procedure) -> M:Acetaminophen 325 MG Oral Tablet [Tylenol]
+  147. [  374 pts,   1.7%] [gml: 0.1223] M:Acetaminophen 325 MG Oral Tablet [Tylenol] -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  148. [  641 pts,   2.9%] [gml: 0.1218] C:Not in labor force (finding) -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure)
+  149. [  370 pts,   1.7%] [gml: 0.1205] M:Ibuprofen 400 MG Oral Tablet [Ibu] -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  150. [  641 pts,   2.9%] [gml: 0.1203] C:Limited social contact (finding) -> P:Depression screening (procedure) -> P:Dental consultation and report (procedure)
+  151. [  243 pts,   1.1%] [gml: 0.1201] P:Assessment of substance use (procedure) -> C:Acute bronchitis (disorder) -> P:Measurement of respiratory function (procedure)
+  152. [  366 pts,   1.7%] [gml: 0.1193] M:Ibuprofen 400 MG Oral Tablet [Ibu] -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  153. [  390 pts,   1.8%] [gml: 0.1191] M:insulin isophane  human 70 UNT/ML / insulin  regular  human 30 UNT/ML Injectable Suspension [Humulin] -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  154. [  362 pts,   1.7%] [gml: 0.1185] M:Acetaminophen 325 MG Oral Tablet [Tylenol] -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  155. [  389 pts,   1.8%] [gml: 0.1181] C:Victim of intimate partner abuse (finding) -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  156. [  387 pts,   1.8%] [gml: 0.1176] C:Victim of intimate partner abuse (finding) -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  157. [  606 pts,   2.8%] [gml: 0.1176] C:Viral sinusitis (disorder) -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  158. [  290 pts,   1.3%] [gml: 0.1171] M:Ibuprofen 400 MG Oral Tablet [Ibu] -> P:Assessment of substance use (procedure) -> M:Ibuprofen 400 MG Oral Tablet [Ibu]
+  159. [  381 pts,   1.7%] [gml: 0.1169] P:Dental consultation and report (procedure) -> M:Hydrochlorothiazide 25 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet
+  160. [  309 pts,   1.4%] [gml: 0.1167] M:Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet -> P:Depression screening (procedure) -> M:Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet
+  161. [  289 pts,   1.3%] [gml: 0.1166] P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure) -> M:Hydrochlorothiazide 25 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet
+  162. [  301 pts,   1.4%] [gml: 0.1163] M:Acetaminophen 325 MG / Oxycodone Hydrochloride 10 MG Oral Tablet [Percocet] -> P:Depression screening (procedure) -> M:Acetaminophen 325 MG / Oxycodone Hydrochloride 10 MG Oral Tablet [Percocet]
+  163. [  370 pts,   1.7%] [gml: 0.1152] C:Reports of violence in the environment (finding) -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  164. [  306 pts,   1.4%] [gml: 0.1145] P:Assessment using Morse Fall Scale (procedure) -> P:Patient referral for dental care (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  165. [  614 pts,   2.8%] [gml: 0.1141] C:Not in labor force (finding) -> P:Depression screening (procedure) -> P:Dental consultation and report (procedure)
+  166. [  807 pts,   3.7%] [gml: 0.1132] C:Viral sinusitis (disorder) -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure)
+  167. [  252 pts,   1.2%] [gml: 0.1117] M:Acetaminophen 325 MG Oral Tablet [Tylenol] -> P:Assessment of anxiety (procedure) -> M:Acetaminophen 325 MG Oral Tablet [Tylenol]
+  168. [  422 pts,   1.9%] [gml: 0.1102] P:Screening for domestic abuse (procedure) -> P:Depression screening (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  169. [  353 pts,   1.6%] [gml: 0.1098] C:Reports of violence in the environment (finding) -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  170. [  465 pts,   2.1%] [gml: 0.1096] M:Ibuprofen 400 MG Oral Tablet [Ibu] -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure)
+  171. [  789 pts,   3.6%] [gml: 0.1083] C:Viral sinusitis (disorder) -> P:Depression screening (procedure) -> P:Dental consultation and report (procedure)
+  172. [  323 pts,   1.5%] [gml: 0.1083] M:Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  173. [  244 pts,   1.1%] [gml: 0.1076] M:Ibuprofen 400 MG Oral Tablet [Ibu] -> P:Assessment of anxiety (procedure) -> M:Ibuprofen 400 MG Oral Tablet [Ibu]
+  174. [  329 pts,   1.5%] [gml: 0.1060] C:Unemployed (finding) -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  175. [  309 pts,   1.4%] [gml: 0.1052] M:Acetaminophen 325 MG / Oxycodone Hydrochloride 10 MG Oral Tablet [Percocet] -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  176. [  324 pts,   1.5%] [gml: 0.1044] C:Unemployed (finding) -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  177. [  331 pts,   1.5%] [gml: 0.1038] P:Patient referral for dental care (procedure) -> M:Hydrochlorothiazide 25 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet
+  178. [  506 pts,   2.3%] [gml: 0.1034] C:Not in labor force (finding) -> P:Assessment of substance use (procedure) -> P:Patient referral for dental care (procedure)
+  179. [  247 pts,   1.1%] [gml: 0.1028] P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure) -> M:amLODIPine 2.5 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet
+  180. [  251 pts,   1.1%] [gml: 0.1011] P:Screening for drug abuse (procedure) -> M:Hydrochlorothiazide 25 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet
+  181. [  304 pts,   1.4%] [gml: 0.1011] P:Dental consultation and report (procedure) -> M:Hydrochlorothiazide 25 MG Oral Tablet -> M:amLODIPine 2.5 MG Oral Tablet
+  182. [  425 pts,   1.9%] [gml: 0.1006] M:Acetaminophen 325 MG Oral Tablet [Tylenol] -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure)
+  183. [  294 pts,   1.3%] [gml: 0.1002] M:Acetaminophen 325 MG / Oxycodone Hydrochloride 10 MG Oral Tablet [Percocet] -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  184. [  291 pts,   1.3%] [gml: 0.0977] M:Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  185. [  398 pts,   1.8%] [gml: 0.0966] M:Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure)
+  186. [  343 pts,   1.6%] [gml: 0.0964] P:Screening for domestic abuse (procedure) -> P:Assessment of substance use (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  187. [  409 pts,   1.9%] [gml: 0.0951] C:Acute viral pharyngitis (disorder) -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  188. [  397 pts,   1.8%] [gml: 0.0943] M:Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet -> P:Depression screening (procedure) -> P:Dental consultation and report (procedure)
+  189. [  252 pts,   1.2%] [gml: 0.0932] P:Dental plain X-ray bitewing (procedure) -> M:Hydrochlorothiazide 25 MG Oral Tablet -> M:lisinopril 10 MG Oral Tablet
+  190. [  421 pts,   1.9%] [gml: 0.0925] C:Victim of intimate partner abuse (finding) -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure)
+  191. [  369 pts,   1.7%] [gml: 0.0909] M:Acetaminophen 325 MG / Oxycodone Hydrochloride 10 MG Oral Tablet [Percocet] -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure)
+  192. [  272 pts,   1.2%] [gml: 0.0893] C:Victim of intimate partner abuse (finding) -> P:Assessment of anxiety (procedure) -> P:Screening for domestic abuse (procedure)
+  193. [  363 pts,   1.7%] [gml: 0.0875] M:Acetaminophen 325 MG / Oxycodone Hydrochloride 10 MG Oral Tablet [Percocet] -> P:Depression screening (procedure) -> P:Dental consultation and report (procedure)
+  194. [  407 pts,   1.9%] [gml: 0.0875] C:Victim of intimate partner abuse (finding) -> P:Depression screening (procedure) -> P:Dental consultation and report (procedure)
+  195. [  376 pts,   1.7%] [gml: 0.0873] C:Acute viral pharyngitis (disorder) -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  196. [  255 pts,   1.2%] [gml: 0.0866] P:Patient referral for dental care (procedure) -> M:Hydrochlorothiazide 25 MG Oral Tablet -> M:amLODIPine 2.5 MG Oral Tablet
+  197. [  392 pts,   1.8%] [gml: 0.0864] C:Reports of violence in the environment (finding) -> P:Depression screening (procedure) -> P:Dental consultation and report (procedure)
+  198. [  338 pts,   1.5%] [gml: 0.0854] M:Acetaminophen 325 MG Oral Tablet -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  199. [  370 pts,   1.7%] [gml: 0.0844] C:Unemployed (finding) -> P:Depression screening (procedure) -> P:Dental consultation and report (procedure)
+  200. [  452 pts,   2.1%] [gml: 0.0830] P:Screening for domestic abuse (procedure) -> P:Depression screening (procedure) -> C:Viral sinusitis (disorder)
+  201. [  306 pts,   1.4%] [gml: 0.0824] P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure) -> P:Patient referral for dental care (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  202. [  561 pts,   2.6%] [gml: 0.0819] P:Dental consultation and report (procedure) -> C:Stress (finding) -> P:Assessment of anxiety (procedure)
+  203. [  302 pts,   1.4%] [gml: 0.0812] P:Screening for drug abuse (procedure) -> P:Patient referral for dental care (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  204. [  525 pts,   2.4%] [gml: 0.0801] P:Dental consultation and report (procedure) -> C:Full-time employment (finding) -> P:Assessment of anxiety (procedure)
+  205. [  317 pts,   1.4%] [gml: 0.0800] M:Acetaminophen 325 MG Oral Tablet -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  206. [  311 pts,   1.4%] [gml: 0.0794] M:Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet -> P:Assessment of substance use (procedure) -> P:Dental consultation and report (procedure)
+  207. [  384 pts,   1.8%] [gml: 0.0785] M:Simvastatin 10 MG Oral Tablet -> P:Depression screening (procedure) -> P:Assessment of substance use (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  208. [  341 pts,   1.6%] [gml: 0.0736] P:Screening for domestic abuse (procedure) -> P:Depression screening (procedure) -> M:lisinopril 10 MG Oral Tablet
+  209. [  268 pts,   1.2%] [gml: 0.0735] P:Screening for domestic abuse (procedure) -> P:Patient referral for dental care (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  210. [  313 pts,   1.4%] [gml: 0.0709] P:Screening for domestic abuse (procedure) -> P:Depression screening (procedure) -> M:Hydrochlorothiazide 25 MG Oral Tablet
+  211. [  512 pts,   2.3%] [gml: 0.0704] P:Examination of gingivae (procedure) -> P:Oral health education (procedure) -> C:Stress (finding) -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  212. [  399 pts,   1.8%] [gml: 0.0702] P:Dental plain X-ray bitewing (procedure) -> C:Stress (finding) -> P:Assessment of anxiety (procedure)
+  213. [  373 pts,   1.7%] [gml: 0.0685] P:Dental plain X-ray bitewing (procedure) -> C:Full-time employment (finding) -> P:Assessment of anxiety (procedure)
+  214. [  472 pts,   2.2%] [gml: 0.0667] P:Examination of gingivae (procedure) -> P:Oral health education (procedure) -> C:Full-time employment (finding) -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  215. [  478 pts,   2.2%] [gml: 0.0658] P:Examination of gingivae (procedure) -> P:Oral health education (procedure) -> C:Stress (finding) -> P:Assessment of substance use (procedure) -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)
+  216. [  261 pts,   1.2%] [gml: 0.0630] P:Screening for drug abuse (procedure) -> M:lisinopril 10 MG Oral Tablet -> P:Assessment of anxiety (procedure)
+  217. [  271 pts,   1.2%] [gml: 0.0601] P:Dental plain X-ray bitewing (procedure) -> M:lisinopril 10 MG Oral Tablet -> P:Assessment of anxiety (procedure)
+  218. [  296 pts,   1.4%] [gml: 0.0567] P:Screening for drug abuse (procedure) -> C:Stress (finding) -> P:Assessment of anxiety (procedure)
+  219. [  299 pts,   1.4%] [gml: 0.0566] P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure) -> P:Patient referral for dental care (procedure) -> C:Viral sinusitis (disorder)
+  220. [  297 pts,   1.4%] [gml: 0.0562] P:Screening for drug abuse (procedure) -> P:Patient referral for dental care (procedure) -> C:Viral sinusitis (disorder)
+  221. [  352 pts,   1.6%] [gml: 0.0556] P:Examination of gingivae (procedure) -> P:Oral health education (procedure) -> M:lisinopril 10 MG Oral Tablet -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)
+  222. [  276 pts,   1.3%] [gml: 0.0529] P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure) -> C:Stress (finding) -> P:Assessment of anxiety (procedure)
+  223. [  261 pts,   1.2%] [gml: 0.0522] P:Screening for drug abuse (procedure) -> C:Full-time employment (finding) -> P:Assessment of anxiety (procedure)
+  224. [  260 pts,   1.2%] [gml: 0.0521] P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure) -> C:Full-time employment (finding) -> P:Assessment of anxiety (procedure)
+  225. [  244 pts,   1.1%] [gml: 0.0487] M:Simvastatin 10 MG Oral Tablet -> P:Depression screening (procedure) -> P:Patient referral for dental care (procedure) -> M:Simvastatin 10 MG Oral Tablet
+  226. [  291 pts,   1.3%] [gml: 0.0448] P:Dental fluoride treatment (procedure) -> P:Oral health education (procedure) -> C:Stress (finding) -> P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure)

@@ -1,4 +1,5 @@
 # Prefix Span Initial Implementation
+# python app/clustering_algorithms/prefix_span/prefix_span_v0.py
 
 import sys
 from pathlib import Path
@@ -18,7 +19,7 @@ from db import engine
 MIN_SUPPORT_PCT = 0.01 # how many patients have the sequence (22.284 x 0.01)
 MIN_PATTERN_LENGTH = 3
 MAX_PATTERN_LENGTH = 6
-TOP_K = 500            #
+TOP_K = 500
 
 
 def load_events(engine) -> pd.DataFrame:
@@ -120,7 +121,7 @@ def main() -> None:
         print(line)
         lines.append(line)
 
-    out_path = "v0.txt"
+    out_path = "results/per_version/v0.txt"
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
     print(f"\nsaved to {out_path}")

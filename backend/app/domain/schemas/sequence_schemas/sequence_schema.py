@@ -19,11 +19,6 @@ class SequenceListItem(CamelModel):
     has_ai_analysis: bool
 
 
-class SequenceContinuationItem(SequenceListItem):
-    matched_steps: int
-    matched_pattern_str: str
-
-
 class SequenceListResponse(CamelModel):
     total: int
     items: List[SequenceListItem]
@@ -34,8 +29,16 @@ class SequenceSortOption(CamelModel):
     label: str
 
 
-class SequenceResourcesResponse(CamelModel):
+class SequenceLengthRange(CamelModel):
     min_length: int
     max_length: int
+
+
+class SequenceResourcesResponse(CamelModel):
+    # Global scope length interval (cluster_label IS NULL).
+    min_length: int
+    max_length: int
+    # Per-cluster length intervals, keyed by cluster_label (as string in JSON).
+    cluster_ranges: Dict[int, SequenceLengthRange]
     colors: Dict[str, str]
     sort_options: List[SequenceSortOption]

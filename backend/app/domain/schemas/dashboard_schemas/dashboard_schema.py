@@ -14,7 +14,7 @@ class KpiCards(CamelModel):
     total_procedures: int
     avg_encounters_per_patient: float
     active_careplans: int
-    new_patients_last_30_days: int
+    new_patients_in_period: int
     avg_patient_age: float
 
 
@@ -62,10 +62,10 @@ class RecentEncounterItem(CamelModel):
 
 class DashboardResponse(CamelModel):
     kpis: KpiCards
-    last_week_encounter_by_class: List[EncounterClassItem]
-    top_conditions_last_week: List[TopConditionItem]
+    encounter_by_class: List[EncounterClassItem]
+    top_conditions: List[TopConditionItem]
     cluster_distribution: List[ClusterDistributionItem]
     gender_distribution: List[GenderDistributionItem]
     age_groups: List[AgeGroupItem]
-    last_month_encounters: List[DailyEncounterItem]
+    encounters_timeline: List[DailyEncounterItem]
     recent_encounters: List[RecentEncounterItem]

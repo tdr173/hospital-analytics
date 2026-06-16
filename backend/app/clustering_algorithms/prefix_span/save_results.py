@@ -10,15 +10,6 @@ def save_prefix_span_results(
     patient_memberships: dict[int, list[str]],
     cluster_label: Optional[int] = None,
 ) -> None:
-    """Replace prefix_span_pattern + prefix_span_patient_pattern rows for the given scope.
-
-    `cluster_label=None` targets the global mining run (rows where cluster_label IS NULL).
-    An integer value targets only that cluster's rows, leaving all other scopes untouched.
-
-    Wipes the scoped rows first (junction before parent to satisfy FK), then inserts fresh
-    rows and maps (rank → inserted id) so the junction gets the correct pattern_id.
-    `ai_analysis` is left NULL on write; it is filled lazily by the LLM endpoint.
-    """
     # Delete junction rows for this scope first (FK child before parent).
     db.execute(text("""
         DELETE FROM prefix_span_patient_pattern pp

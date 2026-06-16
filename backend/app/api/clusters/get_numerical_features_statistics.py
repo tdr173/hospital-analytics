@@ -9,7 +9,7 @@ from .cluster_router import cluster_router
 
 
 @cluster_router.get("/numerical-features-statistics", response_model=GetNumericalFeaturesStatistics)
-async def get_numerical_features_statistics(db: Session = Depends(get_db)):
+def get_numerical_features_statistics(db: Session = Depends(get_db)):
     cluster_repo = ClusterRepository(db)
     cluster_service = ClusterService(cluster_repo)
 

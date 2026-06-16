@@ -47,8 +47,8 @@ class PatientService:
     def get_patient_observations(self, patient_id: str, page: int = 1, page_size: int = 20):
         return self.repo.get_patient_observations(patient_id, page, page_size)
 
-    def create_patient(self, payload):
-        return self.repo.create_patient(payload)
+    def create_patient(self, payload, provider_id_scope=None):
+        return self.repo.create_patient(payload, provider_id_scope)
 
     def update_patient(self, patient_id: str, payload):
         return self.repo.update_patient(patient_id, payload)

@@ -10,7 +10,7 @@ from .cluster_router import cluster_router
 
 
 @cluster_router.get("/ai-analysis/{cluster_id}", response_model=AiAnalysisResponse)
-async def get_ai_analysis(
+def get_ai_analysis(
     cluster_id: int,
     db: Session = Depends(get_db),
     scope: Scope = Depends(scope_dep),

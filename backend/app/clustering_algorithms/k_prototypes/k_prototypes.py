@@ -17,12 +17,11 @@ from cluster_evaluation import full_evaluation_report, _fast_gower_matrix
 
 from service.lllm_sql_agent_service import ask_ai
 from save_results import save_cluster_results
+from prompts.clusters import CLUSTER_SUMMARY_TEMPLATE
 
 current_folder = Path(__file__).parent
 
-# Columns used for global z-score outlier detection. The three _SKEWED ones are
-# log1p'd internally inside remove_outliers_zscore - z-scores on raw long-tailed
-# counts flag too many "outliers" just for being on the tail.
+# used for outlier detection. skewed cols are log1p'd before z-scoring to avoid flagging heavy tails
 OUTLIER_NUMERICAL_FEATURES = [
     "age",
     "total_medications",
@@ -252,8 +251,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    # Uses ILIKE patterns so it tolerates LOINC-style suffixes / casing differences
-    # (e.g. "Glucose [Mass/volume] in Blood", "Body mass index (BMI)", etc.)
+    # ILIKE tolerates LOINC suffixes and casing differences
     observation_features = pd.read_sql(
         text(
             """
@@ -276,8 +274,8 @@ def build_patient_features(engine) -> pd.DataFrame:
             ELSE value_numeric
         END AS value_norm,
         ROW_NUMBER() OVER (
-            PARTITION BY patient_id, 
-            (CASE 
+            PARTITION BY patient_id,
+            (CASE
                 WHEN description ILIKE '%%bmi%%' OR description ILIKE '%%body mass index%%' THEN 'bmi'
                 WHEN description ILIKE '%%qaly%%' THEN 'qaly'
                 WHEN description ILIKE '%%daly%%' THEN 'daly'
@@ -316,11 +314,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    # NEW: dominant careplan category - primary clinical reason patient is in the system.
-    # Raw descriptions (40 values) bucketed into 9 clinical categories.
-    # Allergy (0.45%), Renal (0.29%), Oncology (0.22%) merged into Other - too rare for centroids.
-    # Severity-ranked careplan categorization: picks the highest-severity careplan
-    # per patient rather than the most frequent. 7 clinical groups ranked 1..7.
+    # picks the highest-severity careplan per patient (not most frequent). rare categories merged into Other.
     dominant_careplan_features = pd.read_sql(
         text(
             """
@@ -420,8 +414,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    # substance_use_profile: No/Low Risk - 74.04%, Moderate Risk (Alcohol) - 11.76%, High Risk (Drug/Illicit) - 14.20%
-    # Derived from conditions (diagnoses) and AUDIT-C / DAST-10 screening scores.
+    # derived from diagnoses and AUDIT-C / DAST-10 scores. No/Low Risk 74%, Moderate (Alcohol) 12%, High (Drug) 14%
     substance_use_features = pd.read_sql(
         text(
             """
@@ -480,8 +473,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    # readmission_risk_tier: None - 81.43%, Occasional - 12.11%, Frequent - 4.26%, Super-Utilizer - 2.21%
-    # Categorical feature based on clinical risk levels of 30-day hospital readmissions.
+    # readmission_risk_tier: None 81%, Occasional 12%, Frequent 4%, Super-Utilizer 2%
     thirty_day_readmission_features = pd.read_sql(
         text(
             """
@@ -491,7 +483,7 @@ def build_patient_features(engine) -> pd.DataFrame:
                                  FROM encounter
                                  WHERE encounter_class IN ('inpatient', 'emergency')),
                  readmission_logic AS (SELECT patient_id,
-                                              COUNT(*) FILTER (WHERE prev_end_date IS NOT NULL 
+                                              COUNT(*) FILTER (WHERE prev_end_date IS NOT NULL
                                           AND start_date <= prev_end_date + INTERVAL '30 days') AS readm_count
                                        FROM ordered_enc
                                        GROUP BY patient_id)
@@ -509,8 +501,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    # lifetime_medication_days: total days across all medication records.
-    # Active meds (end_date IS NULL) counted as ending today so long-term therapy isn't zeroed.
+    # active meds use today as end_date so long-term therapy isn't zeroed
     lifetime_medication_features = pd.read_sql(
         text(
             """
@@ -528,7 +519,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    # total_encounter_duration_hours: sum of all encounter durations
+    # sum of all encounter durations
     encounter_duration_features = pd.read_sql(
         text(
             """
@@ -543,8 +534,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         con=engine,
     )
 
-    # cholesterol_risk_category: Optimal - 21.29, Borderline - 24.74, High = 5.62, Very High - 5.71, Unknown - 42.64
-    # Bucketed average total cholesterol into clinical risk tiers.
+    # avg total cholesterol bucketed into risk tiers. Optimal 21%, Borderline 25%, High 6%, Very High 6%, Unknown 43%
     cholesterol_features = pd.read_sql(
         text(
             """
@@ -634,8 +624,7 @@ def build_patient_features(engine) -> pd.DataFrame:
 
     df = patient_features.copy()
 
-    # Merge the 21 feature frames built from SQL above. patient_features is the base
-    # (already copied into df), so it is NOT re-merged here.
+    # merge all feature frames; patient_features is the base, already in df
     for right_df in [
         encounter_features,
         dominant_encounter_features,
@@ -661,8 +650,7 @@ def build_patient_features(engine) -> pd.DataFrame:
     ]:
         df = df.merge(right_df, on="patient_id", how="left")
 
-    # --- Encounter-count aggregates ------------------------------------------------
-    # 0 = "no encounters of that class", semantically correct - no imputation bias.
+    # 0 = no encounters of that class, correct default
     for col in ["ambulatory_count", "outpatient_count", "emergency_count", "urgentcare_count",
                 "wellness_count", "inpatient_count", "snf_count", "hospice_count"]:
         df[col] = df[col].fillna(0)
@@ -672,16 +660,11 @@ def build_patient_features(engine) -> pd.DataFrame:
     df["severe_care_count"] = df["inpatient_count"] + df["snf_count"] + df["hospice_count"]
     df["preventive_to_reactive_ratio"] = df["wellness_count"] / (df["acute_care_count"] + df["severe_care_count"] + 1)
 
-    # Fill severity-count NaNs to 0 - needed here because several downstream
-    # categorical bins (medication_intensity, condition_burden) read these raw
-    # counts. The clinical_severity_score PCA is now computed inside run_kprototypes
-    # so df itself stays fully unscaled.
+    # fill NaNs to 0 - needed before condition_burden and medication_intensity bins
     for col in ["total_procedures", "total_medications", "active_conditions_count"]:
         df[col] = df[col].fillna(0)
 
-    # --- Categorical bins from sparse observation numerics -------------------------
-    # Rule: NEVER mean-impute sparse numerics - the artificial values shift k-prototypes
-    # centroids. Instead, we bucket raw values and route unmeasured patients to "Unknown".
+    # never mean-impute sparse numerics - bucket raw values, unmeasured patients go to "Unknown"
     df["bmi_type"] = pd.cut(
         df["avg_bmi"],
         bins=[-float("inf"), 18.5, 25, 30, 35, 40, float("inf")],
@@ -701,11 +684,10 @@ def build_patient_features(engine) -> pd.DataFrame:
         labels=["Normal", "Prediabetic", "Diabetic"],
     ).astype(object).where(df["avg_glucose"].notna(), "Unknown").astype(str)
 
-    # qaly/daly are Synthea-complete numerics - if any NaN appears, 0 is the neutral default.
+    # qaly/daly are always present in Synthea, 0 is the safe default
     for col in ["qaly", "daly"]:
         df[col] = df[col].fillna(0)
 
-    # --- Categorical bins from count numerics (pre-log1p) --------------------------
     df["condition_burden"] = pd.cut(
         df["active_conditions_count"],
         bins=[-1, 3, 10, float("inf")],
@@ -720,13 +702,12 @@ def build_patient_features(engine) -> pd.DataFrame:
         right=True,
     ).astype(str)
 
-    # --- Demographics and base categoricals ----------------------------------------
     df["gender"] = df["gender"].fillna("F").astype(str)
     df["marital"] = df["marital"].replace("unmarried", "S").fillna("S").astype(str)
     df["race"] = df["race"].fillna("Unknown").astype(str)
     df["ethnicity"] = df["ethnicity"].fillna("Unknown").astype(str)
 
-    # --- Disease flags: map 0/1 -> No/Yes (k-prototypes treats them as categorical) -
+    # map 0/1 -> No/Yes (k-prototypes needs strings for categorical)
     for flag in [
         "has_diabetes", "has_hypertension", "has_heart_disease", "has_cancer",
         "has_kidney_disease", "has_mental_health", "has_inpatient_history",
@@ -735,7 +716,6 @@ def build_patient_features(engine) -> pd.DataFrame:
 
     df["is_polypharmacy"] = df["is_polypharmacy_raw"].fillna(0).astype(int).map({0: "No", 1: "Yes"})
 
-    # --- Categorical NaN fills from LEFT JOINs -------------------------------------
     df["dominant_encounter_class"] = df["dominant_encounter_class"].fillna("wellness").astype(str)
     df["dominant_careplan"] = df["dominant_careplan"].fillna("None").astype(str)
     df["respiratory_disease_profile"] = df["respiratory_disease_profile"].fillna("None").astype(str)
@@ -750,16 +730,13 @@ def build_patient_features(engine) -> pd.DataFrame:
     df["out_of_hours_flyer"] = df["out_of_hours_flyer"].fillna("No").astype(str)
     df["smoking_status"] = df["smoking_status"].fillna("never").astype(str)
 
-    # --- Remaining numerics: fillna(0) where 0 is semantically correct --------------
     for col in ["total_conditions", "total_medications", "total_procedures",
                 "active_conditions_count", "distinct_providers_seen",
                 "lifetime_medication_days", "total_encounter_duration_hours",
                 "days_since_last_encounter"]:
         df[col] = df[col].fillna(0)
 
-    # Keep raw vitals for FE display - only drop the intermediate polypharmacy helper.
-    # avg_bmi / avg_systolic_bp / avg_glucose stay in df so they can be passed as
-    # extra_feature_cols to save_cluster_results without affecting clustering.
+    # keep raw vitals for FE display, only drop the polypharmacy helper column
     df = df.drop(columns=["is_polypharmacy_raw"], errors="ignore")
 
     return df
@@ -768,8 +745,7 @@ def build_patient_features(engine) -> pd.DataFrame:
 def plot_elbow_kproto(
         df, numerical_cols, categorical_cols, init, scaler, title, filename, location
 ):
-    # Mirror the transform pipeline used in run_kprototypes so the elbow curve
-    # reflects the same feature space as the real clustering run.
+    # mirror the same transforms used in run_kprototypes
     df_scaled = df.copy()
 
     for col in ["total_medications", "lifetime_medication_days", "total_encounter_duration_hours"]:
@@ -997,13 +973,11 @@ def run_kprototypes(
         tag = tag.replace("__", "_")
     tag = tag.strip("_")
 
-    # df_work stays RAW: it's what we return for the LLM prompt, DB persistence,
-    # and the FE. All clustering-only transforms (log1p, severity PCA, scaler)
-    # are applied to df_scaled, which is only used to build the clustering matrix.
+    # df_work stays raw (for LLM, DB, FE). transforms go to df_scaled only
     df_work = df.copy()
     df_scaled = df_work.copy()
 
-    # log1p the three skewed count columns (only if the config uses them).
+    # log1p skewed cols to reduce heavy tails
     skewed_count_cols = [
         "total_medications",
         "lifetime_medication_days",
@@ -1013,11 +987,7 @@ def run_kprototypes(
         if col in numerical_cols:
             df_scaled[col] = np.log1p(df_scaled[col].clip(lower=0).astype(float))
 
-    # Derive clinical_severity_score from raw severity counts when the config
-    # includes it. We ALSO write it to df_work so plots / FE / features JSONB
-    # still have the value - it's a standardized PCA score by construction, so
-    # "unscaled" doesn't apply; raw severity inputs (total_procedures,
-    # total_medications, active_conditions_count) remain in df_work for the LLM.
+    # build clinical_severity_score via PCA on log-scaled severity inputs. also write to df_work for plots/FE
     if "clinical_severity_score" in numerical_cols:
         sev_cols = ["total_procedures", "total_medications", "active_conditions_count"]
         sev_input = np.log1p(df_work[sev_cols].clip(lower=0).values.astype(float))
@@ -1028,19 +998,15 @@ def run_kprototypes(
         df_work["clinical_severity_score"] = css
         df_scaled["clinical_severity_score"] = css
 
-    # Scale all numerical features except clinical_severity_score, which is
-    # already a StandardScaler+PCA z-score - re-scaling it with a second scaler
-    # would distort its meaning without adding information.
+    # skip clinical_severity_score - it's already a z-score from PCA
     cols_to_scale = [c for c in numerical_cols if c != "clinical_severity_score"]
     if cols_to_scale:
         df_scaled[cols_to_scale] = scaler.fit_transform(df_scaled[cols_to_scale].values)
 
-    # Build X_num_scaled from the full numerical block (used for evaluation metrics).
+    # used for evaluation metrics
     X_num_scaled = df_scaled[numerical_cols].values.astype(np.float64)
 
-    # Build the clustering matrix. Numerical columns are cast to float64 first,
-    # then categorical columns appended as strings - avoids a mixed object array
-    # that slows down the KPrototypes Cython backend.
+    # cast nums to float64 and cats to str before concat - avoids slow mixed object array
     num_matrix = df_scaled[numerical_cols].to_numpy(dtype=np.float64)
     cat_matrix = df_scaled[categorical_cols].astype(str).to_numpy()
     matrix = np.concatenate([num_matrix, cat_matrix], axis=1)
@@ -1113,12 +1079,11 @@ def run_kprototypes(
 
 
 def remove_outliers_zscore(df, threshold=4):
-    # Compute z-scores per column, skipping zero-variance columns so they don't poison every row with NaN.
+    # skip zero-variance cols - they'd make every z-score NaN
     cols = [c for c in OUTLIER_NUMERICAL_FEATURES if c in df.columns]
     data = df[cols].to_numpy(dtype=float)
 
-    # log1p the skewed count cols internally so their heavy right tails don't
-    # blow z-scores up and flag half the cohort as outliers.
+    # log1p skewed cols first so heavy tails don't inflate z-scores
     for i, col in enumerate(cols):
         if col in _SKEWED_OUTLIER_COLS:
             data[:, i] = np.log1p(np.clip(data[:, i], 0, None))
@@ -1140,12 +1105,11 @@ def remove_outliers_zscore(df, threshold=4):
 
 
 def get_clusters_summary(df_clustered, df_outliers, engine):
-    # Combine clustered data and outliers for metric calculation
+    # combine clustered + outliers with label -1
     df_outliers_temp = df_outliers.copy()
     df_outliers_temp['cluster'] = -1
     df_all = pd.concat([df_clustered, df_outliers_temp], ignore_index=True)
 
-    # Pull top conditions/meds/encounters per cluster for the LLM prompt
     conditions = pd.read_sql(text("SELECT patient_id, description FROM condition"), con=engine)
     conditions = conditions.merge(df_all[["patient_id", "cluster"]], on="patient_id")
     top_conditions = conditions.groupby(["cluster", "description"]).size().reset_index(name="count").sort_values(
@@ -1162,44 +1126,18 @@ def get_clusters_summary(df_clustered, df_outliers, engine):
         ["cluster", "count"], ascending=[True, False])
 
     total_patients = len(df_all)
-    clusters = sorted(df_all["cluster"].unique())  # This will now include -1
+    clusters = sorted(df_all["cluster"].unique())  # includes -1
 
-    # Build the LLM prompt with the expected output format
-    prompt = f"""We clustered {len(df_clustered)} patients into groups, plus {len(df_outliers)} outlier patients.
-I have summarized the data for EACH cluster below. The outliers are labeled as Cluster -1.
-
-Your task is to write extremely brief text to fit inside small frontend UI cards.
-Do NOT include any extra text, introductions, markdown formatting, or bullet points.
-Do NOT use em dashes (-) anywhere in your response. Use commas or plain sentence structure instead.
-
-Structure your response EXACTLY as a list, using the pipe character (|) to separate the fields:
-[Cluster ID] | [#HexColor] | [Short Title] | [1-2 sentences Description] | [1 short sentence Insight] | [1 short sentence Recommendation]
-
-Title rules: 2-4 words, plain everyday language that anyone can understand, no medical jargon (e.g. "Older Adults with Chronic Conditions", "Young and Healthy", "High-Need Patients").
-Description rules: 1-2 short sentences in plain language, understandable by a non-medical reader, no jargon.
-Insight rules: pick the MOST distinguishing signal for this cluster (dominant careplan focus, disease prevalence, polypharmacy, vitals, recency of care, or encounter mix). Use concrete numbers.
-Recommendation rules: tie the action to that insight (e.g. cardiac careplan dominance -> cardiology follow-up; polypharmacy -> medication review; long gap since last visit -> outreach).
-
-Choose a suggestive hex color for each cluster that reflects its clinical profile (e.g. red tones for high-risk, green for healthy, blue for elderly chronic, orange for moderate, purple for psychiatric, teal for maternal).
-Use strong, vivid, fully-saturated colors with high contrast - avoid pastel, washed-out, or faded tones. Prefer colors like #DC2626, #16A34A, #2563EB, #D97706, #7C3AED, #0891B2. The outlier cluster (-1) should always be gray (#9CA3AF).
-
-Example output:
-[0] | #DC2626 | Older Adults with Many Conditions | Elderly patients who visit the hospital often and take many medications. | Cardiac careplan dominant, 85% hypertensive, average 12 active medications. | Coordinate cardiology follow-up and run medication reviews to reduce emergency visits.
-[1] | #16A34A | Young and Healthy | Younger people who rarely need medical care. | Wellness encounters dominate and chronic disease rates are near zero. | Keep them engaged with preventive care programs.
-[-1] | #9CA3AF | Unusual Cases | Patients who stand out significantly from the rest of the population. | Very high variation in procedures and resource use. | Review each case individually.
-
-=========================================
-CLUSTER DATA SUMMARIES:
-=========================================
-"""
+    prompt = CLUSTER_SUMMARY_TEMPLATE.format(
+        n_clustered=len(df_clustered),
+        n_outliers=len(df_outliers),
+    )
     for c in clusters:
         c_df = df_all[df_all['cluster'] == c]
         c_size = len(c_df)
         c_pct = (c_size / total_patients) * 100
 
-        # clinical_severity_score is a standardized PCA z-score (~N(0,1)) - not
-        # interpretable in absolute terms, so omit it. The LLM gets the raw severity
-        # inputs (total_procedures, total_medications, active_conditions_count) instead.
+        # skip clinical_severity_score (PCA z-score, not interpretable by LLM)
         mean_cols = [col for col in [
             'age', 'qaly', 'daly',
             'total_procedures', 'total_medications',
@@ -1227,9 +1165,7 @@ CLUSTER DATA SUMMARIES:
             'readmission_mix': c_df['readmission_risk_tier'].value_counts(normalize=True).round(2).to_dict() if 'readmission_risk_tier' in c_df else {},
         }
 
-        # Careplan mix (share of each careplan category within the cluster) so the LLM
-        # can tell e.g. a cardiac-dominant cluster from a psychiatric one even when the
-        # mode is the same.
+        # careplan share so LLM can distinguish cardiac vs psychiatric clusters
         careplan_mix = (
             c_df['dominant_careplan'].value_counts(normalize=True).round(2).head(4).to_dict()
             if 'dominant_careplan' in c_df else {}

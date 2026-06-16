@@ -1,71 +1,8 @@
 from domain import AiAnalysisResponse, ClusterDetailResponse
+from prompts.clusters import PROMPT_AI_ANALYSIS
 from repository import ClusterRepository
 from service._helpers import parse_ai_json
 from service.lllm_sql_agent_service.llm_models import ask_ai
-
-
-PROMPT_AI_ANALYSIS = """You are a senior clinical data analyst reviewing a specific patient group identified through K-Prototypes population segmentation in a hospital analytics system.
-
-IMPORTANT RULES:
-- Base every claim strictly on the numbers provided. Do not infer traits not supported by the data.
-- Gender: describe as "balanced" if 40-60%, "more female/male" if 60-70%, "predominantly female/male" only if >70%.
-- Comparisons: use the "vs population avg" deltas to say whether this cluster is above or below average on each metric.
-- Translate vitals into plain risk language (e.g. systolic BP >=140 = hypertensive range, glucose >=126 mg/dL = diabetic range, BMI >=30 = obese).
-- Let the dominant careplan category guide the clinical framing (Cardiac, Respiratory, Metabolic, Maternal, Musculoskeletal, Psychiatric, Other, none).
-- If a value is "N/A" or 0 with no clinical meaning, do not mention that metric.
-- Do NOT use em dashes (-) anywhere in your response. Use commas or plain sentence structure instead.
-
-POPULATION CONTEXT:
-- {n_patients} patients across {n_clusters} clusters | Silhouette: {silhouette} | Davies-Bouldin: {davies_bouldin}
-- Population averages: Age {pop_avg_age} yrs | BMI {pop_avg_bmi} | Systolic BP {pop_avg_systolic_bp} mmHg | Glucose {pop_avg_glucose} mg/dL | QALY {pop_avg_qaly} | DALY {pop_avg_daly} | Active conditions {pop_avg_conditions} | Meds {pop_avg_meds} | Procedures {pop_avg_procedures} | Days since last encounter {pop_avg_days_since}
-- Population disease rates: Diabetes {pop_diabetes_pct}% | Hypertension {pop_hypertension_pct}% | Heart disease {pop_heart_pct}% | Cancer {pop_cancer_pct}% | Polypharmacy {pop_polypharmacy_pct}%
-
-THIS CLUSTER - "{title}" ({cluster_type}, {count} patients, {pct}% of population):
-Pre-assigned description: {description}
-
-DEMOGRAPHICS:
-- Mean age: {avg_age} yrs (vs pop avg {pop_avg_age} yrs)
-- Gender: Female {female_pct}% / Male {male_pct}%
-- Marital mix (mode): {dominant_marital}
-
-VITALS & QUALITY OF LIFE (mean per patient):
-- BMI: {avg_bmi} (vs pop avg {pop_avg_bmi})
-- Systolic BP: {avg_systolic_bp} mmHg (vs pop avg {pop_avg_systolic_bp})
-- Glucose: {avg_glucose} mg/dL (vs pop avg {pop_avg_glucose})
-- QALY: {avg_qaly} (vs pop avg {pop_avg_qaly})
-- DALY: {avg_daly} (vs pop avg {pop_avg_daly})
-
-UTILIZATION & BURDEN (mean per patient):
-- Active conditions: {avg_conditions} (vs pop avg {pop_avg_conditions})
-- Medications: {avg_meds} (vs pop avg {pop_avg_meds})
-- Total procedures: {avg_procedures} (vs pop avg {pop_avg_procedures})
-- Days since last encounter: {avg_days_since} (vs pop avg {pop_avg_days_since})
-- Dominant encounter class: {dominant_encounter}
-- Dominant careplan category: {dominant_careplan}
-
-DISEASE PREVALENCE:
-- Diabetes: {diabetes_pct}% (vs pop {pop_diabetes_pct}%)
-- Hypertension: {hypertension_pct}% (vs pop {pop_hypertension_pct}%)
-- Heart disease: {heart_disease_pct}% (vs pop {pop_heart_pct}%)
-- Cancer: {cancer_pct}% (vs pop {pop_cancer_pct}%)
-- Polypharmacy (>=5 active meds): {polypharmacy_pct}% (vs pop {pop_polypharmacy_pct}%)
-- Current smokers: {current_smoker_pct}% | Former: {former_smoker_pct}% | Never: {never_smoker_pct}%
-
----
-TASK: Analyse this patient group for TWO audiences simultaneously:
-1. CLINICIANS - 2-3 sentences: what defines this group clinically (anchor on dominant careplan + top prevalence deltas), the main risks, and the most actionable care gaps. Reference specific numbers and deltas.
-2. GENERAL PUBLIC - 1-2 sentences: who are these patients in plain everyday language, no medical terms.
-
-Respond ONLY with valid JSON (no markdown, no extra text):
-{{
-  "risk_level": "high or moderate or low",
-  "medical_interpretation": "...",
-  "layperson_summary": "...",
-  "key_characteristics": ["data-grounded characteristic 1", "data-grounded characteristic 2", "data-grounded characteristic 3", "data-grounded characteristic 4"],
-  "priority_interventions": ["specific actionable clinical intervention 1", "specific actionable clinical intervention 2", "specific actionable clinical intervention 3"],
-  "care_recommendations": ["longer-term system-level recommendation 1", "longer-term system-level recommendation 2", "longer-term system-level recommendation 3"]
-}}
-"""
 
 
 def _na(value):
@@ -95,6 +32,21 @@ class ClusterService:
         result = self.repo.get_cluster_detail(cluster_id)
         self.repo.save_cluster_detail_cache(cluster_id, result)
         return result
+
+    def warm_detail_cache(self) -> list[int]:
+        """Precompute and persist detail_cache for every cluster that lacks it.
+
+        The per-cluster computation scans millions of observation rows, so this
+        is meant to run in the background (e.g. at startup) to keep the first
+        page load fast. Returns the labels that were warmed.
+        """
+        labels = self.repo.get_cluster_labels_missing_detail_cache()
+        warmed = []
+        for label in labels:
+            result = self.repo.get_cluster_detail(label)
+            self.repo.save_cluster_detail_cache(label, result)
+            warmed.append(label)
+        return warmed
 
     def get_ai_analysis(self, cluster_id: int) -> AiAnalysisResponse:
         # Fast path: no lock, return cached analysis if already computed.

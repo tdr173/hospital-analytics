@@ -1,3 +1,9 @@
+# silhouette:         [-1, 1], higher is better. measures how similar a point is to its own cluster vs the nearest other cluster.
+# davies_bouldin:     [0, inf], lower is better. ratio of intra-cluster scatter to inter-cluster separation - penalizes clusters that are spread out and close to each other.
+# calinski_harabasz:  [0, inf], higher is better. ratio of inter-cluster variance to intra-cluster variance (like an F-statistic for clusters).
+# eta_squared:        [0, 1], higher is better. how much of the variance in a numerical feature is explained by cluster membership.
+# cramer_v:           [0, 1], higher is better. how strongly a categorical feature is associated with cluster membership.
+
 import numpy as np
 import pandas as pd
 from scipy.stats import chi2_contingency

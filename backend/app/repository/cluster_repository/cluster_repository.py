@@ -326,6 +326,15 @@ class ClusterRepository:
             for row in rows
         ]
 
+    def get_cluster_labels_missing_detail_cache(self) -> list[int]:
+        rows = (
+            self.db.query(ClusterModel.cluster_label)
+            .filter(ClusterModel.detail_cache.is_(None))
+            .order_by(ClusterModel.cluster_label)
+            .all()
+        )
+        return [row[0] for row in rows]
+
     def get_cluster_detail_cache(self, cluster_id: int) -> ClusterDetailResponse | None:
         cluster = self.db.query(ClusterModel).filter(
             ClusterModel.cluster_label == cluster_id,

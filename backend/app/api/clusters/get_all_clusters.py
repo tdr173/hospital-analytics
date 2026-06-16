@@ -8,7 +8,7 @@ from repository import ClusterRepository
 from .cluster_router import cluster_router
 
 @cluster_router.get("", response_model=GetClustersDetails)
-async def get_all_clusters(db: Session = Depends(get_db)):
+def get_all_clusters(db: Session = Depends(get_db)):
     cluster_repo = ClusterRepository(db)
     cluster_service = ClusterService(cluster_repo)
 

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 _DELTAS = {
     "week": timedelta(days=7),
     "month": timedelta(days=30),
+    "year": timedelta(days=365),
 }
 
 

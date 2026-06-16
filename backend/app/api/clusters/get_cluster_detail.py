@@ -9,7 +9,7 @@ from .cluster_router import cluster_router
 
 
 @cluster_router.get("/detail/{cluster_id}", response_model=ClusterDetailResponse)
-async def get_cluster_detail(cluster_id: int, db: Session = Depends(get_db)):
+def get_cluster_detail(cluster_id: int, db: Session = Depends(get_db)):
     cluster_repo = ClusterRepository(db)
     cluster_service = ClusterService(cluster_repo)
 

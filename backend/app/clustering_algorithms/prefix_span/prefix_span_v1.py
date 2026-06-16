@@ -1,18 +1,13 @@
-"""
-PrefixSpan v1 - v0 + input shaping.
+# - v0
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# - v1
+# - caps events length at 25
+# - blacklists very frequent events
+# - adds 2 year time period allowed
+# - drops consecutive duplicate events
+# - prefix-rank tie-breaking sort (C -> M -> P -> CP on two events with the same date)
 
-Adds on top of v0:
-  - prefix-rank tie-breaking sort (C -> M -> P -> CP on same date)
-  - item blacklist for ubiquitous noise items
-  - last-WINDOW_DAYS time window per patient
-  - consecutive-duplicate collapse within a patient
-  - per-patient event cap (MAX_EVENTS_PER_PATIENT)
-
-Mining call, scoring and selection are unchanged from v0.
-
-Run from backend/:
-    python app/clustering_algorithms/prefix_span/prefix_span_v1.py
-"""
+# python app/clustering_algorithms/prefix_span/prefix_span_v1.py
 
 import sys
 from pathlib import Path
@@ -29,19 +24,21 @@ from sqlalchemy import text
 from db import engine
 
 
-MIN_SUPPORT_PCT = 0.01
+MIN_SUPPORT_PCT = 0.01  # how many patients have the sequence (22.284 x 0.01)
 MIN_PATTERN_LENGTH = 3
 MAX_PATTERN_LENGTH = 6
 MAX_EVENTS_PER_PATIENT = 25
 TOP_K = 500
 WINDOW_DAYS = 730
 
+# events that appear for almost all patients
 ITEM_BLACKLIST_SUBSTRINGS: frozenset[str] = frozenset({
     "assessment of health and social care needs",
     "medication review due",
     "medication reconciliation",
 })
 
+# if two events have the same date, order will be: C -> M -> P -> CP
 _PREFIX_ORDER = {"C": 0, "M": 1, "P": 2, "CP": 3}
 
 
@@ -71,6 +68,12 @@ def load_events(engine) -> pd.DataFrame:
     df["event_date"] = pd.to_datetime(df["event_date"])
     return df
 
+# 70197 careplans
+# 727499 conditions
+# 913100 medications
+# 3225114 procedures
+# load events returns all of them -> 4.935.910 events
+
 
 def build_sequences(engine) -> list[list[str]]:
     events = load_events(engine)
@@ -86,12 +89,13 @@ def build_sequences(engine) -> list[list[str]]:
     blacklist_mask = pd.Series(False, index=events.index)
     for sub in ITEM_BLACKLIST_SUBSTRINGS:
         blacklist_mask |= item_lower.str.contains(sub, regex=False)
-    events = events[~blacklist_mask]
+    events = events[~blacklist_mask] # remove all the blacklisted items
 
     maxd = events.groupby("patient_id", sort=False)["event_date"].transform("max")
     cutoff = maxd - pd.Timedelta(days=WINDOW_DAYS)
     events = events[events["event_date"] >= cutoff]
 
+    # delete duplicate consecutive items
     same_pid = events["patient_id"].eq(events["patient_id"].shift())
     same_item = events["item"].eq(events["item"].shift())
     events = events[~(same_pid & same_item)]
@@ -102,6 +106,8 @@ def build_sequences(engine) -> list[list[str]]:
 
     grouped = events.groupby("patient_id", sort=False)["item"].apply(list)
     return grouped.tolist()
+
+# build_sequences returns a list of lists, where each list is the patient chronological history.
 
 
 def encode(sequences: list[list[str]]) -> tuple[list[list[int]], list[str]]:
@@ -119,6 +125,10 @@ def encode(sequences: list[list[str]]) -> tuple[list[list[int]], list[str]]:
             out.append(idx)
         encoded.append(out)
     return encoded, inv
+
+# encodes each string to an integer as the prefixSpan lib. works with
+# integers, not strings. there are 1172 unique items -> 311 unique C,
+# 398 unique M, 423 unique P, 40 unique CP
 
 
 def pattern_to_str(pattern: Iterable[str]) -> str:
@@ -150,9 +160,17 @@ def main() -> None:
     mined = mine(sequences)
     print(f"[v1] {len(mined)} patterns\n")
 
+    lines: list[str] = [f"Top {len(mined)} patterns (ranked by support)\n"]
     for rank, (sup, pat) in enumerate(mined, start=1):
         pct = 100.0 * sup / n_patients
-        print(f"  {rank:3}. [{sup:5} pts, {pct:5.1f}%] {pattern_to_str(pat)}")
+        line = f"  {rank:3}. [{sup:5} pts, {pct:5.1f}%] {pattern_to_str(pat)}"
+        print(line)
+        lines.append(line)
+
+    out_path = "results/per_version/v1.txt"
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    print(f"\nsaved to {out_path}")
 
 
 if __name__ == "__main__":

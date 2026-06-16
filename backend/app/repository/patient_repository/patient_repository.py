@@ -17,7 +17,7 @@ from domain import (
 from domain.schemas.patient_schemas.patient_schema import (
     PatientCreateRequest, PatientUpdateRequest, PatientObservationItem,
 )
-from repository._helpers import provider_name_col, clamp_page_size
+from repository._helpers import provider_name_col, clamp_page_size, link_patient_provider
 
 SORT_COL_MAP = {
     "last_name": PatientModel.last_name,
@@ -435,7 +435,11 @@ class PatientRepository:
         ]
         return items, has_more
 
-    def create_patient(self, payload: PatientCreateRequest) -> PatientDetailResponse:
+    def create_patient(
+        self,
+        payload: PatientCreateRequest,
+        provider_id_scope: Optional[str] = None,
+    ) -> PatientDetailResponse:
         patient = PatientModel(
             patient_id=uuid.uuid4().hex,
             first_name=payload.first_name,
@@ -451,6 +455,10 @@ class PatientRepository:
         )
         self.db.add(patient)
         self.db.commit()
+        # when a doctor creates the patient, add them to that doctor's panel so
+        # the scope filter (patient_provider) surfaces the new patient
+        if provider_id_scope:
+            link_patient_provider(self.db, patient.patient_id, provider_id_scope)
         return self.get_patient(patient.patient_id)
 
     def update_patient(self, patient_id: str, payload: PatientUpdateRequest) -> PatientDetailResponse:
@@ -532,13 +540,27 @@ class PatientRepository:
         return [EncounterItem(**row._asdict()) for row in rows], has_more
 
     def get_patient_sequences(self, patient_id: str, page: int = 1, page_size: int = 20):
-        q = (
-            self.db.query(PrefixSpanPatternModel)
+        # A patient can be attributed to the same pattern_str in more than one
+        # scope (global + their cluster). Collapse to one row per pattern_str,
+        # preferring the global row, so the same sequence is shown only once.
+        dedup_ids = (
+            self.db.query(PrefixSpanPatternModel.id)
             .join(
                 PrefixSpanPatientPatternModel,
                 PrefixSpanPatientPatternModel.pattern_id == PrefixSpanPatternModel.id,
             )
             .filter(PrefixSpanPatientPatternModel.patient_id == patient_id)
+            .distinct(PrefixSpanPatternModel.pattern_str)
+            .order_by(
+                PrefixSpanPatternModel.pattern_str,
+                (PrefixSpanPatternModel.cluster_label == None).desc(),
+                PrefixSpanPatternModel.support_count.desc(),
+            )
+            .subquery()
+        )
+        q = (
+            self.db.query(PrefixSpanPatternModel)
+            .filter(PrefixSpanPatternModel.id.in_(self.db.query(dedup_ids.c.id)))
             .order_by(
                 PrefixSpanPatternModel.support_count.desc(),
                 PrefixSpanPatternModel.rank.asc(),
