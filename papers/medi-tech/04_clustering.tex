@@ -1,0 +1,57 @@
+\section{Patient Clustering}
+\label{sec:clustering}
+
+\subsection{Feature Engineering}
+
+Clustering needs a clean table where each row is a patient and each column is a feature. Building this table is most of the effort, because the raw EHR data is spread over seven tables and is not ready for a model. We compute the features with SQL aggregation queries and then join them on the patient identifier.
+
+We build a large pool of candidate features, around forty in total, and then keep a smaller subset for the final model. The candidates include encounter counts per type, disease flags derived by matching condition descriptions, counts of medications and procedures, averaged vital signs, and several derived indicators such as a readmission-risk tier and a preventive-to-reactive care ratio. We also compute a compact severity index by applying principal component analysis to a few log-transformed counts, which gives one number that summarises overall clinical load.
+
+A few preprocessing choices deserve attention. Some counts are strongly right-skewed, so we apply a $\log(1+x)$ transform before scaling. The numerical features are then brought to a common range with min-max scaling. Vital signs such as blood pressure and glucose are often missing, so instead of filling them with the mean we put each value into a clinical bin and add an explicit ``Unknown'' bin. In this way the fact that a measurement is missing is kept as information, which is often itself meaningful. We do not one-hot encode the categorical features, because K-Prototypes works on them directly, and one-hot encoding would distort the mixed-distance balance.
+
+The final configuration uses five numerical and eight categorical features, listed in Table~\ref{tab:features}.
+
+\begin{table}[t]
+\caption{Final feature set used by the clustering model.}
+\label{tab:features}
+\centering
+\small
+\begin{tabular}{@{}p{0.46\linewidth}p{0.46\linewidth}@{}}
+\toprule
+Numerical & Categorical \\
+\midrule
+age & gender \\
+active conditions count & pregnancy history \\
+total medications & has heart disease \\
+total procedures & has diabetes \\
+preventive-to-reactive ratio & has hypertension \\
+ & condition burden (binned) \\
+ & body-mass-index category \\
+ & dominant care plan \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{The K-Prototypes Algorithm}
+
+K-Prototypes \cite{huang1998kprototypes} extends K-Means to mixed data. For a patient $x$ with numerical attributes and categorical attributes, and a cluster prototype $c$, the distance is
+\begin{equation}
+d(x, c) \;=\; \sum_{j \in \text{num}} (x_j - c_j)^2 \;+\; \gamma \sum_{l \in \text{cat}} \delta(x_l, c_l),
+\end{equation}
+where $\delta(a,b)=0$ if $a=b$ and $1$ otherwise. The first term is the squared Euclidean distance on numerical features, and the second term counts the categorical mismatches. The weight $\gamma$ controls how much the categorical part contributes. The algorithm then minimises the total cost
+\begin{equation}
+J \;=\; \sum_{p=1}^{n} d\big(x_p, c_{a(p)}\big),
+\end{equation}
+where $a(p)$ is the cluster assigned to patient $p$. Like K-Means, it alternates between assigning each point to its nearest prototype and updating the prototypes, but the categorical part of the prototype is the most frequent value (the mode) rather than the mean.
+
+We use the Huang initialisation. The weight $\gamma$ can be set by hand, but a common heuristic is to use the average spread (standard deviation) of the scaled numerical features, so that the two distance terms are on a comparable scale. In our final run we let the library choose $\gamma$ automatically, which gives a value near $0.084$.
+
+Before fitting, we remove statistical outliers with a z-score rule on the most informative numerical features. We do not discard these patients. They receive the special cluster label $-1$ and are stored like every other patient. This is important for the next step, because these patients carry the high-acuity signal (cancer, dialysis, heart failure) that a balanced clustering tends to push aside.
+
+\subsection{Evaluation and Model Selection}
+
+Choosing the number of clusters and the feature set requires a metric that fits mixed data. The standard silhouette score and the Calinski-Harabasz and Davies-Bouldin indices all assume a Euclidean space. Applying them to one-hot encoded categories would over-emphasise the numerical spread and hide the categorical structure. For this reason our main metric is the silhouette computed on the Gower distance, which scales each numerical feature by its range and compares categorical values by agreement, in the same spirit as K-Prototypes. We use Calinski-Harabasz and Davies-Bouldin on a two-dimensional projection only as tie-breakers.
+
+We also measure which features drive the partition. For numerical features we use the ANOVA effect size $\eta^2$, and for categorical features we use Cramer's V. Both give a value between zero and one that says how strongly a feature separates the clusters.
+
+To pick a configuration we first look at an elbow plot of the clustering cost over a range of $k$, which suggests a small number of clusters. We then run a benchmark over 63 feature subsets and several hyperparameter values, and we rank the runs with a combined score that gives the largest weight to the Gower silhouette. The final rule is simple: we choose the smallest $k$ for which every cluster stays cohesive, because the clusters will be used as scopes for sequence mining and a weak cluster would produce weak patterns.

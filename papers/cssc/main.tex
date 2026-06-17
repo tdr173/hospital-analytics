@@ -1,0 +1,59 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+% ---------- packages ----------
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit,backgrounds}
+\usepackage[hidelinks]{hyperref}
+
+% ---------- tikz styles ----------
+\tikzset{
+  box/.style={rectangle, rounded corners=2pt, draw=black!70, fill=blue!6,
+    align=center, minimum height=8mm, inner sep=4pt, font=\footnotesize},
+  db/.style={cylinder, shape border rotate=90, aspect=0.25, draw=black!70,
+    fill=orange!12, align=center, minimum height=10mm, font=\footnotesize},
+  llm/.style={rectangle, rounded corners=2pt, draw=black!70, fill=green!8,
+    align=center, minimum height=8mm, inner sep=4pt, font=\footnotesize},
+  flow/.style={-{Stealth[length=2mm]}, draw=black!70},
+  step/.style={rectangle, rounded corners=2pt, draw=black!70, fill=gray!8,
+    align=center, minimum height=7mm, text width=20mm, inner sep=3pt, font=\scriptsize}
+}
+
+\begin{document}
+
+\title{HospitAI: A Hospital Analytics Platform\\ Combining Patient Clustering, Clinical Sequence Mining\\ and AI-Generated Interpretation}
+
+\author{\IEEEauthorblockN{Author Name}
+\IEEEauthorblockA{\textit{Faculty of Computer Science} \\
+\textit{University Name}\\
+City, Country \\
+author@email.example}}
+
+\maketitle
+
+\begin{abstract}
+Hospitals collect a lot of electronic health record (EHR) data, but most of it stays unused for understanding patient groups and their care over time. We present HospitAI, a web platform that brings together three analytics steps in one place. First, it groups patients with K-Prototypes, a clustering method that works with mixed numerical and categorical data. Second, it mines frequent clinical sequences with a pipeline built around PrefixSpan, adapted to the medical domain. Third, it uses a large language model (LLM) to turn the numerical output into short descriptions that both doctors and patients can read. Our main technical contribution is the sequence-mining pipeline. Instead of ranking patterns only by how often they appear, we score them with a geometric mean lift measure and apply several diversity filters, so the results favour clinically meaningful care paths over frequent but trivial ones. We also mine each patient cluster on its own, and we treat statistical outliers as a separate group, which lets rare but important pathways such as oncology, dialysis and heart failure become visible. On a synthetic dataset of about 22{,}000 patients we obtain four stable clusters and per-cluster pattern sets that match recognisable care populations.
+\end{abstract}
+
+\begin{IEEEkeywords}
+hospital analytics, patient clustering, K-Prototypes, sequential pattern mining, PrefixSpan, large language models, electronic health records
+\end{IEEEkeywords}
+
+\input{01_introduction}
+\input{02_related_work}
+\input{03_system_overview}
+\input{04_methodology}
+\input{05_results}
+\input{06_conclusion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

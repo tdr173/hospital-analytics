@@ -1,0 +1,75 @@
+\section{Clinical Sequence Mining}
+\label{sec:mining}
+
+The second component studies the order of clinical events. Patients do not just have a set of diagnoses and treatments, they go through them in a certain order, and that order often holds the clinical meaning. We capture this with sequential pattern mining.
+
+\subsection{Event Model and Preprocessing}
+
+We define one sequence per patient, which is the patient's timeline of events sorted by date. Each event is tagged with a type prefix so that its source is always clear: \texttt{C} for a condition, \texttt{M} for a medication, \texttt{P} for a procedure and \texttt{CP} for a care plan. The same text in two different tables is treated as two different items, so a medication and a condition with similar names never collide. When several events happen on the same day, we order them in a fixed clinical order (condition, then medication, then procedure, then care plan), which makes the runs reproducible and follows the natural flow of care.
+
+Real timelines are noisy, so we clean them before mining. We keep only the last two years of events per patient, because older events are less relevant to current care. We drop a short list of purely administrative items, such as routine ``medication review due'' entries, and a list of social-status findings that appear for almost everyone. We collapse immediate repetitions of the same item, which removes refill artefacts, and we cap each timeline at the last 25 events, which bounds the running time. Finally, each distinct item is mapped to an integer, because the mining engine works on integers.
+
+\subsection{Mining and Scoring}
+
+The mining engine is PrefixSpan \cite{pei2004prefixspan}, a classic algorithm that grows frequent patterns by repeatedly projecting the database on each discovered prefix. It avoids the candidate explosion of older methods, and it supports closed patterns, which drop a pattern when a longer pattern with the same support exists. We ask for closed patterns with a length between three and six and a minimum support of one percent of the patients. To get a good final set we mine a larger pool than we need, twenty times the target size, and then re-rank it, because the most frequent patterns are not always the most useful ones.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[node distance=4mm]
+  \node[step] (a) {Raw events (C, M, P, CP)};
+  \node[step, below=of a] (b) {Per-patient timelines};
+  \node[step, below=of b] (c) {PrefixSpan (closed, length 3 to 6)};
+  \node[step, below=of c] (d) {GML scoring + type bonus};
+  \node[step, below=of d] (e) {Diversity selection};
+  \node[step, below=of e] (f) {Top patterns per scope};
+  \foreach \x/\y in {a/b,b/c,c/d,d/e,e/f} \draw[flow] (\x) -- (\y);
+\end{tikzpicture}
+\caption{The sequence-mining pipeline. PrefixSpan is the engine, but the scoring and diversity selection around it decide what the user finally sees.}
+\label{fig:pipeline}
+\end{figure}
+
+The key idea is in the re-ranking, shown in Figure~\ref{fig:pipeline}. If we sort patterns by raw support, the top of the list is filled with frequent but useless chains, for example routine dental cleaning steps that almost every patient receives. To fix this we rank patterns with a geometric mean lift (GML) score. For a pattern $p$ made of $k$ items, with support $s(p)$ over $n$ patients and individual item supports $s(i)$, the score is
+\begin{equation}
+\mathrm{GML}(p) \;=\; \frac{s(p)/n}{\left(\displaystyle\prod_{i \in p} s(i)/n \right)^{1/k}} .
+\label{eq:gml}
+\end{equation}
+This is the lift idea extended from two items to $k$ items through a geometric mean. The numerator is how often the whole chain occurs, and the denominator is the typical frequency of its single items. A pattern scores high when the full chain is more frequent than its parts would suggest, which is a sign that the steps really belong together. We compute Equation~\ref{eq:gml} in log space,
+\begin{equation}
+\log \mathrm{GML}(p) \;=\; \log s(p) - \log n - \frac{1}{k}\sum_{i \in p}\big(\log s(i) - \log n\big),
+\end{equation}
+which avoids numerical underflow when multiplying many small probabilities.
+
+We then add a type-diversity bonus. The score is multiplied by $(1 + 0.3\,(t-1))$, where $t$ is the number of distinct event types in the pattern. This rewards a real care trajectory that mixes conditions, drugs and procedures over a pattern that merely repeats three medications.
+
+\subsection{Diversity Selection}
+
+A high score is not enough on its own, because the top of the list can still be full of near-duplicates. We therefore apply a selection stage with several rules. We drop patterns that contain three same-type events in a row, since these are usually within-step repetitions rather than trajectories. We run a second, global check for closed patterns, because re-ranking across branches can let dominated patterns slip through. We remove near-duplicates with a Jaccard test on the item sets, with a threshold of $0.80$. We also cap how many selected patterns may share the same first item or the same last item, which stops one common diagnosis from flooding the list.
+
+Selection runs in two phases. In the first phase we reserve a small quota for full-spectrum patterns that contain all four event types, so that these rare but complete care paths are never crowded out. In the second phase we greedily fill the rest of the list under all the caps. At the end we sort the chosen set again by GML, so the order still reflects the ranking. Table~\ref{tab:params} lists the main parameters.
+
+\begin{table}[t]
+\caption{Main parameters of the sequence-mining pipeline.}
+\label{tab:params}
+\centering
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Parameter & Value & Meaning \\
+\midrule
+minimum support & 1\% & smallest pattern frequency \\
+pattern length & 3 to 6 & items per pattern \\
+recency window & 730 days & events kept per patient \\
+events per patient & 25 & timeline length cap \\
+over-mining factor & 20$\times$ & pool size before re-ranking \\
+patterns kept & 500 & final patterns per scope \\
+type-diversity weight & 0.3 & bonus per extra event type \\
+Jaccard threshold & 0.80 & near-duplicate cut-off \\
+per-prefix / per-suffix cap & 6 / 20 & shared first / last item \\
+full-spectrum quota & 25 & reserved four-type patterns \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Per-Cluster Scopes}
+
+Finally, we run the whole pipeline once per scope. We mine the global cohort, and then we mine each cluster on its own, including the outlier group with label $-1$. After mining a cluster we remove the patterns that already appear in the global scope, so each cluster only shows what makes it distinctive. Each discovered pattern is stored together with the list of patients that contain it, computed with an inverted index over the rarest items first, which keeps the membership lookup fast.

@@ -1,0 +1,38 @@
+\section{AI Interpretation}
+\label{sec:ai}
+
+The last component makes the analytics readable. We use a single LLM, but in a controlled way that keeps the text grounded in real numbers.
+
+\subsection{The Verbaliser Principle}
+
+The model never computes statistics by itself. Our code first computes everything, such as cluster averages, disease rates and the cohort statistics for a given pattern, and then passes these fixed numbers to the model with clear instructions to only describe them. We call this the verbaliser principle. Because the model receives the facts and is told not to invent or recompute anything, the risk of fabricated values is much lower than in a free-form prompt. The instructions also fix small style rules, for example the thresholds that count as high or low, so the wording stays consistent across patients.
+
+The platform produces three kinds of text. For each cluster it writes a short card with a title, a colour, a one-line description, an insight and a recommendation. These cards are generated once, when the clustering is computed, and stored in the database. On demand, the platform writes a longer analysis of a single cluster or of a single mined pattern, returned as structured JSON. For a pattern the JSON contains a clinical interpretation, a plain-language summary for the patient, a list of risk signals and a list of recommendations. For a cluster it adds a risk level, key characteristics and suggested interventions, with each cluster value compared to the population average so the text can say whether a group is above or below the norm. All of these results are cached next to the cluster or pattern row, so the model is called only once per item.
+
+\subsection{Natural-Language Querying}
+
+The platform also includes a question-answering agent that lets a user ask about the data in plain English. The agent is built with LangGraph as a small directed graph of steps, shown in Figure~\ref{fig:agent}. First it classifies the question into one of three kinds: a database question, a general medical question, or an off-topic question. Off-topic questions get a short refusal. General medical questions are answered directly by the model. Database questions go through query generation.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[node distance=7mm and 12mm]
+  \node[gnode] (cls) {Classify question};
+  \node[gnode, above right=2mm and 14mm of cls] (gen2) {Answer general};
+  \node[gnode, below right=2mm and 14mm of cls] (gen) {Generate SQL};
+  \node[gnode, right=of gen] (val) {Validate};
+  \node[gnode, right=of val] (exe) {Execute};
+  \node[gnode, right=12mm of gen2] (end) {Summarise answer};
+
+  \draw[flow] (cls) -- (gen2);
+  \draw[flow] (cls) -- (gen);
+  \draw[flow] (gen) -- (val);
+  \draw[flow] (val) -- (exe);
+  \draw[flow] (gen2) -- (end);
+  \draw[flow] (exe) -| (end);
+  \draw[flow] (val) to[bend left=35] node[above,font=\scriptsize]{retry} (gen);
+\end{tikzpicture}
+\caption{The natural-language-to-SQL agent as a directed graph. The validate step can send the query back for a retry; only a safe query is executed.}
+\label{fig:agent}
+\end{figure}
+
+Query generation and validation are kept strict, because the agent must never harm the database. The generated query has to be a single read-only \texttt{SELECT}. A deterministic check blocks dangerous keywords such as \texttt{DROP}, \texttt{DELETE} and \texttt{UPDATE}, and a second model pass checks that the query really matches the question. If a check fails, or if the query raises a database error, the agent gets feedback and tries again, up to a small number of retries. Once a query passes, it is run and the resulting rows are summarised back in natural language, in the same language as the question. A role-scoping rule can also restrict a doctor to their own patients, by forcing a condition on the provider identifier and rejecting any answer that does not respect it.

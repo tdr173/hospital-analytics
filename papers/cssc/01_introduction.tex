@@ -1,0 +1,20 @@
+\section{Introduction}
+
+Modern hospitals store huge amounts of data in electronic health record (EHR) systems. Every visit leaves a trace: diagnoses, prescribed drugs, procedures and care plans. In theory this data could help managers and doctors understand who their patients are and how care actually happens. In practice most of it is never analysed, because the tables are large, messy and hard to read without technical skills.
+
+There are three problems that make this kind of analysis difficult. The first one is that patients are very different from each other. A young person with a single broken bone and an elderly patient with diabetes, high blood pressure and kidney failure do not belong in the same bucket, yet a simple average over all patients hides this variety. The second problem is that care is not a single snapshot. It is a sequence of events that unfolds over months or years, and the order of those events often carries the clinical meaning. The third problem is communication. Even when a model produces a good result, the output is usually a list of numbers or codes that a clinician or a patient cannot interpret quickly.
+
+In this paper we describe HospitAI, a web platform that addresses these three problems together. The platform was developed as part of an undergraduate thesis. It connects a clustering step, a sequence-mining step and a language step, so the same patient data can be looked at from several angles in one tool.
+
+For the first problem we use K-Prototypes \cite{huang1998kprototypes}, a clustering algorithm made for mixed data, because clinical features are partly numerical (age, number of medications) and partly categorical (gender, main care plan). For the second problem we build a sequence-mining pipeline on top of PrefixSpan \cite{pei2004prefixspan}, and we adapt it to clinical data so that it returns useful care paths instead of obvious repetitions. For the third problem we add a large language model (LLM) that reads the computed statistics and writes a short summary in plain language for two audiences, the medical staff and the patient.
+
+The contributions of this work can be summarised as follows.
+
+\begin{itemize}
+  \item An integrated, working platform that combines mixed-data patient clustering, clinical sequence mining and AI-generated interpretation, with a clear separation between the offline analytics and the web application that serves the results.
+  \item A feature-engineering process that turns several raw EHR tables into a compact set of numerical and categorical patient features, with explicit handling of skewed values, missing vitals and statistical outliers.
+  \item A domain-adapted sequence-mining pipeline around PrefixSpan. We rank patterns with a geometric mean lift score and a set of diversity rules, which strongly reduces trivial output and keeps clinically meaningful care paths near the top.
+  \item A practical use of an LLM as a controlled ``verbaliser'' over fixed statistics, plus a guarded natural-language-to-SQL agent, so non-technical users can both read and ask questions about the data.
+\end{itemize}
+
+The rest of the paper is organised as follows. Section~\ref{sec:related} reviews related work on care-pathway mining and patient clustering. Section~\ref{sec:system} gives the system overview. Section~\ref{sec:methods} explains the three analytics components. Section~\ref{sec:results} reports the main results, and Section~\ref{sec:conclusion} discusses limitations and future work.

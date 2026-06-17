@@ -1,0 +1,12 @@
+\section{Discussion and Conclusion}
+\label{sec:conclusion}
+
+We presented HospitAI, a platform that joins three analytics steps over hospital data: mixed-data patient clustering, clinical sequence mining and AI-generated interpretation. The clustering gives a small number of readable patient groups. The sequence mining, with its geometric mean lift ranking and its diversity filters, returns care paths that are clinically meaningful instead of just frequent. The language layer turns the numbers into short summaries and lets users ask questions in plain English.
+
+We see a few clear strengths. The cluster-then-mine design keeps each result local to a patient group, which makes the patterns easier to read. Treating outliers as their own scope is a simple idea that pays off, because it brings rare but important pathways back into view. The verbaliser design, where the model only describes precomputed numbers, is a practical way to use an LLM without letting it invent facts.
+
+There are also honest limitations. The data is synthetic, so the patterns reflect how Synthea models care and not a real hospital. We did not run a formal clinical validation with physicians, and the quality of the mined patterns was judged mostly by inspection rather than by a numeric benchmark against other miners. The platform also relies on a single external LLM, which raises questions of cost, reproducibility and data governance that a hospital would need to solve before real use. One of our filters is tuned to the dataset, which means part of the cleaning is dataset-specific and would need to be revisited on new data.
+
+Future work follows from these points. The first step is to test the pipeline on a real, de-identified dataset and to ask clinicians to rate the mined pathways. A second step is to add a proper evaluation of the sequence patterns, for example by comparing them to known clinical guidelines or to other mining algorithms. A third step is to study the language layer more carefully, including the accuracy of the SQL agent and the faithfulness of the generated summaries. We would also like to replace the dataset-specific filter with a more general rule, so the pipeline transfers more easily.
+
+Overall, the project shows that off-the-shelf algorithms become much more useful when they are wrapped in careful preprocessing, a task-aware ranking and a readable output layer. For a hospital that already stores its data, this kind of platform could be a low-cost way to start understanding its own patient population.

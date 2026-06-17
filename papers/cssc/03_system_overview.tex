@@ -1,0 +1,37 @@
+\section{System Overview}
+\label{sec:system}
+
+\subsection{Architecture}
+
+HospitAI is split into a web application and an offline analytics part. The web side has a frontend built with Next.js and a backend built with FastAPI. The backend follows a layered structure with no shortcuts between layers: the API routers call a service layer, the service layer calls a repository layer, and the repository layer talks to the database. All persistent data lives in a single PostgreSQL database. Figure~\ref{fig:arch} shows the main pieces.
+
+The two heavy machine-learning steps, clustering and sequence mining, do not run inside the web request. They are separate Python scripts that we run offline, because they are slow and they only need to run when the data changes. Each script reads from the database, computes its result and writes it back into dedicated tables. The web application then only reads these tables, which keeps the user interface fast. A single large language model, accessed through the OpenAI API, is used for every text-generation task in the system.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[node distance=5mm and 7mm]
+  \node[box, fill=blue!8] (fe) {Frontend\\(Next.js + Redux)};
+  \node[box, below=of fe] (api) {Backend API\\(FastAPI routers)};
+  \node[box, below=of api] (svc) {Service layer};
+  \node[box, below=of svc] (repo) {Repository layer};
+  \node[db, below=8mm of repo] (db) {PostgreSQL};
+  \node[step, right=14mm of svc, text width=22mm] (ml) {Offline ML scripts:\\K-Prototypes\\PrefixSpan};
+  \node[llm, left=12mm of svc, text width=18mm] (llm) {LLM\\(OpenAI GPT)};
+
+  \draw[flow] (fe) -- (api);
+  \draw[flow] (api) -- (svc);
+  \draw[flow] (svc) -- (repo);
+  \draw[flow] (repo) -- (db);
+  \draw[flow] (svc) -- (llm);
+  \draw[{Stealth[length=2mm]}-{Stealth[length=2mm]}, draw=black!70] (ml) |- (db)
+       node[pos=0.28,right,font=\scriptsize]{read / write};
+\end{tikzpicture}
+\caption{High-level architecture. The web application reads precomputed results; the clustering and mining scripts run offline and persist their output into the database.}
+\label{fig:arch}
+\end{figure}
+
+\subsection{Data}
+
+For development and experiments we use a synthetic dataset generated with Synthea, an open-source patient generator. Synthetic data is a good choice for a student project because it avoids privacy and legal issues while keeping a realistic structure. The dataset contains about 22{,}284 patients and the usual clinical tables: encounters, conditions, medications, procedures, observations and care plans. A loading script reduces the data to a single hospital and a fixed set of providers, cleans the dates and computes a few helper fields such as patient age and treatment duration.
+
+The same database stores both the raw clinical tables and the analytics output. Clustering writes one row per patient with the cluster label and a cached set of features. Sequence mining writes the discovered patterns and a link table that records which patient contains which pattern. The interpretation step stores the generated text in JSON columns next to the cluster and pattern rows, so a summary is computed only once and then reused.

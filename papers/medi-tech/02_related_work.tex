@@ -1,0 +1,21 @@
+\section{Related Work}
+\label{sec:related}
+
+Learning patient groups and care paths from health data is an active research area, and our work builds on several lines of it.
+
+\paragraph{Surveys of patient-pathway analysis.}
+Two recent reviews map the field well. Rosa et al. \cite{rosa2022modelling} survey how patient pathways are modelled and mined, and they separate sequence-mining approaches from process-mining approaches. Flothow et al. \cite{flothow2023} review the analytical methods used to identify sequences of healthcare utilisation, and they report a useful split: clustering is mostly used to describe full care trajectories, while pattern-mining methods are mostly used to identify shorter subsequences. HospitAI sits between these two groups, because we cluster patients first and then mine sequences inside each cluster.
+
+\paragraph{Combining clustering and sequence mining.}
+The work closest to ours mixes the two ideas. Najjar et al. \cite{najjar2018twostep} propose a two-step method that first clusters individual medical visits with K-Prototypes and then builds higher-level treatment pathways. This is a strong precedent, because it relies on the same mixed-data clustering algorithm that we use. Baudrier et al. \cite{baudrier2022} combine a sequential pattern-mining algorithm with care-trajectory clustering on kidney cancer patients, and they show that the resulting groups differ in real outcomes such as mortality. Vogt et al. \cite{vogt2017} apply sequence clustering to ambulatory care pathways in insurance claims and find typical care patterns for heart-failure patients. Our design follows the same spirit but reverses the order: clustering comes first and defines the scope, and mining then runs inside each scope.
+
+\paragraph{Sequence mining from EMR with interpretation.}
+Perer et al. \cite{perer2015mining} mine frequent event sequences from electronic medical records and connect them to patient outcomes, with a strong focus on visual exploration. Their system shows that frequent sequences can recover care patterns that are clinically meaningful, and sometimes even unknown to the treating physician. This motivates our own attention to pattern quality, because raw frequency on its own is not enough.
+
+\paragraph{Clustering of patients on EHR data.}
+Several works study how to group patients well. Yang et al. \cite{yang2024} build a smart-healthcare system that clusters patients on mixed medical data, including text embeddings, and compare several clustering methods. Aljohani \cite{aljohani2024} compares eight clustering algorithms for patient stratification on EHR data and ranks them with a multi-criteria decision framework. These works confirm that clustering is a useful tool for patient stratification, and that the choice of algorithm and evaluation metric has a large impact.
+
+\paragraph{Process mining as an alternative.}
+A different family of methods discovers care processes from event logs. Murazzano et al. \cite{murazzano2026} apply process mining to chronic respiratory patients and find high variability in their clinical pathways. We mention this line of work because it targets the same goal as our sequence mining, namely understanding how care actually happens, but with a different technique.
+
+In summary, clustering and sequence mining are both well studied in healthcare, and a few works already combine them. What is still missing is a single, practical tool that connects cluster-scoped mining, a pattern ranking made for clinical usefulness, and an automatic interpretation layer that non-experts can read. HospitAI is our attempt to close that gap.

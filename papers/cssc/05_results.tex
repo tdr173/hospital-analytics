@@ -1,0 +1,76 @@
+\section{Results}
+\label{sec:results}
+
+We report results on the Synthea dataset described in Section~\ref{sec:system}. After outlier removal, 21{,}995 of the 22{,}284 patients were used to fit the clustering model, and the outliers were kept as the separate group with label $-1$.
+
+\subsection{Clustering}
+
+To pick a configuration we ran a large benchmark over many feature subsets and hyperparameters, and we ranked the runs with a combined score that gives the most weight to the Gower silhouette, because it is the metric that fits mixed data best. Table~\ref{tab:clusters} lists the best configuration for each number of clusters.
+
+\begin{table}[t]
+\caption{Best clustering configuration per number of clusters. The final pick is $k=4$.}
+\label{tab:clusters}
+\centering
+\footnotesize
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Config & $k$ & $\gamma$ & Silhouette & Gower & DB \\
+\midrule
+\textbf{Final ($k{=}4$)} & \textbf{4} & auto & 0.132 & \textbf{0.350} & 2.51 \\
+Best $k{=}5$ & 5 & 0.17 & 0.095 & 0.356 & 3.11 \\
+Best $k{=}6$ & 6 & 0.17 & 0.029 & 0.313 & 2.59 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+We selected $k=4$. The five-cluster run has a marginally higher Gower silhouette (0.356 against 0.350), but only one of its clusters clears our stability threshold of about 0.20, while in the four-cluster run all clusters do (the per-cluster values are 0.423, 0.199, 0.320 and 0.396). Since the clusters are later used as the scope for sequence mining, we prefer the smallest $k$ for which every cluster stays cohesive. The most influential features are the number of active conditions and age on the numerical side, and condition burden, gender, diabetes and heart disease on the categorical side.
+
+Figure~\ref{fig:heatmap} shows the per-cluster means of the numerical features as a heatmap. There is a clear morbidity gradient: cluster~0 holds younger patients with low burden, while the higher-numbered clusters carry more conditions and more treatment. Reading the four clusters together with the categorical panel, they correspond to four recognisable groups: young low-burden patients, women of reproductive age, hypertensive adults with polypharmacy, and a pediatric or acute group.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figs/cluster_heatmap.png}
+\caption{Z-scored numerical feature means per cluster ($k=4$). Warm colours are above the population average, cool colours below it.}
+\label{fig:heatmap}
+\end{figure}
+
+\subsection{Sequence Mining}
+
+The clearest way to show the effect of our pipeline is to compare the first and the last version of the miner on the same data. Table~\ref{tab:ablation} shows the top pattern in each case. When we rank by raw support (version v0), the best ``pattern'' is an administrative loop, and almost the entire top of the list is filled with near-identical dental cleaning steps that around 93\% of patients receive. After we add GML scoring and the diversity filters (version v6), the top of the list becomes a set of short, clinically coherent care paths.
+
+\begin{table}[t]
+\caption{Effect of the ranking. Top pattern when ranking by support (v0) versus by geometric mean lift with diversity filters (v6).}
+\label{tab:ablation}
+\centering
+\footnotesize
+\begin{tabular}{@{}p{0.10\linewidth}p{0.80\linewidth}@{}}
+\toprule
+Ver. & Top-ranked pattern \\
+\midrule
+v0 & Medication review due $\rightarrow$ Medication reconciliation $\rightarrow$ Medication review due \emph{(support 96\%, no clinical value)} \\[2pt]
+v6 & Laceration $\rightarrow$ Wound care $\rightarrow$ Suture open wound \emph{(GML 0.97)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Mining each scope on its own produces between 175 and 252 frequent patterns per cluster. Table~\ref{tab:patterns} gives a few representative patterns from different scopes. Each cluster shows its own dominant signal. Cluster~0 is dominated by episodic acute care such as wounds and fractures. Cluster~2 shows chronic-disease management, for example an antihypertensive drug together with screening, or a furosemide and oxygen sequence for fluid overload. The most useful effect comes from the outlier scope. Because we mine the label $-1$ group on its own, high-cost pathways such as chemotherapy with cisplatin followed by hospice care, or dialysis with epoetin, rise to the top. These pathways are below the global support floor and would simply be invisible if we mined the whole cohort at once.
+
+\begin{table}[t]
+\caption{Representative mined pathways by scope (ranked by GML).}
+\label{tab:patterns}
+\centering
+\footnotesize
+\begin{tabular}{@{}p{0.16\linewidth}p{0.74\linewidth}@{}}
+\toprule
+Scope & Pattern \\
+\midrule
+Cluster 0 & Fracture of bone $\rightarrow$ Fracture care $\rightarrow$ Bone immobilization \\
+Cluster 1 & Normal pregnancy $\rightarrow$ Pregnancy test $\rightarrow$ Ultrasound for fetal viability \\
+Cluster 2 & Furosemide $\rightarrow$ Oxygen by mask $\rightarrow$ Prone position $\rightarrow$ Furosemide \\
+Cluster 3 & Acute allergic reaction $\rightarrow$ Epinephrine injection $\rightarrow$ Prednisone \\
+Outliers ($-1$) & Chemotherapy + radiation $\rightarrow$ Cisplatin $\rightarrow$ Hospice care \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Taken together, the results show that the four-cluster partition is not only defensible by its metrics but also meaningful in content. Each cluster's top patterns describe a clearly different care population, which is exactly what we need for cluster-scoped analysis in the dashboard.
