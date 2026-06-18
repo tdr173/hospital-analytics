@@ -4,8 +4,10 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import SearchIcon from "@mui/icons-material/Search";
 import useClasses from "@/utils/useClasses";
+import theme from "@/utils/theme";
 import StyledInput from "@/components/generic_components/StyledInput/StyledInput";
 import StyledDropdown from "@/components/generic_components/StyledDropdown/StyledDropdown";
+import StyledButton from "@/components/generic_components/StyledButton/StyledButton";
 import {
   SequenceResourcesResponse,
   SequenceSortOption,
@@ -17,10 +19,14 @@ import ClusterMultiSelect from "../ClusterMultiSelect/ClusterMultiSelect";
 interface Props {
   search: string;
   minLength: number;
+  rangeMin: number;
+  rangeMax: number;
   sortBy: string;
   sortType: "asc" | "desc";
   resources: SequenceResourcesResponse | null;
   onSearchChange: (value: string) => void;
+  onSearchApply: () => void;
+  onSearchClear: () => void;
   onMinLengthChange: (value: number) => void;
   onSortByChange: (value: string) => void;
   onSortTypeChange: (value: "asc" | "desc") => void;
@@ -33,10 +39,14 @@ interface Props {
 export default function SequenceFilters({
   search,
   minLength,
+  rangeMin,
+  rangeMax,
   sortBy,
   sortType,
   resources,
   onSearchChange,
+  onSearchApply,
+  onSearchClear,
   onMinLengthChange,
   onSortByChange,
   onSortTypeChange,
@@ -49,8 +59,8 @@ export default function SequenceFilters({
     name: "SequenceFilters",
   });
 
-  const minLen = resources?.minLength ?? 1;
-  const maxLen = resources?.maxLength ?? 1;
+  const minLen = rangeMin;
+  const maxLen = rangeMax;
   const lengthOptions = Array.from(
     { length: Math.max(0, maxLen - minLen + 1) },
     (_, i) => {
@@ -71,8 +81,8 @@ export default function SequenceFilters({
       className={classes.bar}
       style={{
         gridTemplateColumns: showClusterPicker
-          ? "1fr auto auto auto auto"
-          : "1fr auto auto auto",
+          ? "minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr)"
+          : "minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)",
       }}
     >
       <div className={classes.fieldGroup}>
@@ -82,9 +92,12 @@ export default function SequenceFilters({
           placeholder="Search care sequences..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onSearchApply();
+          }}
           startIcon={<SearchIcon fontSize="small" />}
           clearIcon={search.length > 0}
-          onClear={() => onSearchChange("")}
+          onClear={onSearchClear}
           height={"40px"}
           fullWidth
         />
@@ -97,7 +110,7 @@ export default function SequenceFilters({
           value={minLength}
           onChange={(v) => onMinLengthChange(Number(v))}
           options={lengthOptions}
-          width={140}
+          fullWidth
           height={"40px"}
           onClear={() => onMinLengthChange(minLen)}
         />
@@ -110,9 +123,9 @@ export default function SequenceFilters({
           value={sortBy}
           onChange={(v) => onSortByChange(String(v))}
           options={sortOptions}
-          width={180}
+          fullWidth
           height={"40px"}
-          onClear={() => onSortByChange("")}
+          onClear={() => onSortByChange("support")}
         />
       </div>
 
@@ -134,7 +147,7 @@ export default function SequenceFilters({
           className={classes.sortDirectionButton}
           onClick={() => onSortTypeChange(sortType === "desc" ? "asc" : "desc")}
           title={sortType === "desc" ? "Descending" : "Ascending"}
-          style={{ height: "40px" }}
+          style={{ height: "40px", width: "100%" }}
         >
           {sortType === "desc" ? (
             <>
@@ -146,6 +159,35 @@ export default function SequenceFilters({
             </>
           )}
         </button>
+      </div>
+
+      <div className={classes.fieldGroup}>
+        <label className={classes.fieldLabel} aria-hidden>
+          &nbsp;
+        </label>
+        <StyledButton
+          onClick={onSearchApply}
+          sx={{
+            width: "100%",
+            height: "40px !important",
+            background: theme.colors.button.primary,
+            boxShadow: "none",
+            border: "none",
+            color: "#ffffff",
+            "&:hover": {
+              background: theme.colors.button.primaryHover,
+              boxShadow: "none",
+              transform: "none",
+            },
+            "&:active": {
+              background: theme.colors.button.primaryActive,
+              boxShadow: "none",
+              transform: "none",
+            },
+          }}
+        >
+          Search
+        </StyledButton>
       </div>
     </div>
   );

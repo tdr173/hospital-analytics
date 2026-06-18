@@ -1,29 +1,29 @@
 \section{Results}
 \label{sec:results}
 
-We report results on the Synthea dataset described in Section~\ref{sec:system}. After outlier removal, 21{,}995 of the 22{,}284 patients were used to fit the clustering model, and the outliers were kept as the separate group with label $-1$.
+The performance of the proposed algorithm is demonstrated on the Synthea dataset, presented in Section~\ref{sec:system}. The 21{,}995 out of 22{,}284 patients have been used for clustering, while the outliers were kept as a separate group marked with the $-1$ label.
 
 \subsection{Clustering}
 
-To pick a configuration we ran a large benchmark over many feature subsets and hyperparameters, and we ranked the runs with a combined score that gives the most weight to the Gower silhouette, because it is the metric that fits mixed data best. Table~\ref{tab:clusters} lists the best configuration for each number of clusters.
+In order to find an optimal configuration, we ran a large benchmark of 629 configurations. A configuration is a combination of a feature subset (we tried more than sixty of them), the number of clusters $k$, the scaler, the categorical weight $\gamma$, the random seed and the outlier threshold. We rank the runs with a combined score. Each metric is first min-max normalised across all 629 runs, and the score is then a weighted sum whose weights reflect how much we trust each metric: $0.5$ for the Gower silhouette, $0.3$ for the Calinski-Harabasz index and $0.2$ for the Davies-Bouldin index, the last one inverted because for it a lower value is better. We keep the best clinically meaningful run for each value of $k$ (four, five and six), and around these winners we vary the parameters once more, both the hyperparameters and the feature subset, in order to find the best local configuration. The three metrics have simple meanings. The Gower silhouette measures how well each patient fits its own cluster compared to the nearest other one, on a mixed-data distance and a scale from $-1$ to $1$ where higher is better; it carries the largest weight because it is the measure best suited for our mixed data. The Calinski-Harabasz index (CH) is the ratio of between-cluster to within-cluster spread, where higher is better. The Davies-Bouldin index (DB) is the average overlap between a cluster and its most similar neighbour, where lower is better. We report CH and DB on a mixed two-dimensional (FAMD) embedding, the same space the score uses.
 
-\begin{table}[t]
-\caption{Best clustering configuration per number of clusters. The final pick is $k=4$.}
+\begin{table*}[t]
+\caption{Representative clustering configuration for each number of clusters (the feature set is given by its version id). CH and DB are reported on the mixed FAMD embedding, the space used by the combined score. The best value per metric is in bold; the final pick is $k=4$ (v55).}
 \label{tab:clusters}
 \centering
 \footnotesize
-\begin{tabular}{@{}lccccc@{}}
+\begin{tabular}{@{}l c c l c r c@{}}
 \toprule
-Config & $k$ & $\gamma$ & Silhouette & Gower & DB \\
+Config & $k$ & Gower & Per-cluster Gower & DB & CH & Score \\
 \midrule
-\textbf{Final ($k{=}4$)} & \textbf{4} & auto & 0.132 & \textbf{0.350} & 2.51 \\
-Best $k{=}5$ & 5 & 0.17 & 0.095 & 0.356 & 3.11 \\
-Best $k{=}6$ & 6 & 0.17 & 0.029 & 0.313 & 2.59 \\
+v55 (final) & 4 & \textbf{0.350} & 0.42, 0.20, 0.32, 0.40 & \textbf{0.72} & \textbf{26813} & \textbf{0.82} \\
+v40 & 5 & 0.324 & 0.28, 0.22, 0.31, 0.19, 0.48 & 0.87 & 22547 & 0.74 \\
+v60 & 6 & 0.287 & 0.17, 0.13, 0.47, 0.21, 0.38, 0.27 & 0.95 & 22273 & 0.70 \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
-We selected $k=4$. The five-cluster run has a marginally higher Gower silhouette (0.356 against 0.350), but only one of its clusters clears our stability threshold of about 0.20, while in the four-cluster run all clusters do (the per-cluster values are 0.423, 0.199, 0.320 and 0.396). Since the clusters are later used as the scope for sequence mining, we prefer the smallest $k$ for which every cluster stays cohesive. The most influential features are the number of active conditions and age on the numerical side, and condition burden, gender, diabetes and heart disease on the categorical side.
+We selected $k=4$, with feature configuration v55. Among the clinically meaningful runs it has the best combined score (0.82), and it leads on every individual metric as well: the highest Gower silhouette, the highest Calinski-Harabasz index and the lowest Davies-Bouldin index. We do discard one family of runs that scores even higher on paper. A demographics-only baseline reaches a score of 0.87 by separating patients almost entirely by gender, but such a split carries no clinical value, so we do not consider it. Among the four clusters of the chosen run, three have a per-cluster Gower silhouette above 0.30 and one sits near 0.20, while the five and six-cluster runs leave one and two clusters below 0.20. Since the clusters are later used as the scope for sequence mining, we also prefer the smallest $k$ that keeps every cluster cohesive. The most influential features are the number of active conditions and age on the numerical side, and condition burden, gender, diabetes and heart disease on the categorical side.
 
 Figure~\ref{fig:heatmap} shows the per-cluster means of the numerical features as a heatmap. There is a clear morbidity gradient: cluster~0 holds younger patients with low burden, while the higher-numbered clusters carry more conditions and more treatment. Reading the four clusters together with the categorical panel, they correspond to four recognisable groups: young low-burden patients, women of reproductive age, hypertensive adults with polypharmacy, and a pediatric or acute group.
 
@@ -34,21 +34,48 @@ Figure~\ref{fig:heatmap} shows the per-cluster means of the numerical features a
 \label{fig:heatmap}
 \end{figure}
 
+The categorical features tell the same story from a different angle. Figure~\ref{fig:categorical} shows, for a few categorical features, how each value is distributed across the four clusters. The disease flags, the dominant care plan and the binned vitals separate the clusters cleanly, which confirms that the partition is driven by clinically meaningful differences and not only by the raw counts.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=1\linewidth]{figs/cluster_categorical.png}
+\caption{Per-cluster distribution of selected categorical features ($k=4$). Each bar is one cluster; the segments show the share of each category.}
+\label{fig:categorical}
+\end{figure}
+
 \subsection{Sequence Mining}
 
-The clearest way to show the effect of our pipeline is to compare the first and the last version of the miner on the same data. Table~\ref{tab:ablation} shows the top pattern in each case. When we rank by raw support (version v0), the best ``pattern'' is an administrative loop, and almost the entire top of the list is filled with near-identical dental cleaning steps that around 93\% of patients receive. After we add GML scoring and the diversity filters (version v6), the top of the list becomes a set of short, clinically coherent care paths.
+The clearest way to show the effect of our pipeline is to follow how the mined patterns change across its successive versions on the same data. Table~\ref{tab:ablation} lists two example patterns, each at least four events long, from every version. The first versions (v0 to v2) rank patterns by raw support, so the top of the list is filled with frequent but useless chains, mostly near-identical dental cleaning steps that around 93\% of patients receive. From v3 on we rank by geometric mean lift and add the diversity filters, and the top of the list turns into short, clinically coherent care paths. Version v4 also removes long runs of the same event type, which is why the all-procedure diabetic eye-exam chain from v3 disappears later. By v6, after we drop social-status events and reserve a quota for full-spectrum trajectories, the best patterns mix conditions, care plans, medications and procedures, even though their support is far lower than the dental noise they replaced.
 
 \begin{table}[t]
-\caption{Effect of the ranking. Top pattern when ranking by support (v0) versus by geometric mean lift with diversity filters (v6).}
+\caption{How the mined patterns evolve across miner versions. Two example patterns per version, each at least four events long, with the support of the pattern. Versions v0 to v2 rank by raw support; from v3 on we rank by geometric mean lift and apply the diversity filters.}
 \label{tab:ablation}
 \centering
-\footnotesize
-\begin{tabular}{@{}p{0.10\linewidth}p{0.80\linewidth}@{}}
+\scriptsize
+\begin{tabular}{@{}l p{0.72\linewidth} r@{}}
 \toprule
-Ver. & Top-ranked pattern \\
+Ver. & Example pattern (length $\ge 4$) & Sup. \\
 \midrule
-v0 & Medication review due $\rightarrow$ Medication reconciliation $\rightarrow$ Medication review due \emph{(support 96\%, no clinical value)} \\[2pt]
-v6 & Laceration $\rightarrow$ Wound care $\rightarrow$ Suture open wound \emph{(GML 0.97)} \\
+v0 & dental consultation $\rightarrow$ dental care $\rightarrow$ supragingival scaling $\rightarrow$ subgingival scaling & 93\% \\
+v0 & supragingival scaling $\rightarrow$ subgingival scaling $\rightarrow$ gingivae exam $\rightarrow$ oral health education & 93\% \\
+\addlinespace
+v1 & supragingival scaling $\rightarrow$ subgingival scaling $\rightarrow$ gingivae exam $\rightarrow$ oral health education & 63\% \\
+v1 & dental care $\rightarrow$ supragingival scaling $\rightarrow$ subgingival scaling $\rightarrow$ oral health education & 63\% \\
+\addlinespace
+v2 & dental consultation $\rightarrow$ dental care $\rightarrow$ subgingival scaling $\rightarrow$ gingivae exam $\rightarrow$ oral health education & 62\% \\
+v2 & dental referral $\rightarrow$ dental consultation $\rightarrow$ dental care $\rightarrow$ subgingival scaling $\rightarrow$ oral health education & 57\% \\
+\midrule
+v3 & tropicamide eye drops $\rightarrow$ gonioscopy $\rightarrow$ fundoscopy $\rightarrow$ diabetic eye exam & 3\% \\
+v3 & furosemide $\rightarrow$ oxygen by mask $\rightarrow$ prone position $\rightarrow$ furosemide & 2\% \\
+\addlinespace
+v4 & acute bronchitis $\rightarrow$ respiratory therapy $\rightarrow$ respiratory function test $\rightarrow$ acetaminophen & 3\% \\
+v4 & salmeterol-fluticasone inhaler $\rightarrow$ albuterol $\rightarrow$ spirometry $\rightarrow$ depression screening & 2\% \\
+\addlinespace
+v5 & subgingival scaling $\rightarrow$ gingivae exam $\rightarrow$ sodium fluoride gel $\rightarrow$ fluoride treatment & 35\% \\
+v5 & dental bitewing X-ray $\rightarrow$ gingivae exam $\rightarrow$ sodium fluoride gel $\rightarrow$ fluoride treatment & 19\% \\
+\addlinespace
+v6 & acute bronchitis $\rightarrow$ respiratory therapy $\rightarrow$ respiratory function test $\rightarrow$ acetaminophen & 3\% \\
+v6 & chest X-ray $\rightarrow$ furosemide $\rightarrow$ oxygen by mask $\rightarrow$ prone position $\rightarrow$ furosemide & 1\% \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -74,3 +101,34 @@ Outliers ($-1$) & Chemotherapy + radiation $\rightarrow$ Cisplatin $\rightarrow$
 \end{table}
 
 Taken together, the results show that the four-cluster partition is not only defensible by its metrics but also meaningful in content. Each cluster's top patterns describe a clearly different care population, which is exactly what we need for cluster-scoped analysis in the dashboard.
+
+\subsection{AI Layer}
+
+When the K-Prototypes script finishes, the AI also writes a small card for every cluster on its own. From the precomputed statistics, the model decides the cluster title, a colour that is then used for that cluster everywhere in the platform, a one-line description, a short insight and a recommendation. Figure~\ref{fig:platform_clusters} shows how these cards look in the dashboard. Because the model only describes the precomputed numbers, the cards stay consistent with the heatmap and the prevalence rates: the high-burden cluster is given a high risk level and a cardiology-oriented recommendation, while the young low-burden cluster is presented as healthy with a preventive recommendation.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figs/platform_clusters.png}
+\caption{The clusters as shown in the platform. The title, colour, description, insight and recommendation of each card are produced automatically by the AI when the clustering script runs.}
+\label{fig:platform_clusters}
+\end{figure}
+
+On top of these cards, the platform produces a longer analysis for any cluster or mined pattern. Each analysis is written for two audiences at once: a clinical reading for medical staff and a plain-language summary for a reader without a medical background. This makes the results accessible to everyone, not only to specialists. Figure~\ref{fig:platform_interpretation} shows one such interpretation in the front end. For sequences the model behaves the same way, recovering the clinical story behind a pattern, for example reading the chemotherapy and hospice pathway in the outlier scope as an advanced oncology trajectory.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figs/platform_interpretation.png}
+\caption{An AI interpretation in the front end, written for both a clinician and a reader without medical training.}
+\label{fig:platform_interpretation}
+\end{figure}
+
+Finally, the natural-language-to-SQL agent lets a user ask free questions. We tested it on questions of different difficulty, including non-trivial ones that need several joins. Figure~\ref{fig:agent_example} shows two such conversations in the front end: the first joins several clinical tables, while the second joins the cluster and the sequence-mining tables. The answers are correct almost every time, and the guard layer blocked every attempt to run a non-\texttt{SELECT} statement. When the agent cannot build a valid query or finds no matching data, it says plainly that it could not complete the task instead of inventing an answer. The values the agent returns are deterministic, because they come directly from the SQL result; only their wording varies, since the final answer is phrased by the language model.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\linewidth]{figs/agent_chat.png}
+\caption{Two example conversations with the natural-language-to-SQL agent in the front end. The first question needs several joins across the clinical tables; the second joins the cluster and the sequence-mining tables.}
+\label{fig:agent_example}
+\end{figure}
+
+A full quantitative evaluation of the agent and of the generated summaries is left for future work, as discussed next.

@@ -11,9 +11,10 @@ const ENCOUNTER_CLASS_COLORS = theme.colors.charts.encounterClass;
 
 interface Props {
   data: EncounterClassItem[];
+  title?: string;
 }
 
-export default function LastWeekClassPie({ data }: Props) {
+export default function LastWeekClassPie({ data, title }: Props) {
   const classes = useClasses(LastWeekClassPieStyles, {
     name: "LastWeekClassPie",
   });
@@ -30,9 +31,9 @@ export default function LastWeekClassPie({ data }: Props) {
 
   return (
     <div className={classes.card}>
-      <p className={classes.title}>Last Week – Visits by Type</p>
+      <p className={classes.title}>{title ?? "Visits by Type"}</p>
       {pieData.length === 0 ? (
-        <div className={classes.empty}>No visits recorded in the last week.</div>
+        <div className={classes.empty}>No visits recorded in this period.</div>
       ) : (
         <PieChartComponent data={pieData} title="" colors={colors} />
       )}

@@ -3,7 +3,8 @@ import { Theme } from "@/utils/theme";
 export const ClusterMultiSelectStyles = (theme: Theme) => ({
   select: {
     height: "40px",
-    minWidth: "200px",
+    width: "100%",
+    minWidth: 0,
     backgroundColor: theme.colors.surface.containerLow,
     borderRadius: theme.borderRadius.md,
     fontSize: theme.typography.fontSize.sm,
@@ -20,9 +21,11 @@ export const ClusterMultiSelectStyles = (theme: Theme) => ({
       borderWidth: "1px",
     },
     "& .MuiSelect-select": {
-      padding: "0 12px",
+      padding: "0 32px 0 12px",
       display: "flex",
       alignItems: "center",
+      minWidth: 0,
+      overflow: "hidden",
     },
   },
   placeholder: {
@@ -47,8 +50,9 @@ export const ClusterMultiSelectStyles = (theme: Theme) => ({
     display: "flex",
     alignItems: "center",
     gap: "6px",
-    flexWrap: "wrap" as const,
+    flexWrap: "nowrap" as const,
     overflow: "hidden",
+    minWidth: 0,
   },
   chip: {
     display: "inline-flex",

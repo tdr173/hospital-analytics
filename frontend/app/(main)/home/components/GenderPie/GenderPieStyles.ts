@@ -6,6 +6,9 @@ export const GenderPieStyles = (theme: Theme) => ({
     borderRadius: theme.borderRadius.lg,
     boxShadow: theme.shadows.sm,
     padding: theme.spacing.lg,
+    height: "100%",
+    display: "flex",
+    flexDirection: "column" as const,
   },
   title: {
     fontSize: "0.7rem",

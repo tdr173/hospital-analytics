@@ -26,6 +26,7 @@ interface BarChartComponentProps {
   colors?: string[];
   showLabel?: boolean;
   bottomBorder?: number;
+  fillHeight?: boolean;
 }
 
 function TruncatedTick({
@@ -73,13 +74,18 @@ export default function BarChartComponent({
   colors,
   showLabel = false,
   bottomBorder = 5,
+  fillHeight = false,
 }: BarChartComponentProps) {
   const classes = useClasses(BarChartStyles, { name: "BarChart" });
 
   return (
-    <div className={classes.container}>
-      <h3 className={classes.title}>{title}</h3>
-      <ResponsiveContainer width="100%" height={300}>
+    <div
+      className={
+        fillHeight ? `${classes.container} ${classes.containerFill}` : classes.container
+      }
+    >
+      {title && <h3 className={classes.title}>{title}</h3>}
+      <ResponsiveContainer width="100%" height={fillHeight ? "100%" : 300}>
         <BarChart
           data={data}
           margin={{

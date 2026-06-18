@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import useClasses from "@/utils/useClasses";
 import headerStyles from "./HeaderStyles";
@@ -24,7 +25,17 @@ function capitalize(str: string) {
 export default function Header() {
   const classes = useClasses(headerStyles, { name: "HeaderStyles" });
   const pathname = usePathname();
-  const role = useSelector((s: RootState) => s.auth.user?.role) || "MANAGER";
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // auth hydrates from localStorage (absent during SSR), so the server always
+  // renders the default "MANAGER" tag. Use the real role only after mount to
+  // avoid a hydration mismatch on the user tag.
+  const realRole = useSelector((s: RootState) => s.auth.user?.role) || "MANAGER";
+  const role = mounted ? realRole : "MANAGER";
 
   const matchedKey = Object.keys(ROUTE_TITLES)
     .sort((a, b) => b.length - a.length)

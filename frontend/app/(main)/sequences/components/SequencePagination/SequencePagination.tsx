@@ -36,7 +36,7 @@ export default function SequencePagination({
       <span className={classes.info}>
         {total === 0
           ? "No sequences"
-          : `Showing ${fromItem}–${toItem} of ${total.toLocaleString()} sequences`}
+          : `Showing ${fromItem} - ${toItem} of ${total.toLocaleString()} sequences`}
       </span>
       <div className={classes.controls}>
         <button

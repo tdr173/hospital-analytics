@@ -3,6 +3,7 @@ import { Theme } from "@/utils/theme";
 export const HomeLayoutStyles = (_theme: Theme) => ({
   layoutContainer: {
     width: "100%",
+    height: "100%",
   },
 });
 

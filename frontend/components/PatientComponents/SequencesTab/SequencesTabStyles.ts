@@ -50,56 +50,6 @@ const sequencesTabStyles = (theme: Theme) => ({
     fontStyle: "italic" as const,
     fontSize: theme.typography.fontSize.sm,
   },
-  sectionDivider: {
-    borderTop: `1px solid ${theme.colors.border.light}`,
-    marginTop: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-  },
-  sectionLabel: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.secondary,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.06em",
-    marginBottom: theme.spacing.sm,
-  },
-  continuationCard: {
-    backgroundColor: theme.colors.surface.containerLowest,
-    borderRadius: theme.borderRadius.lg,
-    boxShadow: theme.shadows.md,
-    padding: `${theme.spacing.md} ${theme.spacing.lg}`,
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: theme.spacing.sm,
-  },
-  continuationHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-  },
-  continuationBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "4px",
-    padding: "3px 10px",
-    backgroundColor: "#fff7ed",
-    color: "#c2410c",
-    borderRadius: theme.borderRadius.full,
-    fontSize: "0.65rem",
-    fontWeight: theme.typography.fontWeight.bold,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.06em",
-  },
-  matchBadge: {
-    fontSize: "0.75rem",
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.secondary,
-    fontFamily: theme.typography.fontFamilyHeading,
-  },
-  matchBadgeHighlight: {
-    color: theme.colors.primary.main,
-  },
 });
 
 export default sequencesTabStyles;

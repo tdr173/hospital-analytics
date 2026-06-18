@@ -1,3 +1,5 @@
+export type DashboardRange = "week" | "month" | "year" | "all";
+
 export interface KpiCards {
   totalPatients: number;
   activePatients: number;
@@ -9,7 +11,7 @@ export interface KpiCards {
   totalProcedures: number;
   avgEncountersPerPatient: number;
   activeCareplans: number;
-  newPatientsLast30Days: number;
+  newPatientsInPeriod: number;
   avgPatientAge: number;
 }
 
@@ -57,11 +59,11 @@ export interface RecentEncounterItem {
 
 export interface DashboardData {
   kpis: KpiCards;
-  lastWeekEncounterByClass: EncounterClassItem[];
-  topConditionsLastWeek: TopConditionItem[];
+  encounterByClass: EncounterClassItem[];
+  topConditions: TopConditionItem[];
   clusterDistribution: ClusterDistributionItem[];
   genderDistribution: GenderDistributionItem[];
   ageGroups: AgeGroupItem[];
-  lastMonthEncounters: DailyEncounterItem[];
+  encountersTimeline: DailyEncounterItem[];
   recentEncounters: RecentEncounterItem[];
 }

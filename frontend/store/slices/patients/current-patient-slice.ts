@@ -10,7 +10,7 @@ import {
   CarePlanItem,
   EncounterItem,
 } from "@/models/generic/patients";
-import { SequenceListItem, SequenceContinuationItem } from "@/models/generic/sequences";
+import { SequenceListItem } from "@/models/generic/sequences";
 import {
   fetchPatientDetail,
   fetchPatientSummary,
@@ -22,7 +22,6 @@ import {
   fetchPatientCareplans,
   fetchPatientEncounters,
   fetchPatientSequences,
-  fetchPatientContinuations,
   fetchPatientObservations,
   PatientObservationItem,
 } from "./thunks";
@@ -69,7 +68,6 @@ interface CurrentPatientState {
   careplans: PagedCollectionState<CarePlanItem>;
   encounters: PagedCollectionState<EncounterItem>;
   sequences: PagedCollectionState<SequenceListItem>;
-  continuations: SequenceContinuationItem[];
   observations: PagedCollectionState<PatientObservationItem>;
   loading: boolean;
   error: string | null;
@@ -87,7 +85,6 @@ const initialState: CurrentPatientState = {
   careplans: initPaged(),
   encounters: initPaged(),
   sequences: initPaged(),
-  continuations: [],
   observations: initPaged(),
   loading: false,
   error: null,
@@ -226,10 +223,6 @@ const currentPatientSlice = createSlice({
       .addCase(fetchPatientSequences.rejected, (state) => {
         handlePagedRejected(state.sequences);
         addTab(state, 7);
-      })
-      // Continuations (fetched alongside sequences tab 7)
-      .addCase(fetchPatientContinuations.fulfilled, (state, action) => {
-        state.continuations = action.payload;
       })
       // Observations (tab 8)
       .addCase(fetchPatientObservations.pending, (state, action) => {

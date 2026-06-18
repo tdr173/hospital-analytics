@@ -12,6 +12,14 @@ export function formatDay(iso: string): string {
   return `${String(dayNum).padStart(2, "0")} ${monthLabel}`;
 }
 
+export function formatMonth(iso: string): string {
+  const [year, month] = iso.split("-");
+  const monthIdx = Number(month) - 1;
+  if (Number.isNaN(monthIdx)) return iso;
+  const monthLabel = MONTH_SHORT[monthIdx] ?? "";
+  return `${monthLabel} ${year}`;
+}
+
 export function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }

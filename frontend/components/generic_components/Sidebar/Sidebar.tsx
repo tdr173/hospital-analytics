@@ -103,7 +103,14 @@ export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const dispatch = useAppDispatch();
-  const role = useSelector((s: RootState) => s.auth.user?.role) || "MANAGER";
+  // The store hydrates auth from localStorage, which is absent during SSR.
+  // So the server always renders with the default "MANAGER" role; if we use
+  // the real client-side role on the first render, the menus differ and React
+  // throws a hydration mismatch (which tears down & regenerates this whole
+  // layout subtree). Gate the real role behind `mounted` so the first client
+  // render matches the server, then switch to the real role after mount.
+  const realRole = useSelector((s: RootState) => s.auth.user?.role) || "MANAGER";
+  const role = mounted ? realRole : "MANAGER";
   const visibleElements = sidebarElements.filter((el) => el.allowedRoles.includes(role));
 
   useEffect(() => {

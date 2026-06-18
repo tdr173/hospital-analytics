@@ -1,7 +1,6 @@
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
 
-% ---------- packages ----------
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
@@ -13,7 +12,6 @@
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit,backgrounds}
 \usepackage[hidelinks]{hyperref}
 
-% ---------- tikz styles ----------
 \tikzset{
   box/.style={rectangle, rounded corners=2pt, draw=black!70, fill=blue!6,
     align=center, minimum height=8mm, inner sep=4pt, font=\footnotesize},
@@ -28,23 +26,35 @@
 
 \begin{document}
 
-\title{HospitAI: A Hospital Analytics Platform\\ Combining Patient Clustering, Clinical Sequence Mining\\ and AI-Generated Interpretation}
+\title{HospitAI: A Hospital Analytics Platform Combining Patient Clustering, Clinical Sequence Mining and AI-Generated Interpretation}
 
-\author{\IEEEauthorblockN{Author Name}
-\IEEEauthorblockA{\textit{Faculty of Computer Science} \\
-\textit{University Name}\\
-City, Country \\
-author@email.example}}
+\author{\IEEEauthorblockN{Ioan-Iulian Todor}
+\IEEEauthorblockA{\textit{Faculty of Automation and Computer Science} \\
+\textit{Technical University of Cluj-Napoca}\\
+Cluj-Napoca, Romania \\
+todor.io.ioan@student.utcluj.ro}
+\and
+\IEEEauthorblockN{prof. dr. conf. Cristina Bianca Pop}
+\IEEEauthorblockA{\textit{Faculty of Automation and Computer Science} \\
+\textit{Technical University of Cluj-Napoca}\\
+Cluj-Napoca, Romania \\
+Cristina.Pop@campus.utcluj.ro}}
 
 \maketitle
+\thispagestyle{plain}
+\pagestyle{plain}
 
-\begin{abstract}
-Hospitals collect a lot of electronic health record (EHR) data, but most of it stays unused for understanding patient groups and their care over time. We present HospitAI, a web platform that brings together three analytics steps in one place. First, it groups patients with K-Prototypes, a clustering method that works with mixed numerical and categorical data. Second, it mines frequent clinical sequences with a pipeline built around PrefixSpan, adapted to the medical domain. Third, it uses a large language model (LLM) to turn the numerical output into short descriptions that both doctors and patients can read. Our main technical contribution is the sequence-mining pipeline. Instead of ranking patterns only by how often they appear, we score them with a geometric mean lift measure and apply several diversity filters, so the results favour clinically meaningful care paths over frequent but trivial ones. We also mine each patient cluster on its own, and we treat statistical outliers as a separate group, which lets rare but important pathways such as oncology, dialysis and heart failure become visible. On a synthetic dataset of about 22{,}000 patients we obtain four stable clusters and per-cluster pattern sets that match recognisable care populations.
-\end{abstract}
+{\centering\normalsize A\,B\,S\,T\,R\,A\,C\,T\par}
+\vspace{4pt}
 
-\begin{IEEEkeywords}
-hospital analytics, patient clustering, K-Prototypes, sequential pattern mining, PrefixSpan, large language models, electronic health records
-\end{IEEEkeywords}
+{\small\noindent Many electronic health records (EHR) are generated in the healthcare environment. Unfortunately, a vast majority of this data remains underutilized, as clustering patient data to analyze longitudinal care histories is highly complex.
+
+In this paper, we present HospitAI, a platform structured around a three-stage pipeline: ETL for data ingestion, the K-Prototypes algorithm for mixed-type patient clustering, and a PrefixSpan sequence-mining framework tailored for the medical context. Additionally, an AI agent allows users to query the database using natural language, without requiring any technical knowledge. The AI is also used for interpreting our results (clusters and sequences), making them easily understandable for both medical professionals and patients.
+
+Analyzing each patient cluster separately and identifying anomalies allows for the detection of unique care pathways, such as oncology, dialysis, and heart failure treatments. Testing the system on a synthetic dataset of 22,000 patients yielded four stable clusters with distinct sequence patterns, successfully representing actual patient categories.
+
+Consequently, HospitAI converts complex numerical data into accessible textual information, using LLMs to provide actionable, easily interpretable insights into patient categories and care patterns.\par}
+\vspace{6pt}
 
 \input{01_introduction}
 \input{02_related_work}

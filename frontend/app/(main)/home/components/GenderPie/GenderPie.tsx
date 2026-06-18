@@ -36,7 +36,7 @@ export default function GenderPie({ data }: Props) {
       {barData.length === 0 ? (
         <div className={classes.empty}>No patient data available.</div>
       ) : (
-        <BarChartComponent data={barData} title="" colors={colors} />
+        <BarChartComponent data={barData} title="" colors={colors} fillHeight />
       )}
     </div>
   );

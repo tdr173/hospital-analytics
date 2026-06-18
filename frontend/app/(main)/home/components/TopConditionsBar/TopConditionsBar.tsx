@@ -17,9 +17,10 @@ import { truncate } from "../../utils/formatters";
 
 interface Props {
   data: TopConditionItem[];
+  title?: string;
 }
 
-export default function TopConditionsBar({ data }: Props) {
+export default function TopConditionsBar({ data, title }: Props) {
   const classes = useClasses(TopConditionsBarStyles, {
     name: "TopConditionsBar",
   });
@@ -32,16 +33,19 @@ export default function TopConditionsBar({ data }: Props) {
     pct: total > 0 ? (d.count / total) * 100 : 0,
   }));
 
+  // Explicit height so the chart renders regardless of the parent's height.
+  const chartHeight = Math.max(240, chartData.length * 34);
+
   return (
     <div className={classes.card}>
-      <p className={classes.title}>Top 5 Conditions – Last Week</p>
+      <p className={classes.title}>{title ?? "Top 10 Conditions"}</p>
       {chartData.length === 0 ? (
         <div className={classes.empty}>
-          No conditions recorded in the last week.
+          No conditions recorded in this period.
         </div>
       ) : (
         <div className={classes.chartWrapper}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={chartHeight}>
             <BarChart
               data={chartData}
               layout="vertical"

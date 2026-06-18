@@ -6,6 +6,9 @@ export const TopConditionsBarStyles = (theme: Theme) => ({
     borderRadius: theme.borderRadius.lg,
     boxShadow: theme.shadows.sm,
     padding: theme.spacing.lg,
+    height: "100%",
+    display: "flex",
+    flexDirection: "column" as const,
   },
   title: {
     fontSize: "0.7rem",
@@ -17,7 +20,6 @@ export const TopConditionsBarStyles = (theme: Theme) => ({
   },
   chartWrapper: {
     width: "100%",
-    height: 260,
   },
   empty: {
     display: "flex",

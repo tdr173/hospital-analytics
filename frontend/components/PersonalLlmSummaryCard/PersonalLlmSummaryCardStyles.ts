@@ -18,9 +18,11 @@ export const PersonalLlmSummaryCardStyles = {
     lineHeight: 1.55,
   },
   markdown: {
-    whiteSpace: "pre-wrap" as const,
     fontFamily: "inherit",
     margin: 0,
+  },
+  line: {
+    margin: "0 0 8px 0",
   },
   error: {
     color: "#B91C1C",

@@ -48,8 +48,7 @@ export default function StackedBarChartComponent({
 
   return (
     <div className={classes.card}>
-      <p className={classes.title}>{toTitleCase(feature)}</p>
-      <ResponsiveContainer width="100%" height={"95%"}>
+      <ResponsiveContainer width="100%" height={"100%"}>
         <BarChart
           data={chartData}
           margin={{ top: 8, right: 16, left: 0, bottom: 4 }}

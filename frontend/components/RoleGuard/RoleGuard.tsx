@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "@/store";
@@ -20,6 +20,22 @@ export default function RoleGuard({
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const user = useSelector((s: RootState) => s.auth.user);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const roleSearchParam = searchParams.get("role");
+
+  // Once mounted, an absent user means the session ended (e.g. logout).
+  // Redirect immediately so the layout never re-renders with the default
+  // MANAGER role, which caused a brief flash to the manager view on logout.
+  useEffect(() => {
+    if (mounted && !user && !roleSearchParam) {
+      router.replace("/login");
+    }
+  }, [mounted, user, roleSearchParam, router]);
 
   useEffect(() => {
     const roleParam = searchParams.get("role") as UserRole | null;
@@ -65,6 +81,8 @@ export default function RoleGuard({
       // Backend ownership check handles the data, UI just shows empty if denied.
     }
   }, [pathname, user, router]);
+
+  if (mounted && !user && !roleSearchParam) return null;
 
   return <>{children}</>;
 }

@@ -1,23 +1,32 @@
-import { createSlice } from "@reduxjs/toolkit";
-import { DashboardData } from "@/models/generic/dashboard";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { DashboardData, DashboardRange } from "@/models/generic/dashboard";
 import { fetchDashboard } from "./thunks";
 
 interface DashboardState {
   data: DashboardData | null;
   loading: boolean;
   error: string | null;
+  selectedRange: DashboardRange;
 }
 
 const initialState: DashboardState = {
   data: null,
   loading: false,
   error: null,
+  selectedRange: "month",
 };
 
 const dashboardSlice = createSlice({
   name: "dashboard",
   initialState,
-  reducers: {},
+  reducers: {
+    setDashboardRange(state, action: PayloadAction<DashboardRange>) {
+      if (state.selectedRange !== action.payload) {
+        state.selectedRange = action.payload;
+        state.data = null; // triggers re-fetch in page useEffect
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchDashboard.pending, (state) => {
@@ -35,4 +44,5 @@ const dashboardSlice = createSlice({
   },
 });
 
+export const { setDashboardRange } = dashboardSlice.actions;
 export default dashboardSlice.reducer;

@@ -10,6 +10,14 @@ export const SequenceFiltersStyles = (theme: Theme) => ({
     gridTemplateColumns: "1fr auto auto auto",
     gap: theme.spacing.md,
     alignItems: "end",
+    // as a flex item of the scroll container, min-width:auto would let the bar
+    // grow to its content's min size (so the fields widen when a clear icon
+    // appears). Pinning it to 0 keeps the bar at container width and forces the
+    // minmax(0, …fr) tracks to absorb the change instead.
+    width: "100%",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box" as const,
     "@media (max-width: 900px)": {
       gridTemplateColumns: "1fr",
     },
@@ -18,7 +26,9 @@ export const SequenceFiltersStyles = (theme: Theme) => ({
     display: "flex",
     flexDirection: "column" as const,
     gap: "4px",
-    minWidth: "150px",
+    // allow grid columns to shrink so fields fill (and never exceed) their
+    // share of the bar instead of growing to their content width
+    minWidth: 0,
   },
   fieldLabel: {
     fontSize: "0.65rem",

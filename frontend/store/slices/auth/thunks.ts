@@ -29,34 +29,13 @@ export async function registerUser(_payload: RegisterUserPayload): Promise<void>
   void API_BASE;
 }
 
-const defaultHeaders: Record<string, string> = {
-  "ngrok-skip-browser-warning": "true",
-};
+export const DEMO_PATIENT_ID = "8ceaad7c-9545-e79c-17b2-47c7d3c17b87";
+export const DEMO_PROVIDER_ID = "1dc97cc3-c9d9-341b-9b32-a34b4c4b79ff";
 
 export async function fetchDemoPatientId(): Promise<string | undefined> {
-  try {
-    const res = await fetch(`${API_BASE}/patients?rows=1&page=1`, {
-      headers: defaultHeaders,
-    });
-    if (!res.ok) return undefined;
-    const data = await res.json();
-    const first = data?.items?.[0] ?? data?.[0];
-    return first?.patient_id ?? first?.patientId;
-  } catch {
-    return undefined;
-  }
+  return DEMO_PATIENT_ID;
 }
 
 export async function fetchDemoProviderId(): Promise<string | undefined> {
-  try {
-    const res = await fetch(`${API_BASE}/providers?rows=1&page=1`, {
-      headers: defaultHeaders,
-    });
-    if (!res.ok) return undefined;
-    const data = await res.json();
-    const first = data?.items?.[0] ?? data?.[0];
-    return first?.provider_id ?? first?.providerId;
-  } catch {
-    return undefined;
-  }
+  return DEMO_PROVIDER_ID;
 }

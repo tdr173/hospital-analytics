@@ -9,6 +9,7 @@ export const SequenceCardStyles = (theme: Theme) => ({
     display: "flex",
     flexDirection: "column" as const,
     gap: theme.spacing.md,
+    minWidth: 0,
   },
   header: {
     display: "flex",

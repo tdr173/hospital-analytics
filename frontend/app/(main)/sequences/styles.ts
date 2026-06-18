@@ -10,19 +10,28 @@ export const SequencesPageStyles = (theme: Theme) => ({
   },
   content: {
     flex: 1,
-    overflow: "auto",
+    minHeight: 0,
+    overflow: "hidden",
     padding: theme.spacing.lg,
     paddingBottom: "0px",
     display: "flex",
     flexDirection: "column" as const,
     gap: theme.spacing.md,
   },
+  scrollArea: {
+    flex: 1,
+    minHeight: 0,
+    overflowY: "auto" as const,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: theme.spacing.md,
+  },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: theme.spacing.lg,
     "@media (max-width: 900px)": {
-      gridTemplateColumns: "1fr",
+      gridTemplateColumns: "minmax(0, 1fr)",
     },
   },
   status: {

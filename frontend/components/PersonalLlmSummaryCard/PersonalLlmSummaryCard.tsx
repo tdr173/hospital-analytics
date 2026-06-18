@@ -39,7 +39,16 @@ export default function PersonalLlmSummaryCard() {
         {loading && "Preparing your summary..."}
         {err && <span className={classes.error}>{err}</span>}
         {!loading && !err && text && (
-          <pre className={classes.markdown}>{text}</pre>
+          <div className={classes.markdown}>
+            {text.split("\n").map((line, i) => {
+              const parts = line.split(/(\*\*[^*]+\*\*)/g).map((seg, j) =>
+                seg.startsWith("**") && seg.endsWith("**")
+                  ? <strong key={j}>{seg.slice(2, -2)}</strong>
+                  : seg
+              );
+              return <p key={i} className={classes.line}>{parts}</p>;
+            })}
+          </div>
         )}
       </div>
     </div>

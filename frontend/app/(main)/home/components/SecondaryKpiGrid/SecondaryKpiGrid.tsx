@@ -15,9 +15,10 @@ import { SecondaryKpiGridStyles } from "./SecondaryKpiGridStyles";
 
 interface Props {
   kpis: KpiCards;
+  periodLabel?: string;
 }
 
-export default function SecondaryKpiGrid({ kpis }: Props) {
+export default function SecondaryKpiGrid({ kpis, periodLabel }: Props) {
   const classes = useClasses(SecondaryKpiGridStyles, { name: "SecondaryKpiGrid" });
 
   const items = [
@@ -27,7 +28,7 @@ export default function SecondaryKpiGrid({ kpis }: Props) {
     { key: "totalOrganizations", label: "Total Facilities", value: kpis.totalOrganizations.toLocaleString(), Icon: AccountBalanceOutlinedIcon },
     { key: "avgEncountersPerPatient", label: "Avg Visits / Patient", value: kpis.avgEncountersPerPatient.toFixed(2), Icon: TrendingUpOutlinedIcon },
     { key: "activeCareplans", label: "Active Care Plans", value: kpis.activeCareplans.toLocaleString(), Icon: AssignmentTurnedInOutlinedIcon },
-    { key: "newPatientsLast30Days", label: "New Patients (Last 30 Days)", value: kpis.newPatientsLast30Days.toLocaleString(), Icon: PersonAddAlt1OutlinedIcon },
+    { key: "newPatientsInPeriod", label: `New Patients (${periodLabel ?? "Period"})`, value: kpis.newPatientsInPeriod.toLocaleString(), Icon: PersonAddAlt1OutlinedIcon },
     { key: "avgPatientAge", label: "Avg Patient Age", value: `${kpis.avgPatientAge.toFixed(1)} yrs`, Icon: CakeOutlinedIcon },
   ];
 

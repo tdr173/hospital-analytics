@@ -18,9 +18,17 @@ export interface SequenceSortOption {
   label: string;
 }
 
-export interface SequenceResourcesResponse {
+export interface SequenceLengthRange {
   minLength: number;
   maxLength: number;
+}
+
+export interface SequenceResourcesResponse {
+  // Global scope length interval.
+  minLength: number;
+  maxLength: number;
+  // Per-cluster length intervals, keyed by cluster_label (string in JSON).
+  clusterRanges: Record<string, SequenceLengthRange>;
   colors: Record<string, string>;
   sortOptions: SequenceSortOption[];
 }
@@ -30,11 +38,6 @@ export interface SequenceAiAnalysisResponse {
   laypersonSummary: string;
   riskSignals: string[];
   recommendations: string[];
-}
-
-export interface SequenceContinuationItem extends SequenceListItem {
-  matchedSteps: number;
-  matchedPatternStr: string;
 }
 
 export interface FetchSequencesArgs {

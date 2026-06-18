@@ -8,6 +8,12 @@ export const BarChartStyles = (theme: Theme) => ({
     boxShadow: theme.shadows.sm,
     padding: theme.spacing.md,
   },
+  containerFill: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column" as const,
+    minHeight: 260,
+  },
   title: {
     fontFamily: theme.typography.fontFamily,
     fontSize: theme.typography.fontSize.md,

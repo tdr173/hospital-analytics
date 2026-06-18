@@ -13,26 +13,34 @@ import useClasses from "@/utils/useClasses";
 import theme from "@/utils/theme";
 import { DailyEncounterItem } from "@/models/generic/dashboard";
 import { DailyEncounterChartStyles } from "./DailyEncounterChartStyles";
-import { formatDay } from "../../utils/formatters";
+import { formatDay, formatMonth } from "../../utils/formatters";
 
 interface Props {
   data: DailyEncounterItem[];
+  title?: string;
+  monthly?: boolean;
+  hideXLabels?: boolean;
 }
 
-export default function DailyEncounterChart({ data }: Props) {
+export default function DailyEncounterChart({
+  data,
+  title,
+  monthly,
+  hideXLabels,
+}: Props) {
   const classes = useClasses(DailyEncounterChartStyles, {
     name: "DailyEncounterChart",
   });
   const chartData = data.map((d) => ({
-    name: formatDay(d.day),
+    name: monthly ? formatMonth(d.day) : formatDay(d.day),
     value: d.count,
   }));
 
   return (
     <div className={classes.card}>
-      <p className={classes.title}>Visit Volume – Last 30 Days</p>
+      <p className={classes.title}>{title ?? "Visit Volume"}</p>
       {chartData.length === 0 ? (
-        <div className={classes.empty}>No visits recorded in the last 30 days.</div>
+        <div className={classes.empty}>No visits recorded in this period.</div>
       ) : (
         <ResponsiveContainer width="100%" height={240}>
           <LineChart
@@ -42,11 +50,15 @@ export default function DailyEncounterChart({ data }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
             <XAxis
               dataKey="name"
-              tick={{
-                fontSize: 11,
-                fontFamily: theme.typography.fontFamily,
-                fill: "#6B7280",
-              }}
+              tick={
+                hideXLabels
+                  ? false
+                  : {
+                      fontSize: 11,
+                      fontFamily: theme.typography.fontFamily,
+                      fill: "#6B7280",
+                    }
+              }
               stroke="#E5E7EB"
               interval="preserveStartEnd"
             />

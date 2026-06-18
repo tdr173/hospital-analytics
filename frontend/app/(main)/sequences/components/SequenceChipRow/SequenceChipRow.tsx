@@ -46,7 +46,7 @@ export default function SequenceChipRow({ patternStr, colors, dimAfter }: Props)
               })}
             </span>
             {stepIdx < steps.length - 1 && (
-              <span className={classes.arrow}>→</span>
+              <span className={classes.arrow}>-</span>
             )}
           </React.Fragment>
         );

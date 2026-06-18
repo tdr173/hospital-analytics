@@ -62,7 +62,11 @@ const TAB_LABELS = [
   "Care Plans",
   "Visits",
   "Care Sequences",
+  "Health Summary",
 ];
+
+// PersonalLlmSummaryCard self-fetches, so its tab bypasses the loadedTabs gate.
+const SUMMARY_TAB = TAB_LABELS.length - 1;
 
 export default function PatientSelfView() {
   const dispatch = useAppDispatch();
@@ -133,7 +137,6 @@ export default function PatientSelfView() {
     <div className={classes.pageContainer}>
       <IdentityCard patient={patient} classes={classes} />
       {summary && <MetricsRow s={summary} classes={classes} />}
-      <PersonalLlmSummaryCard />
       <div className={classes.tabsPanel}>
         <Tabs
           value={tab}
@@ -165,7 +168,9 @@ export default function PatientSelfView() {
           ))}
         </Tabs>
         <div className={classes.tabContentPadding}>
-          {!loadedTabs.includes(tab) ? (
+          {tab === SUMMARY_TAB ? (
+            <PersonalLlmSummaryCard />
+          ) : !loadedTabs.includes(tab) ? (
             <div className={classes.tabLoading}>Loading...</div>
           ) : (
             tabContent[tab]
