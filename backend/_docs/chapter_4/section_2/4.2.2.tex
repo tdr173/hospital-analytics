@@ -1,0 +1,24 @@
+\subsection{Functional and Non-Functional Requirements}
+\begin{itemize}
+    \item \textbf{Authentication and User Account Management}. Email and password based secure authentication, one time ten minute link for resetting password and user role management with three roles namely: Manager, Doctor and Patient. Any user role account can be created by a manager, but the doctor can create patient accounts only.
+    \item \textbf{User Role based Access Control}. User role based access control is rigorously followed in all the pages of the user interface and API endpoints. Only Patients can view their records, Doctors can manage clinical records while Managers can do administration and read operations.
+    \item \textbf{Management of Patients}. Doctors conduct CRUD operations on patients' information, filtered listing, and detailed history including encounters, conditions, medications, etc., while Managers get read-only access on similar views. Observations are encounter-specific.
+    \item \textbf{Management of Providers}. Managers conduct CRUD operations on clinicians' information and view their encounters.
+    \item \textbf{Management of Clinical Encounters.} Doctors manage clinical encounters and the sub-records associated with them (observations, conditions, medications, procedures, immunizations, care plans, and allergies).
+    \item \textbf{Self-Service Patient View.} Patients view their own clinical records in a read-only manner.
+    \item \textbf{Statistics Visualization Dashboard.} Graphical representations of all major clinical dimensions (patients, encounters, conditions, medications, observations, procedures, allergies, immunizations, care plans, and providers), accessible only to Managers.
+    \item \textbf{Cluster Exploration Panel.} Displays the outputs of the K-Prototypes clustering technique, including prototypes, distributions, heatmaps, PCA scatterplot, and AI-generated descriptions of the clusters.
+    \item \textbf{Sequential Pattern Mining Exploration.} A panel that visualizes the closed sequential patterns discovered through PrefixSpan, sorted by support, with AI-generated explanations.
+    \item \textbf{Querying through Natural Language.} Managers and Doctors may pose queries in natural language that will be converted into a read-only SQL query for the system to answer.
+\end{itemize}
+
+\subsubsection*{Non-functional requirements}
+\begin{itemize}
+    \item \textbf{Performance.} Long collections are paginated, cluster feature generation is cached to minimize cost, and dashboard aggregates are served with sub-second latency.
+    \item \textbf{Security \& Confidentiality.} Clinical information is provided through JWT-authenticated, TLS-encrypted channels. Role-based access control policies are enforced using FastAPI endpoint dependencies. For Doctors, scope to their own provider identity is additionally applied on the query endpoint.
+    \item \textbf{Usability.} The server-side data aggregation method is employed to minimize user interaction, while validation messages are displayed inline. Computationally heavy algorithms such as clustering and sequential pattern mining are computed in advance offline to prevent user interface slowdowns.
+    \item \textbf{Safety \& Reliability.} Every SQL query generated is validated at the deterministic Abstract Syntax Tree level before execution. In case of validation failure, a bounded retry of up to three attempts is made. Persistent failures are communicated to the user without ever attempting to write to the database.
+    \item \textbf{Scalability.} Decoupled \emph{auth}, \emph{clinical-core}, and \emph{analytics} services exchanging information via REST API and message queue have to handle up to $10^{4}$ longitudinal patient records and dozens of concurrent sessions without any drop in performance.
+    \item \textbf{Maintainability.} The back-end has rigid layers of architecture (api $\rightarrow$ service $\rightarrow$ repository $\rightarrow$ domain), while the front-end has styling alongside components; both methods limit the impact of any change and allow for easy alterations in the future.
+    \item \textbf{Portability.} The solution can be run without modifying the source code on any host that has Docker installed (Linux, macOS, Windows).
+\end{itemize}

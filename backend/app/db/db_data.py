@@ -149,7 +149,7 @@ TABLE: prefix_span_pattern
   - length (int) - Number of events in the sequence.
   - support_count (int) - How many distinct patients contain this pattern.
   - support_pct (float) - support_count / total patients, as a percentage.
-  - ai_analysis (JSONB, nullable) - Cached AI-generated interpretation (not useful for SQL queries).
+  - ai_analysis (JSONB, nullable) - Cached AI-generated interpretation (not related_work for SQL queries).
 
 TABLE: prefix_span_patient_pattern
   PURPOSE: Junction table - which patients contain which mined sequence.
@@ -170,9 +170,9 @@ TABLE: cluster_meta
   - categorical_features (JSONB) - List of categorical feature names used (e.g. ["gender", "has_diabetes"]).
   - params (JSONB) - Algorithm parameters: scaler, gamma, init method, random_state, outlier_threshold.
   - metrics (JSONB) - Quality scores: silhouette, gower_silhouette, calinski_harabasz, davies_bouldin.
-  - heatmap (bytes, nullable) - PNG image of cluster heatmap (binary, not useful for SQL queries).
-  - pca_image (bytes, nullable) - PNG image of PCA/FAMD scatter plot (binary, not useful for SQL queries).
-  - ai_analysis (JSONB, nullable) - Cached AI-generated population analysis (not useful for SQL queries).
+  - heatmap (bytes, nullable) - PNG image of cluster heatmap (binary, not related_work for SQL queries).
+  - pca_image (bytes, nullable) - PNG image of PCA/FAMD scatter plot (binary, not related_work for SQL queries).
+  - ai_analysis (JSONB, nullable) - Cached AI-generated population analysis (not related_work for SQL queries).
 
 TABLE: cluster
   PURPOSE: One row per cluster. Stores the AI-generated summary for each patient group.

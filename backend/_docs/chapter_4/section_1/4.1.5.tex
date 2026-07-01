@@ -1,0 +1,84 @@
+\subsection{Sequential Pattern Mining and PrefixSpan}
+
+Static clustering divides patients into groups that have similar clinical characteristics. However, static clustering reflects only a point in time. It captures who a patient was, but it fails to capture how the patient got there. The sequence of events needs to be captured to uncover the time order and discover clinical processes that happen often within each subgroup. According to Huang et al.\cite{huang2014}, the discovery of clinical processes is done using sequential pattern mining.
+
+\subsubsection*{Sequence Model and Support}
+
+A patient's history is modelled as an ordered sequence of clinical events. Each event carries a type prefix (\texttt{C}: condition, \texttt{M}: medication, \texttt{P}: procedure, \texttt{CP}: care plan) and a description:
+
+\begin{equation}
+    S = \langle e_1,\, e_2,\, \ldots,\, e_n \rangle, \qquad t_1 \leq t_2 \leq \cdots \leq t_n
+    \label{eq:sequence}
+\end{equation}
+
+Events that take place on the same calendar day are linearized in a deterministic chronological way; therefore, the mining process is applied to simple sequences of singletons. For a sequence $\alpha = \langle a_1, \ldots, a_r \rangle$, the definition $\alpha \sqsubseteq S$ implies the existence of indices $i_1 < i_2 < \cdots < i_r$ such that $a_j = e_{i_j}$. Gaps are allowed between matched events, reflecting the fact that clinical encounters are interspersed by other activity.
+
+For a sequence database $\mathbb{S} = \{S_1, \ldots, S_N\}$ and support threshold $\sigma$, the support of a pattern $\alpha$ corresponds to the number of sequences that include it,
+
+\begin{equation}
+    \mathrm{sup}(\alpha) = \bigl|\{\, S_i \in \mathbb{S} \mid \alpha \sqsubseteq S_i \,\}\bigr|,
+    \label{eq:support}
+\end{equation}
+
+and $\alpha$ is called \emph{frequent} whenever $\mathrm{sup}(\alpha) \geq \sigma \times N$. All the frequent patterns are collected in the set $\mathcal{F}_\sigma$. Support is said to be \emph{anti-monotonic}, since
+
+\begin{equation}
+    \mathrm{sup}(\beta) \leq \mathrm{sup}(\alpha),
+    \label{eq:antimonotone}
+\end{equation}
+
+for $\alpha \sqsubseteq \beta$. Anti-monotonicity is what ensures the pruning of the search space and constitutes the basis of every efficient mining approach.
+
+\subsubsection*{PrefixSpan: Prefix-Projected Pattern Growth}
+\label{ch:prefix_span_theory}
+
+Generate and test based early methods such as GSP (Generalized Sequential Pattern) grow candidate sequences level-wise and check them against the entire dataset. In the case of an electronic medical records dataset with hundreds of unique event codes, this method would prove impossible due to exponential increase in candidate space and the need for repeated scanning of the database at each level.
+
+The PrefixSpan algorithm \cite{pei2001} does not generate candidates but instead extends them progressively and prunes its search space by considering only those suffixes that can follow a certain prefix in a \emph{projected database}. For any prefix $\alpha$,
+
+\begin{equation}
+    \mathbb{S}|_\alpha = \bigl\{\, S' \mid \exists\, S \in \mathbb{S}: \alpha \sqsubseteq S \text{ and } S' \text{ is the suffix of } S \text{ after the first occurrence of } \alpha \,\bigr\}.
+    \label{eq:projection}
+\end{equation}
+
+Mining begins with the empty prefix, mines all frequent length-1 items, performs projection, and recurses. Since the size of $\mathbb{S}|_\alpha$ is non-increasing as $\alpha$ is extended, less effort will be required on each recursion call as the pattern lengths increase. The correctness of the prefix decomposition ensures that the algorithm exhaustively generates $\mathcal{F}_\sigma$, without any repetitions or missing items.
+
+\subsubsection*{Closed Patterns}
+
+A detailed enumeration of all the patterns in $\mathcal{F}_\sigma$ would certainly not be an effective strategy as by virtue of the characteristic of anti-monotonicity, all the subsequences of a frequent pattern have to be frequent, which means that from one single trajectory of length $L$, we get $2^L-1$ other patterns in $\mathcal{F}_\sigma$. The theoretical approach in solving this problem is by reporting only those patterns that are \emph{closed}. A pattern $\alpha$ in $\mathcal{F}_\sigma$ is called closed if there does not exist:
+
+\begin{equation}
+    \exists\, \beta \sqsupset \alpha \;\text{ such that }\; \mathrm{sup}(\beta) = \mathrm{sup}(\alpha).
+    \label{eq:closed}
+\end{equation}
+
+The set $\mathcal{C}_\sigma \subseteq \mathcal{F}_\sigma$ containing the closed patterns can be called a \emph{lossless compression} of $\mathcal{F}_\sigma$, because for each $\alpha \in \mathcal{F}_\sigma$ there exists a $\beta \in \mathcal{C}_\sigma$ satisfying $\alpha \sqsubseteq \beta$ and $\mathrm{sup}(\alpha) = \mathrm{sup}(\beta)$, meaning that no data is lost in the process. In terms of healthcare, a closed pattern represents the most detailed shared trajectory for a patient group.
+
+\subsubsection*{Statistical Re-ranking by Geometric Mean Lift}
+
+Closure strips redundancy from structure, but not the semantics. The most supportive patterns consist of combinations of items that are individually common; hence support highlights uninteresting item interactions. In order to identify patterns based on their characterizing nature, closed patterns are rescored in relation to independence. All-confidence of a pattern $\alpha$ involving distinct items $\{v_1, \ldots, v_m\}$ \cite{omiecinski2003} is defined as
+
+\begin{equation}
+    \mathrm{allconf}(\alpha) = \frac{\mathrm{sup}(\alpha)}{\max_{i}\, \mathrm{sup}(\langle v_i \rangle)},
+    \label{eq:allconf}
+\end{equation}
+
+and, like support, it is downward closed. A similar statistic, proposed in this paper\cite{omiecinski2003} as a custom refinement, is geometric-mean lift
+
+\begin{equation}
+    \mathrm{gml}(\alpha) = \frac{\mathrm{sup}(\alpha)/N}{\bigl(\prod_{i=1}^{m} \mathrm{sup}(\langle v_i \rangle)/N\bigr)^{1/m}},
+    \label{eq:gml}
+\end{equation}
+
+which computes the deviation of a pattern frequency from a geometric mean of its items' marginal frequencies. It is numerically robust even for long patterns and measures the extent to which a pattern deviates from the null model of independent occurrence of its items. A diversity-weighted score for each pattern $\alpha$ is calculated by weighting $\mathrm{gml}(\alpha)$ by the weight $\omega_\alpha^{\mathrm{td}}$, which is monotonically increasing with respect to the type diversity of $\alpha$. Formally, if $T(\alpha)$ denotes the set of distinct clinical event types (e.g., \texttt{C}, \texttt{M}, \texttt{P}, \texttt{CP}) present in the pattern, and $T_{\max} = 4$ is the total number of possible types, this weight is defined as $\omega_\alpha^{\mathrm{td}} = |T(\alpha)| / T_{\max}$.
+
+\subsubsection*{Diversity Constrained Selection}
+
+Even when statistically re-ranked, such patterns are susceptible to near-duplicates where only one item differs or the exact same clinical events appear in a different order. To make sure that our result set ($\mathcal{R}$) remains diverse, we use a greedy approach that relies on Jaccard similarity applied to the unordered item sets, filtering out structural permutations. The Jaccard similarity of patterns $\alpha$ and $\beta$, with item sets $A$ and $B$ respectively, is defined as:
+
+\begin{equation}
+    J(\alpha, \beta) = \frac{|A \cap B|}{|A \cup B|}.
+    \label{eq:jaccard}
+\end{equation}
+
+Candidates are sorted in a descending order according to their geometric-mean lift values. In order to qualify for inclusion into $\mathcal{R}$, a pattern $\alpha$ must have lower similarity than a given diversity threshold with all patterns $\beta$ already accepted to the result set ($J(\alpha, \beta) < \tau$). Geometrically, patterns whose similarity to an accepted sequence exceeds the threshold will be removed from the list.

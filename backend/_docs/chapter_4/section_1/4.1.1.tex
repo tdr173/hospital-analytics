@@ -1,0 +1,27 @@
+\subsection{From Medical Records to Meaningful Insights}
+
+To keep up with the evolution of digitalization, in the last 15-20 years more and more hospitals have opted for digital solutions when it comes to storing data and patient history. Thus, the classic paper records and files have been replaced with a new system (EHR - Electronic Health Records), which allows the digital storage of patient history. Because this data can be accessed much more easily than the classic ones, the analyses and reports made on patients or groups of patients have become easier to do. As shown in the review by Shen et al. \cite{shen2025}, the processing of this digital data can lead to valuable observations and analyses. In this way, common patterns can be discovered, treatments that have worked on other similar patients can be reapplied or the same recommendations can be applied to people in the same group. Therefore, the potential of this data is huge.
+
+Electronic Health Records possess immense analytical value in the medical field, but the processing of this data is not always as simple as it seems at first glance. Patients may differ mathematically in small attributes, which can add noise to analyses and reports. Or simply medical data is private, under GDPR protection, and therefore difficult to use for academic research.
+
+\subsubsection*{The First Barrier: Data Protection and Synthetic Data Accuracy}
+
+The first major barrier encountered in the clinical analysis process is data protection, for data security reasons. Real EHR data contains sensitive information, such as patient names, dates of birth, or medical history. Due to GDPR restrictions, these are not accessible to the general public, requiring specific institutional approvals. Even if real data is obtained, sensitive fields must be anonymized due to the same GDPR rules.
+
+The solution to this problem consists in utilizing artificially generated data. As a result, we will be able to check our algorithms, which will be used in academic research, without infringing privacy rights. For this purpose, we will take a dataset created using Synthea. While the synthetic dataset creation is performed using the probabilistic approach in Synthea, the validity of such a dataset is provided by the statistical fidelity rule. The prevalence graphs produced by Walonoski et al. in \cite{walonoski2017} show the following result. With the increasing size of the simulation sample, the results become more stable and close to the official statistics.
+
+However, there is no claim about any convergence in terms of measure theory. Still, this example provides the evidence of high empirical consistency. As the number of simulated individuals increases, the structure of demographic and disease statistics in the synthetic population becomes more consistent with the statistics of the real-world clinical cases. This feature allows claiming that data mining operations performed on this artificially created database are reliable and generalizable to the population of actual patients.
+
+\subsubsection*{The Second Barrier: Mathematical Complexity of Clinical Data}
+
+The second major barrier occurs due to the variety of characteristics of the standalone data. The heterogeneity of the data makes it difficult to analyze the information using one approach. Specifically, clinical data of a certain patient consists of several kinds of events that are hard to accommodate by a single mathematical model. In particular, patient's clinical data may include:
+\vspace{0.2em}
+\begin{enumerate}
+    \item \textbf{Data of different types:} a patient's record may belong to such types as integer (blood pressure, blood sugar, cholesterol), float (quality adjusted life year index, body mass index, hemoglobin) or string (patient's diagnoses, diagnoses codes, allergies).
+
+    \item \textbf{Different data regarding variation:} some variables can differ in small intervals (e.g., $[0.4, 4]$ mIU/L for TSH) or in larger intervals (e.g., $[50, 500]$ mg/dL for cholesterol). No single model will handle correctly these data, hence the necessity of their treatment before processing.
+
+    \item \textbf{Interrupted or non-equally spaced timelines:} medical data may consist of interrupted records. A patient might have no information on his or her health condition for months, or even years (as is often the case with healthy individuals), while other patients could have numerous interventions in a window of a few days.
+\end{enumerate}
+\vspace{1em}
+Since there is no single approach to this problem, a solution should use a specific group of algorithms and procedures to solve it optimally.

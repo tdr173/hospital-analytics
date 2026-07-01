@@ -1,0 +1,9 @@
+\section{Detailed Implementation}
+
+The Hospital Analytics Platform works as \textbf{Dockerized microservices}, ensuring that each calculation occurs in an isolated environment. The back end has \textbf{FastAPI} services in which the algorithmic layer provides \textbf{K-Prototypes Clustering} and \textbf{PrefixSpan}. An \textbf{AI Service} connects the \textbf{SQL Agent} and chat capabilities, transforming human language into queries and analysis, along with a \textbf{mail service} for transactional messages and \textbf{RabbitMQ} for communication between services. The front end is a \textbf{Next.js} application using REST APIs to present the results. The platform benefits its stakeholders: patients, doctors, and managers, by allowing them to analyze results from algorithms, manage patients' records, review dashboard statistics, and ask questions about the database using natural language through the \textbf{SQL Agent}. The rest of this paper will elaborate on the backend, frontend interface, \textbf{RabbitMQ} messaging, and Docker configuration.
+
+\input{chapter_5/section_2/5.2.1}
+\input{chapter_5/section_2/5.2.2}
+\input{chapter_5/section_2/5.2.3}
+\input{chapter_5/section_2/5.2.4}
+\input{chapter_5/section_2/5.2.5}

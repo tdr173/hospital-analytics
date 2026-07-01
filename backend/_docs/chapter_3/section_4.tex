@@ -1,0 +1,33 @@
+\section{Comparative Analysis and Conclusions}\label{sec:rw_synthesis}
+
+To conclude this chapter, a comparative synthesis is performed between the analyzed state-of-the-art papers and the approach designed in this thesis. While the current literature excels at individual tasks, namely mixed-type clustering, sequence mining, or prompt-based interpretation, there is a visible gap in frameworks that bridge structured data mining directly with automated, guardrailed medical interpretation. The reviewed works tend to solve one pillar in isolation: the clustering studies stop at the partition and leave interpretation to experts, the pathway-mining studies surface sequences without conditioning them on phenotype or interpreting them automatically, and the prompt-engineering tutorial governs free-text clinical interaction without connecting to the output of unsupervised models.
+
+Table~\ref{tab:ch3_comparison} summarizes this comparison along the dimensions that characterize HospitAI as an end-to-end platform: native support for mixed numerical-categorical data, temporal sequence mining, conditioning of mined pathways on the discovered clusters, automated LLM interpretation of the statistical output, and a guardrailed natural-language querying interface. Each reviewed work satisfies only a subset of these dimensions, whereas the proposed platform is designed to satisfy all of them within a single pipeline.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}l c c c c c@{}}
+\toprule
+Reference & \begin{tabular}[b]{@{}c@{}}Mixed\\ data\end{tabular}
+          & \begin{tabular}[b]{@{}c@{}}Sequence\\ mining\end{tabular}
+          & \begin{tabular}[b]{@{}c@{}}Per-cluster\\ scope\end{tabular}
+          & \begin{tabular}[b]{@{}c@{}}Automated LLM\\ interpretation\end{tabular}
+          & \begin{tabular}[b]{@{}c@{}}Guardrailed\\ NL querying\end{tabular} \\
+\midrule
+Aljohani \cite{aljohani2024}   & No        & No            & No  & No  & No \\
+Yang et al.\ \cite{yang2024}   & No        & No            & No  & No  & No \\
+Najjar et al.\ \cite{najjar2018} & Yes     & Yes (HMM)     & No  & No  & No \\
+Perer et al.\ \cite{perer2015} & No        & Yes           & No  & No  & No \\
+Baudrier et al.\ \cite{baudrier2022} & Partial & Yes (CP-SPAM) & No & No  & No \\
+Liu et al.\ \cite{liu2025}     & N/A       & No            & N/A & Yes & Partial \\
+\midrule
+\textbf{HospitAI (this work)}  & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} \\
+\bottomrule
+\end{tabular}
+\caption{Synthesis of existing approaches versus HospitAI. ``Mixed data'' denotes native support for combined numerical and categorical features; ``Per-cluster scope'' denotes whether sequence mining is conditioned on the discovered phenotypes; ``Guardrailed NL querying'' denotes a validated, read-only natural-language-to-SQL interface.}
+\label{tab:ch3_comparison}
+\end{table}
+
+The comparison makes the contribution of this thesis explicit. HospitAI does not propose a new clustering algorithm or a new sequence miner in isolation; rather, its novelty lies in unifying mixed-type clustering, cluster-scoped sequential pattern mining, and constraint-based LLM interpretation into a single platform in which the output of each stage feeds the next, and in which the final, clinician-facing layer is both automatically generated and protected by deterministic safety guarantees. The theoretical foundations of each of these components are developed in Chapter~\ref{ch:analysis}, and their concrete realization is described in Chapter~\ref{ch:design}.

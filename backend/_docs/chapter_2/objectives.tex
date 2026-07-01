@@ -1,0 +1,53 @@
+\chapter{Project Objectives}\label{ch:objectives}
+
+The purpose of this thesis is to develop HospitAI, a healthcare analytics tool that will transform raw electronic health record (EHR) data into valuable information understandable by physicians, managers, and even patients. Chapter~\ref{ch:introduction} outlined the problem statement: healthcare providers accumulate large amounts of data that are not processed or difficult to interpret even after processing by non-technical users. In this chapter, I set out to define concrete goals that need to be achieved. The goals will be divided into two categories: analytical, which focus on calculations performed by the platform internally, and platform goals, which concern its features for end users.
+
+\section{Main (analytical) objectives}
+
+The analytical objectives describe the data processing that happens in the backend, the features that make HospitAI more than a simple electronic health record viewer.
+
+\vspace{0.5em}
+\noindent\textbf{Data Ingestion and Patient-Level Feature Building}
+
+The first goal is to load Synthea's output CSV files into a PostgreSQL relational database and create one row of features for each patient. The system is expected to process data from over ten tables (such as patients, encounters, conditions, medications, procedures, immunizations, allergies, observations, care plans, providers, organizations) and derive features for each patient, such as age, BMI, systolic blood pressure, the number of conditions, the number of medications, the number of procedures, the number of emergency encounters, days since last encounter, QALY, DALY, and others. Such features need to be stored in the patient table as a JSONB field.
+
+\vspace{0.5em}
+\noindent\textbf{Patient Clustering for both Categorical and Numerical features}
+
+The second objective is that of the application of the K-Prototypes clustering algorithm. This particular algorithm can handle the processing of numeric attributes such as age and quantity of prescribed drugs, together with the categorical ones like main type of care plan and gender, during a single distance calculation. Cluster analysis will result in patient groups with similar clinical characteristics. Clusters obtained from the cluster analysis will be then used in the LLM algorithm to obtain a natural language description of the cluster. In this case, this will mean obtaining a cluster title, a cluster description, its features, risk level, and suggested interventions.
+
+\vspace{0.5em}
+\noindent\textbf{Sequential Pattern Mining of Clinical Histories}
+
+The third objective is finding frequent clinical sequence patterns through PrefixSpan. The clinical history of a patient is represented as a time-stamped sequence of events grouped by day, with prefixes denoting the type of each item (\texttt{C:} for conditions, \texttt{M:} for medications, \texttt{P:} for procedures, \texttt{CP:} for care plans). Patterns mined through PrefixSpan include frequent occurrences within a patient group, such as “diagnosis of diabetes, followed by metformin prescription, followed by an HbA1c lab test”. Each mined pattern is stored with the following information: Pattern String, Support Count, Support Percentage, and Patients following the pattern. This will allow us to trace each pattern back to its supporting patients from the patient and cluster pages in the future.
+
+\vspace{0.5em}
+\noindent\textbf{Natural-Language Database Interface}
+
+The fourth goal makes it possible for the end-user who may lack technical expertise to pose questions on the database using natural language. This is made possible through a text-to-SQL agent offered by the platform that uses large language models and works on top of LangGraph in translating questions like “List patients with more than three emergencies within the last year” into SQL and returning the answer in natural language.
+
+\section{Platform (secondary) objectives}
+
+The analytical objectives above describe what the system computes. The platform objectives describe what the users can see and do. HospitAI defines three user roles: patient, doctor, and manager, each with its own interface and its own view of the data.
+
+\vspace{0.5em}
+\noindent\textbf{Patient Interface}
+
+In HospitAI, a patient can sign in and view only their own medical record. The patient's user interface displays the individual’s profile (which includes name, age, marital status, and contact information), a summary of key health parameters (QALY, BMI, conditions, number of medications, number of emergencies, days since the last visit), and a timeline that records all visits, conditions, medications, procedures, immunizations, allergies, and care plans. A patient cannot view any other individual's record, does not have access to any clustering and sequence mining results, and cannot make any queries to the database.
+
+\vspace{0.5em}
+\noindent\textbf{Doctor Interface}
+
+The doctor has the ability to browse the patient directory, filter the patients according to their gender, age range, race, marital status, or clinical status, and access the details page for any of the patients. On the patient detail view, the doctor will have all the clinical tabs of the patient, which include conditions, medications, procedures, immunizations, allergies, care plans, and encounters, in addition to two further sections containing the cluster associated with the patient and the sequential patterns associated with the patient. The doctor can also access the cluster summary report that will enable them to understand how the current patient fits within other similar patients.
+
+\vspace{0.5em}
+\noindent\textbf{Manager Interface}
+
+Unlike a doctor who only deals with one patient at a time, the manager will be working with aggregate perspectives. The manager will work with aggregate views such as the home dashboard containing KPIs and charts (number of patients, mortality rate, number of conditions, number of care plans, number of procedures, encounters by week and month, demographics, most common conditions), the cluster browser containing all clusters and their LLM-generated descriptions, the sequence browser showing all sequences and their support values, and the text-to-SQL chat through which one can freely explore the database. It should be noted that the manager can navigate from a cluster to the patients in that cluster and from a sequence to the patients that follow a particular sequence, though the essence of the role remains focused on the aggregate perspective rather than individual patient management.
+
+\vspace{0.5em}
+\noindent\textbf{Scope and Non-Goals}
+
+To keep the project within the time frame of this thesis, a few things are explicitly out of scope. First of all, HospitAI does not connect to any real hospitals' databases or to any patient data. It operates with the Synthea synthetic dataset only. The platform is not designed as a replacement for the human clinician who can provide treatment advice. Any text generated by the LLM is just a description of the statistical information and does not constitute a medical recommendation based on that description. Clustering and sequence mining are run as offline batch tasks without any real-time computation, which could be too costly for the research objectives pursued within the thesis framework. Finally, there is no fine-grained permission system implemented across the three user roles at the level of a production-quality authorization module, since the research part of this thesis concerns itself with analysis capabilities only.
+
+Given the above project objectives, Chapter~\ref{ch:research} gives an overview of the literature relevant to this thesis and sets the research in context.

@@ -1,0 +1,64 @@
+\subsection{K-Prototypes Clustering Design}
+
+Patient profiles and measurements include data of different types, both numeric (such as age) and categorical (such as gender and dominant care plan). In order to handle both data types natively without artificial encodings, the K-Prototypes algorithm was chosen. It extends K-Means by adding a categorical distance measurement to its cost function, as previously detailed in Section~\ref{ch:clustering_limitations}.
+
+\subsubsection*{Selecting the Number of Clusters}
+
+The optimal $k$ value was chosen by using the "Elbow" Plot method, based on the within cluster cost variation, for $k \in \{2, 3, \ldots, 9\}$. As seen in Figure~\ref{fig:ch5_elbow_plot}, a point of diminishing returns clearly appears when $k=4$. The reduction in cost when increasing $k$ from 3 to 4 was almost 900 points, while from 4 to 5 it was just about 350 points. This "elbow" point for $k=4$ for the chosen set of features is also supported by a benchmark that tunes various parameters for 63 different configurations, details of which are provided in Chapter~\ref{ch:testing}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.80\linewidth]{figs/chapter_5/elbow_plot.png}
+\caption{Elbow plot used to select the number of clusters}
+\label{fig:ch5_elbow_plot}
+\end{figure}
+
+\subsubsection*{Feature Engineering}
+
+Many candidate features were created and tested for over 629 distinct runs of K-Prototypes algorithm before choosing the optimal features list. The set of features can be divided into two categories: \textbf{direct attributes} directly extracted from the database (e.g., age, gender), and \textbf{clinical signals} derived from the events in the raw table format. Feature derivation process is described by Figure~\ref{fig:ch5_feature_pipeline}. It takes raw data as an input, extracts features, passes high-cardinality and numeric variables to the bucketing layer, and finally forms a feature vector for K-Prototypes.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\linewidth]{figs/chapter_5/feature_pipeline.png}
+\caption{Feature engineering pipeline for the K-Prototypes input matrix}
+\label{fig:ch5_feature_pipeline}
+\end{figure}
+
+The final configuration uses \textbf{5 numerical} and \textbf{8 categorical} features, which are described in detail below.
+
+\paragraph{Numeric Features}
+
+\begin{itemize}
+
+    \item \textbf{age} -- is pulled straight from the patient medical record.
+
+    \item \textbf{active\_conditions\_count} -- count of all those conditions that have not been resolved (no end date). Hence, it reflects the current chronic disease burden of a patient.
+
+    \item \textbf{total\_medications} -- count of medication records associated with the patient at some point during their lifetime.
+
+    \item \textbf{total\_procedures} -- count of procedures that have been conducted on the patient.
+
+    \item \textbf{preventive\_to\_reactive\_ratio} -- number of wellness visits over the sum of acute visits and severe visits, with a unit added to the denominator to avoid division by zero for patients with no acute or severe encounters. The metric helps evaluate how proactive a patient is about their health: a value of 0 corresponds to a patient with no wellness visits, while higher values indicate a stronger focus on preventive care over reactive encounters.
+
+\end{itemize}
+
+
+
+\paragraph{Categorical Features}
+
+\begin{itemize}
+
+    \item \textbf{gender} -- pulled directly from the patient’s record.
+
+    \item \textbf{has\_diabetes}, \textbf{has\_hypertension}, \textbf{has\_heart\_disease} -- binary attributes created through comparison with descriptions using clinical keywords. This triad of conditions was chosen based on their high prevalence and impact on care paths.
+
+    \item \textbf{pregnancy\_history} -- a three-valued attribute (Active / Past / None) rather than a binary flag, since a pregnancy actively underway requires different medical attention than one that occurred previously.
+
+    \item \textbf{condition\_burden} -- a binned version of \texttt{active\_conditions\_count}, discussed in more detail below.
+
+    \item \textbf{bmi\_type} -- a binned form of average BMI calculated based on observations, detailed further below.
+
+    \item \textbf{dominant\_careplan} -- the most severe care plan associated with the patient, binned from descriptions to clinical attributes, described in detail below.
+
+\end{itemize}
+

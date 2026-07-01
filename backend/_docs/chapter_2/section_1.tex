@@ -1,0 +1,23 @@
+\section{Main (analytical) objectives}
+
+The analytical objectives describe the data processing that happens in the backend, the features that make HospitAI more than a simple electronic health record viewer.
+
+\vspace{0.5em}
+\noindent\textbf{Data Ingestion and Patient-Level Feature Building}
+
+The first goal is to ingest the Synthea-generated CSV files into a PostgreSQL relational database and compute one feature row per patient. The system needs to aggregate information coming from more than ten tables (patients, encounters, conditions, medications, procedures, immunizations, allergies, observations, care plans, providers, organizations) and calculate patient-level features, like age, BMI, systolic blood pressure, number of active conditions, number of medications, number of procedures, number of emergency encounters, days since last encounter, QALYs, and DALYs. Such features should be persisted to the patient record as a JSONB column to avoid recomputation in later steps.
+
+\vspace{0.5em}
+\noindent\textbf{Patient Clustering with Mixed-Data Support}
+
+The second goal is the application of the K-Prototypes clustering algorithm. This algorithm can process both numerical (for example, age and number of prescribed medications) and categorical features (such as the dominant category for care plans or gender) simultaneously within a single distance computation. Cluster analysis results in groups of patients who have similar clinical profiles. The resulting clusters are fed into the LLM, producing a description in natural language. In particular, this involves generating a title for the cluster, a description of it, a list of features, its risk level, and recommended interventions. In this way, the problem of translating raw data into meaningful information is solved.
+
+\vspace{0.5em}
+\noindent\textbf{Sequential Pattern Mining of Clinical Histories}
+
+The third objective is finding frequent clinical sequence patterns through PrefixSpan. The clinical history of a patient is represented as a time-stamped sequence of events grouped by day, with prefixes denoting the type of each item (\texttt{C:} for conditions, \texttt{M:} for medications, \texttt{P:} for procedures, \texttt{CP:} for care plans). Patterns mined through PrefixSpan include frequent occurrences within a patient group, such as "diagnosis of diabetes, followed by metformin prescription, followed by an HbA1c lab test". Each mined pattern is stored with the following information: Pattern String, Support Count, Support Percentage, and Patients following the pattern. This will allow us to trace each pattern back to its supporting patients from the patient and cluster pages in the future.
+
+\vspace{0.5em}
+\noindent\textbf{Natural-Language Database Interface}
+
+The fourth objective enables the end user, who may not be technically proficient, to query the database in natural language. The platform provides a text-to-SQL agent that leverages large language models and runs atop LangGraph, which converts a question such as "List patients who have had more than three emergencies in the past year" into an SQL query and presents the results back in natural language. Importantly, the generated SQL is also exposed to the user, without requiring them to understand any technical details, while serving as a safeguard in case they want to verify the query run against their data.

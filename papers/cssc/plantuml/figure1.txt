@@ -1,0 +1,54 @@
+@startuml HospitAI_Pipeline
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 11
+skinparam ArrowColor #0E9594
+skinparam ArrowThickness 1.5
+
+skinparam rectangle {
+  BackgroundColor #EAF3F4
+  BorderColor #15324F
+  FontColor #15324F
+  RoundCorner 8
+}
+
+skinparam database {
+  BackgroundColor #FFF8EC
+  BorderColor #E08A1E
+  FontColor #15324F
+}
+
+skinparam cloud {
+  BackgroundColor #E8F8F5
+  BorderColor #27AE8F
+  FontColor #15324F
+}
+
+database "Raw EHR Dataset\n(Synthea, 22,284 patients)" as dataset
+
+rectangle "ETL Pipeline\ncleaning, normalization, feature engineering" as etl
+
+rectangle "K-Prototypes Clustering\nmixed numeric and categorical data" as clustering
+
+rectangle "4 Patient Clusters + Outlier group" as clusters
+
+rectangle "Global Sequence Mining\nPrefixSpan on all patients, ranked by GML score" as global_seq
+
+rectangle "Per-cluster Sequence Mining\nPrefixSpan within each cluster, ranked by GML score" as cluster_seq
+
+rectangle "AI Verbalization\nLLM generates clinical summaries for clusters and sequences" as ai_verb
+
+cloud "AI Chat Agent\nNL-to-SQL via LangGraph\nAnswers clinical queries and general medical questions" as ai_agent
+
+dataset -down-> etl
+etl -down-> clustering
+clustering -down-> clusters
+clusters -down-> global_seq
+clusters -down-> cluster_seq
+global_seq -right-> ai_verb
+cluster_seq -right-> ai_verb
+clusters -right-> ai_verb
+ai_verb -down-> ai_agent
+
+@enduml

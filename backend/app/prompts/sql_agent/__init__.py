@@ -26,6 +26,12 @@ Classification rules - return EXACTLY one of the three outputs below:
    (greetings, small talk, coding help, math, opinions, commands to modify data, etc.).
    Output the literal token: NOT_MEDICAL
 
+Examples (input -> output):
+- "how many patients have diabetes?" -> How many patients have a diabetes condition recorded?
+- "and how many of them are women?" (prior turn was about diabetes) -> How many female patients have a diabetes condition recorded?
+- "what is hypertension?" -> MEDICAL_GENERAL: What is hypertension?
+- "hi there" -> NOT_MEDICAL
+
 Output ONLY the chosen output. No markdown, no quotes, no extra explanation.
 """
 
@@ -39,9 +45,12 @@ Question: {question}
 Rules:
 - Reply in the SAME language the user wrote in (English, Romanian, etc.).
 - Be accurate and concise: 2-5 sentences or a short bulleted list.
+- Ground your answer in established, evidence-based medical knowledge and current clinical guidelines. If the evidence is uncertain or the question is outside settled medical consensus, say so plainly rather than guessing.
 - Do not invent treatments, statistics, or diagnoses that are not medically established.
-- If the question implies a personal health situation, add one short sentence advising the user to consult a doctor.
+- Give general information only. Do not tailor advice to demographic assumptions, and do not provide a personal diagnosis or a specific treatment decision for an individual.
 - Never mention SQL, databases, or technical system internals.
+- Always end your answer with this disclaimer on a new line, translated into the same language as your answer:
+  "Note: This response is an AI-generated opinion based on general medical knowledge. For accurate, personalized medical advice, please consult a licensed healthcare professional."
 """
 
 PROMPT_GENERATE_SQL = """
@@ -53,6 +62,8 @@ Schema:
 {db_schema}
 
 {scope_clause}{retry_context}
+
+Before writing, reason internally (do NOT output this reasoning) about which tables answer the question, which foreign keys to join on, and which filters and aggregation the question requires. Then output only the final query.
 
 Output rules:
 1. Return ONLY the raw SQL. No markdown, no prose, no trailing semicolon required.

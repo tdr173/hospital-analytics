@@ -1,0 +1,137 @@
+\subsection{PrefixSpan Pipeline Implementation}
+
+The pipeline for pattern mining can be found in \texttt{app/\allowbreak clustering\_\allowbreak algorithms/\allowbreak prefix\_\allowbreak span/\allowbreak prefix\_\allowbreak span.py}, where it can run as a stand-alone script, either cluster-wide or per cluster depending on the command line option \texttt{--n-clusters N}. The mining itself is done using the \texttt{prefixspan} module, whereas everything else is about data preparation, scoring, deduplication, patient assignment, and database storage. The present script is a part of the ml-batch service. All numerical parameters are grouped together at the top of the file to make their trade-offs clear. All of them are presented and explained below:
+
+\begin{lstlisting}[style=pythonstyle]
+MIN_SUPPORT_PCT       = 0.01      # absolute floor: max(2, 1% of patients)
+MIN_PATTERN_LENGTH    = 3
+MAX_PATTERN_LENGTH    = 6
+MAX_EVENTS_PER_PATIENT = 25
+TOP_K                 = 500
+WINDOW_DAYS           = 730       # 2 years of recent events per patient
+OVERMINE_MULTIPLIER   = 20        # mine 10000, keep 500 after rerank
+JACCARD_THRESHOLD     = 0.80
+MAX_PER_PREFIX        = 6
+MAX_PER_SUFFIX        = 20
+TYPE_DIVERSITY_BONUS  = 0.3
+MAX_DENTAL_PATTERNS   = 15
+
+\end{lstlisting}
+
+\subsubsection*{Event Extraction}
+
+A single \texttt{UNION ALL} over \texttt{condition}, \texttt{medication}, \texttt{procedure}, and \texttt{careplan} results in a combined event stream. The rows' \texttt{description} is prefixed with a tag denoting the source table (\texttt{C:}, \texttt{M:}, \texttt{P:}, \texttt{CP:}) so that when the same string appears in two tables, it is still counted as two unique strings:
+
+\begin{lstlisting}[style=sqlstyle]
+SELECT patient_id, start_date AS event_date, 'C:' || TRIM(description) AS item
+FROM condition
+WHERE description IS NOT NULL AND start_date IS NOT NULL
+UNION ALL
+SELECT patient_id, start_date, 'M:' || TRIM(description) FROM medication
+UNION ALL
+SELECT patient_id, start_date, 'P:' || TRIM(description) FROM "procedure"
+UNION ALL
+SELECT patient_id, start_date, 'CP:' || TRIM(description) FROM careplan;
+
+\end{lstlisting}
+
+\subsubsection*{Sequence Construction and Three Carefully Justified Filters}
+
+The deterministic sort order used by the \texttt{build\_sequences} function is \texttt{(patient\_id, event\_date, \_pref\_rank, item)} with \texttt{kind="mergesort"} for stability, meaning ties within the same day will always be broken by the following precedence order: \texttt{C} \(<\) \texttt{M} \(<\) \texttt{P} \(<\) \texttt{CP}. The three filter functions execute in a pipeline and each is needed to avoid a particular pitfall of the initial prototypes.
+
+\paragraph{(1) Substring blacklist.} Several substrings that are common forms of garbage data are discarded:
+
+\begin{lstlisting}[style=pythonstyle]
+ITEM_BLACKLIST_SUBSTRINGS: frozenset[str] = frozenset({
+    "assessment of health and social care needs",
+    "medication review due",
+    "medication reconciliation",
+
+})
+\end{lstlisting}
+
+\noindent The strings mentioned here are present in almost every episode in the Synthea database and are not patterns but simply workflow indicators. All top-K results had one of these strings as their leading item in the absence of the blacklist. This meant that the actual important patterns were being overshadowed. The frozenset matches using substring matching (\texttt{str.contains(sub, regex=False)}), as Synthea often adds a code to the string.
+
+\paragraph{(2) Recency window.} All patient interactions that occurred more than \texttt{WINDOW\_DAYS=730} days before that patient's most recent interaction are dropped from the sample using \texttt{groupby(patient\_id).transform("max")} so that the window is calculated independently for each patient without leaking information at the dataset level:
+
+\begin{lstlisting}[style=pythonstyle]
+maxd  = events.groupby("patient_id", sort=False)["event_date"].transform("max")
+cutoff = maxd - pd.Timedelta(days=WINDOW_DAYS)
+events = events[events["event_date"] >= cutoff]
+\end{lstlisting}
+
+\noindent The maximum value of 730 days (2 years) ensures clinical relevance, since the sequence of treatments that occurred many years prior would not have any clinical significance and would only make the sequences longer than needed. Additionally, the cutoff is anchored to the last event of each individual, no matter how many years ago that person died. Therefore, the last 2 years of each patient’s medical history are included.
+
+\paragraph{(3) Consecutive duplication removal and maximum timeline length.} In case there are two consecutive identical elements for one patient, the second one is dropped based on comparisons of \texttt{patient\_id} and \texttt{item} with \texttt{shift()}. \texttt{MAX\_EVENTS\_PER\_PATIENT=25} caps each timeline via \texttt{groupby().tail(25)}.
+
+\begin{lstlisting}[style=pythonstyle]
+same_pid  = events["patient_id"].eq(events["patient_id"].shift())
+same_item = events["item"].eq(events["item"].shift())
+events    = events[~(same_pid & same_item)]
+events    = events.groupby("patient_id", sort=False, group_keys=False).tail(MAX_EVENTS_PER_PATIENT)
+\end{lstlisting}
+
+\noindent Without duplicate elimination, there will be a huge number of duplicates for the \texttt{M:Lisinopril} row that a patient will get when using some medicine regularly; therefore, PrefixSpan can connect those rows and form the trivial pattern \texttt{M:Lisinopril \(\rightarrow\) M:Lisinopril \(\rightarrow\) M:Lisinopril}. The scanning time required without the upper bound on the timeline length will be \(O(\text{tail}^2)\), where each super-utilizer projection table may have hundreds of rows.
+
+\subsubsection*{Encoding and Mining Loop}
+
+The sequences are transformed into integer IDs with the help of the one-pass vocabulary builder (\texttt{\_encode}). This way, we ensure that the inner workings of the \texttt{prefixspan.PrefixSpan} function rely on numerical data and not on textual strings. This is definitely the single most important speedup in the entire process pipeline. The package is invoked with the closed top-\(k\) operator, configured to mine a candidate pool \(20\) times larger than the desired output size:
+
+\begin{lstlisting}[style=pythonstyle]
+ps         = PrefixSpan(int_seqs)
+ps.minlen  = MIN_PATTERN_LENGTH        # 3
+ps.maxlen  = MAX_PATTERN_LENGTH        # 6
+pool_size  = TOP_K * OVERMINE_MULTIPLIER  # 10000
+raw        = ps.topk(pool_size, closed=True)
+abs_minsup = max(2, int(n_patients * MIN_SUPPORT_PCT))   # 1%
+raw        = [(sup, pat) for sup, pat in raw if sup >= abs_minsup]
+
+\end{lstlisting}
+
+\noindent Over-Mining: This is the optimization technique applied to allow all downstream filters to be aggressive in pruning, without running into the danger of mining too few patterns for consideration. For instance, when we call \texttt{top\_k=500}, and rescoring, deduplication, prefix/suffix capping, and dental capping filter out roughly half of the number, leaving us with 250 candidates which is well below what the dashboard requires. Mining 20 times more and applying filtration afterwards enables the filters to be aggressive in pruning the near-duplicates, without necessarily yielding a thin set of patterns. Using \texttt{closed=True} allows the output to include only closed patterns.
+
+The minimum support threshold is set to \texttt{int(n\_patients * MIN\_SUPPORT\_PCT)} (\(1\%\)) with a hard lower bound of 2. Applying the minimum \(1\%\) makes it possible to bring out even very small and niche-specific pathways (such as a maternal pathway in an overwhelmingly non-pregnant cohort), while at the same time preventing a single noisy patient from elevating a pattern.
+
+\subsubsection*{Geometric-Mean-Lift Scoring}
+
+The new evaluation for each candidate will be based on the geometric mean lift (GML) measure that calculates the ratio between the actual support and the product of the marginal frequencies of the events in the pattern:
+
+\begin{lstlisting}[style=pythonstyle]
+log_item_freqs = np.log(np.maximum(single_support[unique_items], 1)) - log_n
+raw_gml        = np.exp(np.log(sup) - log_n - np.mean(log_item_freqs))
+gml            = raw_gml * (1.0 + TYPE_DIVERSITY_BONUS * (n_types - 1))
+
+\end{lstlisting}
+
+Furthermore, there is a multiplicative factor (\texttt{TYPE\_DIVERSITY\_BONUS}), determined by the number of distinct event types (C/M/P/CP) appearing in the pattern; therefore, a pattern in the format \texttt{C: \(\rightarrow\) M: \(\rightarrow\) P:} will have a higher ranking than an ordinary sequence consisting of events from one single domain despite having a comparable support. Patterns with three consecutive events of the same type are filtered from the candidate list beforehand.
+
+\subsubsection*{Closedness and Jaccard Deduplication}
+
+Finally, a strictly closed set of patterns will be generated by removing a pattern \(p\) from the candidate list when a pattern \(p'\) longer than \(p\) with the same support contains all the elements of \(p\) within its item set, where \(p\) appears as a subsequence of \(p'\). This will be performed in buckets with the keys corresponding to the support values to avoid quadratic scanning over the whole candidate list; thus, achieving the time complexity of \(O(\text{bucket}^2)\). Deduplication will occur at the following stage:
+
+\begin{lstlisting}[style=pythonstyle]
+def _jaccard(a, a_len, b, b_len):
+    inter = len(a & b)
+    denom = a_len + b_len - inter
+    return inter / denom if denom else 0.0
+
+if all(_jaccard(pat_set, pat_len, s, s_len) < JACCARD_THRESHOLD
+       for s, s_len in chosen_sets):
+    chosen.append(entry)
+
+\end{lstlisting}
+
+Two caps at the end ensure that the impact of any single starting or ending element does not unfairly affect the outcome (\texttt{MAX\_PER\_PREFIX}=6, \texttt{MAX\_PER\_SUFFIX}=20). Additionally, there is another cap to limit the number of majority dental pathways among the top-\(k\) pathways (\texttt{MAX\_DENTAL\_PATTERNS}=15). This cap is critical due to the fact that Synthea has a standard routine that involves applying a fluoride product and other dental treatments (\texttt{P:Application of fluoride product} \(\rightarrow\) \texttt{P:Dental cleaning} \(\rightarrow\) \texttt{P:Dental examination} etc.), which leads to many near-duplicate patterns. Without such a cap, the 50 most common pathways for the cohort would be completely filled with dental routines, whereas cardiometabolic and respiratory patterns would not appear on the dashboard. Detection of majority dental pathways is based on keywords:
+
+\begin{lstlisting}[style=pythonstyle]
+DENTAL_KEYWORDS: frozenset[str] = frozenset({
+    "dental", "fluoride", "gingiv", "supragingival", "subgingival",
+    "oral health", "tooth", "teeth",
+})
+
+\end{lstlisting}
+
+\subsubsection*{Libraries}
+
+The pattern discovery process relies on the constrained closed top-\(k\) approach of the \texttt{prefixspan} algorithm. The data manipulation tasks like filtering and preprocessing are handled via \texttt{pandas} library, whereas \texttt{numpy} is utilized for math-based functions such as geometric mean lift scores, diversity scores, and support count calculation. Database access and persistence-related functionalities are managed via \texttt{SQLAlchemy} (initialized via \texttt{python-dotenv}), where \texttt{ai\_analysis} is intentionally set as \texttt{NULL} for lazy loading of LLM analysis. Finally, the basic python libraries serve the purpose of providing infrastructure functionality such as \texttt{collections.defaultdict} indexing patient-to-pattern mapping, \texttt{argparse} parsing of scoping flags, and \texttt{pathlib}.
+

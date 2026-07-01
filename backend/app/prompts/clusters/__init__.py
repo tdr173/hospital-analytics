@@ -1,11 +1,13 @@
 PROMPT_AI_ANALYSIS = """You are a senior clinical data analyst reviewing a specific patient group identified through K-Prototypes population segmentation in a hospital analytics system.
 
 IMPORTANT RULES:
-- Base every claim strictly on the numbers provided. Do not infer traits not supported by the data.
+- Base every claim strictly on the numbers provided. Do not infer traits not supported by the data. This output is clinical decision support, not a diagnosis: it is a preliminary draft that a clinician must verify before acting on it, so never overstate certainty.
 - Gender: describe as "balanced" if 40-60%, "more female/male" if 60-70%, "predominantly female/male" only if >70%.
 - Comparisons: use the "vs population avg" deltas to say whether this cluster is above or below average on each metric.
 - Translate vitals into plain risk language (e.g. systolic BP >=140 = hypertensive range, glucose >=126 mg/dL = diabetic range, BMI >=30 = obese).
 - Let the dominant careplan category guide the clinical framing (Cardiac, Respiratory, Metabolic, Maternal, Musculoskeletal, Psychiatric, Other, none).
+- Evidence-based framing: anchor risks and interventions to widely recognised clinical guidelines appropriate to the dominant disease profile (e.g. ADA for diabetes, ACC/AHA for hypertension and cardiovascular disease, KDIGO for chronic kidney disease, GOLD for COPD). Name a guideline body only when the cluster's data clearly supports that disease focus, and never quote a specific numeric guideline threshold you are not certain of.
+- Bias mitigation: do not attribute clinical risk to age, gender, or marital status beyond what the prevalence and vitals data explicitly support. State demographic composition as fact, without stereotyping.
 - If a value is "N/A" or 0 with no clinical meaning, do not mention that metric.
 - Do NOT use em dashes (-) anywhere in your response. Use commas or plain sentence structure instead.
 
@@ -46,6 +48,12 @@ DISEASE PREVALENCE:
 - Current smokers: {current_smoker_pct}% | Former: {former_smoker_pct}% | Never: {never_smoker_pct}%
 
 ---
+REASONING (think through these steps internally, do NOT include them in the output):
+1. Identify the dominant careplan category and the disease prevalences with the largest deltas vs the population.
+2. Translate the mean vitals and quality-of-life metrics into risk language.
+3. From steps 1-2, decide the overall risk level (high / moderate / low).
+4. Derive interventions that follow directly from the largest deltas and the dominant disease focus.
+
 TASK: Analyse this patient group for TWO audiences simultaneously:
 1. CLINICIANS - 2-3 sentences: what defines this group clinically (anchor on dominant careplan + top prevalence deltas), the main risks, and the most actionable care gaps. Reference specific numbers and deltas.
 2. GENERAL PUBLIC - 1-2 sentences: who are these patients in plain everyday language, no medical terms.
@@ -75,8 +83,8 @@ Structure your response EXACTLY as a list, using the pipe character (|) to separ
 
 Title rules: 2-4 words, plain everyday language that anyone can understand, no medical jargon (e.g. "Older Adults with Chronic Conditions", "Young and Healthy", "High-Need Patients").
 Description rules: 1-2 short sentences in plain language, understandable by a non-medical reader, no jargon.
-Insight rules: pick the MOST distinguishing signal for this cluster (dominant careplan focus, disease prevalence, polypharmacy, vitals, recency of care, or encounter mix). Use concrete numbers.
-Recommendation rules: tie the action to that insight (e.g. cardiac careplan dominance -> cardiology follow-up; polypharmacy -> medication review; long gap since last visit -> outreach).
+Insight rules: pick the MOST distinguishing signal for this cluster (dominant careplan focus, disease prevalence, polypharmacy, vitals, recency of care, or encounter mix). Use concrete numbers taken only from the data provided. Do not base the insight on demographics (age, gender) alone.
+Recommendation rules: tie the action to that insight and to standard care for that disease focus (e.g. cardiac careplan dominance -> cardiology follow-up per ACC/AHA; polypharmacy -> medication review; long gap since last visit -> outreach). Keep it actionable and verifiable by a clinician.
 
 Choose a suggestive hex color for each cluster that reflects its clinical profile (e.g. red tones for high-risk, green for healthy, blue for elderly chronic, orange for moderate, purple for psychiatric, teal for maternal).
 Use strong, vivid, fully-saturated colors with high contrast - avoid pastel, washed-out, or faded tones. Prefer colors like #DC2626, #16A34A, #2563EB, #D97706, #7C3AED, #0891B2. The outlier cluster (-1) should always be gray (#9CA3AF).
