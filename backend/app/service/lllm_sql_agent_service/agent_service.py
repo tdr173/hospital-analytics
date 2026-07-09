@@ -14,6 +14,7 @@ from prompts.sql_agent import (
     PROMPT_VALIDATE_SQL,
     PROMPT_RESULT,
     DOCTOR_SCOPE_CLAUSE,
+    PATIENT_SCOPE_CLAUSE,
 )
 
 load_dotenv()
@@ -186,6 +187,7 @@ def execute_query(state: AgentState):
     except Exception as e:
         error_msg = str(e)
         print(f"[SQL Agent] Execution: ERROR - {error_msg}\n")
+        state['db'].rollback()
         return {
             "error_message": f"Execution Error: {error_msg}",
             "validation_status": "INCORRECT",
@@ -280,10 +282,18 @@ def build_history_string(history: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def run_agent(db: Session, prompt: str, history=None, role: str = None, provider_id: str = None):
+def run_agent(db: Session, prompt: str, history=None, role: str = None, provider_id: str = None, patient_id: str = None):
     scope_clause = ""
+    scope_id = None
+    scope_label = ""
     if role and role.upper() == "DOCTOR" and provider_id:
         scope_clause = DOCTOR_SCOPE_CLAUSE.format(provider_id=provider_id)
+        scope_id = provider_id
+        scope_label = "doctor"
+    elif role and role.upper() == "PATIENT" and patient_id:
+        scope_clause = PATIENT_SCOPE_CLAUSE.format(patient_id=patient_id)
+        scope_id = patient_id
+        scope_label = "patient"
 
     initial_state = {
         "db": db,
@@ -309,11 +319,11 @@ def run_agent(db: Session, prompt: str, history=None, role: str = None, provider
     if final_state.get("error_message") == "NOT_MEDICAL":
         return {"response": "I can only help with medical and hospital data questions. Please ask something related to medicine or the hospital database."}
 
-    if scope_clause:
+    if scope_clause and scope_id:
         sql = final_state.get("sql_query", "") or ""
-        if provider_id not in sql:
+        if scope_id not in sql:
             return {
-                "response": "Unable to answer under doctor scope - the generated query did not reference your provider id. Try rephrasing.",
+                "response": f"Unable to answer under {scope_label} scope - the generated query did not reference your {scope_label} id. Try rephrasing.",
             }
 
     if final_state.get("query_result"):

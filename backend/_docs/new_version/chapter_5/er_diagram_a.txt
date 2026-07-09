@@ -1,0 +1,144 @@
+' ================================================================
+' Entity-Relationship Diagram - Hospital Analytics Platform
+' FIGURE 5.2 - GROUP A: Raw Synthea Data (11 tables + 1 junction)
+' Abstract / keys-only view (PK + FK only, no business columns) so
+' the diagram stays compact: portrait-oriented, tall rather than
+' wide. Business columns are already listed in the surrounding text.
+' ================================================================
+@startuml er_diagram_group_a
+
+hide circle
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam nodesep 35
+skinparam ranksep 80
+
+skinparam entity {
+  BackgroundColor<<raw>> #DCEEFB
+  BorderColor<<raw>> #2E5E86
+  BackgroundColor<<junction>> #DCEFD4
+  BorderColor<<junction>> #4C7A3E
+  FontSize 14
+  AttributeFontSize 13
+  BorderThickness 1.4
+}
+
+skinparam ArrowColor #555555
+skinparam ArrowFontSize 12
+skinparam ArrowThickness 1.3
+entity organization <<raw>> {
+  * organization_id : VARCHAR <<PK>>
+}
+
+entity provider <<raw>> {
+  * provider_id : VARCHAR <<PK>>
+  --
+  # organization_id : VARCHAR <<FK>>
+}
+
+entity patient <<raw>> {
+  * patient_id : VARCHAR <<PK>>
+  --
+  also referenced from Group B
+  (see Figure 5.3)
+}
+
+entity encounter <<raw>> {
+  * encounter_id : VARCHAR <<PK>>
+  --
+  # patient_id : VARCHAR <<FK>>
+  # organization_id : VARCHAR <<FK>>
+  # provider_id : VARCHAR <<FK>>
+}
+
+entity patient_provider <<junction>> {
+  * id : INT <<PK>>
+  --
+  # patient_id : VARCHAR <<FK>>
+  # provider_id : VARCHAR <<FK>>
+}
+
+entity condition <<raw>> {
+  * id : INT <<PK>>
+  --
+  # patient_id : VARCHAR <<FK>>
+  # encounter_id : VARCHAR <<FK>>
+}
+
+entity procedure <<raw>> {
+  * id : INT <<PK>>
+  --
+  # patient_id : VARCHAR <<FK>>
+  # encounter_id : VARCHAR <<FK>>
+}
+
+entity immunization <<raw>> {
+  * id : INT <<PK>>
+  --
+  # patient_id : VARCHAR <<FK>>
+  # encounter_id : VARCHAR <<FK>>
+}
+
+entity medication <<raw>> {
+  * id : INT <<PK>>
+  --
+  # patient_id : VARCHAR <<FK>>
+  # encounter_id : VARCHAR <<FK>>
+}
+
+entity observation <<raw>> {
+  * id : INT <<PK>>
+  --
+  # patient_id : VARCHAR <<FK>>
+  # encounter_id : VARCHAR <<FK, null>>
+  --
+  largest table (14M+ rows)
+}
+
+entity allergy <<raw>> {
+  * id : INT <<PK>>
+  --
+  # patient_id : VARCHAR <<FK>>
+  # encounter_id : VARCHAR <<FK, null>>
+}
+
+entity careplan <<raw>> {
+  * id : INT <<PK>>
+  --
+  # patient_id : VARCHAR <<FK>>
+  # encounter_id : VARCHAR <<FK>>
+}
+
+' -- hidden ordering links: pack the 7 clinical tables into two
+'    narrow columns (3 + 4) instead of one wide row, so the diagram
+'    grows taller rather than wider --
+condition    -[hidden]right-> medication
+condition    -[hidden]down-> procedure
+procedure    -[hidden]down-> immunization
+medication   -[hidden]down-> observation
+observation  -[hidden]down-> allergy
+allergy      -[hidden]down-> careplan
+
+' -- relationships (FKs, solid; unlabeled -- the FK column
+'    is already visible inside each box).
+'    NOTE: each clinical table also carries a direct patient_id FK
+'    (redundant with encounter->patient); only the encounter link
+'    is drawn below, so every table has exactly ONE incoming line. --
+organization ||--o{ provider
+organization ||--o{ encounter
+provider     ||--o{ encounter
+patient      ||--o{ encounter
+
+patient      ||--o{ patient_provider
+provider     ||--o{ patient_provider
+
+encounter    ||--o{ condition
+encounter    ||--o{ medication
+encounter    ||--o{ procedure
+encounter    |o--o{ observation
+encounter    ||--o{ immunization
+encounter    |o--o{ allergy
+encounter    ||--o{ careplan
+
+@enduml

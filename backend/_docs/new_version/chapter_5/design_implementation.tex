@@ -1,0 +1,1212 @@
+\chapter{System Design and Implementation}
+\label{ch:design}
+\pagestyle{fancy}
+
+Following the theoretical framework from Chapter~\ref{ch:analysis}, this chapter present in detail the system's design and implementation. The first part, System Design~\ref{ch:system_implementation}, outlines the conceptual architecture, the database schema, and the internal structure of the backend and frontend. The second part, System Implementation~\ref{ch:system_implementation}, presents the technical execution. It uses concrete code listings to explain the libraries, algorithmic logic, and the complete workflow, from the initial processing of patient data to the delivery of clinical insights.
+
+\section{System Design}
+\label{ch:system_design}
+
+\subsection{System Architecture}
+\label{ch:system_architecture}
+
+Figure~\ref{fig:system_architecture} presents the high-level architecture of the platform. Four kinds of components cooperate: a \textbf{Frontend} that renders the interface and consumes data, a \textbf{Backend} that exposes the API and hosts the analytical logic, a \textbf{Database} that persists both the raw clinical records and every analytical result, and a small set of \textbf{external services} that feed the pipeline or extend it with generative capabilities.
+
+The \textbf{Frontend} is a single \textbf{Next.js} application. It never talks to the database or to any external service directly. Every piece of data it renders, patient records, cluster dashboards, sequence dashboards, statistics, and the pipeline management page, is fetched over REST from the Backend.
+
+The \textbf{Backend} is a single \textbf{FastAPI} process with three cooperating parts. The \textbf{REST API} (Section~\ref{ch:backend_design}) is the only entry point the Frontend is allowed to use. The \textbf{analytics pipeline} is an in-process chain of four stages: \textbf{ETL ingestion} (Section~\ref{ch:etl_impl}), K-Prototypes \textbf{clustering} (Section~\ref{ch:kproto_impl}), PrefixSpan \textbf{sequence mining} (Section~\ref{ch:prefixspan_impl}), and \textbf{AI-driven interpretation} (Section~\ref{ch:ai_results}). This chain is formalized in Section~\ref{ch:analysis} and orchestrated as a single job in Section~\ref{ch:pipeline_impl}. The \textbf{LLM SQL Agent} (Section~\ref{ch:sql_agent_impl}) translates natural-language questions into safe, read-only SQL. All three parts share the same process, connection pool, and domain models.
+
+The \textbf{Database} is a single \textbf{PostgreSQL} instance, detailed in Section~\ref{ch:database_design}: eleven relations are populated once by the ETL step from the Synthea dataset, and the rest record the junctions and analytical outputs of the pipeline.
+
+Finally, the platform relies on a few \textbf{external services}. The Synthea generator produces the source dataset offline, and the LLM providers, Google Gemini and OpenAI, sit behind the interpretation stage and the SQL Agent. The monthly re-triggering that keeps the clusters and mined pathways current as the data evolves is handled internally, by the in-process scheduler shown inside the Backend (Section~\ref{ch:pipeline_impl}), not by any external service.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\linewidth]{figs/chapter_5/system_architecture.png}
+\caption{System Architecture Diagram}
+\label{fig:system_architecture}
+\end{figure}
+
+\subsubsection*{Why a Monolithic, Client-Server Architecture}
+
+The platform is built as a single \textbf{monolithic} application rather than a set of distributed microservices. This is deliberate: the object of this thesis is not a production-grade, independently-scalable web platform, but the analytics pipeline itself (Section~\ref{ch:analysis}). A microservice split would add network hops, service discovery, a message broker, and duplicated deployment infrastructure, none of which improves the clustering, the mined patterns, or the LLM narratives. A single backend sharing one database engine and one set of domain models removes that overhead without giving up any capability the platform needs.
+
+\textbf{FastAPI} was chosen because it lets Python serve the REST API directly. Python is the language of the whole machine-learning stack used here (\texttt{scikit-learn}, \texttt{kmodes}, \texttt{prefixspan}, \texttt{pandas}), so the clustering and mining modules are called in-process rather than over the network. \textbf{PostgreSQL} and \textbf{Next.js} are justified in Sections~\ref{ch:database_design} and~\ref{ch:frontend_design}. Long-running and scheduled work, such as the monthly analytics job, runs inside the same backend process through an in-process scheduler, so no external worker or message queue is needed.
+
+\subsection{Database Design}
+\label{ch:database_design}
+
+A relational database was chosen over a NoSQL store because the domain is inherently relational. Every clinical event belongs to exactly one patient and, usually, one encounter. The analytical modules constantly join across these events, for instance to build one chronologically ordered sequence per patient out of four event tables (Section~\ref{ch:prefixspan_impl}). A document store would either duplicate that context in every event document or push the joins into application code, giving up the transactional consistency and query optimizer PostgreSQL provides. Since the platform reads far more than it writes, this was judged more valuable than the write-scalability a NoSQL store would offer instead.
+
+The schemas below show eighteen tables split into two groups. The \emph{normalized raw-data relations} mirror the ingested Synthea dataset (Figure~\ref{fig:ch5_er_a}). The \emph{analytics relations}, produced and consumed by the pipeline, are shown in Figure~\ref{fig:ch5_er_b}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_5/er_diagram_a.png}
+\caption{Entity--Relationship diagram of the database schema (1)}
+\label{fig:ch5_er_a}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_5/er_diagram_b.png}
+\caption{Entity--Relationship diagram of the database schema (2)}
+\label{fig:ch5_er_b}
+\end{figure}
+
+\subsubsection*{Normalized Raw-Data Relations}
+
+Eleven tables correspond one-to-one to the ingested Synthea CSV files. Four are core entities: \texttt{patient}, \texttt{organization}, \texttt{provider}, and \texttt{encounter}. \texttt{encounter} is the hub, referencing both \texttt{patient} and \texttt{provider}. \texttt{provider} maintains a reference to \texttt{organization}. The remaining seven, \texttt{condition}, \texttt{medication}, \texttt{procedure}, \texttt{observation}, \texttt{immunization}, \texttt{allergy}, and \texttt{careplan}, are clinical-event tables. Each one references the patient it belongs to and, where relevant, the encounter. The single many-to-many relationship, between patients and providers, is resolved through the \texttt{patient\_provider} junction table, materialized during ETL from the distinct pairs found in \texttt{encounter}.
+
+\subsubsection*{Analytics Relations}
+
+Six further tables, not part of the raw dataset, store the pipeline's outputs and its own state. \texttt{cluster\_meta} is a singleton holding the metadata of the current clustering run (algorithm, feature lists, parameters, metrics, plots). A re-run replaces its single row. \texttt{cluster} holds one row per cluster label (the $k$ clusters plus the $-1$ outlier group) with the LLM-generated card content. \texttt{cluster\_patient} assigns each patient to a cluster and caches its features and 2-D projection coordinates in a JSONB column. \texttt{prefix\_span\_pattern} stores each mined pattern with a nullable \texttt{cluster\_label} (\texttt{NULL} for the global run, a label for a per-cluster run), and \texttt{prefix\_span\_patient\_pattern} is its patient junction. \texttt{pipeline\_run} is the singleton state machine of the orchestration job (Section~\ref{ch:pipeline_impl}).
+
+Two conventions apply here. Free-form results (feature packs, LLM narratives, run metrics) live in \texttt{JSONB} columns rather than rigid columns, so the analytics tables stay compact and their shape can evolve between runs without a migration. And the only foreign key linking the analytics group back to the raw group is \texttt{cluster\_patient.patient\_id}. The rest are logical joins left unlinked, since the analytics tables are truncated and repopulated on every pipeline run.
+
+\subsubsection*{Integrity Constraints and Indexing}
+
+Every table has its own primary key, and foreign keys such as \texttt{encounter.patient\_id} and \texttt{encounter.provider\_id} enforce referential integrity across the raw-data group. Indexes target concrete access patterns rather than being added randomly. B-tree indexes on the \texttt{description}/\texttt{start\_date} columns speed up the statistics filters and the sequence-construction queries of Section~\ref{ch:prefixspan_impl}. Trigram \texttt{GIN} indexes on \texttt{observation.description} and \texttt{condition.description} back the SQL Agent's free-text search. And \texttt{cluster\_label}/\texttt{is\_outlier} are indexed on \texttt{cluster} and \texttt{cluster\_patient}, because every cluster-scoped dashboard read filters on them.
+
+\texttt{observation}, the largest table with over fourteen million rows, is also pre-aggregated into five materialized \textbf{views} (\texttt{mv\_obs\_totals}, \texttt{mv\_obs\_per\_patient}, \texttt{mv\_obs\_top\_types}, \texttt{mv\_obs\_numeric\_stats}, \texttt{mv\_obs\_categorical\_stats}). This way, the statistics dashboard reads pre-computed totals instead of aggregating millions of rows per request. These are rebuilt at backend startup and refreshed after every ETL reload.
+
+\subsubsection*{Normal Form and Its Limits}
+
+The raw-data group satisfies the third normal form (3NF): every non-key attribute depends on the whole key and, with the two exceptions below, on nothing else. First, a few columns are computed and stored rather than derived on demand (patient age, medication/careplan duration, provider/organization counters). A stored \texttt{age} is strictly transitively dependent on the non-key \texttt{birthdate}, which 3NF forbids. But recomputing it on every query would be far costlier than the redundancy. And it cannot drift, since it is written once at ETL time.
+
+Second, the analytics tables keep several attributes inside JSONB columns instead of one column each, a departure from first normal form's atomicity requirement. This is accepted because those tables are regenerated on every run. Their shape must evolve freely across the 63 clustering configurations of Section~\ref{ch:kproto_impl}. A rigid, one-column-per-feature schema would not allow that without a migration per experiment.
+
+\subsection{Frontend Design}
+\label{ch:frontend_design}
+
+\textbf{Next.js} (App Router) was chosen for the Frontend, written in React and TypeScript. Its file-system routing and mature UI ecosystem let the interface be built directly around the platform's REST API, without any extra client-side routing framework. Routing splits the app into two groups: \texttt{(auth)} for the demonstration sign-in and \texttt{(main)} for the authenticated area, nesting the layouts of \texttt{/clusters}, \texttt{/sequences}, \texttt{/statistics}, \texttt{/patients}, \texttt{/pipeline}, and the other pages. After signing in, each user reaches only the pages their role exposes: a Patient sees their own records, a Doctor works with patient and encounter management as well as the cluster and sequence analytics, and a Manager additionally reaches the manager-only views, namely the hospital statistics and the pipeline management page. As established in Chapter~\ref{ch:analysis}, this client-side role gating is a demonstration of per-role UX, not a security boundary.
+
+Pages are composed of small, reusable components that read from and dispatch to a central store rather than fetching data themselves. This way, the same table, chart, and card components are reused across the patient, cluster, and sequence pages. Server data lives in \textbf{Redux Toolkit} slices, one per domain, each pairing asynchronous thunks (the REST calls) with a reducer that shapes the fetched data and its loading/error state. No component calls \texttt{fetch} directly, so every chart is guaranteed to render exactly what the Backend returned.
+
+Responsiveness follows the same discipline. Layout, spacing, and breakpoints come from a shared Emotion-based system, \texttt{theme.ts} plus the \texttt{useClasses} hook, rather than being hard-coded per page. A single theme change therefore propagates to every table, scatter plot, and dashboard that uses it.
+
+\subsection{Backend Design}
+\label{ch:backend_design}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\linewidth]{figs/chapter_5/backend_package_diagram.png}
+\caption{Backend package diagram}
+\label{fig:ch5_backend_package}
+\end{figure}
+
+As introduced in Section~\ref{ch:system_architecture}, the Backend is a single FastAPI process with three cooperating parts: the REST API, the analytics pipeline, and the LLM SQL Agent. All three are built on the same strict, top-down layered architecture, shown in Figure~\ref{fig:ch5_backend_package}. No cross-layer imports are allowed, which localizes the impact of any change. The \textbf{presentation layer} (\texttt{api/} routers, aggregated in \texttt{api/\_\_init\_\_.py} and registered in \texttt{main.py}) sits on top. Below it, the \textbf{business layer} (\texttt{service/}) validates requests and delegates to the clustering, mining, and SQL-Agent modules. The \textbf{persistence layer} (\texttt{repository/}) owns all database access. And the \textbf{domain layer} (\texttt{domain/models} - SQLModel tables and \texttt{domain/schemas} -Pydantic models) sits at the bottom.
+
+\subsubsection*{REST API}
+
+The presentation layer is a REST API, not GraphQL. Each page needs one shaped resource, such as a cluster overview or a patient record, not an arbitrary client-chosen graph of fields. A query language's added complexity would not pay off here. Endpoints are grouped by domain (\texttt{/patients}, \texttt{/clusters}, \texttt{/sequences}, \texttt{/statistics}, \texttt{/pipeline}, the SQL-Agent chat endpoint), each exposing listings, a detail view, and, where relevant, an action endpoint such as \texttt{POST /pipeline/run}. Every request/response body is a Pydantic schema in \texttt{domain/schemas}, so FastAPI validates and rejects malformed input before the business layer is reached, with no hand-written checks in the endpoint itself.
+
+\subsubsection*{Request Processing and the Role of the Pipeline and the SQL Agent}
+
+Two processing modes coexist behind the same API. Ordinary CRUD and dashboard endpoints are \textbf{synchronous}: router to service to repository to database, and the response returns once that chain completes. The analytics pipeline is \textbf{decoupled from the request that starts it}. Clustering and sequence mining take minutes, so \texttt{POST /pipeline/run} only checks that no run is in progress and hands the work to a background daemon thread. It returns immediately, while the Frontend polls a lightweight status endpoint (Section~\ref{ch:pipeline_impl}). The LLM SQL Agent is synchronous from the client's view, but internally drives a multi-step LangGraph state machine before returning (Section~\ref{ch:sql_agent_impl}).
+
+\subsubsection*{Middleware: Validation and the Demonstration Role Layer}
+
+The only cross-cutting concerns are input validation and the demonstration role layer. There is no session, token, or authentication middleware, since the three roles exist purely to demonstrate a per-role interface over synthetic data (Chapter~\ref{ch:analysis}). Validation is enforced declaratively through the Pydantic schemas above, not custom middleware. The one place role awareness reaches into query logic is the SQL Agent, which injects a \texttt{DOCTOR\_SCOPE\_CLAUSE} or a \texttt{PATIENT\_SCOPE\_CLAUSE} into the prompt depending on the caller's role, restricting a doctor's questions to their own \texttt{provider\_id} and a patient's to their own \texttt{patient\_id}; a Manager gets neither clause and so queries unscoped. This is a demonstration of role-aware behavior, not an access-control boundary.
+
+
+\section{System Implementation}
+\label{ch:system_implementation}
+
+This section presents the concrete realization of the design above. The backend is implemented in Python on top of \textbf{FastAPI}, the frontend in TypeScript on top of \textbf{Next.js}/React, and all storage is a standard \textbf{PostgreSQL} instance. All backend configuration is supplied through environment variables loaded with \texttt{python-dotenv} from a \texttt{.env} file (the PostgreSQL connection parameters and the LLM API keys), so the identical codebase can be pointed at a local, testing, or production database without any source change, which satisfies the portability requirement of Chapter~\ref{ch:analysis}. The frontend implementation is presented first, followed by the backend, whose six modules (ETL, clustering, pattern mining, orchestration, AI results generation, and the SQL agent) are each detailed in their own subsection.
+
+\subsection{Frontend Implementation}
+\label{ch:frontend_impl}
+
+\subsubsection*{Routing and External Libraries}
+
+The application is a Next.js App Router project in TypeScript. Every folder under \texttt{app/} is a route. The \texttt{(auth)}/\texttt{(main)} groups introduced in Section~\ref{ch:frontend_design} are implemented as plain folders whose parentheses exclude them from the URL, while still letting each group nest its own layout. Beyond Next.js and React, the implementation relies on a small, fixed set of libraries: \textbf{Redux Toolkit} and \textbf{react-redux} for state, \textbf{MUI} and \textbf{Emotion} for components and styling. \textbf{Recharts} and \textbf{ECharts} render the analytical charts, \textbf{react-toastify} handles error notifications, and \textbf{Yup} handles form validation. No HTTP client library is used. Every call goes through the native \texttt{fetch} API, wrapped by the helper described next.
+
+\subsubsection*{State Management and API Access}
+
+All server data lives in Redux Toolkit slices under \texttt{store/slices}, one per domain. Each slice pairs asynchronous \emph{thunks}, which issue the REST calls, with a reducer that holds the fetched data together with its loading and error flags. Listing~\ref{lst:fe-thunk} shows the pattern used in the \texttt{patients} domain. A small typed \texttt{get<T>(url, label)} helper centralizes the request headers, scopes the URL to the signed-in user through \texttt{appendScopeToUrl}, and turns a failed response into a de-duplicated toast. A thunk such as \texttt{fetchPatients} builds its query string and simply awaits that helper. Other domains apply the same headers and toast handling inline in their own thunks, rather than through a shared function.
+
+\begin{lstlisting}[style=tsxstyle, caption={Generic fetch helper and a domain thunk built on top of it}, label={lst:fe-thunk}]
+async function get<T>(url: string, label: string): Promise<T> {
+  const scoped = appendScopeToUrl(url);
+  const res = await fetch(scoped, { headers: defaultHeaders });
+  if (!res.ok) {
+    toast.error(`Failed to load ${label}`, { toastId: `fetch-${label}` });
+    throw new Error(`${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+export const fetchPatients = createAsyncThunk<
+  PatientListResponse,
+  FetchPatientsArgs,
+  { rejectValue: ErrorResponse }
+>("patients/fetchPatients", async (args, thunkAPI) => {
+  try {
+    const q = new URLSearchParams();
+    if (args.search) q.set("search", args.search);
+    // ...additional filters (gender, ageGroup, status, race, marital, city) set the same way
+    q.set("page", args.page.toString());
+    q.set("rows", args.rows.toString());
+    q.set("sortBy", args.sortBy);
+    q.set("sortType", args.sortType);
+    return await get<PatientListResponse>(`${API_BASE}/patients?${q}`, "patients");
+  } catch {
+    return thunkAPI.rejectWithValue({ error: true, message: "Failed to fetch patients" });
+  }
+});
+\end{lstlisting}
+
+A component never calls \texttt{fetch} itself. It dispatches a thunk, renders a loading state while the thunk is pending, and reads the result back from the slice once the reducer has stored it. So every chart and table shows exactly what the Backend returned.
+
+\subsubsection*{Frontend Flow for Patient CRUD}
+
+The patient pages exercise the full read/write cycle over this same pattern. The list page dispatches \texttt{fetchPatients} with the current filters, page, and sort order, and renders the response in a \texttt{StyledTable}. Opening a record dispatches \texttt{fetchPatientDetail} for the detail view. Creating, editing, and deleting all go through three further thunks, \texttt{createPatient}, \texttt{updatePatient}, and \texttt{deletePatient}, which \texttt{POST}/\texttt{PATCH}/\texttt{DELETE} to \texttt{/patients} through small wrappers around \texttt{fetch} analogous to \texttt{get}.
+
+The \texttt{patients} slice's \texttt{extraReducers}, shown in Listing~\ref{lst:fe-patients-slice}, is where these thunks actually change state. \texttt{fetchPatients.fulfilled} replaces the page of \texttt{items} wholesale. \texttt{createPatient.fulfilled} and \texttt{updatePatient.fulfilled} patch that same array in place instead, either prepending or finding and replacing by \texttt{patientId}. This way, the table reflects a create or an edit without a second round trip. \texttt{deletePatient} is the exception. Its reducer has no dedicated case. Instead, the page dispatches \texttt{fetchPatients} again once the delete resolves successfully, since removing a row can shift page boundaries and pagination totals in a way that is simpler to re-fetch than to patch locally.
+
+\begin{lstlisting}[style=tsxstyle, caption={Patients slice: reducer state changes driven by the CRUD thunks}, label={lst:fe-patients-slice}]
+const patientsSlice = createSlice({
+  name: "patients",
+  initialState,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchPatients.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload.items;
+        state.total = action.payload.total;
+      })
+      .addCase(createPatient.fulfilled, (state, action) => {
+        state.items.unshift(action.payload);
+        state.total += 1;
+      })
+      .addCase(updatePatient.fulfilled, (state, action) => {
+        const i = state.items.findIndex((p) => p.patientId === action.payload.patientId);
+        if (i !== -1) state.items[i] = action.payload;
+      });
+  },
+});
+\end{lstlisting}
+
+\subsubsection*{Conversation State for the SQL Agent}
+
+The Ask AI page maintains the dialogue with the SQL agent as an ordered list of user and assistant messages held in its slice. Each new question is sent to the backend together with the recent history, so the agent can resolve follow-up questions that refer to earlier turns (for example ``and how many of them are women?''). The answer returned by the agent is appended to the same list, which the chat component renders in order. Because the history lives in the Redux store rather than in the component, it survives navigation within the session (content is not lost until refresh).
+
+\subsubsection*{Reusable Components and Charts}
+
+The Fronted uses Emotion CSS through a custom \texttt{useClasses} hook, with a single \texttt{theme.ts} file as the source of truth for colors, spacing, and typography. Reusable wrappers (styled tables, inputs, dropdowns, date pickers, and chart components) live under \texttt{components/generic\_components/} and are shared across every page rather than rebuilt per feature.
+
+\texttt{PieChartComponent} is a representative example. Listing~\ref{lst:fe-piechart} shows it stripped to its essentials. It takes a data array, a title, and a color palette, and renders them through Recharts. All colors, fonts, and container styling come from the theme and \texttt{useClasses}, rather than being hard-coded in the component.
+
+\begin{lstlisting}[style=tsxstyle, caption={Simplified reusable pie-chart component}, label={lst:fe-piechart}]
+interface ChartEntry { name: string; value: number }
+
+export default function PieChartComponent({
+  data, title, colors,
+}: { data: ChartEntry[]; title: string; colors: string[] }) {
+  const classes = useClasses(PieChartStyles, { name: "PieChart" });
+
+  return (
+    <div className={classes.container}>
+      <h3 className={classes.title}>{title}</h3>
+      <ResponsiveContainer width="100%" height={380}>
+        <PieChart>
+          <Pie data={data} dataKey="value" nameKey="name" outerRadius={110}>
+            {data.map((_, i) => (
+              <Cell key={i} fill={colors[i % colors.length]} />
+            ))}
+          </Pie>
+          <Tooltip />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+\end{lstlisting}
+
+The same component is instantiated, with different data and colors, on the statistics, home, and cluster-detail pages. Figure~\ref{fig:ch5_statistics_page} shows it on the home page, where it renders the ``Visits by Type'' breakdown for the selected time range.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\linewidth]{figs/chapter_5/home_visits_by_type.png}
+\caption{Home page ``Visits by Type'' card, built from a \texttt{PieChartComponent}}
+\label{fig:ch5_statistics_page}
+\end{figure}
+
+\subsubsection*{Role-Gated Navigation}
+
+Navigation is filtered by a single route-to-role map, \texttt{rolePermissions.ts}, that lists, for each route prefix, the roles allowed to see it. Listing~\ref{lst:fe-role-gate} shows the essential shape: an array of prefix-to-roles entries and a lookup function that the layout calls on every navigation to decide whether to render the page or redirect.
+
+\begin{lstlisting}[style=tsxstyle, caption={Route-to-role map and its lookup function}, label={lst:fe-role-gate}]
+export const ROUTE_ROLES: RouteRoles[] = [
+  { prefix: "/home", allowed: ["MANAGER", "DOCTOR", "PATIENT"] },
+  { prefix: "/encounters", allowed: ["MANAGER", "DOCTOR", "PATIENT"] },
+  { prefix: "/clusters", allowed: ["MANAGER", "DOCTOR"] },
+  { prefix: "/sequences", allowed: ["MANAGER", "DOCTOR"] },
+  { prefix: "/patients", allowed: ["MANAGER", "DOCTOR"] },
+  { prefix: "/providers", allowed: ["MANAGER", "DOCTOR"] },
+  { prefix: "/statistics", allowed: ["MANAGER"] },
+  { prefix: "/pipeline", allowed: ["MANAGER"] },
+];
+
+export function isRouteAllowedForRole(pathname: string, role: UserRole): boolean {
+  const match = ROUTE_ROLES.find((r) => pathname.startsWith(r.prefix));
+  return !match || match.allowed.includes(role);
+}
+\end{lstlisting}
+
+As already stated, this is a demonstration of role-specific interfaces rather than an access-control mechanism.
+\subsection{Backend Implementation}
+\label{ch:backend_impl}
+
+Building on the layered design of Section~\ref{ch:backend_design}, this subsection first explains the request-serving machinery shared by all endpoints, and then dedicates one part to each of the six backend modules.
+
+\subsubsection*{Routing and Registration}
+
+Each endpoint lives in its own file under \texttt{api/<domain>/} and attaches itself to a shared \texttt{APIRouter}. The routers are collected in \texttt{api/\_\_init\_\_.py} through wildcard re-exports and registered in \texttt{main.py}. Registration order matters: static routes (for example \texttt{/patients/resources}) are registered before dynamic ones (\texttt{/patients/\{id\}}), so a literal path is never shadowed by a parameterized one.
+
+Listing~\ref{lst:be-create-patient} shows a representative endpoint, \texttt{POST /patients}. The router only checks the caller's scope and delegates everything else, request validation, the actual insert, and error translation, to the schema and the service layer described next.
+
+\begin{lstlisting}[style=pythonstyle, caption={A representative endpoint: creating a patient}, label={lst:be-create-patient}]
+@patient_router.post("", response_model=PatientDetailResponse, status_code=201)
+async def create_patient(
+    payload: PatientCreateRequest,
+    db: Session = Depends(get_db),
+    scope: Scope = Depends(scope_dep),
+):
+    if scope.is_patient:
+        raise HTTPException(status_code=403, detail="Patients cannot create patient records")
+    provider_id_scope = scope.provider_id if scope.is_doctor else None
+    try:
+        return PatientService(PatientRepository(db)).create_patient(payload, provider_id_scope)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+\end{lstlisting}
+
+\noindent Listing~\ref{lst:be-service-repo} shows the two layers behind that call: the service only forwards the request, while the repository builds the row, commits it, and links it to the creating doctor's panel when relevant.
+
+\begin{lstlisting}[style=pythonstyle, caption={Service and repository layers backing \texttt{create\_patient}}, label={lst:be-service-repo}]
+# service/patient_service.py
+def create_patient(self, payload, provider_id_scope=None):
+    return self.repo.create_patient(payload, provider_id_scope)
+
+# repository/patient_repository.py
+def create_patient(self, payload, provider_id_scope=None):
+    patient = PatientModel(patient_id=uuid.uuid4().hex, first_name=payload.first_name, ...)
+    self.db.add(patient)
+    self.db.commit()
+    if provider_id_scope:
+        link_patient_provider(self.db, patient.patient_id, provider_id_scope)
+    return self.get_patient(patient.patient_id)
+\end{lstlisting}
+
+\subsubsection*{Validation and Serialization}
+
+Request and response bodies are declared as Pydantic models in \texttt{domain/schemas}, kept separate from the SQLModel tables in \texttt{domain/models} that the repository layer reads and writes. Listing~\ref{lst:be-patient-model} shows the latter for \texttt{patient}: a plain SQLModel table with its column constraints. Listing~\ref{lst:be-patient-schema} shows the former for the same resource: the request schema FastAPI validates \texttt{POST /patients} against before \texttt{create\_patient} is ever called.
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle, caption={Domain model: the \texttt{patient} SQLModel table}, label={lst:be-patient-model}]
+class PatientModel(SQLModel, table=True):
+    __tablename__ = "patient"
+
+    patient_id: str = Field(primary_key=True)
+    birthdate: Optional[date]
+    deathdate: Optional[date]
+    age: int = Field(gt=0)
+    first_name: str = Field(index=True, nullable=False, max_length=50)
+    last_name: str = Field(index=True, nullable=False, max_length=50)
+    gender: Optional[str]
+\end{lstlisting}
+
+\begin{lstlisting}[style=pythonstyle, caption={Domain schema: the patient-creation request}, label={lst:be-patient-schema}]
+class CamelModel(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+class PatientCreateRequest(CamelModel):
+    first_name: str
+    last_name: str
+    age: int
+    birthdate: Optional[date] = None
+    gender: Optional[str] = None
+\end{lstlisting}
+
+\noindent A shared \texttt{CamelModel} base, reused by every request/response schema, transparently converts between the \texttt{snake\_case} used in Python and the \texttt{camelCase} expected by the TypeScript frontend, so both sides keep their idiomatic naming. FastAPI validates every incoming body against these schemas before the service layer is reached, rejecting malformed input with a descriptive error and without any hand-written checks.
+
+\subsubsection*{Database Access and Configuration}
+
+\vspace{0.25cm}
+
+The persistence layer follows a singleton pattern: the SQLAlchemy \texttt{engine} and its \texttt{SessionLocal} factory are created once at module import and reused for the process's lifetime, so the connection pool is shared across requests instead of being rebuilt each time. The \texttt{get\_db()} FastAPI dependency, shown in Listing~\ref{lst:be-db-access}, draws a session from this shared factory per request and guarantees it is closed once the response is sent.
+
+All connection parameters (host, credentials, database name) are read from environment variables through \texttt{python-dotenv}, keeping credentials out of the source and letting the same code target a local, testing, or production database with no change.
+
+\begin{lstlisting}[style=pythonstyle, caption={Singleton engine/session factory and the request-scoped session dependency}, label={lst:be-db-access}]
+engine = create_engine(url, pool_pre_ping=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+\end{lstlisting}
+
+\subsubsection{ETL Pipeline and Used Dataset}
+\label{ch:etl_impl}
+
+This thesis uses the open-source Synthea generator to produce a synthetic but realistic electronic-health-record dataset. It generates patient demographics together with the clinical events (conditions, medications, procedures, immunizations, allergies, care plans, and observations) of 20{,}000 living patients, each with a decades-long history. Table~\ref{tab:ch5_synthea_csv} summarizes the size of each source file.
+
+The Ingestion Script (\texttt{db/etl\_script.py}) loads this CSV output into the normalized schema of Section~\ref{ch:database_design} via SQLModel, following Figure~\ref{fig:etl_pipeline}. It reuses the \texttt{engine}/\texttt{get\_db()} connectivity of Section~\ref{ch:backend_impl}, runs once per database refresh, and can be run standalone or through the orchestration job.
+
+Only the eleven tables listed there are kept. Financial, imaging, and device files (\texttt{claims}, \texttt{payers}, \texttt{devices}, \texttt{imaging\_studies}, \texttt{supplies}, and similar) are dropped as out of scope.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\linewidth]{figs/chapter_5/etl_pipeline.png}
+\caption{ETL Pipeline Diagram}
+\label{fig:etl_pipeline}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lr}
+\hline
+\textbf{Synthea CSV} & \textbf{Rows} \\
+\hline
+\texttt{patients.csv}        &        22,284 \\
+\texttt{organizations.csv}   &         5,833 \\
+\texttt{providers.csv}       &         5,833 \\
+\texttt{encounters.csv}      &     1,211,526 \\
+\texttt{allergies.csv}       &        21,761 \\
+\texttt{procedures.csv}      &     3,225,114 \\
+\texttt{medications.csv}     &       913,100 \\
+\texttt{immunizations.csv}   &       335,814 \\
+\texttt{careplans.csv}       &        70,197 \\
+\texttt{conditions.csv}      &       727,501 \\
+\texttt{observations.csv}    &    14,250,746 \\
+\hline
+\end{tabular}
+\caption{Row counts of the ingested Synthea CSV files}
+\label{tab:ch5_synthea_csv}
+\end{table}
+
+\subsubsection*{Reducing Synthea to a Single Hospital}
+
+Synthea's \texttt{organizations.csv} covers an entire region (5,833 organizations), while this thesis targets a \emph{single} hospital. \texttt{\_pick\_single\_org} keeps the organization with the highest \texttt{UTILIZATION}, and \texttt{\_pick\_top\_provider\_ids} keeps its 300 busiest providers out of the original 5,833. Every encounter left with a dropped provider is reassigned rather than discarded. It goes to one of the kept providers, chosen uniformly at random through a seeded \texttt{numpy} draw for reproducibility, and is rewritten to the one retained organization. Original Synthea UUIDs are kept as primary keys throughout, so no look-up table is needed.
+
+\begin{lstlisting}[style=pythonstyle]
+def _pick_single_org() -> dict:
+    df = pd.read_csv(dataset_path / "organizations.csv")
+    row = df.loc[df["UTILIZATION"].idxmax()]
+    return {"organization_id": row["Id"], "name": row["NAME"], ...}
+
+def _pick_top_provider_ids(max_providers: int = 300) -> list[str]:
+    enc_df = pd.read_csv(dataset_path / "encounters.csv", usecols=["PROVIDER"])
+    return enc_df["PROVIDER"].value_counts().head(max_providers).index.tolist()
+\end{lstlisting}
+
+\subsubsection*{CSV Ingestion and Computed Columns}
+
+Each CSV is read with \texttt{pandas.read\_csv}, mapped to the columns the schema needs, and bulk-inserted with \texttt{DataFrame.to\_sql}. The derived columns of Section~\ref{ch:database_design} (age, durations) are computed in-frame at this same step, as the listing below shows for patient age. The one exception is \texttt{observation} (over fourteen million rows), streamed in \texttt{10\,000}-row chunks to keep memory bounded. The single many-to-many relationship, \texttt{patient\_provider}, is filled separately with one \texttt{INSERT ... SELECT DISTINCT} over \texttt{encounter}.
+
+\begin{lstlisting}[style=pythonstyle]
+patients_df = df[list(keep_cols.keys())].rename(columns=keep_cols)
+patients_df["first_name"] = patients_df["first_name"].apply(_strip_digits)
+patients_df["age"] = (
+    patients_df["deathdate"].fillna(pd.Timestamp.now()) - patients_df["birthdate"]
+).dt.days // 365
+
+patients_df.to_sql(name="patient", con=engine, if_exists="append", index=False)
+\end{lstlisting}
+
+\subsubsection*{Execution Order}
+
+\texttt{run\_etl} wires the per-table loaders together so parents load before children: patients, one organization, and 300 providers before any encounter, and encounters before allergies, procedures, medications, immunizations, careplans, conditions, and observations. \texttt{\_truncate\_all\_tables} clears the same tables beforehand, in child-first order, so no \texttt{TRUNCATE CASCADE} violates a foreign key.
+
+\begin{lstlisting}[style=pythonstyle]
+def run_etl(engine):
+    _truncate_all_tables(engine)
+    load_patients(engine); load_organizations(engine); load_providers(engine)
+    load_encounters(engine); load_patient_providers(engine)
+    load_allergies(engine); load_procedures(engine); load_medications(engine)
+    load_immunizations(engine); load_careplans(engine)
+    load_conditions(engine); load_observations(engine)
+\end{lstlisting}
+
+\subsubsection*{Libraries}
+
+The ETL layer relies on \texttt{pandas} for CSV processing, \texttt{SQLAlchemy}/\texttt{SQLModel} for schema and connection pooling, \texttt{psycopg2-binary} as the PostgreSQL driver, and \texttt{python-dotenv} for configuration. Bulk loads go through \texttt{DataFrame.to\_sql} or raw \texttt{text()}, never the ORM.
+
+\subsubsection{K-Prototypes Clustering}
+\label{ch:kproto_impl}
+
+Patient profiles mix numeric (age) and categorical (gender, dominant care plan) attributes, so we chose K-Prototypes, which extends K-Means with a categorical distance term (Section~\ref{ch:clustering_limitations}), over an artificial encoding. The clustering module, \texttt{k\_prototypes.py}, wraps \texttt{kmodes.kprototypes.KPrototypes} with everything the algorithm itself does not do: feature construction, scaling, outlier handling, evaluation, plotting, persistence, and handing off to the AI interpretation of Section~\ref{ch:ai_results}. Being time-consuming, it runs offline, either as a standalone script or as a pipeline stage, following the three phases below (input preparation, algorithm execution, output persistence).
+
+Listing~\ref{lst:kproto-pseudocode} traces \texttt{run\_clustering\_stage}, the production entry point that runs these phases end to end for the single champion configuration (\texttt{v55}, Chapter~\ref{ch:testing}), stripped of file/plot bookkeeping to keep the call sequence readable.
+
+\begin{lstlisting}[style=pythonstyle, caption={Pseudocode of the production clustering run (\texttt{run\_clustering\_stage})}, label={lst:kproto-pseudocode}]
+def run_clustering_stage(engine):
+    cfg = CONFIGS[0]
+
+    df = build_patient_features(engine)
+    df_cleaned, df_outliers = remove_outliers_zscore(df, threshold=6)
+
+    df_scaled = log1p(df_cleaned[skewed_cols])
+    df_scaled["clinical_severity_score"] = pca_1d(df_scaled[severity_cols])
+    df_scaled[numerical_cols] = MinMaxScaler().fit_transform(df_scaled[numerical_cols])
+    matrix = concat(df_scaled[numerical_cols], df_scaled[categorical_cols].astype(str))
+
+    kproto = KPrototypes(n_clusters=cfg.k, init="Huang", random_state=42)
+    clusters = kproto.fit_predict(matrix, categorical=categorical_positions)
+    df_result = df_cleaned.assign(cluster=clusters)
+    plot_famd_scatter(df_result); plot_cluster_heatmap(df_result); plot_cluster_bars(df_result)
+
+    report, eval_metrics = full_evaluation_report(df_result, clusters, ...)
+    summary_text = get_clusters_summary(df_result, df_outliers, engine)
+
+    save_cluster_results(
+        df_clustered=df_result, df_outliers=df_outliers,
+        numerical_features=cfg.numerical, categorical_features=cfg.categorical,
+        metrics=eval_metrics, cluster_summaries=summary_text,
+    )
+    return cfg.k
+\end{lstlisting}
+
+\subsubsection*{Selecting the Number of Clusters}
+
+The optimal $k$ was chosen with the "Elbow" method over the within-cluster cost for $k \in \{2, \ldots, 9\}$. Figure~\ref{fig:ch5_elbow_plot} shows a clear diminishing-returns point at $k=4$: the cost drop from $k{=}3$ to $4$ is almost 900 points, versus about 350 from $4$ to $5$. The choice is corroborated by the 63-configuration benchmark of Chapter~\ref{ch:testing}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.80\linewidth]{figs/chapter_5/elbow_plot.png}
+\caption{Elbow plot used to select the number of clusters}
+\label{fig:ch5_elbow_plot}
+\end{figure}
+
+\subsubsection*{Feature Engineering}
+
+Many candidate features were tried across 629 K-Prototypes runs before settling on the list below, split into \textbf{direct attributes} (age, gender) and \textbf{clinical signals} derived from the raw event tables. Figure~\ref{fig:ch5_feature_pipeline} traces this derivation: raw data in, features extracted, high-cardinality/numeric variables bucketed, and a feature vector out for K-Prototypes.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\linewidth]{figs/chapter_5/feature_pipeline.png}
+\caption{Feature engineering pipeline for the K-Prototypes input matrix}
+\label{fig:ch5_feature_pipeline}
+\end{figure}
+
+The final configuration uses \textbf{5 numerical} and \textbf{8 categorical} features, which are described in detail below.
+
+\paragraph{Numeric Features}
+
+\begin{itemize}
+    \item \textbf{age} -- from the patient record.
+    \item \textbf{active\_conditions\_count} -- unresolved conditions (no end date). Reflects current chronic burden.
+    \item \textbf{total\_medications} -- lifetime medication record count.
+    \item \textbf{total\_procedures} -- lifetime procedure count.
+    \item \textbf{preventive\_to\_reactive\_ratio} -- wellness visits over (acute + severe visits + 1). A higher value means more preventive-oriented care.
+\end{itemize}
+
+\paragraph{Categorical Features}
+
+\begin{itemize}
+    \item \textbf{gender} -- from the patient record.
+    \item \textbf{has\_diabetes}, \textbf{has\_hypertension}, \textbf{has\_heart\_disease} -- keyword flags for this high-prevalence, high-impact triad.
+    \item \textbf{pregnancy\_history} -- Active/Past/None, since an ongoing pregnancy needs different care than a past one.
+    \item \textbf{condition\_burden} -- binned \texttt{active\_conditions\_count}.
+    \item \textbf{bmi\_type} -- binned average BMI (below).
+    \item \textbf{dominant\_careplan} -- most severe care plan, binned from descriptions (below).
+\end{itemize}
+
+\subsubsection*{Feature Construction}
+\label{ch:feature_construction}
+
+\texttt{build\_patient\_features(engine)} runs one standalone SQL query per feature category (demographics, encounters, condition flags, BMI/BP/glucose, care plan, and so on) via \texttt{pandas.read\_sql}, then chains \texttt{df.merge(right\_df, on="patient\_id", how="left")} across them and applies type-aware imputation.
+
+The listing below shows the pattern for \emph{dominant care plan}: 40 raw care plan descriptions are bucketed into 6 clinical categories by severity rank, and \texttt{ROW\_NUMBER() OVER (PARTITION BY patient\_id ORDER BY severity\_rank ASC)} keeps only the most severe one per patient.
+
+\begin{lstlisting}[style=sqlstyle]
+WITH CategorizedPlans AS (
+    SELECT patient_id,
+           CASE
+               WHEN description IN (
+                   'Cancer care plan (record artifact)',
+                   'Dialysis care plan (record artifact)',
+                   'Terminal care (regime/therapy)'
+               ) THEN 'Complex, Oncology & Palliative'
+               WHEN description = 'Routine antenatal care (regime/therapy)'
+                                 THEN 'Maternal & Antenatal'
+               WHEN LOWER(description) ~ '(fracture|wound|surgery|injury|trauma)'
+                                 THEN 'Acute Trauma, Wound & Surgery'
+               WHEN LOWER(description) ~ '(respiratory|asthma|pulmonary|covid)'
+                                 THEN 'Respiratory & Infectious'
+               WHEN LOWER(description) ~ '(diabetes|heart|hypertension|cardiac)'
+                                 THEN 'Chronic Cardio-Metabolic'
+               ELSE 'General Rehab & Routine'
+           END AS care_plan_category,
+           CASE
+               WHEN description IN (
+                   'Cancer care plan (record artifact)',
+                   'Dialysis care plan (record artifact)',
+                   'Terminal care (regime/therapy)'
+               ) THEN 1
+               WHEN description = 'Routine antenatal care (regime/therapy)' THEN 2
+               WHEN LOWER(description) ~ '(fracture|wound|surgery|injury)'   THEN 3
+               WHEN LOWER(description) ~ '(respiratory|asthma|pulmonary)'    THEN 4
+               WHEN LOWER(description) ~ '(diabetes|heart|hypertension)'     THEN 5
+               ELSE 6
+           END AS severity_rank
+    FROM careplan
+),
+RankedPatientPlans AS (
+    SELECT patient_id, care_plan_category,
+           ROW_NUMBER() OVER (
+               PARTITION BY patient_id ORDER BY severity_rank ASC
+           ) AS rank_id
+    FROM CategorizedPlans
+)
+SELECT patient_id, care_plan_category AS dominant_careplan
+FROM RankedPatientPlans
+WHERE rank_id = 1;
+\end{lstlisting}
+
+The same technique produces the other derived categories: \texttt{substance\_use\_profile}, \texttt{pain\_management\_tier}, \texttt{readmission\_risk\_tier}, \texttt{cholesterol\_risk\_category}, \texttt{respiratory\_disease\_profile}, and others.
+
+\subsubsection*{Feature Bucketing}
+
+Once merged, sparse clinical features are deliberately bucketed rather than mean-imputed, to avoid distorting the numerical centroids K-Prototypes assumes are real measurements. Missing values fall into an explicit \texttt{"Unknown"} bucket instead. Count-type features are simply filled with zero, since that correctly represents an absence of events.
+
+\begin{lstlisting}[style=pythonstyle]
+for col in ["wellness_count", "inpatient_count", ...]:
+    df[col] = df[col].fillna(0)        # zero is semantically correct
+df["dominant_careplan"] = df["dominant_careplan"].fillna("None")
+df["bmi_type"] = pd.cut(df["avg_bmi"],
+                        bins=[-inf, 18.5, 25, 30, 35, 40, inf],
+                        labels=["Underweight", "Normal", "Overweight",
+                                "Obese I", "Obese II", "Obese III"]) \
+                  .astype(object).where(df["avg_bmi"].notna(), "Unknown")
+\end{lstlisting}
+
+\subsubsection*{The Role of \texttt{log1p}}
+
+\texttt{total\_medications}, \texttt{lifetime\_medication\_days}, and \texttt{total\_encounter\_duration\_hours} have strong right tails, so \texttt{np.log1p} is applied to them at two points in the pipeline:
+
+\begin{lstlisting}[style=pythonstyle]
+for i, col in enumerate(cols):
+    if col in _SKEWED_OUTLIER_COLS:
+        data[:, i] = np.log1p(np.clip(data[:, i], 0, None))
+
+for col in ["total_medications", "lifetime_medication_days",
+            "total_encounter_duration_hours"]:
+    if col in numerical_cols:
+        df_scaled[col] = np.log1p(df_scaled[col].clip(lower=0).astype(float))
+\end{lstlisting}
+
+\noindent The first block runs inside \texttt{remove\_outliers\_zscore}, so these heavy-tailed counts do not flag a quarter of the cohort as outliers on distribution shape alone. The second runs inside \texttt{run\_kprototypes}, so the scaler does not compress the "normal" mass of patients into a tiny corner of $[0,1]$. \texttt{log1p} is preferred over plain $\log$ since it is defined at $x=0$, the mode of these columns. Both transforms apply only to \texttt{df\_scaled}, never to \texttt{df\_work}, which stays raw for the LLM prompt and the database.
+
+\subsubsection*{PCA for Severity Compression, FAMD for Visualization}
+
+PCA and FAMD both reduce dimensionality here, but for different jobs. \textbf{PCA} compresses the three correlated severity features (\texttt{total\_procedures}, \texttt{total\_medications}, \texttt{active\_conditions\_count}) into one \texttt{clinical\_severity\_score} axis. Configurations that want an overall severity signal do not have to carry all three, and configurations combining the composite with its raw inputs are disallowed as redundant. The score itself is computed by log1p-ing the three columns, standardizing, and projecting onto the first principal component, which is already a z-score and so skipped by the outer scaler:
+
+\begin{lstlisting}[style=pythonstyle]
+sev_input        = np.log1p(df[sev_cols].clip(lower=0).values.astype(float))
+sev_standardized = StandardScaler().fit_transform(sev_input)
+css              = PCA(n_components=1).fit_transform(sev_standardized)[:, 0]
+\end{lstlisting}
+
+\textbf{FAMD} (Factor Analysis of Mixed Data, from \texttt{prince}) instead produces the dashboard's 2-D scatter plot. It is PCA's natural extension to mixed data: numerics are standardized, and categoricals are one-hot-encoded and reweighted by inverse category frequency, so both types contribute on equal footing. An ordinal encoding, by contrast, would distort the categorical distance geometry K-Prototypes relies on.
+
+\begin{lstlisting}[style=pythonstyle]
+famd   = prince.FAMD(n_components=2, random_state=42).fit(df_feat)
+coords = famd.transform(df_feat).values
+\end{lstlisting}
+
+\subsubsection*{Z-score Outlier Detection}
+\label{ch:z_score}
+
+\texttt{remove\_outliers\_zscore()} applies the z-score of Equation~\eqref{eq:zscore} (Section~\ref{ch:feature_scaling_theory}) to a fixed list of numerical attributes, log1p-ing the skewed ones first, before clustering ever begins:
+
+\begin{lstlisting}[style=pythonstyle]
+data = df[cols].to_numpy(dtype=float)
+for i, col in enumerate(cols):
+    if col in _SKEWED_OUTLIER_COLS:
+        data[:, i] = np.log1p(np.clip(data[:, i], 0, None))
+
+mask = np.ones(len(df), dtype=bool)
+for i, col in enumerate(cols):
+    z     = np.abs((data[:, i] - np.nanmean(data[:, i])) / np.nanstd(data[:, i]))
+    mask &= z < threshold      # threshold = 6 in production
+\end{lstlisting}
+
+A patient is retained only if every column's z-score stays under the threshold. Outliers are not discarded, though. The function returns two frames, and \texttt{df\_outliers} is carried through the rest of the chain and persisted with cluster label $-1$. It forms its own cluster on the dashboard, gets an LLM explanation like any other cluster, and is mined separately by PrefixSpan. No patient is dropped, while the four real clusters' centroids still represent ordinary patients.
+
+\subsubsection*{Scaling the Numerical Block}
+
+Section~\ref{ch:feature_scaling_theory} already covers what MinMax, standard, and robust scaling compute. Here they are simply exposed through a name-to-instance map and selected per run:
+
+\begin{lstlisting}[style=pythonstyle]
+_SCALER_MAP = {
+    "minmax": MinMaxScaler(), "robust": RobustScaler(), "standard": StandardScaler(),
+}
+\end{lstlisting}
+
+\textbf{MinMax is the production choice.} The K-Prototypes objective adds a squared-Euclidean numerical term to a $\gamma$-scaled Hamming term bounded in $[0, n_{\text{cat}}]$. Scaling the numerics to the same $[0,1]$ range as that bound keeps the two terms comparable regardless of the numerics' original spread, so \texttt{kmodes} can auto-tune $\gamma$ without either term dominating. StandardScaler centers at zero but leaves the long tails untouched. RobustScaler is outlier-resistant, but it still leaves some values outside $[0,1]$. Both produced less stable clusters across the benchmark.
+
+\subsubsection*{Running the Algorithm}
+
+The matrix passed to \texttt{kmodes} places numeric columns first and string-cast categorical columns after, with their indices passed via \texttt{categorical=}, so the library's Cython loop can split the two blocks efficiently:
+
+\begin{lstlisting}[style=pythonstyle]
+num_matrix    = df_scaled[numerical_cols].to_numpy(dtype=np.float64)
+cat_matrix    = df_scaled[categorical_cols].astype(str).to_numpy()
+matrix        = np.concatenate([num_matrix, cat_matrix], axis=1)
+cat_positions = list(range(len(numerical_cols),
+                           len(numerical_cols) + len(categorical_cols)))
+kproto = KPrototypes(n_clusters=k, init="Huang",
+                     random_state=rs, n_jobs=-1, gamma=gamma)
+clusters = kproto.fit_predict(matrix, categorical=cat_positions)
+\end{lstlisting}
+
+\texttt{init="Huang"} seeds prototypes from attribute frequency distributions (Huang, 1998) and, combined with a fixed \texttt{random\_state}, keeps runs reproducible. With \texttt{gamma=None}, \texttt{kmodes} derives $\gamma$ from the standard deviation of the (already min-max-normalized) numeric block, balancing the two terms of the objective automatically.
+
+\subsubsection*{Configuration Loop and Persistence to the Database}
+
+\texttt{configs.py} holds \textbf{63 configurations} (\texttt{v1}--\texttt{v63}), each testing a different feature hypothesis (severity-only, utilization-only, cardio-metabolic, and so on) and archived with comments as an audit trail. Their benchmarking and the selection of \texttt{v55} as champion are covered in Chapter~\ref{ch:testing}. Only \texttt{v55} stays uncommented in the code:
+
+\begin{lstlisting}[style=pythonstyle]
+{
+    "version": 55,
+    "preferred_k": 4,
+    "numerical": [
+        "age",
+        "active_conditions_count",
+        "total_medications",
+        "total_procedures",
+        "preventive_to_reactive_ratio",
+    ],
+    "categorical": [
+        "gender",
+        "pregnancy_history",
+        "has_heart_disease",
+        "has_diabetes",
+        "has_hypertension",
+        "condition_burden",
+        "bmi_type",
+        "dominant_careplan",
+    ],
+},
+\end{lstlisting}
+
+Outside production, the same code doubles as a benchmark harness: replacing any of \texttt{THRESHOLDS}, \texttt{CONFIGS}, \texttt{SCALERS}, \texttt{GAMMAS}, \texttt{RANDOM\_STATES}, or $k$ with a non-singleton list turns the single run above into a loop over their Cartesian product. Each iteration writes one \texttt{conclusions.xlsx}/plot set, plus a combined \texttt{general\_conclusion.xlsx} for comparison across the whole sweep. Chapter~\ref{ch:testing} presents the results of that sweep and the selection of \texttt{v55}.
+
+\subsubsection*{From DataFrame to \texttt{numpy} and Back to Words}
+
+K-Prototypes and the sklearn metrics need \texttt{numpy} arrays, but the LLM prompt, the dashboard cards, and \texttt{cluster\_patient.features} need the original strings back (\texttt{gender = "F"}, \texttt{bmi\_type = "Obese II"}). \texttt{run\_kprototypes} avoids any decoding step by keeping two frames throughout: \texttt{df\_work} stays raw and is what gets persisted, while \texttt{df\_scaled} (log1p, severity PCA, scaler) is the one converted to \texttt{numpy}. The resulting cluster labels are appended back onto the untouched raw frame:
+
+\begin{lstlisting}[style=pythonstyle]
+df_work   = df.copy()
+df_scaled = df_work.copy()
+clusters  = kproto.fit_predict(matrix, categorical=cat_positions)
+df_work["cluster"] = clusters
+\end{lstlisting}
+
+\subsubsection*{Reuse of Derived Features Across Configurations}
+
+\texttt{build\_patient\_features} computes its SQL features \emph{once} per run. The configuration loop then only \emph{selects} columns from that same frame, so sweeping 63 configurations costs one round of SQL/merging plus 63 in-memory \texttt{numpy} fits, not 63 full feature builds.
+
+The same reuse extends to persistence: \texttt{save\_cluster\_results} takes an \texttt{extra\_feature\_cols} list, currently \texttt{avg\_bmi}, \texttt{avg\_systolic\_bp}, \texttt{avg\_glucose}, \texttt{qaly}, \texttt{daly}, \texttt{days\_since\_last\_encounter}, the four care-setting counts, \texttt{distinct\_providers\_seen}, \texttt{has\_cancer}, \texttt{has\_mental\_health}, \texttt{is\_polypharmacy}, \texttt{has\_respiratory\_disease}, \texttt{marital}, \texttt{dominant\_encounter\_class}, and \texttt{smoking\_status}. None of these enter the K-Prototypes distance computation, but all are stored in the \texttt{cluster\_patient.features} JSONB column. They play no role in forming the clusters, yet they still reach the AI interpretation step (Section~\ref{ch:ai_results}) and the frontend's per-patient and per-cluster detail views.
+
+\subsubsection*{Libraries}
+
+The principal libraries used are \texttt{kmodes} (algorithm), \texttt{scikit-learn} (\texttt{StandardScaler}, \texttt{MinMaxScaler}, \texttt{RobustScaler}, \texttt{PCA}, evaluation metrics), \texttt{prince} (\texttt{FAMD}), \texttt{matplotlib} and \texttt{seaborn} (plots), \texttt{pandas}/\texttt{numpy} (feature pipeline), \texttt{SQLAlchemy} (read/write paths), and the OpenAI Python SDK behind \texttt{ask\_ai} for the cluster-narrative step of Section~\ref{ch:ai_results}.
+
+\subsubsection{PrefixSpan Customizations}
+\label{ch:prefixspan_impl}
+
+Clustering tells us which group a patient belongs to, but not \emph{how} patients move through the care system over time. To capture that, we add a pattern-mining layer on top of the clustered patients. We use PrefixSpan (Section~\ref{ch:prefix_span_theory}) because it grows patterns by projection instead of by repeated candidate generation, which stays fast even with the hundreds of distinct clinical event codes in this dataset, unlike algorithms such as GSP.
+
+Figure~\ref{fig:ch5_pattern_pipeline} shows the four stages of the mining process. Stage 1 turns raw clinical events into one sequence per patient. Stage 2 mines frequent candidate patterns with PrefixSpan. Stage 3 scores and ranks them so the clinically interesting ones rise to the top. Stage 4 filters out near-duplicates to keep only the strongest, most distinct results.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_5/pattern_pipeline.png}
+\caption{Pattern mining pipeline stages}
+\label{fig:ch5_pattern_pipeline}
+\end{figure}
+
+Plain PrefixSpan only ranks patterns by support, and on clinical data that raw ranking is dominated by repetitive, near-duplicate, and purely administrative sequences. To fix this, the pipeline adds \textbf{seven customizations} on top of the base algorithm:
+
+\begin{enumerate}
+    \item \label{cust:overmining} \textbf{Over-mining with a closed top-$k$ operator}: a candidate pool twenty times larger than the final result set is mined, restricted to closed patterns, so later filters can prune aggressively without running out of candidates.
+    \item \label{cust:gml} \textbf{Geometric-mean-lift re-ranking}: candidates are scored against how independent their items are, so a distinctive combination outranks a pattern built only from common events.
+    \item \label{cust:typediversity} \textbf{Type-diversity bonus and same-type-run filter}: patterns spanning several event types (condition, medication, procedure, care plan) are boosted, while patterns that repeat the same type three times in a row are dropped.
+    \item \label{cust:fullspectrum} \textbf{Full-spectrum quota}: a fixed number of slots is reserved up front for patterns that touch all four event types, so this small but clinically rich group is never crowded out by the far more common two-type patterns.
+    \item \label{cust:jaccard} \textbf{Jaccard deduplication}: a greedy pass rejects any candidate that shares most of its items with an already accepted pattern.
+    \item \label{cust:caps} \textbf{Prefix, suffix, and dental caps}: only a fixed number of accepted patterns may start or end with the same item, and majority-dental patterns are capped so routine dental care cannot fill the whole result set.
+    \item \label{cust:dualscope} \textbf{Dual-scope mining with cross-scope deduplication}: the miner runs once globally and once per cluster (including the outlier group), and each per-cluster run drops any pattern already found globally, so cluster results only show what is distinctive to that cluster.
+\end{enumerate}
+
+Listing~\ref{lst:prefixspan-pseudocode} traces the top-level orchestration end to end: \texttt{run} loops over scopes, and \texttt{\_run\_single} mines one of them. The rest of this subsection zooms into each customization in turn, starting with how the input sequences are built.
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle, caption={Pseudocode of the mining orchestration (\texttt{run} and \texttt{\_run\_single})}, label={lst:prefixspan-pseudocode}]
+def run(engine, db_session, n_clusters=None):
+    if n_clusters is None:
+        _run_single(engine, db_session, cluster_label=None)
+    else:
+        for label in list(range(n_clusters)) + [-1]:
+            _run_single(engine, db_session, cluster_label=label)
+
+def _run_single(engine, db_session, cluster_label):
+    sequences, patient_ids = build_sequences(engine, cluster_label)
+    if not sequences:
+        return
+
+    mined = mine_patterns(sequences)
+    if cluster_label is not None:
+        mined = drop_already_global(mined, db_session)
+
+    if not mined:
+        return
+
+    memberships = attribute_patients(mined, sequences, patient_ids)
+    save_prefix_span_results(db_session, mined, memberships, cluster_label)
+\end{lstlisting}
+
+\subsubsection*{Sequence Construction}
+
+Clinical events come from four tables (\texttt{condition}, \texttt{medication}, \texttt{procedure}, \texttt{careplan}), each tagged with its source so that the same description in two tables still counts as two different events. Figure~\ref{fig:ch5_sequence_example} shows this for one patient: five raw rows from four tables become one ordered clinical sequence.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_5/sequence_example.png}
+\caption{Example of a length 5 sequence}
+\label{fig:ch5_sequence_example}
+\end{figure}
+
+A single \texttt{UNION ALL} over the four tables builds one combined event stream, with each \texttt{description} prefixed by a source tag (\texttt{C:}, \texttt{M:}, \texttt{P:}, \texttt{CP:}):
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=sqlstyle]
+SELECT patient_id, start_date AS event_date, 'C:' || TRIM(description) AS item
+FROM condition
+WHERE description IS NOT NULL AND start_date IS NOT NULL
+UNION ALL
+SELECT patient_id, start_date, 'M:' || TRIM(description) FROM medication
+UNION ALL
+SELECT patient_id, start_date, 'P:' || TRIM(description) FROM "procedure"
+UNION ALL
+SELECT patient_id, start_date, 'CP:' || TRIM(description) FROM careplan;
+\end{lstlisting}
+
+\texttt{build\_sequences} sorts events by \texttt{(patient\_id, event\_date, \_pref\_rank, item)}, so same-day ties always break in the order \texttt{C} \(<\) \texttt{M} \(<\) \texttt{P} \(<\) \texttt{CP}. Four filters then clean the stream, each fixing a specific problem seen in early prototypes.
+
+\paragraph{(1) Noise blacklists.} Two substring blacklists remove events that are not real clinical patterns. \texttt{ITEM\_BLACKLIST\_SUBSTRINGS} drops routine workflow notes (for example ``medication reconciliation''), which showed up as the leading item of nearly every top-ranked pattern and drowned out the real ones. \texttt{SOCIAL\_STATUS\_SUBSTRINGS} drops psychosocial/SDOH screening findings (employment status, social isolation, and similar), which sit on almost every wellness visit and only add a vague, repetitive antecedent. Both match by substring (\texttt{str.contains(sub, regex=False)}), since Synthea often appends extra codes to these descriptions.
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+ITEM_BLACKLIST_SUBSTRINGS: frozenset[str] = frozenset({
+    "assessment of health and social care needs",
+    "medication review due",
+    "medication reconciliation",
+})
+\end{lstlisting}
+
+\paragraph{(2) Recency window.} Events older than \texttt{WINDOW\_DAYS=730} days before a patient's own most recent event are dropped, using \texttt{groupby(patient\_id).transform("max")} so the two-year window is anchored per patient, not to a single dataset-wide date:
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+maxd  = events.groupby("patient_id", sort=False)["event_date"].transform("max")
+cutoff = maxd - pd.Timedelta(days=WINDOW_DAYS)
+events = events[events["event_date"] >= cutoff]
+\end{lstlisting}
+
+\noindent Two years keeps sequences clinically relevant without growing them past what is useful, and anchoring the cutoff to each patient's own last event means the most recent two years of history are kept even for patients who died long ago.
+
+\paragraph{(3) Consecutive duplicates and timeline cap.} A repeated \texttt{item} right after itself for the same patient is dropped (compared via \texttt{shift()}), and each timeline is then capped at \texttt{MAX\_EVENTS\_PER\_PATIENT=25} with \texttt{groupby().tail(25)}:
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+same_pid  = events["patient_id"].eq(events["patient_id"].shift())
+same_item = events["item"].eq(events["item"].shift())
+events    = events[~(same_pid & same_item)]
+events    = events.groupby("patient_id", sort=False, group_keys=False).tail(MAX_EVENTS_PER_PATIENT)
+\end{lstlisting}
+
+\noindent Without deduplication, a patient on a long-term medication would repeat \texttt{M:Lisinopril} many times in a row, and PrefixSpan would happily report the trivial pattern \texttt{M:Lisinopril \(\rightarrow\) M:Lisinopril \(\rightarrow\) M:Lisinopril}. Without the length cap, mining time grows as \(O(\text{tail}^2)\), and a heavy-utilizer's timeline can run to hundreds of events.
+
+\paragraph{Temporal-shuffle hook (validation).} \texttt{build\_sequences} also takes an optional \texttt{shuffle\_seed} that drives the order-sensitivity null test used to validate the mined sequences in Section~\ref{ch:results_sequences}. When it is set, each patient's timeline is permuted in place \emph{after} all four filters above, so the exact same events enter mining in the real and the shuffled runs:
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+if shuffle_seed is not None:
+    rng = np.random.default_rng(shuffle_seed)
+    for seq in sequences:      # permute WITHIN each patient
+        rng.shuffle(seq)       # item set unchanged, order destroyed
+\end{lstlisting}
+
+\noindent Because the permutation stays inside a single patient, every patient keeps the same \emph{set} of items, so single-item supports, and therefore the geometric-mean-lift denominator introduced below, are left unchanged; only chronological order is destroyed. Exposed on the CLI as \texttt{--shuffle}, this run is deliberately read-only: it writes its top-$k$ to a separate \texttt{patterns\_*\_shuffled\_*.txt} file and never touches the database or the real mined results.
+
+\subsubsection*{Execution: the Mining Core}
+
+The pattern mining pipeline lives in \texttt{app/clustering\_algorithms/prefix\_span/prefix\_span.py}, runnable as a standalone script (cluster-wide, or per cluster via \texttt{--n-clusters N}) or as a pipeline stage, and, like the clustering module, offline rather than inside a request handler. Mining itself is done by the \texttt{prefixspan} package. Everything else here (preparation, scoring, deduplication, patient assignment, persistence) wraps around it. Every numerical knob lives at the top of the file:
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+MIN_SUPPORT_PCT       = 0.01      # floor: max(2, 1% of patients)
+MIN_PATTERN_LENGTH    = 3
+MAX_PATTERN_LENGTH    = 6
+MAX_EVENTS_PER_PATIENT = 25
+TOP_K                 = 500
+WINDOW_DAYS           = 730       # 2 years of recent events per patient
+OVERMINE_MULTIPLIER   = 20        # mine 10000, keep 500 after rerank
+JACCARD_THRESHOLD     = 0.80
+MAX_PER_PREFIX        = 6
+MAX_PER_SUFFIX        = 20
+TYPE_DIVERSITY_BONUS  = 0.3
+MAX_DENTAL_PATTERNS   = 15
+MULTITYPE_MIN_TYPES     = 4        # types needed to count as "full spectrum"
+MIN_MULTITYPE_PATTERNS  = 25       # reserved slots for full-spectrum patterns
+\end{lstlisting}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.65\linewidth]{figs/chapter_5/prefixspan_tree.png}
+\caption{PrefixSpan projection tree}
+\label{fig:ch5_prefixspan_tree}
+\end{figure}
+
+Figure~\ref{fig:ch5_prefixspan_tree} shows the core algorithm on four toy sequences with a minimum support of 2. Starting from the empty prefix, it scans the dataset and counts each item, keeping the frequent length-1 prefixes (\texttt{<C>}, \texttt{<M>}, \texttt{<P>}, each with support 4) and pruning infrequent ones like \texttt{<CP>} right away.
+
+For each frequent prefix, PrefixSpan then builds a projected sub-database of only the sequences (and only the parts after that prefix) that contain it, and grows the prefix one item at a time by mining that smaller database. From \texttt{<C>}, this is how \texttt{<C,M>} and \texttt{<C,P>} (support 3) are found, and from $S|\texttt{<C,M>}$, the length-3 pattern \texttt{<C,M,P>}. The recursion stops once no frequent item is left to append. Each projection is smaller than the one before it, so the search keeps shrinking on its own.
+
+A deliberate design choice here is to keep all the clinical-quality logic (scoring, filtering, capping) as a post-processing step \emph{after} PrefixSpan runs, rather than wiring it into the mining loop itself. This keeps the mining step a plain, well-tested library call, and lets every scoring rule below be tuned or replaced without re-running PrefixSpan.
+
+Before mining, sequences are encoded to integers by a one-pass vocabulary builder (\texttt{\_encode}), since \texttt{prefixspan.PrefixSpan} works on integers, and this is the single biggest speedup in the pipeline. The call itself uses the closed top-$k$ operator (customization~\ref{cust:overmining} in the list above), asking for a pool twenty times larger than the final result:
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+ps         = PrefixSpan(int_seqs)
+ps.minlen  = MIN_PATTERN_LENGTH        # 3
+ps.maxlen  = MAX_PATTERN_LENGTH        # 6
+pool_size  = TOP_K * OVERMINE_MULTIPLIER  # 10000
+raw        = ps.topk(pool_size, closed=True)
+abs_minsup = max(2, int(n_patients * MIN_SUPPORT_PCT))   # 1%
+raw        = [(sup, pat) for sup, pat in raw if sup >= abs_minsup]
+\end{lstlisting}
+
+\noindent \textbf{Why over-mine.} The later filters (rescoring, dedup, capping) are meant to be aggressive, and aggressive filters can easily cut a pool of 500 down to around 250, well short of what the dashboard needs. Mining 20 times more candidates up front gives those filters enough room to prune hard without running out of good patterns. \texttt{closed=True} additionally keeps only closed patterns (Section~\ref{ch:prefix_span_theory}). The 1\% minimum-support floor (at least 2 patients) is loose enough to surface small but real pathways, such as a maternal-care pattern in a mostly non-pregnant cohort, while still ignoring a single noisy patient.
+
+\subsubsection*{Geometric-Mean-Lift Scoring}
+
+Customizations~\ref{cust:gml} and~\ref{cust:typediversity} rescore every surviving candidate with geometric mean lift (GML): the ratio between a pattern's actual support and the geometric mean of its items' individual frequencies, i.e., how much more often these items appear together than chance would predict.
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+log_item_freqs = np.log(np.maximum(single_support[unique_items], 1)) - log_n
+raw_gml        = np.exp(np.log(sup) - log_n - np.mean(log_item_freqs))
+gml            = raw_gml * (1.0 + TYPE_DIVERSITY_BONUS * (n_types - 1))
+\end{lstlisting}
+
+\texttt{TYPE\_DIVERSITY\_BONUS} then multiplies this score up for patterns that mix several event types (C/M/P/CP), so a pattern like \texttt{C: \(\rightarrow\) M: \(\rightarrow\) P:} outranks a same-support pattern built from a single domain. Conversely, any pattern with three consecutive events of the same type is dropped before scoring even starts.
+
+\subsubsection*{Full-Spectrum Quota}
+
+Customization~\ref{cust:fullspectrum} addresses a side effect of the scoring just described. Even with the diversity bonus, patterns touching all four event types are rare compared to the much larger pool of two-type patterns, and a plain top-$k$ cut can still leave them out. Before the normal ranking is applied, up to \texttt{MIN\_MULTITYPE\_PATTERNS=25} patterns with at least \texttt{MULTITYPE\_MIN\_TYPES=4} distinct types are reserved first. These reserved slots are still subject to Jaccard deduplication and the dental cap below, but not to the prefix/suffix caps. This guarantees that multi-domain trajectories, such as a condition leading to a care plan, a medication, and a procedure, reach the dashboard instead of being crowded out. The remaining slots are then filled normally by GML rank. In the saved pattern listing, each reserved full-spectrum pattern is annotated with a \texttt{[4-type]} tag.
+
+\subsubsection*{Closedness and Jaccard Deduplication}
+
+A pattern $p$ is dropped as redundant if a longer pattern $p'$ with the same support contains every item of $p$ and $p$ is one of its subsequences. Comparisons are bucketed by support value, so this only costs $O(\text{bucket}^2)$ instead of scanning the whole candidate list. Jaccard deduplication (customization~\ref{cust:jaccard}) then removes near-duplicates during selection: a candidate is accepted only if it shares under 80\% of its items with every pattern already chosen.
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+def _jaccard(a, a_len, b, b_len):
+    inter = len(a & b)
+    denom = a_len + b_len - inter
+    return inter / denom if denom else 0.0
+
+if all(_jaccard(pat_set, pat_len, s, s_len) < JACCARD_THRESHOLD
+       for s, s_len in chosen_sets):
+    chosen.append(entry)
+\end{lstlisting}
+
+Two more caps (customization~\ref{cust:caps}) stop any single item from dominating the result set: at most \texttt{MAX\_PER\_PREFIX=6} accepted patterns may start with the same item, and at most \texttt{MAX\_PER\_SUFFIX=20} may end with it. A separate cap limits \emph{majority-dental} patterns to \texttt{MAX\_DENTAL\_PATTERNS=15}, since Synthea's routine dental visits (fluoride, cleaning, examination) otherwise produce so many near-identical patterns that they alone would fill the top 50, pushing out cardiometabolic and respiratory patterns entirely. A pattern counts as dental if its items match these keywords:
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+DENTAL_KEYWORDS: frozenset[str] = frozenset({
+    "dental", "fluoride", "gingiv", "supragingival", "subgingival",
+    "oral health", "tooth", "teeth",
+})
+\end{lstlisting}
+
+\noindent Every majority-dental pattern is annotated with a \texttt{[dental]} tag in the saved listing, and this is the same tag that marks routine dental trajectories in the result tables of Section~\ref{ch:results_sequences}: they stay visible, but clearly flagged as dental noise rather than clinically distinctive pathways.
+
+\subsubsection*{Dual Scope Mining and Persistence}
+
+Customization~\ref{cust:dualscope} mines at two scopes so the platform captures both the big picture and the per-cluster detail (Figure~\ref{fig:ch5_sequence_modes}): one \emph{global} run over every patient, and one \emph{per-cluster} run for each discovered cluster plus the outlier group, all indexed together by scope. To keep the two complementary rather than repetitive, every per-cluster run checks the pattern strings already stored for the global scope and drops any match, so a cluster's results show only what is distinctive to it.
+
+Once the result set is final, an inverted index over the sequences resolves which patients follow each pattern, written to the \texttt{prefix\_span\_patient\_pattern} junction. The patterns themselves (rank, support, scope label) go to \texttt{prefix\_span\_pattern}. Their \texttt{ai\_analysis} column is left \texttt{NULL} on purpose: the LLM interpretation is generated lazily, as described in Section~\ref{ch:ai_results}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.67\linewidth]{figs/chapter_5/sequence_modes.png}
+\caption{Sequence Mining Operating Modes}
+\label{fig:ch5_sequence_modes}
+\end{figure}
+
+\subsubsection*{Libraries}
+
+\texttt{prefixspan} provides the closed top-$k$ mining itself. \texttt{pandas} handles sequence filtering and preparation, and \texttt{numpy} computes the GML and diversity scores. \texttt{SQLAlchemy} (configured via \texttt{python-dotenv}) handles database access, while \texttt{collections.defaultdict}, \texttt{argparse}, and \texttt{pathlib} cover indexing, CLI flags, and paths.
+
+\subsubsection{Pipeline Orchestration}
+\label{ch:pipeline_impl}
+
+ETL ingestion, K-Prototypes clustering, and PrefixSpan sequence mining were originally three independent scripts. Each was launched by hand, and each assumed the previous one had already run. An \emph{orchestration job} now chains them into one monitored flow. It is tracked as a finite state machine in a singleton database row (\texttt{pipeline\_run}), moving between \texttt{IDLE}, \texttt{RUNNING}, \texttt{SUCCESS}, \texttt{FAILED}, and \texttt{STOPPED} (if a manager cancels a run in progress via \texttt{POST /pipeline/stop}). While running, it advances through \texttt{ETL} (skipped once the database is populated), \texttt{CLUSTERING}, \texttt{SEQUENCES\_GLOBAL}, and \texttt{SEQUENCES\_CLUSTERS}, one run per cluster label $0..k{-}1$ plus the outlier group $-1$, as shown in Figure~\ref{fig:ch5_pipeline_flow}.
+
+AI interpretation, the final stage of Chapter~\ref{ch:analysis}'s conceptual pipeline, is folded into this same flow rather than run as its own tracked stage. Cluster cards are generated automatically, in-line, at the end of \texttt{CLUSTERING} (Section~\ref{ch:ai_results}). Sequence patterns, though, are left uninterpreted until a user opens one. Only then is an explanation generated, lazily, and cached. Any exception along the way is caught and recorded, marking the run \texttt{FAILED} instead of crashing.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\linewidth]{figs/chapter_5/figure5.png}
+\caption{Analytics pipeline orchestration: stages and state transitions}
+\label{fig:ch5_pipeline_flow}
+\end{figure}
+
+Each module can also be run standalone, straight from the backend. That is how the benchmarking in Chapter~\ref{ch:testing} was produced:
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+python app/clustering_algorithms/k_prototypes/k_prototypes.py
+
+python app/clustering_algorithms/prefix_span/prefix_span.py
+python app/clustering_algorithms/prefix_span/prefix_span.py --n-clusters 4
+\end{lstlisting}
+
+\noindent The first command runs K-Prototypes clustering. The other two run PrefixSpan, globally and per cluster.
+
+In normal operation, though, a manager triggers the whole pipeline from the pipeline management page (Section~\ref{ch:frontend_impl}, \texttt{POST /pipeline/run}). The same job also runs automatically once a month, on the 1st at 02:00, via an in-process APScheduler job. Both triggers call the identical orchestrator function. An atomic database guard rejects a second trigger with \texttt{409 Conflict} if a run is already in progress, so the manual and scheduled paths can never overlap.
+
+\subsubsection{AI Results Generation}
+\label{ch:ai_results}
+
+The LLM turns raw statistics into readable text at two different moments. The first is automatic: right after clustering finishes, one prompt writes the short card, title, color, insight, and recommendation, shown for every cluster on the dashboard. The second is manual. The first time a manager opens the detail view of a cluster or of a mined sequence, a separate prompt writes the full clinical interpretation on demand. The result is cached in the object's \texttt{ai\_analysis} JSONB column, so it is written only once.
+
+All three prompts follow the same shape. A fixed set of statistics is injected as \emph{expected input}, and the \emph{prompt} states explicit rules grounded in the clinical prompt-engineering guidance of Liu et al.~\cite{liu2025}. The framing is guideline-anchored and evidence-based, bias mitigation is explicit, and the two manual prompts add an internal chain-of-thought step. The model must then answer with a strict \emph{expected output}, either a pipe-delimited line or a JSON object. This keeps every response a paraphrase of the numbers it was given, framed as the ``preliminary draft a clinician must verify'' that the paper itself recommends, and never a number the model invented.
+
+\subsubsection*{Cluster Cards at Creation}
+
+\texttt{get\_clusters\_summary}, using the template in \texttt{app/prompts/clusters}, builds one prompt covering every cluster at once and sends it via \texttt{ask\_ai}.
+
+\paragraph{Expected input.} Per cluster: its size and population share, key numeric averages (age, QALY, DALY, procedures, medications, active conditions), the demographic and disease-rate mix, the dominant care plan share, and the top conditions, medications, and procedures.
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+Structure your response EXACTLY as: [Cluster ID] | [#HexColor] | [Short Title]
+| [1-2 sentence Description] | [1 short Insight] | [1 short Recommendation]
+
+Title rules: 2-4 words, plain everyday language, no medical jargon
+(e.g. "Older Adults with Chronic Conditions", "Young and Healthy").
+Description rules: 1-2 short sentences a non-medical reader can follow.
+Insight: pick the MOST distinguishing signal, using concrete numbers from the
+data only; do NOT base it on demographics (age, gender) alone.
+Recommendation: tie the action to that insight and to standard care for the
+disease focus (cardiac dominance -> cardiology follow-up per ACC/AHA;
+polypharmacy -> medication review; long gap since last visit -> outreach).
+
+Choose a hex color that reflects the cluster's clinical profile: red for
+high-risk, green for healthy, blue for elderly chronic, orange for moderate,
+purple for psychiatric, teal for maternal. Use strong, saturated colors, not
+pastel tones. The outlier cluster (-1) is always gray (#9CA3AF).
+Do NOT use em dashes anywhere in the response.
+\end{lstlisting}
+
+\paragraph{Expected output.} One pipe-delimited line per cluster:
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+[Cluster ID] | [#HexColor] | [Short Title] | [1-2 sentence Description]
+            | [1 short Insight] | [1 short Recommendation]
+\end{lstlisting}
+
+\texttt{\_parse\_cluster\_summaries} splits each line on \texttt{|} and writes it straight into the \texttt{cluster} table, so this is exactly what the dashboard cards show.
+
+\subsubsection*{On-Demand Analysis: Clusters and Sequences}
+
+Opening a cluster or a sequence for the first time triggers a second, heavier prompt, \texttt{PROMPT\_AI\_ANALYSIS} for clusters and \texttt{PROMPT\_SEQUENCE\_ANALYSIS} for sequences, both built the same way and both answering in strict JSON.
+
+\paragraph{Expected input (cluster).} The same per-cluster statistics as above, but each metric paired with its population average, plus the clustering quality scores (silhouette, Davies--Bouldin), so the model can describe every deviation as ``higher'' or ``lower'' than average.
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+Base every claim strictly on the numbers provided. This is clinical decision
+support, not a diagnosis: a preliminary draft a clinician must verify.
+Gender: "balanced" if 40-60%, "more female/male" if 60-70%, "predominantly
+female/male" only if >70%.
+Translate vitals into plain risk language (systolic BP >=140 = hypertensive,
+glucose >=126 = diabetic range, BMI >=30 = obese).
+Let the dominant careplan category guide the clinical framing (Cardiac,
+Respiratory, Metabolic, Maternal, Musculoskeletal, Psychiatric, Other).
+Evidence-based framing: anchor risks and interventions to recognized
+guidelines (ADA, ACC/AHA, KDIGO, GOLD) only when the data supports that focus;
+never quote a threshold you are unsure of.
+Bias mitigation: do not attribute risk to age, gender, or marital status
+beyond what the prevalence and vitals data explicitly support.
+If a value is "N/A" or 0 with no clinical meaning, do not mention that metric.
+
+REASONING (work through internally, do NOT include in the output):
+1. Identify the dominant careplan and the prevalences with the largest deltas.
+2. Translate the mean vitals and quality-of-life metrics into risk language.
+3. Decide the overall risk level (high / moderate / low).
+4. Derive interventions from the largest deltas and dominant disease focus.
+
+TASK: analyse this group for TWO audiences: clinicians (2-3 sentences,
+anchored on dominant careplan and top prevalence deltas) and the general
+public (1-2 sentences, plain language, no medical terms).
+\end{lstlisting}
+
+\paragraph{Expected output (cluster).} Strict JSON, parsed by \texttt{parse\_ai\_json} and cached into \texttt{cluster.ai\_analysis}:
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+{
+  "risk_level": "high or moderate or low",
+  "medical_interpretation": "...",
+  "layperson_summary": "...",
+  "key_characteristics": ["...", "...", "...", "..."],
+  "priority_interventions": ["...", "...", "..."],
+  "care_recommendations": ["...", "...", "..."]
+}
+\end{lstlisting}
+
+\paragraph{Expected input (sequence).} The ordered pattern items with their \texttt{C:}/\texttt{M:}/\texttt{P:}/\texttt{CP:} type tags, its support and population share, and the same demographic, vitals, and disease-rate summary, computed only over the patients who follow that pattern.
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+A "care trajectory" is an ordered sequence of clinical events. The arrow (->)
+denotes temporal ordering; items in parentheses occurred on the same day.
+Interpret item prefixes: C: = Condition, M: = Medication, P: = Procedure,
+CP: = CarePlan.
+Focus on the clinical narrative: what is the likely disease progression or
+care pathway this sequence represents? Frame it as a plausible
+interpretation of the ordering, not a proven causal chain.
+Gender, vitals, evidence-based framing, and bias mitigation follow the same
+rules as the cluster prompt above.
+
+REASONING (work through internally, do NOT include in the output):
+1. Read the sequence in order and map each item to its clinical meaning.
+2. Infer the most plausible disease progression or care pathway.
+3. Cross-check that inference against the patient statistics for this group.
+4. Identify the key risks or care gaps and the recommendations that follow.
+
+TASK: explain this trajectory for TWO audiences: clinicians (2-3 sentences,
+referencing specific items in the sequence and the patient statistics) and
+the general public (1-2 sentences, plain language, no medical terms).
+\end{lstlisting}
+
+\paragraph{Expected output (sequence).} Strict JSON, parsed by \texttt{parse\_ai\_json} and cached into \texttt{prefix\_span\_pattern.ai\_analysis}. The schema is shorter than the cluster one: a pathway calls for a narrative rather than a static profile.
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+{
+  "clinical_interpretation": "...",
+  "layperson_summary": "...",
+  "risk_signals": ["...", "...", "..."],
+  "recommendations": ["...", "...", "..."]
+}
+\end{lstlisting}
+
+\noindent Neither object is produced twice: once cached, every later visit to that cluster or sequence is served straight from the database.
+
+\subsubsection{LLM SQL Agent (LangGraph)}
+\label{ch:sql_agent_impl}
+
+The SQL agent lives in \texttt{app/service/lllm\_sql\_agent\_service/} and lets a user query the database in plain natural language. It is built as a \textbf{LangGraph} state machine: a directed graph of node functions over one shared, typed state, compiled once and invoked per request via \texttt{graph.invoke(initial\_state, \{"recursion\_limit": 20\})}, shown in Figure~\ref{fig:ch5_sql_agent_graph}. Each node makes at most one call to \texttt{ask\_ai} and returns a partial state update. Every prompt is a constant in \texttt{app/prompts/sql\_agent}, grounded against one shared \texttt{DB\_SCHEMA} string, and follows the clinical prompt-engineering guidance of Liu et al.~\cite{liu2025} reviewed in Section~\ref{sec:rw_llm}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.90\linewidth]{figs/chapter_5/sql_graph.png}
+\caption{LangGraph state machine for the SQL agent}
+\label{fig:ch5_sql_agent_graph}
+\end{figure}
+
+\texttt{process\_input} is the entry point. Using the last 5 conversation turns as context, it classifies the message into one of three routes. \texttt{NOT\_MEDICAL} is out of scope, and the graph ends immediately with a fixed refusal. \texttt{MEDICAL} is a health question that needs no database access, answered directly by \texttt{answer\_general}. \texttt{GENERATE} is a data question, rewritten as one standalone English sentence and passed on.
+
+\texttt{generate\_query} drafts a SQL statement from that sentence. \texttt{validate\_query} then checks it in two independent passes before anything touches the database. A static filter, \texttt{is\_select\_only}, first rejects any statement that is not a bare \texttt{SELECT}/\texttt{WITH} query, or that contains a blacklisted keyword (\texttt{INSERT}, \texttt{UPDATE}, \texttt{DELETE}, \texttt{DROP}, \texttt{TRUNCATE}, \texttt{ALTER}, and similar). No write statement can reach the database, whatever the model produces. Only a query that survives this filter is handed to a second, independent LLM call, which audits it against the schema and the original question.
+
+A query that passes both checks moves to \texttt{execute\_query}, which runs it through the request-scoped session and truncates the result to 3{,}000 characters. \texttt{PROMPT\_RESULT} then turns it into a natural-language answer. A failure at either validation or execution feeds its exact cause back into the next \texttt{generate\_query} attempt, up to \texttt{MAX\_RETRIES=3}. Because a single request-scoped SQLAlchemy session is reused across every retry, \texttt{execute\_query} rolls the session back whenever the database raises an error, so a failed attempt (a bad cast, an unknown column) cannot leave the session in a failed-transaction state and silently doom every subsequent retry in the same request. When the caller has a scoped role, Doctor or Patient, a matching clause restricts both generation and validation to that person's own records. A post-execution check also refuses the answer if the final SQL does not reference the required identifier. As established in Chapter~\ref{ch:analysis}, this illustrates provider/patient-level separation rather than acting as a hardened access-control boundary, since the platform runs only on synthetic data.
+
+\subsubsection*{Validating the Generated Query}
+
+\texttt{validate\_query} is the one prompt worth detailing on its own, since it is what keeps the agent read-only.
+
+\paragraph{Expected input.} The original question, the candidate SQL, the \texttt{DB\_SCHEMA} string, and, if the caller is scoped, the doctor or patient clause.
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+Decide if the SQL is safe AND correctly answers the request.
+Validation checklist (reject if ANY fails):
+1. Must be a single SELECT or WITH ... SELECT.
+2. Every referenced table and column must exist in the schema.
+3. JOIN conditions must use documented foreign-key relationships.
+4. Query logic must answer THIS specific question.
+5. Cluster questions: reject if `NOT is_outlier` is missing.
+6. Patient counts: reject COUNT(*) where COUNT(DISTINCT patient_id) is needed.
+7. If a MANDATORY ROLE SCOPE is present: reject if its filter is missing.
+Do NOT flag: ILIKE vs =, aliasing, ordering, whitespace.
+\end{lstlisting}
+
+\paragraph{Expected output.} Line 1: \texttt{YES} or \texttt{NO}. Line 2, only if \texttt{NO}: a one-sentence reason, which becomes the feedback for the next \texttt{generate\_query} attempt.
+
+\subsubsection*{The Remaining Prompts}
+
+The other four prompts are simpler variations on the same idea. \texttt{PROMPT\_TRANSLATE} does the classification described above, and rewrites data questions into one clean English sentence, using the chat history and the schema only to resolve ambiguous terms. \texttt{PROMPT\_MEDICAL\_ANSWER} answers general health questions directly: grounded in established clinical knowledge, never inventing a statistic or a personal diagnosis, and always closing with a disclaimer to consult a licensed professional. \texttt{PROMPT\_GENERATE\_SQL} writes the actual query, carrying every project-specific rule: \texttt{LIMIT}, exact-cased enums for categorical codes (matching how Synthea actually stores them, e.g. lowercase \texttt{race}/\texttt{ethnicity} values), \texttt{COUNT(DISTINCT patient\_id)}, the JSONB accessors for \texttt{cluster\_patient.features}, and the mandatory \texttt{NOT is\_outlier} filter. For free-text columns such as \texttt{description} it uses \texttt{ILIKE}, but rather than wrapping the user's whole phrase in one pattern, it is instructed to split it into its distinct keywords (drug or condition name, strength, form) and \texttt{AND} together one \texttt{ILIKE '\%keyword\%'} per keyword, since clinical names rarely share the exact word order of a question (e.g. ``Metformin extended release tablet'' versus the stored ``24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet''). For sequence-mining questions it distinguishes a pattern's raw \texttt{support\_count} (``most frequent'') from its curated \texttt{rank} (``most representative''), and, for ``how many patterns were mined for cluster $X$'', filters \texttt{prefix\_span\_pattern.cluster\_label} directly instead of joining through \texttt{prefix\_span\_patient\_pattern}, which instead answers the different question of which patterns have a member in cluster $X$. On a retry, it also receives the previous query and exactly why it failed. \texttt{PROMPT\_RESULT} phrases the final row set the way a data analyst would, never mentioning SQL, tables, or columns.
+
+All three query-facing prompts share one static resource, \texttt{DB\_SCHEMA} (\texttt{db/db\_data.py}): a description of all 16 tables with every column, type, foreign key, and JSONB access convention, so the model never has to guess the schema.
+
+\vspace{0.25cm}
+
+\begin{lstlisting}[style=pythonstyle]
+DB_SCHEMA = """
+OVERVIEW:
+- 16 tables: 4 infrastructure (patient, organization, provider, encounter)
+  + 7 clinical (observation, condition, medication, procedure, immunization,
+    allergy, careplan) + 2 sequence-mining + 3 clustering.
+- Encounters link Patients to Providers and Organizations (many-to-one).
+- Only use clustering or sequence tables when the user explicitly asks
+  about clusters, patient segments, care trajectories, or sequences.
+
+TABLE: patient
+  - patient_id (str, PK) - UUID. Never treat as integer.
+  - gender (str) - Values: 'M' (Male), 'F' (Female). Do NOT use 'Male'/'Female'.
+  - marital (str) - Values: 'M', 'S', 'D', 'W'.
+  ...
+"""
+\end{lstlisting}
+
+\noindent Every other table follows the same pattern: its columns, their types, and any value it would be unsafe for the model to guess (foreign keys, enum codes, nullable dates). This last part matters in practice, not just in principle: \texttt{prefix\_span\_pattern.cluster\_label} was initially missing from \texttt{DB\_SCHEMA} even though the underlying model has it, and the model would then either omit it and fall back to a join-based approximation, or reference it correctly only for the validator (reading the same incomplete schema) to reject the query as touching a non-existent column. Keeping \texttt{DB\_SCHEMA} in lockstep with the SQLModel definitions is therefore as load-bearing as the prompts themselves.
+
+When the caller is a Doctor or a Patient, an extra block of text, \texttt{DOCTOR\_SCOPE\_CLAUSE} or \texttt{PATIENT\_SCOPE\_CLAUSE}, is inserted into \texttt{PROMPT\_GENERATE\_SQL} and \texttt{PROMPT\_VALIDATE\_SQL} right after the schema, carrying that person's own \texttt{provider\_id} or \texttt{patient\_id} and instructing the model to restrict every query to it. As established in Chapter~\ref{ch:analysis}, this is a demonstration of role-aware scoping rather than an enforced access-control boundary, since the platform runs only on synthetic data.

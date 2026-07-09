@@ -229,7 +229,7 @@ function PatientsPageContent() {
       <TableCell sx={bodyCellSx}>
         <TruncatedText
           text={
-            p.race ? (p.ethnicity ? `${p.race} · ${p.ethnicity}` : p.race) : "-"
+            p.race ? (p.ethnicity ? `${p.race} - ${p.ethnicity}` : p.race) : "-"
           }
         />
       </TableCell>

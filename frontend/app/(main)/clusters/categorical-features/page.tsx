@@ -50,7 +50,7 @@ export default function CategoricalClusterFeaturesPage() {
               disabled={index === 0}
               aria-label="Previous"
             >
-              ‹
+              &lt;
             </button>
             <div className={classes.chartWrapper}>
               <StackedBarChartComponent featureData={current} />
@@ -61,7 +61,7 @@ export default function CategoricalClusterFeaturesPage() {
               disabled={index === total - 1}
               aria-label="Next"
             >
-              ›
+              &gt;
             </button>
           </div>
         </>

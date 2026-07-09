@@ -24,8 +24,8 @@ def statistics_ask_ai(
     db: Session = Depends(get_db),
     scope: Scope = Depends(scope_dep),
 ):
-    if scope.is_patient:
-        raise HTTPException(status_code=403, detail="SQL agent is not available for patients")
+    if scope.is_patient and not scope.patient_id:
+        raise HTTPException(status_code=403, detail="Patient scope requires a patient id")
     history = [{"role": msg.role, "content": msg.content} for msg in request.history]
     return run_agent(
         db,
@@ -33,4 +33,5 @@ def statistics_ask_ai(
         history,
         role=scope.role,
         provider_id=scope.provider_id,
+        patient_id=scope.patient_id,
     )

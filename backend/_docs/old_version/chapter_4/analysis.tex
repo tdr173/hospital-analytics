@@ -1,0 +1,888 @@
+\chapter{Analysis and Theoretical Foundation}
+\label{ch:analysis}
+\pagestyle{fancy}
+
+This chapter represents the cornerstone of the proposed hospital analytics solution. In this part of the thesis, we will present the chosen algorithms and methods, the theoretical reasoning behind their selection, and the abstract mathematical foundations of the system. We will examine each algorithmic component in detail, so the reader can gain a comprehensive understanding of the operating principles behind patient segmentation, clustering, sequence mining, and natural language querying and interpretation.
+
+\section{Theoretical Foundation}
+
+This section introduces the foundational concepts and the underlying mathematical framework, alongside a high-level theoretical overview of the algorithms involved.
+
+\subsection{From Medical Records to Meaningful Insights}
+
+To keep up with the evolution of digitalization, in the last 15-20 years more and more hospitals have opted for digital solutions when it comes to storing data and patient history. Thus, the classic paper records and files have been replaced with a new system (EHR - Electronic Health Records), which allows the digital storage of patient history. Because this data can be accessed much more easily than the classic ones, the analyses and reports made on patients or groups of patients have become easier to do. The processing of this digital data can lead to valuable observations and analyses. In this way, common patterns can be discovered, treatments that have worked on other similar patients can be reapplied or the same recommendations can be applied to people in the same group. Therefore, the potential of this data is huge.
+
+Electronic Health Records possess immense analytical value in the medical field, but the processing of this data is not always as simple as it seems at first glance. Patients may differ mathematically in small attributes, which can add noise to analyses and reports. Or simply medical data is private, under GDPR protection, and therefore difficult to use for academic research.
+
+\subsubsection*{The First Barrier: Data Protection and Synthetic Data Accuracy}
+
+The first major barrier encountered in the clinical analysis process is data protection, for data security reasons. Real EHR data contains sensitive information, such as patient names, dates of birth, or medical history. Due to GDPR restrictions, these are not accessible to the general public, requiring specific institutional approvals. Even if real data is obtained, sensitive fields must be anonymized due to the same GDPR rules.
+
+The solution to this problem consists in utilizing artificially generated data. As a result, we will be able to check our algorithms, which will be used in academic research, without infringing privacy rights. For this purpose, we will take a dataset created using Synthea. While the synthetic dataset creation is performed using the probabilistic approach in Synthea, the validity of such a dataset is provided by the statistical fidelity rule. The prevalence graphs produced by Walonoski et al. in \cite{walonoski2017} show the following result. With the increasing size of the simulation sample, the results become more stable and close to the official statistics.
+
+However, there is no claim about any convergence in terms of measure theory. Still, this example provides the evidence of high empirical consistency. As the number of simulated individuals increases, the structure of demographic and disease statistics in the synthetic population becomes more consistent with the statistics of the real-world clinical cases. This feature allows claiming that clustering and data mining operations performed on this artificially created database are reliable and generalizable to the population of real actual patients.
+
+\subsubsection*{The Second Barrier: Mathematical Complexity of Clinical Data}
+
+The second major barrier occurs due to the variety of characteristics of the standalone data. The heterogeneity of the data makes it difficult to analyze the information using one approach. Specifically, clinical data of a certain patient consists of several kinds of events that are hard to accommodate by a single mathematical model. In particular, patient's clinical data may include:
+\vspace{0.2em}
+\begin{enumerate}
+    \item \textbf{Data of different types:} a patient's record may belong to such types as integer (blood pressure, blood sugar, cholesterol), float (quality adjusted life year index, body mass index, hemoglobin) or string (patient's diagnoses, diagnoses codes, allergies).
+
+    \item \textbf{Different data regarding variation:} some variables can differ in small intervals (e.g., $[0.4, 4]$ mIU/L for TSH) or in larger intervals (e.g., $[50, 500]$ mg/dL for cholesterol). No single model will handle correctly these data, hence the necessity of their treatment before processing.
+
+    \item \textbf{Interrupted or non-equally spaced timelines:} medical data may consist of interrupted records. A patient might have no information on his or her health condition for months, or even years (as is often the case with healthy individuals), while other patients could have numerous interventions in a window of a few days.
+\end{enumerate}
+\vspace{1em}
+Since there is no single approach to this problem, a solution should use a specific group of algorithms and procedures to solve it optimally.
+\subsection{Algorithmic Strategies for Clinical Analytics}
+
+Given the limitations discovered earlier in this paper, it becomes clear that a singular computational approach will not perform well under the limitations of the Electronic Health Records in their natural state. Patient data can be expressed in several formats and states, ranging from continuous numerical variables to textual data and non-uniform timelines. In light of this observation, it becomes necessary to adopt an architectural strategy for solving this problem. Through the abstraction of the original problem statement, the architecture we suggest below allows distributing the workload onto specialized mathematical algorithms. As pointed out by Dash et al. \cite{dash2019}, a proven strategy for dealing with such complexity is through machine learning pipelines.
+
+\textbf{Formal Problem Abstraction} \\
+Essentially, the proposed system models the hospital population as a finite set $P = \{p_1, p_2, \dots, p_n\}$. Every individual patient will be modeled using two different mathematical structures:
+\begin{enumerate}
+    \item A feature vector $p_i = \langle x_i^{(1)}, \dots, x_i^{(m)} \rangle$, that belongs to the combined feature space, containing both numerical and categorical features.
+    \item A temporal event sequence $S_i = \langle e_{i,1}, e_{i,2}, \dots, e_{i,l_i} \rangle$, indicating a strict chronological order of events.
+\end{enumerate}
+
+\vspace{1em}
+
+Since these two data structures cannot be analyzed by a single mathematical model, the suggested solution builds its analysis based on three orthogonal models. Each of the three pillars attempts to answer one basic question related to the patient pool:
+
+\vspace{1em}
+
+\begin{itemize}
+    \item \textbf{Pillar I: Population Stratification (Who are the patients?)} \\
+    For analyzing the demographics and characteristics of hospital patient population, patients have to be divided into specific phenotypes based on their static feature vectors ($p_i$). Since there is a combination of both continuous and categorical data types involved in this, traditional distance measure methods would fail from a mathematical perspective. Hence, mixed data type cluster analysis approach is required in this regard.
+
+    \vspace{0.5em}
+
+    \item \textbf{Pillar II: Clinical Trajectory Mining (What care pathways do they follow?)} \\
+    The exact sequence of occurrence of the event sequences ($S_i$) in terms of time must be known for understanding the patient's trajectory. In a particular scenario, there might be a diagnosis that leads to the use of a specific drug that will eventually be followed by some procedure, and the order of these events holds significance and cannot be broken or altered.
+
+    \vspace{0.5em}
+
+    \item \textbf{Pillar III: Semantic Query Translation (How can clinicians access this data?)} \\
+    The results of the statistical clustering algorithm and sequence mining are not natively understandable by non-technical medical staff. As a solution, an LLM given enough context can be used to interpret the results. In addition, conventional database queries are subject to the accessibility bottleneck issue for administrators without any expertise in query languages as SQL. The solution to this problem involves implementing the concept of autonomous reasoning agents (LLMs), which are enclosed within a directed control graph. They convert natural language queries to safe SQL queries and statistical results to clinical text, but they can also answer to general medical related questions.
+\end{itemize}
+
+\vspace{1em}
+
+These three pillars are highly interdependent because clustering reduces the noise in the population, sequence mining identifies the pathways from those particular clusters, and the semantic agent allows a common interface for querying the output. The following sections will provide a formal definition of the mathematics behind each one of these analytical paradigms.
+\subsection{Mixed-Type Clustering and K-Prototypes}
+
+The patients stratification involves the task of breaking the entire available population into various sets of homogeneous entities. These groups known as clusters or phenotypes. While the general population is generally heterogeneous, our analytical goal is to create smaller cohorts of people who share a high degree of similarity (smaller homogeneous groups). The underlying objective of this analysis is to reveal natural groupings in the data where the population in each cluster exhibits similar characteristics (intra-cluster variance must be minimized) while patients belonging to different groups are different from each other (inter-cluster variance must be maximized). Through stratification, we are able to reduce the overall complexity of the population into several representative prototypes that can be analyzed easier.
+
+The key issue related to the problem of patient clustering is the nature of the healthcare data involved. Patient data contains not only continuous variables that include age, results of some medical tests, physiological measures, time spent per consultation, but also discrete or categorical variables such as medical codes, drug classes, gender, ethnic group, and many others. These two classes of attributes belong to different mathematical domains and thus require different handling techniques.
+
+\subsubsection{Limitations of Standard Clustering Algorithms}
+\label{ch:clustering_limitations}
+
+The most popular clustering algorithm in the existing specialized literature and certainly the most studied is K-Means. It partitions a domain into K predefined cohorts, by minimizing the total within cluster squared Euclidean distance. Given a dataset $X = \{x_1, x_2, \ldots, x_n\}$ of $n$ instances over a purely numerical feature space $\mathbb{R}^m$, the K-Means objective is:
+
+\begin{equation}
+    J_{km} = \sum_{j=1}^{k} \sum_{x_i \in C_j} \|x_i - \mu_j\|^2
+    \label{eq:kmeans}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\boldsymbol{J_{km}}$ is the total objective function value (the within-cluster sum of squared errors).
+    \item $\boldsymbol{k}$ is the predefined number of clusters.
+    \item $\boldsymbol{C_j}$ is the $j$-th cluster.
+    \item $\boldsymbol{x_i}$ is a single data point (patient instance) assigned to cluster $C_j$.
+    \item $\boldsymbol{\mu_j}$ is the centroid of cluster $C_j$, computed as the arithmetic mean of all instances assigned to it.
+    \item $\boldsymbol{m}$ is the total number of dimensions (numerical features) in the dataset.
+    \item $\boldsymbol{n}$ is the total number of instances in the dataset $X$.
+\end{itemize}
+
+\vspace{1em}
+
+The equation~\eqref{eq:kmeans} holds true from the mathematical perspective only when the underlying data set is completely made up of numeric values that are continuous in nature. When numbers are used as data, the computation of the arithmetic mean provides the ideal way to determine the centroid of the cluster. However, because categorical variables have no numerical value, it is mathematically impossible to calculate an ``average'' for them.
+
+When categorical variables are used as features, this algorithm becomes invalid and generates false clusters. The encoding of strings as integers to represent categorical data and the application of Equation~\eqref{eq:kmeans} leads to the creation of an artificial ordinal ranking, as the algorithm interprets the integer encodings as representing meaningful distances between categories. The resulting centroids are arithmetic averages of integer codes, which correspond to no plausible clinical profile and produce geometrically distorted cluster boundaries.
+
+To overcome the limitations of Euclidean space, the K-Modes clustering method was designed for exclusively categorical databases. The problem of undefined mathematical centers is mitigated through the use of the mode instead of the arithmetic mean, where the most prevalent category is used to represent each cluster. Further, the algorithm replaces the Euclidean objective function with the Hamming distance, which is a simplistic binary dissimilarity metric calculated as the sum of all mismatched categorical attributes between categorical vectors. Nonetheless, incorporating the K-Modes clustering algorithm within the framework of a heterogeneous clinical database brings about a major analytical concern. In order to incorporate continuous numeric variables, the algorithm has to convert such measurements into discrete categories (e.g. high and low blood pressure). Such an approximation would ignore the inherent variation of continuous variables, thereby reducing the information content of the continuous attributes.
+
+Accordingly, using either algorithm alone fails to meet theoretical requirements when examining the complexity of EHRs. Although K-Means fails mathematically in analyzing nominal text information, K-Modes distorts the geometry of numeric variables. Addressing this core problem requires a new mathematical model capable of measuring the dissimilarity between variables from both data types at once.
+
+\subsubsection*{The K-Prototypes Algorithm}
+
+The K-Prototypes algorithm, proposed by Huang \cite{huang1998}, which is an extension of both the K-Means and K-Modes algorithms, provides a solution to this problem through the introduction of a unified dissimilarity function for the entire feature space. We assume that the features of each sample can be divided into two groups: numerical features ($N$), and categorical features ($C$). Then, we denote the vector of features of each sample $x_i$ as $x_i = (x_i^N, x_i^C)$. A prototype $q_j$ of a cluster is defined as $q_j = (q_j^N, q_j^C)$, where $q_j^N$ is a numerical centroid, and $q_j^C$ is a categorical mode. The mixed dissimilarity between an instance $x_i$ and a prototype $q_j$ is defined as:
+
+\vspace{1em}
+
+\begin{equation}
+    d(x_i,\, q_j) = \underbrace{\sum_{l=1}^{|N|} \bigl(x_{il}^{N} - q_{jl}^{N}\bigr)^2}_{\text{numerical term}} + \;\gamma \underbrace{\sum_{l=1}^{|C|} \delta\bigl(x_{il}^{C},\, q_{jl}^{C}\bigr)}_{\text{categorical term}}
+    \label{eq:kproto_dist}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\boldsymbol{d(x_i, q_j)}$ is the total mixed-type dissimilarity between a single patient instance $x_i$ and the cluster prototype $q_j$.
+    \item $\boldsymbol{|N|}$ and $\boldsymbol{|C|}$ represent the total number of continuous numerical features and discrete categorical features in the dataset, respectively.
+    \item $\boldsymbol{x_{il}^N}$ is the value of the $l$-th numerical attribute for the patient instance $x_i$.
+    \item $\boldsymbol{q_{jl}^N}$ is the corresponding $l$-th numerical centroid value for the cluster prototype $q_j$.
+    \item $\boldsymbol{x_{il}^C}$ is the value of the $l$-th categorical attribute for the patient instance $x_i$.
+    \item $\boldsymbol{q_{jl}^C}$ is the corresponding $l$-th categorical mode value for the cluster prototype $q_j$.
+    \item $\boldsymbol{\delta(x_{il}^C, q_{jl}^C)}$ is the simple matching dissimilarity function (equivalent to the Hamming distance for single attributes). It acts as a binary indicator, returning $0$ if the categories match ($x_{il}^C = q_{jl}^C$) and $1$ if they differ ($x_{il}^C \neq q_{jl}^C$).
+    \item $\boldsymbol{\gamma}$ is the scalar weight factor ($\gamma > 0$) that has been included in order to ensure that the influence of the discrete feature space does not get overshadowed by the continuous feature space.
+\end{itemize}
+
+The ultimate mathematical aim in K-Prototypes is to find the optimal clustering of patients such that the dissimilarity among them is at the minimum for the whole dataset. The cost function which defines this procedure is given below:
+
+\begin{equation}
+    J = \sum_{i=1}^{n} \sum_{j=1}^{k} w_{ij}\, d(x_i,\, q_j)
+    \label{eq:kproto_obj}
+\end{equation}
+
+For minimizing the total error $J$, the algorithm updates two crucial elements. Firstly, it optimizes the set of cluster prototypes $Q = \{q_1, \ldots, q_k\}$, which represents the ideal representative in mathematical terms for every patient group. Secondly, it optimizes the assignment matrix $W = [w_{ij}]$, a binary matrix employed for monitoring patients' assignments, with $w_{ij}=1$ when $x_i$ belongs to $q_j$ and $w_{ij}=0$ otherwise.
+
+Also, there is an additional requirement, known as a hard assignment condition, formulated in the following manner: $\sum_{j=1}^k w_{ij}=1$. In medical practice, this requirement ensures that every individual patient is clearly assigned to precisely one cluster without any ambiguous overlaps or unassigned patients.
+
+\subsubsection*{The Balancing Parameter $\boldsymbol{\gamma}$}
+
+The tuning parameter $\gamma$ used in Equation \ref{eq:kproto_dist} indicates the importance of considering the categorical part over the numerical part. This cannot be stressed enough. If the value of $\gamma$ is very small, then the numerical part will dominate and totally neglect the categorical part. On the other hand, if $\gamma$ is very large, then vice versa will happen, where the variance between the continuous features will be ignored, making the algorithm behave like the K-Modes algorithm again.
+
+Following the principles outlined by Huang \cite{huang1998}, the value for $\gamma$ should be selected in  relation to the scale of the numerical attributes, being proportional to their average standard deviation. In this work, we adopt $\gamma$ as half the average standard deviation of the numerical attributes, a value that lies within Huang's recommended range:
+
+\begin{equation}
+    \gamma = \frac{1}{2} \cdot \frac{1}{|N|} \sum_{l=1}^{|N|} \hat{\sigma}_l
+    \label{eq:gamma}
+\end{equation}
+
+where $\hat{\sigma}_l$ means the standard deviation of the $l$-th numerical attribute in the whole dataset. In this way, neither attribute type dominates the dissimilarity merely because of its scale, since tying $\gamma$ to the average standard deviation of the numerical attributes keeps the squared numerical term and the categorical mismatch term on comparable orders of magnitude. As a result, the $\gamma$ calculated by Equation~\eqref{eq:gamma} depends upon the data and adjusts accordingly for the scale of the clinical attributes used in clustering.
+
+\subsubsection*{Prototype Update Rules and Convergence}
+
+In order to optimize $J$ (cost function), which is formulated using \eqref{eq:kproto_obj}, an iterative process, composed of two main parts, can be used: the \textbf{assignment step} and the \textbf{update step}. The algorithm iterates between the two parts such that at each cycle, the overall clustering error decreases to a point where patient groups become stable from a mathematical perspective.
+
+\vspace{0.5em}
+
+In the \textbf{assignment step}, each object $x_i$ gets assigned to the prototype $q_j^*$ that yields minimal mixed dissimilarity.
+
+\begin{equation}
+    j^* = \arg\min_{j \in \{1,\ldots,k\}} d(x_i,\, q_j)
+\end{equation}
+
+In the \textbf{update step}, prototypes are recalculated using their instances. In terms of the numerical component, the arithmetic average is the optimal option due to its optimal reduction of the squared Euclidean component:
+
+\begin{equation}
+    q_{jl}^{N} \;\leftarrow\; \frac{1}{|C_j|}\sum_{i:\, w_{ij}=1} x_{il}^{N}
+\end{equation}
+
+In the case of the categorical part, the best solution for updating is the mode, since it maximizes the simple matching dissimilarity:
+
+\begin{equation}
+    q_{jl}^{C} \;\leftarrow\; \operatorname{mode}\bigl(\{x_{il}^{C} : w_{ij} = 1\}\bigr)
+\end{equation}
+
+The completion of every iteration of the assignment process and the update process is guaranteed to result in an output in which J does not increase, as each of the two processes alone optimizes the objective function independently with respect to the different variables. The series $J^{(1)} \geq J^{(2)} \geq \cdots$ is thus assured to be monotonically non-increasing and lower-bounded by zero, and hence it converges to a local optimum of Equation~\eqref{eq:kproto_obj}.
+
+\subsubsection*{Initialization Strategies: Huang vs. Cao}
+
+One of the well-known weaknesses of all $k$-partitional methods is that they are highly sensitive to the initial choice of centroids. In case the prototypes for the clusters are selected poorly, the iteration process will fast lead to an inferior local minimum that is far from being the global one. The random initialization method performs poorly on mixed-type clinical data because a randomly selected prototype can be placed within an area with minimal data points, resulting in empty clusters during the iteration process.
+
+\vspace{1em}
+
+There are two prominent initialization techniques for the K-Prototypes algorithm proposed in literature:
+
+\begin{itemize}
+    \item \textbf{Initialization by Huang \cite{huang1998}:} First introduced with the algorithm itself, this approach is based on frequencies and uses the calculation of the frequency of each category to select its most common ones as the initialization for the categorical components ($q_j^C$). The initialization of the numerical component ($q_j^N$) is usually done with local means. Although highly computationally efficient, the biggest problem of Huang's initialization from a clinical perspective is that it performs frequency calculations independently. As a result, the algorithm risks initializing with fictitious patient profiles, constructing mathematical centroids out of high-frequency attributes that do not naturally coexist in any actual clinical observation. Besides, it does not guarantee geometric separation of the centers either.
+
+    \item \textbf{Initialization by Cao \cite{cao2009}:} To address the above issues with this geometrical aspect, the authors suggested a density-based initialization approach. Rather than building artificial prototypes, the algorithm selects real records from the dataset as the initial prototypes. The co-occurrence density of the records is calculated, and the first prototype is selected to be the record located in the absolutely densest point. Importantly, following prototypes are selected taking into account not only the local density but also the mathematical distance from all previously selected prototypes.
+\end{itemize}
+
+\vspace{1em}
+
+Even though the approach outlined in \cite{cao2009}, which utilizes density and distance metrics, is often mentioned as having the theoretical superiority in the presence of mixed data types, theoretical assumptions are not always reflective of what constitutes the best possible performance in specific clinical contexts. Given the unique nature of the Electronic Health Records' topology, which can be described as being extremely dimensional, sparse in categories, and highly skewed clinically, it is vital to adopt an empirical approach, rather than relying blindly on theoretical assumptions.
+
+As such, rather than assuming the theoretical superiority of either scheme, this work adopts the frequency-based Huang initialization, whose convergence behavior is assessed directly through the internal validation procedures outlined in the previous sections. Although Cao initialization was also tested, empirical results demonstrated that the Huang method consistently yielded superior internal validation metrics. On the clinical Synthea data, Huang initialization proved more effective in generating stable, non-degenerate clusters, which is why it drives the production K-Prototypes runs.
+
+\subsection{Mixed-Type Clustering Validation Metrics}
+
+According to Section 4.1.3, the K-Prototypes method can successfully classify mixed-type Electronic Health Records data. Nevertheless, since the algorithm does not require labels, it will automatically generate clusters regardless. Since no ground truth data exists, internal measures of validation are indispensable. The following section introduces six such measures and their ranges.
+
+These metrics fall into three functional categories: the Silhouette and Gower Silhouette Scores assess geometric cohesion and separation; the Calinski-Harabasz and Davies-Bouldin Indices evaluate the ratio of inter-cluster to intra-cluster dispersion and Cramér's $V$ and Eta Squared ($\eta^2$) quantify the statistical effect size of individual features on cluster membership.
+
+\subsubsection*{Silhouette Score}
+
+The Silhouette Score, introduced by Rousseeuw~\cite{rousseeuw1987}, measures how well an item fits into the cluster it belongs to. A high score means that the patient is close to other patients in the same cluster and far away from patients in neighboring clusters. For a data point $i$ assigned to cluster $C_a$, two quantities are defined.
+
+\vspace{1em}
+
+The \emph{intra-cluster distance} $a(i)$ is the mean distance from point $i$ to all other points in its own cluster:
+
+\begin{equation}
+    a(i) = \frac{1}{|C_a| - 1} \sum_{j \in C_a,\; j \neq i} d(i, j)
+    \label{eq:silhouette_a}
+\end{equation}
+
+\vspace {1em}
+
+The \emph{inter-cluster distance} $b(i)$ evaluates the proximity of point $i$ to its closest neighboring group. It is defined as the minimum average distance between $i$ and all instances belonging to any other cluster $C_b \neq C_a$:
+
+\begin{equation}
+    b(i) = \min_{C_b \neq C_a} \frac{1}{|C_b|} \sum_{j \in C_b} d(i, j)
+    \label{eq:silhouette_b}
+\end{equation}
+
+The silhouette coefficient of point $i$ is then:
+
+\begin{equation}
+    s(i) = \frac{b(i) - a(i)}{\max\bigl(a(i),\; b(i)\bigr)}
+    \label{eq:silhouette_si}
+\end{equation}
+
+The global Silhouette Score $\bar{s}$ is the arithmetic mean over all $n$ points:
+
+\begin{equation}
+    \bar{s} = \frac{1}{n} \sum_{i=1}^{n} s(i)
+    \label{eq:silhouette_global}
+\end{equation}
+
+$s(i)$ is bounded in $[-1, 1]$. When the result for $s(i)$ is near $+1$, this means that data point $i$ has been matched to its proper cluster and is far away from other clusters. If the result is near $0$, it shows that data point $i$ belongs to the border of clusters. Lastly, when the result is near $-1$, it means that the data point has been misclassified. Similarly, $\bar{s}$ is interpreted in the same way. Values greater than $0.5$ for $\bar{s}$ suggest a reasonable clustering process, while those above $0.7$ imply very good clustering results, as pointed out by Kaufman et al.~\cite{kaufman1990}.
+
+In its standard form, the Silhouette Score uses Euclidean distance as $d(i,j)$, which restricts its applicability to purely numerical data.
+
+\subsubsection*{Gower Silhouette Score}
+\label{ch:gower}
+
+In the case where we have mixed types in the feature space, the Euclidean distance used in the conventional Silhouette Score is not anymore defined on all features. So we have to define the Gower distance \cite{gower1971} instead, which is defined for any mixture of quantitative and qualitative variables. The Gower distance between two data points $i$ and $j$ with $p$ features is:
+
+\begin{equation}
+    d_G(i, j) = \frac{1}{p} \sum_{m=1}^{p} d_m(i, j)
+    \label{eq:gower}
+\end{equation}
+
+where the per-feature contribution $d_m(i, j)$ is defined according to the feature type:
+
+\begin{equation}
+    d_m(i, j) =
+    \begin{cases}
+        \dfrac{|x_{im} - x_{jm}|}{R_m} & \text{if feature } m \text{ is numerical} \\[8pt]
+        \mathbf{1}[x_{im} \neq x_{jm}]  & \text{if feature } m \text{ is categorical}
+    \end{cases}
+    \label{eq:gower_dm}
+\end{equation}
+
+Here $R_m=\max_i(x_{im})-\min_i(x_{im})$ is the range of values that the variable takes in the whole data set. As a result, each element $d_m(i,j)$ will take a value in $[0,1]$, and thus the Gower distance $d_G(i,j)\in[0,1]$.
+
+The $n\times n$ pairwise distance matrix is built using equation~\eqref{eq:gower}, and the silhouette formulae of Equations~\eqref{eq:silhouette_a}~-~\eqref{eq:silhouette_global} are directly used on it. While the calculated value of the Gower Silhouette Score $\bar{s}_G$ still lies within the theoretical interval of [-1, 1], the standard textbook conditions (where scores $\bar{s} > 0.7$ are required to achieve successful clustering) do not apply to the true nature of clinical data. As has been stated before, the datasets used clinically are naturally characterized by certain amounts of noise and sparsity, along with naturally overlapping clusters in biological features. Given the extreme multidimensional nature of these datasets, in practice, scores of $\bar{s}_G > 0.5$ are rarely observed.
+
+\subsubsection*{Calinski-Harabasz Index}
+
+The Calinski-Harabasz (CH) index \cite{calinski1974} measures a clustering based on the ratio of the between-cluster variance and the within-cluster variance. Assuming the dataset contains a total of $n$ data points partitioned into $k$ clusters, we define $\boldsymbol{\mu}$ as the centroid of the entire dataset, and $\boldsymbol{\mu}_j$ as the centroid of cluster $C_j$. The between-cluster scatter matrix trace is:
+
+\begin{equation}
+    \mathrm{tr}(B_k) = \sum_{j=1}^{k} |C_j| \cdot \|\boldsymbol{\mu}_j - \boldsymbol{\mu}\|^2
+    \label{eq:ch_between}
+\end{equation}
+
+The within-cluster scatter matrix trace is:
+
+\begin{equation}
+    \mathrm{tr}(W_k) = \sum_{j=1}^{k} \sum_{i \in C_j} \|\mathbf{x}_i - \boldsymbol{\mu}_j\|^2
+    \label{eq:ch_within}
+\end{equation}
+
+The CH Index is the normalized ratio of these two quantities:
+
+\begin{equation}
+    \mathrm{CH} = \frac{\mathrm{tr}(B_k)}{\mathrm{tr}(W_k)} \cdot \frac{n - k}{k - 1}
+    \label{eq:ch}
+\end{equation}
+
+Ranging between $[0, +\infty)$, the higher the value of CH, the more clearly defined the clusters are with greater separation and less variation within themselves. Without any clear defined cutoff value, its only use is for comparison purposes.
+
+\subsubsection*{Davies-Bouldin Index}
+
+The Davies-Bouldin (DB) Index \cite{davies1979} measures clustering quality by quantifying the worst-case overlap between every cluster and its most similar neighbor. For each cluster $C_i$, the internal scatter $\sigma_i$ is the mean distance from points in $C_i$ to the centroid $\boldsymbol{\mu}_i$:
+
+\begin{equation}
+    \sigma_i = \frac{1}{|C_i|} \sum_{j \in C_i} \|\mathbf{x}_j - \boldsymbol{\mu}_i\|
+    \label{eq:db_sigma}
+\end{equation}
+
+The similarity score between two clusters $C_i$ and $C_j$ can be formulated as:
+
+\begin{equation}
+    R_{ij} = \frac{\sigma_i + \sigma_j}{\|\boldsymbol{\mu}_i - \boldsymbol{\mu}_j\|}
+    \label{eq:db_Rij}
+\end{equation}
+
+For each $C_i$, the most similar neighbor is the cluster $C_j$ that maximizes $R_{ij}$:
+
+\begin{equation}
+    D_i = \max_{j \neq i}\; R_{ij}
+    \label{eq:db_Di}
+\end{equation}
+
+The DB Index is the mean of these worst-case similarity values over all $k$ clusters:
+
+\begin{equation}
+    \mathrm{DB} = \frac{1}{k} \sum_{i=1}^{k} D_i
+    \label{eq:db}
+\end{equation}
+
+The DB index ranges between $[0, +\infty)$. In contrast to the CH index, a smaller value is desirable because it suggests small clusters and high separation between different clusters. However, there is no predetermined upper bound to determine poor clustering results, but as a general rule of thumb, a value greater than $1$ suggests overlapping clusters.
+
+\subsubsection*{Cramér's $V$}
+
+In contrast with the previous geometric measures, the following two metrics evaluate the strength of association between cluster membership and individual attributes in terms of effect size.
+
+Cramér's $V$ measure \cite{cramer1946} evaluates the strength of association for categorical attributes. The $\chi^2$ statistic is defined for the contingency table of observed frequencies $O_{ij}$ for $k$ clusters and $q$ categories as follows:
+
+\begin{equation}
+    \chi^2 = \sum_{i=1}^{k} \sum_{j=1}^{q} \frac{(O_{ij} - E_{ij})^2}{E_{ij}}, \qquad E_{ij} = \frac{R_i \cdot C_j}{n}
+    \label{eq:chisq}
+\end{equation}
+
+where $E_{ij}$ is the expected frequency, $R_i$ and $C_j$ are the corresponding row and column totals, and $n$ is the total number of observations. The $\chi^2$ statistic is converted into a range $[0, 1]$ using Cramér's $V$ measure, regardless of the table dimensions:
+
+\begin{equation}
+    V = \sqrt{\frac{\chi^2}{n \cdot \min(k-1,\; q-1)}}
+    \label{eq:cramer_v}
+\end{equation}
+
+It is straightforward to understand the boundaries: $V=0$ implies no association, whereas $V=1$ implies a perfect association. In line with Cohen's guidelines \cite{cohen1988}, the effect size is considered weak ($V<0.10$), moderate ($0.10 \leq V<0.30$), or strong ($V \geq 0.30$).
+
+\subsubsection*{Eta Squared}
+
+Eta Squared ($\eta^2$) represents the relationship between clustering and the numeric attribute. This statistic captures the degree to which the variation in the feature can be attributed to the clusters and is based on a one-way analysis of variance (ANOVA).
+
+Let $\bar{x}$ denote the overall mean of the numeric attribute, $\bar{x}_j$ the intra-cluster mean of cluster $C_j$, and $x_{ij}$ the numeric attribute value of individual $i$ in cluster $j$. The inter-cluster sum of squares and the total sum of squares are defined as follows:
+
+\begin{equation}
+    \mathrm{SS}_{\mathrm{between}} = \sum_{j=1}^{k} |C_j| \cdot (\bar{x}_j - \bar{x})^2, \qquad
+    \mathrm{SS}_{\mathrm{total}} = \sum_{j=1}^{k} \sum_{i \in C_j} (x_{ij} - \bar{x})^2
+    \label{eq:ss}
+\end{equation}
+
+Eta Squared is the ratio:
+
+\begin{equation}
+    \eta^2 = \frac{\mathrm{SS}_{\mathrm{between}}}{\mathrm{SS}_{\mathrm{total}}}
+    \label{eq:eta_squared}
+\end{equation}
+
+The value of $\eta^2$ lies in the interval [0, 1]. An $\eta^2$ value of 0 indicates that there is no relationship between the partitioning and the variance of the feature, whereas an $\eta^2$ value of 1 implies that the numeric attribute value depends entirely on the cluster assignment. Based on Cohen's guidelines \cite{cohen1988}, an effect size of $\eta^2 < 0.01$ is considered trivial, $0.01 \leq \eta^2 < 0.06$ small, $0.06 \leq \eta^2 < 0.14$ medium, and $\eta^2 \geq 0.14$ large.
+\subsection{Sequential Pattern Mining and PrefixSpan}
+
+Static clustering divides patients into groups that have similar clinical characteristics. However, static clustering reflects only a point in time. It captures who a patient was, but it fails to capture how the patient got there. The sequence of events needs to be captured to uncover the time order and discover clinical processes that happen often within each subgroup. According to Huang et al.~\cite{huang2014}, the discovery of clinical processes is done using sequential pattern mining.
+
+\subsubsection*{Sequence Model and Support}
+
+A patient's history is modeled as an ordered sequence of clinical events. Each event carries a type prefix (\texttt{C}: condition, \texttt{M}: medication, \texttt{P}: procedure, \texttt{CP}: care plan) and a description:
+
+\begin{equation}
+    S = \langle e_1,\, e_2,\, \ldots,\, e_n \rangle, \qquad t_1 \leq t_2 \leq \cdots \leq t_n
+    \label{eq:sequence}
+\end{equation}
+
+Events that take place on the same calendar day are linearized in a deterministic chronological way; therefore, the mining process is applied to simple sequences of singletons. For a sequence $\alpha = \langle a_1, \ldots, a_r \rangle$, the definition $\alpha \sqsubseteq S$ implies the existence of indices $i_1 < i_2 < \cdots < i_r$ such that $a_j = e_{i_j}$. Gaps are allowed between matched events, reflecting the fact that clinical encounters are interspersed by other activity.
+
+For a sequence database $\mathbb{S} = \{S_1, \ldots, S_{|\mathbb{S}|}\}$ and support threshold $\sigma$, the support of a pattern $\alpha$ corresponds to the number of sequences that include it,
+
+\begin{equation}
+    \mathrm{sup}(\alpha) = \bigl|\{\, S_i \in \mathbb{S} \mid \alpha \sqsubseteq S_i \,\}\bigr|,
+    \label{eq:support}
+\end{equation}
+
+and $\alpha$ is called \emph{frequent} whenever $\mathrm{sup}(\alpha) \geq \sigma \times |\mathbb{S}|$. All the frequent patterns are collected in the set $\mathcal{F}_\sigma$. Support is said to be \emph{anti-monotonic}, since
+
+\begin{equation}
+    \mathrm{sup}(\beta) \leq \mathrm{sup}(\alpha),
+    \label{eq:antimonotone}
+\end{equation}
+
+for $\alpha \sqsubseteq \beta$. Anti-monotonicity is what ensures the pruning of the search space and constitutes the basis of every efficient mining approach.
+
+\subsubsection*{PrefixSpan: Prefix-Projected Pattern Growth}
+\label{ch:prefix_span_theory}
+
+Generate and test based early methods such as GSP (Generalized Sequential Pattern) grow candidate sequences level-wise and check them against the entire dataset. In the case of an electronic medical records dataset with hundreds of unique event codes, this method would prove impossible due to exponential increase in candidate space and the need for repeated scanning of the database at each level.
+
+The PrefixSpan algorithm \cite{pei2001} does not generate candidates but instead extends them progressively and prunes its search space by considering only those suffixes that can follow a certain prefix in a \emph{projected database}. For any prefix $\alpha$,
+
+\begin{equation}
+    \mathbb{S}|_\alpha = \bigl\{\, S' \mid \exists\, S \in \mathbb{S}: \alpha \sqsubseteq S \text{ and } S' \text{ is the suffix of } S \text{ after the first occurrence of } \alpha \,\bigr\}.
+    \label{eq:projection}
+\end{equation}
+
+Mining begins with the empty prefix, mines all frequent length-1 items, performs projection, and recurses. Since the size of $\mathbb{S}|_\alpha$ is non-increasing as $\alpha$ is extended, less effort will be required on each recursion call as the pattern lengths increase. The correctness of the prefix decomposition ensures that the algorithm exhaustively generates $\mathcal{F}_\sigma$, without any repetitions or missing items.
+
+\subsubsection*{Closed Patterns}
+
+A detailed enumeration of all the patterns in $\mathcal{F}_\sigma$ would certainly not be an effective strategy as by virtue of the characteristic of anti-monotonicity, all the subsequences of a frequent pattern have to be frequent, which means that from one single trajectory of length $L$, we get $2^L-1$ other patterns in $\mathcal{F}_\sigma$. The theoretical approach in solving this problem is by reporting only those patterns that are \emph{closed}. A pattern $\alpha$ in $\mathcal{F}_\sigma$ is called closed if there does not exist:
+
+\begin{equation}
+    \beta \sqsupset \alpha \;\text{ such that }\; \mathrm{sup}(\beta) = \mathrm{sup}(\alpha).
+    \label{eq:closed}
+\end{equation}
+
+The set $\mathcal{C}_\sigma \subseteq \mathcal{F}_\sigma$ containing the closed patterns can be called a \emph{lossless compression} of $\mathcal{F}_\sigma$, because for each $\alpha \in \mathcal{F}_\sigma$ there exists a $\beta \in \mathcal{C}_\sigma$ satisfying $\alpha \sqsubseteq \beta$ and $\mathrm{sup}(\alpha) = \mathrm{sup}(\beta)$, meaning that no data is lost in the process. In terms of healthcare, a closed pattern represents the most detailed shared trajectory for a patient group.
+
+\subsubsection*{Statistical Re-ranking by Geometric Mean Lift}
+
+Closure strips redundancy from structure, but not the semantics. The most supportive patterns consist of combinations of items that are individually common; hence support highlights uninteresting item interactions. In order to identify patterns based on their characterizing nature, closed patterns are rescored in relation to independence. Rather than relying on established interest measures such as all-confidence \cite{omiecinski2003}, which normalizes a pattern's support by the support of its most frequent item, this thesis introduces a custom refinement, the geometric-mean lift
+
+\begin{equation}
+    \mathrm{gml}(\alpha) = \frac{\mathrm{sup}(\alpha)/|\mathbb{S}|}{\bigl(\prod_{i=1}^{m} \mathrm{sup}(\langle v_i \rangle)/|\mathbb{S}|\bigr)^{1/m}},
+    \label{eq:gml}
+\end{equation}
+
+which computes the deviation of a pattern frequency from a geometric mean of its items' marginal frequencies. It is numerically robust even for long patterns and measures the extent to which a pattern deviates from the null model of independent occurrence of its items. A diversity-weighted score for each pattern $\alpha$ is calculated by weighting $\mathrm{gml}(\alpha)$ by the weight $\omega_\alpha^{\mathrm{td}}$, which is monotonically increasing with respect to the type diversity of $\alpha$. Formally, if $T(\alpha)$ denotes the set of distinct clinical event types (\texttt{C}, \texttt{M}, \texttt{P}, \texttt{CP}) present in the pattern, this weight is defined as $\omega_\alpha^{\mathrm{td}} = 1 + \beta\,\bigl(|T(\alpha)| - 1\bigr)$, where $\beta = 0.3$ adds a fixed bonus for each additional event type beyond the first. A single-type pattern is therefore left unchanged ($\omega_\alpha^{\mathrm{td}} = 1$), while a full-spectrum pattern spanning all four types receives the largest boost.
+
+\subsubsection*{Diversity Constrained Selection}
+
+Even when statistically re-ranked, such patterns are susceptible to near-duplicates where only one item differs or the exact same clinical events appear in a different order. To make sure that our result set ($\mathcal{R}$) remains diverse, we use a greedy approach that relies on Jaccard similarity applied to the unordered item sets, filtering out structural permutations. The Jaccard similarity of patterns $\alpha$ and $\beta$, with item sets $A$ and $B$ respectively, is defined as:
+
+\begin{equation}
+    J(\alpha, \beta) = \frac{|A \cap B|}{|A \cup B|}.
+    \label{eq:jaccard}
+\end{equation}
+
+Candidates are sorted in a descending order according to their geometric-mean lift values. In order to qualify for inclusion into $\mathcal{R}$, a pattern $\alpha$ must have lower similarity than a given diversity threshold with all patterns $\beta$ already accepted to the result set ($J(\alpha, \beta) < \tau$). Geometrically, patterns whose similarity to an accepted sequence exceeds the threshold will be removed from the list.
+\subsection{LLM-Driven Interpretation and Natural Language Querying}
+
+The clustering model in Section~4.1.3 and the sequential pattern mining model in Section~4.1.5 generate highly accurate mathematical results, i.e., prototype vectors, support values, and ordered events. None of these can be directly applied to clinical practice. The current subsection describes the two components that bridge the interpretability gap using the large language model: the directed graph agent that converts natural language queries into safe SQL queries, and the prompt for the summarizer that converts raw data into clinical narrative summaries.
+
+\subsubsection*{Problem Statement}
+
+The critical aspect of this automatic process is that the natural language input ($Q_{nl}$) should be mapped to the safe and read-only database query ($Q_{safe}$):
+
+\begin{equation}
+    T(Q_{nl}) = Q_{safe}
+    \label{eq:translation}
+\end{equation}
+
+It is important to note that the query can only include read-only commands in order to avoid any possible negative actions performed on the clinical database by the agent.
+
+A direct use of the LLM is not sufficient for this problem because LLMs are naturally stochastic, so they have a tendency of hallucinating non-existent database tables or carrying out destructive write actions. It is therefore necessary to enclose the stochastic model within a strict, deterministic control loop.
+
+\subsubsection*{The Agent as a Directed Graph}
+
+The LLM Agent is built in a directed graph form with vertices corresponding to the tasks which have to be done and the edges corresponding to the deterministic sequence of actions. Thus, it ensures that the actual control path in the case of generation by the LLM will be generated by the code.
+
+\vspace{1em}
+
+The state $\Psi$ passed between the nodes must be part of the below tuple:
+
+\begin{equation}
+    \Psi = \langle\, Q_{nl},\; \Sigma,\; \rho,\; Q,\; R,\; E_m,\; k \,\rangle,
+    \label{eq:state}
+\end{equation}
+
+where $Q_{nl}$ denotes the user input, $\Sigma$ denotes the schema of the database, $\rho \in \{\textsc{db}, \textsc{medical}, \textsc{other}\}$ denotes the classification label, $Q$ denotes the generated query, $R$ denotes the retrieved data, $E_m$ denotes the error feedback, and $k$ denotes the iteration number.
+
+The vertex set $V = \{\, v_{\mathrm{in}},\; v_{\mathrm{med}},\; v_{\mathrm{gen}},\; v_{\mathrm{val}},\; v_{\mathrm{exec}},\; v_{\mathrm{end}} \,\}$ defines the operational states:
+
+\begin{itemize}
+    \item $v_{\mathrm{in}}$ (\emph{classification}): The LLM classifies $Q_{nl}$ into one of three categories  (DB, MEDICAL or OTHER) and rewrites a database question (if it is the case) for clarity
+    \item $v_{\mathrm{med}}$ (\emph{medical answer}): Generates a simple medical response without querying the database
+    \item $v_{\mathrm{gen}}$ (\emph{query generation}): Drafts a candidate SQL query $Q$ based on the prompt, schema, and any previous error feedback $E_m$.
+    \item $v_{\mathrm{val}}$ (\emph{validation}): Evaluates $Q$ against strict criteria: syntactic validity, schema compliance, and read-only safety.
+    \item $v_{\mathrm{exec}}$ (\emph{execution}): Runs the validated query against the database to capture the result set $R$. Any runtime error is treated as a validation failure.
+    \item $v_{\mathrm{end}}$ (\emph{termination}): Summarizes $R$ into natural language for the user and ends the process.
+\end{itemize}
+
+From the entry node $v_{\mathrm{in}}$, the control flow branches deterministically based on the assigned classification label:
+
+\begin{equation}
+    v_{\mathrm{in}} \longrightarrow
+    \begin{cases}
+        v_{\mathrm{gen}} & \text{if } \rho = \textsc{db},\\
+        v_{\mathrm{med}} & \text{if } \rho = \textsc{medical},\\
+        v_{\mathrm{end}} & \text{if } \rho = \textsc{other}.
+    \end{cases}
+    \label{eq:branch}
+\end{equation}
+
+In database query processing, the bounded retry cycle includes generation, validation, and execution ($v_{\mathrm{gen}} \to v_{\mathrm{val}} \to v_{\mathrm{exec}}$). When validation fails or an error occurs during execution, the particular error message gets placed in $E_m$, the value of $k$ is increased, and the flow proceeds to $v_{\mathrm{gen}}$.
+
+For the bounded retry cycle to terminate, there must be a successful query result or $k$ reaches its maximum value $k_{\max}$:
+
+\begin{equation}
+    \text{exit cycle} \iff f_{\mathrm{val}}(Q,\Sigma) = \mathrm{True} \;\;\lor\;\; k \ge k_{\max}
+    \label{eq:exit}
+\end{equation}
+
+\subsubsection*{LLM Interpretation of Analytical Output}
+
+The second LLM function takes the numeric output of the clustering and pattern mining processes and generates a summary in a form readable by clinicians. To prevent hallucination, the LLM can be used only as a \emph{verbalizer} for deterministic inputs; no invention or computation of any statistics is allowed.
+
+Each cluster is then provided as input to the LLM through a pre-computed feature pack:
+
+\begin{equation}
+    F_c = \langle\, \mu_c,\; \pi_c,\; \delta_c,\; \tau_c,\; \omega_c \,\rangle,
+    \label{eq:feature_pack}
+\end{equation}
+
+where $\mu_c$ aggregates continuous clinical magnitudes (such as age and lab values), $\pi_c$ denotes the prevalences of categorical attributes, $\delta_c$ captures the demographic distributions, $\tau_c$ signifies the distributional mixes over ordinal risk strata, and $\omega_c$ contains the top frequent clinical events. This tuple encodes all necessary statistics about the cluster. The LLM's task is to identify the most discriminative signals within $F_c$ and phrase them into a natural and accurate clinical analysis.
+
+When this exact same principle is applied to the sequences, the output of the LLM process becomes strictly constrained. Use of deterministic inputs ensures high fidelity of the results produced.
+\subsection{Justification of Algorithmic Choices}
+
+The system developed in Sections~4.1.3 through~4.1.6 represents a deliberate departure from existing approaches. Each algorithm provides the minimal necessary mathematical solution to overcome the three structural barriers identified in Section~4.1.1, which include static variability in patients, the time factor in clinical procedures, and the conversion of numeric outputs to human cognition.
+
+\textbf{K-Prototypes for Population Stratification.} Clustering can be seen as operating in a feature space, which inherently includes both continuous-valued features and discrete categorical features. As discussed in Section~4.1.3, K-Means algorithm is mathematically ill-defined on categorical attributes, because the average of numerically encoded categories is not meaningful and induces unnecessary geometric structure, whereas K-Modes loses the notion of variance of continuous attributes by artificially converting them into categorical features. While DBSCAN density-based clustering needs a universal global distance metric and struggles with the ``curse of dimensionality'' in sparse spaces, Gaussian Mixture Model requires parametric continuous distribution that categorical attributes do not satisfy. Lastly, hierarchical clustering based on Gower's distance, though independent of any distance measure, scales as $O(n^2)$ and lacks any prototype representation, therefore, does not produce any mathematical entity to characterize each cluster. Therefore, the only method among them meeting all of these criteria is the K-Prototypes algorithm, which (i) provides a mathematically well-defined dissimilarity measure using Equation~\eqref{eq:kproto_dist}, (ii) offers a closed-form solution for prototype update being provably optimal w.r.t.\ objective function of each individual variable, and (iii) gives a non-increasing sequence that converges to a local optimum of Equation~\eqref{eq:kproto_obj}.
+
+\textbf{Complementary Validation Criteria.} These six criteria, described in Section~4.1.4, were specifically selected to provide non-redundant, complementary insights about the dataset under investigation. Silhouette Score measures individual data points' geometric fit, whereas Gower's variant allows for measuring geometric fit within the mixed-type space. At the macro level, Calinski-Harabasz index assesses cluster separation based on variance ratios, while Davies-Bouldin Index identifies the most severe instances of overlap that may be obscured by averaging across clusters. Finally, because geometric distances cannot isolate feature-level importance, Cramér's $V$ and $\eta^2$ are employed to measure the statistical effect sizes of individual categorical and numerical variables.
+
+\textbf{PrefixSpan for Trajectory Mining.} For algorithms performing sequential pattern mining, the main contenders are GSP, SPADE, and PrefixSpan. The former is based on the classic generate and test framework akin to Apriori, whereby the growth of the candidate set becomes exponential with respect to the alphabet size and requires multiple scans through the entire dataset at each level of mining. SPADE uses a vertical representation in terms of ID list, which although enabling efficient joining, suffers from severe memory overhead when expanding ID lists for long sequences with large clinical alphabets. PrefixSpan, however, manages to avoid generating candidates altogether with prefix projection technique; the size of the projected dataset $\mathbb{S}|_\alpha$ is strictly non-increasing as the length of the sequence $\alpha$ grows. Together with the inherent data compression due to closed patterns (Equation~\eqref{eq:closed}) and geometric-mean lift re-ranking, which mitigates the effect of frequent item bias, the only possible choice is PrefixSpan algorithm.
+
+\section{Analysis}
+
+This section analyzes the system's functional behavior by means of a use-case decomposition and demonstrates how each requirement is satisfied.
+
+\subsection{Use-Case Analysis}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.44\linewidth]{figs/use_case.png}
+\caption{Use case diagram}
+\label{fig:usecase}
+\end{figure}
+
+This sub-section discusses the main use cases found during the analysis process. As shown in Figure~\ref{fig:usecase}, the functionality of the system is divided into three distinct roles, \emph{Manager}, \emph{Doctor}, and \emph{Patient}, each having certain access privileges. The eleven use cases identified during analysis are described below.
+
+\vspace{1em}
+
+\begin{enumerate}
+
+\item \textbf{Use Case Title: Run the analytics pipeline}
+\begin{itemize}
+    \item \textbf{Brief description}: The Manager launches the end-to-end analytics pipeline, which loads the dataset on first use, computes the K-Prototypes clustering, and then mines sequential patterns both across the whole population and within each cluster. The Manager can follow its progress while it runs, and the same pipeline is also executed automatically on a monthly schedule.
+    \item \textbf{Primary actor}: Manager
+    \item \textbf{Pre-conditions}: The actor is signed in with the Manager role, and no pipeline run is currently in progress.
+    \item \textbf{Post-conditions}: The clustering and sequential-pattern results are refreshed and become available in the Clusters and Sequences views.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor opens the Pipeline page.
+        \item The system shows the current pipeline state together with the counts of available data, clusters, and mined sequences.
+        \item The actor starts a new run.
+        \item The system runs the stages in order: data loading (only when the database is still empty), clustering, global sequence mining, and per-cluster sequence mining.
+        \item The system reports the stage in progress until the run finishes.
+        \item On completion, the system marks the run as successful and updates the results.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[3a.] \textit{A pipeline run is already in progress.}
+        \begin{enumerate}
+            \item The system rejects the request and keeps showing the progress of the ongoing run.
+        \end{enumerate}
+        \item[4a.] \textit{A stage fails.}
+        \begin{enumerate}
+            \item The system stops the run and records the failure together with the stage that caused it.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Discover sequential patterns}
+\begin{itemize}
+    \item \textbf{Brief description}: The Manager consults the sequential care patterns discovered by the PrefixSpan algorithm on the longitudinal histories of the patients in each cluster.
+    \item \textbf{Primary actor}: Manager
+    \item \textbf{Pre-conditions}: The actor is signed in with the Manager role. The analytics pipeline has been executed, so clustering and per-cluster sequential pattern mining results are available.
+    \item \textbf{Post-conditions}: The selected closed sequential patterns are displayed, grouped by cluster.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor opens the Sequences page.
+        \item The actor selects the cluster of interest.
+        \item The system displays the closed patterns retained after mining, ordered by descending support; the actor may switch the metric (support, length) and the sort direction in the UI.
+        \item The actor selects a pattern to view the corresponding AI-generated clinical interpretation.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[3a.] \textit{No pattern meets the support threshold for the selected cluster.}
+        \begin{enumerate}
+            \item The system displays an empty-state message.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Explore patient clusters}
+\begin{itemize}
+    \item \textbf{Brief description}: The Manager examines the output from the K-Prototypes clustering analysis, including the cluster list, prototypes, feature distributions, comparative heatmaps, PCA scatter plots, and AI-generated cluster summaries.
+    \item \textbf{Primary actor}: Manager
+    \item \textbf{Pre-conditions}: The actor is logged into the application as a Manager and the analytics pipeline has been executed, with clustering results stored in the database.
+    \item \textbf{Post-conditions}: Cluster views are shown.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor navigates to the Clusters tab.
+        \item The application shows the list of clusters and general information about the clusters.
+        \item The actor chooses one of the clusters.
+        \item The application shows the cluster prototype with feature distributions and the AI-generated summary.
+        \item The actor opens the cluster comparison plots (heatmap and PCA scatter plot) or the dedicated plots for numerical and categorical features.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[1a.] \textit{No clustering result available yet.}
+        \begin{enumerate}
+            \item The application shows the empty-state message.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: View statistical dashboards}
+\begin{itemize}
+    \item \textbf{Brief description}: The actor reviews the statistical dashboards containing aggregate information on patients, encounters, conditions, medications, observations, procedures, allergies, immunizations, care plans, and providers.
+    \item \textbf{Primary actor}: Manager
+    \item \textbf{Pre-conditions}: The actor is logged in as a Manager. The dataset has been loaded into the database.
+    \item \textbf{Post-conditions}: Statistical views are displayed within the application.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor navigates to the Statistics page.
+        \item The actor selects a required dimension (e.g., conditions, medications, observations).
+        \item The system retrieves aggregate data from the database.
+        \item The system displays the charts and tables with aggregate information.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[3a.] \textit{There is no data available for this dimension.}
+        \begin{enumerate}
+            \item The system displays the corresponding empty-state message.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Manage provider records}
+\begin{itemize}
+    \item \textbf{Brief description}: The Manager views the list of providers (doctors and other healthcare workers) and makes changes to the provider records.
+    \item \textbf{Primary actor}: Manager
+    \item \textbf{Pre-conditions}: The actor is logged in and holds the Manager role.
+    \item \textbf{Post-conditions}: The change made by the actor is committed to the database and reflected in the providers list.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor navigates to the Providers page.
+        \item The system presents the list of providers on a paginated table.
+        \item The actor decides whether to create, modify, or delete a provider record.
+        \item The actor fills out the form and presses the submit button.
+        \item The system validates the input and commits the change to the list.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[3a.] \textit{The actor decides to remove the record.}
+        \begin{enumerate}
+            \item The system prompts for confirmation.
+            \item The actor confirms the decision.
+            \item The system removes the record and refreshes the list.
+        \end{enumerate}
+        \item[5a.] \textit{Validation error.}
+        \begin{enumerate}
+            \item The system displays the errors.
+            \item The actor corrects the errors.
+            \item The actor proceeds from step 4.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Register a clinical encounter}
+\begin{itemize}
+    \item \textbf{Brief description}: The Doctor creates, modifies, or deletes the encounter together with its sub-records: observations (presented in the UI as \emph{Test Results}), conditions, medications, procedures, immunizations, care plans, and allergies.
+    \item \textbf{Primary actor}: Doctor
+    \item \textbf{Pre-conditions}: The actor must be signed in with the Doctor role. Both the Patient and Provider must already exist in the system.
+    \item \textbf{Post-conditions}: The encounter and the associated records are created, modified, or deleted depending on the actual operation performed by the actor.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor gets directed to the Encounters page or the Patient page.
+        \item The actor gets directed to the form for adding a new encounter or editing an existing one.
+        \item The actor provides the details of the patient, provider, encounter type, and its date.
+        \item The actor populates the corresponding fields for observations, conditions, medications, procedures, immunizations, care plans, and allergies.
+        \item The actor clicks on the submit button of the form.
+        \item The system validates the provided information.
+        \item The system persists the encounter and its sub-records to the database.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[2a.] \textit{The actor chooses to delete an existing encounter record.}
+        \begin{enumerate}
+            \item The system asks the actor to confirm the action.
+            \item The actor confirms the action.
+            \item The system deletes the encounter.
+        \end{enumerate}
+        \item[6a.] \textit{The data is not valid.}
+        \begin{enumerate}
+            \item The system presents the actor with the validation error message.
+            \item The actor corrects the data.
+            \item The actor continues with step 5.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Navigate patient records}
+\begin{itemize}
+    \item \textbf{Brief description}: The Manager browses the paginated list of patients in read-only mode, filters the list by demographic and clinical criteria, and reviews each patient's longitudinal record.
+    \item \textbf{Primary actor}: Manager
+    \item \textbf{Pre-conditions}: The actor is signed in and holds the Manager role.
+    \item \textbf{Post-conditions}: The selected patient's profile and longitudinal history are displayed in read-only mode.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor accesses the Patients page.
+        \item The system shows the list of patients in paginated form.
+        \item The actor may apply filters to the list based on demographic and clinical criteria.
+        \item The actor chooses a patient.
+        \item The system shows the patient's profile together with their encounters, conditions, medications, allergies, procedures, immunizations, and care plans. Observations are accessed within the encounter.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[2a.] \textit{The filtered list is empty.}
+        \begin{enumerate}
+            \item The system displays an empty-state message.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Manage patient records}
+\begin{itemize}
+    \item \textbf{Brief description}: The Doctor examines the paginated list of patients, filters the records, reviews detailed clinical histories, and applies modifications to the patient database.
+    \item \textbf{Primary actor}: Doctor
+    \item \textbf{Pre-conditions}: The actor should be logged in and must hold the Doctor role.
+    \item \textbf{Post-conditions}: All modifications are saved both in the database and in the UI.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor accesses the Patients page.
+        \item The system shows the list of patients in paginated form.
+        \item The actor may apply filters to the list based on demographic and clinical criteria.
+        \item The actor chooses a patient.
+        \item The system shows the patient's profile as well as their encounters, conditions, medications, allergies, procedures, immunizations, and care plans. Observations are accessed within the encounter.
+        \item The actor modifies the record and clicks save, or goes back to the list to add another record.
+        \item The system validates and registers the changes, and refreshes the views.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[6a.] \textit{The actor confirms the deletion of the data entry.}
+        \begin{enumerate}
+            \item The system prompts the actor for confirmation.
+            \item The actor confirms.
+            \item The system deletes the data entry and removes it from the list.
+        \end{enumerate}
+        \item[7a.] \textit{The data entered is invalid on creation or modification.}
+        \begin{enumerate}
+            \item The system displays the error message.
+            \item The actor corrects the data.
+            \item The actor proceeds to step 6.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Query data in natural language}
+\begin{itemize}
+    \item \textbf{Brief description}: The actor provides a question in natural language, which is converted into a read-only SQL query, executed against the database, and the result is returned as a natural-language answer.
+    \item \textbf{Primary actor}: Manager, Doctor
+    \item \textbf{Pre-conditions}: The actor is logged in and holds the Manager or Doctor role.
+    \item \textbf{Post-conditions}: The natural-language answer derived from the executed query is returned to the user interface. The generated SQL is logged server-side for audit but is not displayed to the actor.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor navigates to the Ask AI page.
+        \item The actor provides the question in natural language.
+        \item The actor submits the question.
+        \item The system converts the provided question into SQL using the LLM agent.
+        \item The system validates the generated query against the read-only fragment and the database schema; for Doctor actors the query is additionally scoped to their own provider.
+        \item The system executes the validated query.
+        \item The system returns the natural-language answer derived from the result.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[5a.] \textit{The generated query fails validation.}
+        \begin{enumerate}
+            \item The system requests a regenerated query from the agent, retrying up to three times.
+            \item If all attempts fail, the system informs the actor that the question could not be answered safely.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Sign in and select a role}
+\begin{itemize}
+    \item \textbf{Brief description}: The user signs in with one of the predefined demonstration accounts to open the platform under a specific role. Because the roles exist only to illustrate how the interface adapts to each type of user, the sign-in is a demonstration mechanism rather than a security control: any password is accepted and no session token is issued.
+    \item \textbf{Primary actor}: Manager, Doctor, Patient
+    \item \textbf{Pre-conditions}: The email entered matches one of the three predefined demonstration accounts, one for each role.
+    \item \textbf{Post-conditions}: The role associated with the entered account is loaded, and the user is taken to the corresponding role home page.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor visits the login page.
+        \item The actor enters one of the predefined demonstration emails.
+        \item The actor enters any password.
+        \item The actor presses the Sign In button.
+        \item The platform recognizes the account, loads the associated role, and redirects to the corresponding home page.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[2a.] \textit{The entered email does not match any predefined account.}
+        \begin{enumerate}
+            \item The platform notifies the actor that the account is not recognized.
+            \item The actor resumes the process from step 2.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: View own records}
+\begin{itemize}
+    \item \textbf{Brief description}: The Patient reviews their personal record, which only includes the information related to the account that they have created: encounters, conditions, medications, allergies, procedures, immunizations, and care plans.
+    \item \textbf{Primary actor}: Patient
+    \item \textbf{Pre-conditions}: The actor should be logged in, and must hold the role of Patient.
+    \item \textbf{Post-conditions}: The personal record is presented in a read-only mode.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor goes to the personal records section.
+        \item The system presents the list of encounters owned by the actor.
+        \item The actor chooses one of the encounters.
+        \item The system presents the sub-records for the chosen encounter, including the observations associated with it.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[2a.] \textit{The actor has no encounters recorded.}
+        \begin{enumerate}
+            \item The system displays an empty-state message.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\end{enumerate}
+
+\subsection{Functional and Non-Functional Requirements}
+\begin{itemize}
+    \item \textbf{Demonstration Sign-In and Roles}. A lightweight sign-in based on three predefined accounts, one for each of the three roles (Manager, Doctor, and Patient). The sign-in is a demonstration mechanism rather than a security control: any password with length > 8 is accepted, no session token is issued, and the chosen account only determines which role view is presented.
+    \item \textbf{Role-Based Views}. Each of the three roles is presented with its own set of pages: Patients view only their own records, Doctors manage clinical records, and Managers perform administration together with analytics and read-only operations. The roles serve to demonstrate how the interface adapts to each type of user.
+    \item \textbf{Management of Patients}. Doctors conduct CRUD operations on patients' information, filtered listing, and detailed history including encounters, conditions, medications, etc., while Managers get read-only access on similar views. Observations are encounter-specific.
+    \item \textbf{Management of Providers}. Managers conduct CRUD operations on clinicians' information and view their encounters.
+    \item \textbf{Management of Clinical Encounters.} Doctors manage clinical encounters and the sub-records associated with them (observations, conditions, medications, procedures, immunizations, care plans, and allergies).
+    \item \textbf{Self-Service Patient View.} Patients view their own clinical records in a read-only manner.
+    \item \textbf{Statistics Visualization Dashboard.} Graphical representations of all major clinical dimensions (patients, encounters, conditions, medications, observations, procedures, allergies, immunizations, care plans, and providers), accessible only to Managers.
+    \item \textbf{Cluster Exploration Panel.} Displays the outputs of the K-Prototypes clustering technique, including prototypes, distributions, heatmaps, PCA scatterplot, and AI-generated descriptions of the clusters.
+    \item \textbf{Sequential Pattern Mining Exploration.} A panel that visualizes the closed sequential patterns discovered through PrefixSpan, sorted by support, with AI-generated explanations.
+    \item \textbf{Querying through Natural Language.} Managers and Doctors may pose queries in natural language that will be converted into a read-only SQL query for the system to answer.
+    \item \textbf{Analytics Pipeline Execution.} Managers can trigger the full analytics pipeline, which loads the dataset when needed and then computes the clustering and the global and per-cluster sequential patterns, while following its progress; the same pipeline also runs automatically on a monthly schedule.
+\end{itemize}
+
+\subsubsection*{Non-functional requirements}
+\begin{itemize}
+    \item \textbf{Performance.} Long collections are paginated, cluster feature generation is cached to minimize cost, and dashboard aggregates are served with sub-second latency.
+    \item \textbf{Data Confidentiality.} The platform operates exclusively on synthetic data generated with Synthea, so it holds no real patient information and is not subject to confidentiality constraints. The three roles and their sign-in exist only to demonstrate how access would be partitioned per role in a production deployment; for instance, the Doctor view is scoped to a single provider to illustrate provider-level separation.
+    \item \textbf{Usability.} The server-side data aggregation method is employed to minimize user interaction, while validation messages are displayed inline. Computationally heavy algorithms such as clustering and sequential pattern mining are computed by a job that is running once a month, on 1st of the month at 2am (but the job can also be triggered manually by the manager) to prevent user interface slowdowns.
+    \item \textbf{Safety \& Reliability.} Every SQL query generated by the LLM Agent is checked by a deterministic read-only filter before execution, which admits only \texttt{SELECT} and \texttt{WITH} statements and rejects any data-modifying keyword, before a further schema-compliance check. In case of validation failure, the query is regenerated, with up to three retries after the initial attempt. Persistent failures are communicated to the user without ever attempting to write to the database.
+    \item \textbf{Scalability.} The application is a single monolithic service that exposes a REST API and is designed to handle up to $10^{4}$ longitudinal patient records and dozens of concurrent sessions without any drop in performance.
+    \item \textbf{Maintainability.} The back-end has rigid layers of architecture (api $\rightarrow$ service $\rightarrow$ repository $\rightarrow$ domain), while the front-end has styling alongside components; both methods limit the impact of any change and allow for easy alterations in the future.
+    \item \textbf{Portability.} The solution builds on cross-platform runtimes (Python and Node.js) and depends only on a standard PostgreSQL database, so it runs without source-code changes on Linux, macOS, and Windows.
+\end{itemize}

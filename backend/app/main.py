@@ -7,8 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 from sqlalchemy import text
 
-from app import statistics_router, cluster_router, patient_router, provider_router, dashboard_router, encounter_router, sequence_router
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+from app import statistics_router, cluster_router, patient_router, provider_router, dashboard_router, encounter_router, sequence_router, pipeline_router
 from db.db_connector import engine, SessionLocal
+from repository import PipelineRepository
+from service.pipeline_service import run_pipeline
 import domain.models  # noqa: F401 - ensures all models are registered before create_all
 
 logger = logging.getLogger(__name__)
@@ -21,6 +26,7 @@ routers = [
     provider_router,
     dashboard_router,
     encounter_router,
+    pipeline_router,
 ]
 
 
@@ -56,8 +62,10 @@ async def lifespan(app: FastAPI):
             conn.execute(text("ALTER TABLE cluster_meta ADD COLUMN IF NOT EXISTS pca_image BYTEA"))
             conn.execute(text("ALTER TABLE cluster ADD COLUMN IF NOT EXISTS ai_analysis JSONB"))
             conn.execute(text("ALTER TABLE cluster ADD COLUMN IF NOT EXISTS detail_cache JSONB"))
+            conn.execute(text("ALTER TABLE cluster ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT now()"))
             conn.execute(text("ALTER TABLE prefix_span_pattern ADD COLUMN IF NOT EXISTS ai_analysis JSONB"))
             conn.execute(text("ALTER TABLE prefix_span_pattern ADD COLUMN IF NOT EXISTS cluster_label INT NULL"))
+            conn.execute(text("ALTER TABLE pipeline_run ADD COLUMN IF NOT EXISTS stop_requested BOOLEAN DEFAULT FALSE"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_prefix_span_pattern_cluster_label ON prefix_span_pattern (cluster_label)"))
             # NOT VALID skips the check on existing rows; new inserts are still validated.
             conn.execute(text("""
@@ -187,7 +195,37 @@ async def lifespan(app: FastAPI):
         daemon=True,
     ).start()
 
+    # Seed the pipeline_run singleton so status/overview endpoints always have a row.
+    try:
+        with SessionLocal() as db:
+            repo = PipelineRepository(db)
+            repo.ensure_singleton()
+            # A RUNNING row at process startup belonged to a background thread
+            # in the previous process, which is now gone - it will never finish
+            # or respond to a stop request, so fail it instead of leaving the
+            # UI stuck on a run that can't progress.
+            if repo.fail_stale_running("Server restarted while pipeline was running"):
+                logger.warning("Pipeline: found stale RUNNING state at startup, marked as FAILED")
+    except Exception:
+        logger.exception("Failed to seed pipeline_run singleton")
+
+    # In-process monthly scheduler: run the analytics pipeline on the 1st at 02:00.
+    # Same orchestrator as the manual "Start" button. Stored on app.state so the
+    # pipeline endpoints can read the job's next_run_time.
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        run_pipeline,
+        trigger=CronTrigger(day=1, hour=2, minute=0),
+        args=["scheduled"],
+        id="monthly_pipeline",
+        replace_existing=True,
+    )
+    scheduler.start()
+    app.state.scheduler = scheduler
+
     yield
+
+    scheduler.shutdown(wait=False)
 
 
 app = FastAPI(lifespan=lifespan)

@@ -73,7 +73,7 @@ export default function IdentityCard({
               alive ? classes.idStatusBadgeAlive : classes.idStatusBadgeDeceased
             }
           >
-            {alive ? "Alive" : `Deceased · ${formatDate(patient.deathdate)}`}
+            {alive ? "Alive" : `Deceased - ${formatDate(patient.deathdate)}`}
           </span>
           {patient.age != null && (
             <span className={classes.idAgeBadge}>

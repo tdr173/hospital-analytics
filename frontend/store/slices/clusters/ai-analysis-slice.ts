@@ -3,7 +3,7 @@ import { AiAnalysisResponse } from "@/models/generic/clusters";
 import { getAiAnalysis } from "./thunks";
 
 interface AiAnalysisState {
-  cache: Record<number, AiAnalysisResponse>; // cluster_id → cached result
+  cache: Record<number, AiAnalysisResponse>; // cluster_id -> cached result
   currentClusterId: number | null;
   loading: boolean;
   error: string | null;

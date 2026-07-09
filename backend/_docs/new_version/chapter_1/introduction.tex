@@ -1,0 +1,56 @@
+\chapter{Introduction}\label{ch:introduction}
+
+\pagestyle{fancy}
+
+The medical field is one of the domains where huge amounts of data can be collected.
+This data includes both general patient information (age, weight, height, blood type) and clinical records such as treatment plans (prescribed medications, surgical interventions, vaccines), consultation parameters, hospitalizations, allergies and so on.
+Through proper processing, this data can help doctors identify \textbf{patterns that repeat across patients}.
+In this way, patient groups that require similar treatment plans can be determined, and the treatments that worked best for each group can also be observed.
+
+In the last 15 to 20 years, to keep up with digitalization, more and more hospitals have chosen digital solutions for storing data and patient history.
+The classic paper records and files have gradually been replaced by Electronic Health Records (EHR), a system that stores the complete history of a patient in digital form.
+Because digital records can be accessed much more easily than paper archives, analyses and reports made on patients or groups of patients have become easier to do, and their findings can feed back into daily medical practice.
+
+Despite the growing volume of medical data, many hospitals around the world still lack systems to efficiently store and process patient records.
+The data either remains written on stacks of paper, or is stored in hospital databases but remains untouched and unprocessed.
+This potential is largely wasted, as Yadav et al.~\cite{Yadav2018MiningEHR} point out.
+
+Implementing a system like the one described above raises four challenges.
+The first is getting and preparing the data that needs to be processed.
+The second involves grouping patients using an algorithm that can combine both numerical data (age, body mass index, number of hospitalizations, results of the medical tests) and categorical data (gender, dominant care plan, dominant encounter class, condition burden).
+The third is finding and analyzing clinical event sequences through a sequential pattern mining algorithm.
+The fourth relates to interpreting the results and querying the clinical database, so non-technical users can find and understand the information they are searching for.
+
+The second and third challenges are complex, because clinical data does not behave like ordinary business data.
+The record of a single patient mixes values of different kinds: integers such as blood pressure or cholesterol, real numbers such as the body mass index, and plain text such as diagnoses or allergy descriptions.
+These values also move on very different scales. A thyroid hormone result stays inside a narrow interval, while cholesterol can cover an interval a hundred times wider.
+On top of that, the timeline of a patient is irregular: a healthy person may have no records for years, while another patient collects dozens of events in a single week.
+No single mathematical model handles all of this at once, which is why the platform combines several specialized algorithms instead of relying on only one.
+
+Building this pipeline requires a complete, complex dataset.
+Real hospital records, however, are hard to obtain: they contain sensitive information such as names, birth dates, and full medical histories, so GDPR regulations restrict their use to specific institutional approvals, and even then the sensitive fields must be anonymized.
+For this thesis, the open-source project \textbf{Synthea} was used instead, through which a CSV dataset of 22,284 patients was generated. Each patient has their entire medical history simulated in depth, with detailed data on organizations, providers, encounters, conditions, allergies, observations, immunizations, care plans, procedures, and medications.
+Because of the depth of the relationships between tables, the dataset is a suitable base for the system that we decided to build.
+The choice of synthetic data does not weaken the analysis: Walonoski et al.~\cite{walonoski2017} show that, as the simulated Synthea population grows, its demographic and disease statistics come close to the official ones, so the conclusions of this work remain meaningful for real patients.
+
+Since the dataset contains both numerical and categorical data, this thesis proposes the use of \textbf{K-Prototypes} for implementing the clustering process, as this algorithm allows the simultaneous use of both data types.
+K-Prototypes, introduced by Huang~\cite{huang1998}, extends the well-known K-Means algorithm by adding support for categorical attributes through a combined distance function that uses squared Euclidean distance for numerical features and a simple matching measure for categorical ones.
+
+To find patterns of clinical sequences (particular diagnosis $\rightarrow$ medicine $\rightarrow$ surgery $\rightarrow$ care plan), the thesis adopts the \textbf{PrefixSpan} approach~\cite{pei2001}, a sequential pattern mining method that searches efficiently for frequent subsequences of events.
+Applied to the medical event sequences extracted from the Synthea data, it identifies the common clinical sequences of the patients.
+
+In addition to the clustering and sequential analysis, the system uses a \textbf{Large Language Model (LLM)} that performs two functions.
+First, an LLM generates automatic, easily readable summaries for each patient cluster, converting the numeric statistical outputs into something that a physician would be able to understand without specialized training.
+The second function lets users query the database in natural language through a text-to-SQL agent (for instance, ``Show me the most common disease among patients under 15 in the last month''), with results returned in natural language as well.
+
+This thesis introduces \textbf{HospitAI}, a hospital analytics platform built around a single end-to-end pipeline in which the output of each stage becomes the input of the next. An ETL stage first ingests the raw records and builds each patient's clinical features and event history; K-Prototypes then splits the patient population into groups, PrefixSpan mines the frequent clinical sequences inside each discovered group, and an LLM finally turns both results into readable clinical text and answers natural language questions about the data.
+The platform was developed on synthetic EHRs generated via Synthea and offers three role-based interfaces: Patients consult their own medical record, Doctors explore patient profiles and enter consultation data, and Managers launch the pipeline, analyze its results, and view hospital statistics.
+
+The remainder of this document is organized as follows.
+Chapter~\ref{ch:objectives} defines the project objectives.
+Chapter~\ref{ch:research} reviews the related literature and positions HospitAI within the current state of the art.
+Chapter~\ref{ch:analysis} analyzes the system through its actors, use cases, and requirements, and then presents the theoretical foundation of the algorithms used, together with the conceptual architecture of the analytical pipeline.
+Chapter~\ref{ch:design} describes the detailed design and implementation.
+Chapter~\ref{ch:testing} presents the testing and validation results.
+Chapter~\ref{ch:manual} provides the user manual.
+Chapter~\ref{ch:conclusions} concludes the thesis and discusses potential future work.

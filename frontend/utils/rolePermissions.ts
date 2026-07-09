@@ -8,13 +8,12 @@ export interface RouteRoles {
 export const ROUTE_ROLES: RouteRoles[] = [
   { prefix: "/home", allowed: ["MANAGER", "DOCTOR", "PATIENT"] },
   { prefix: "/statistics", allowed: ["MANAGER"] },
-  { prefix: "/clusters", allowed: ["MANAGER"] },
-  { prefix: "/sequences", allowed: ["MANAGER"] },
+  { prefix: "/clusters", allowed: ["MANAGER", "DOCTOR"] },
+  { prefix: "/sequences", allowed: ["MANAGER", "DOCTOR"] },
   { prefix: "/patients", allowed: ["MANAGER", "DOCTOR"] },
   { prefix: "/encounters", allowed: ["MANAGER", "DOCTOR", "PATIENT"] },
   { prefix: "/providers", allowed: ["MANAGER", "DOCTOR"] },
-  { prefix: "/ask", allowed: ["MANAGER", "DOCTOR"] },
-  { prefix: "/register-user", allowed: ["MANAGER", "DOCTOR", "PATIENT"] },
+  { prefix: "/pipeline", allowed: ["MANAGER"] },
 ];
 
 export function isRouteAllowedForRole(

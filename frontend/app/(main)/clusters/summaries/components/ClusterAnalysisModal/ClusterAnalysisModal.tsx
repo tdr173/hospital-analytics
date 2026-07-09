@@ -46,12 +46,12 @@ export default function ClusterAnalysisModal({ cluster }: Props) {
         <div className={classes.header}>
           <div className={classes.titleArea}>
             <p className={classes.label} style={{ color }}>
-              AI Analysis · Cluster {cluster.clusterId}
+              AI Analysis - Cluster {cluster.clusterId}
             </p>
             <h2 className={classes.title}>{cluster.title}</h2>
             <div className={classes.meta}>
               <span className={classes.patientCount}>
-                {cluster.count.toLocaleString()} patients · {cluster.percentage}%
+                {cluster.count.toLocaleString()} patients - {cluster.percentage}%
               </span>
               {riskStyle && (
                 <span
@@ -71,7 +71,7 @@ export default function ClusterAnalysisModal({ cluster }: Props) {
             </div>
           </div>
           <button className={classes.closeBtn} onClick={close}>
-            ✕
+            X
           </button>
         </div>
 

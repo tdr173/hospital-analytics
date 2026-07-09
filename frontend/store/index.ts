@@ -30,6 +30,7 @@ import dashboardReducer from "./slices/dashboard/dashboard-slice";
 import encountersReducer from "./slices/encounters/encounters-slice";
 import currentEncounterReducer from "./slices/encounters/current-encounter-slice";
 import authReducer from "./slices/auth/auth-slice";
+import pipelineReducer from "./slices/pipeline/pipeline-slice";
 
 export const store = configureStore({
   reducer: {
@@ -63,6 +64,7 @@ export const store = configureStore({
     encounters: encountersReducer,
     currentEncounter: currentEncounterReducer,
     auth: authReducer,
+    pipeline: pipelineReducer,
   },
 });
 

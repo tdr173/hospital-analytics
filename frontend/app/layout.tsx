@@ -5,7 +5,7 @@ import EmotionRegistry from "./EmotionRegistry";
 
 export const metadata: Metadata = {
   title: "HospitAI - Hospital Analytics Dashboard",
-  description: "A comprehensive platform for hospital analytics",
+  description: "Hospital analytics dashboard for patient data, clustering, and statistics",
 };
 
 export default function RootLayout({

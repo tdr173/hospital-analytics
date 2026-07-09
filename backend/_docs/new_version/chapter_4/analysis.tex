@@ -1,0 +1,699 @@
+\chapter{Analysis and Theoretical Foundation}
+\label{ch:analysis}
+\pagestyle{fancy}
+
+This chapter presents the HospitAI analytics platform from two different points of view. The first is a user-focused view: the actors, the use cases, and the requirements of the system. The second is the mathematical background behind patient segmentation and sequence mining, the algorithms and the models they rely on. It also sketches the whole pipeline, including how the numeric results are turned into natural language with large language models (LLMs). Therefore, the aim is to justify the choice of methods, conceptually and mathematically. The technical details come later, in Chapter~\ref{ch:design}.
+
+\section{Analysis}
+
+This section describes how the system behaves. It uses use-case decomposition first, then lists the requirements the platform satisfies.
+
+\subsection{Use-Case Analysis}
+
+This subsection describes the use-cases identified in the process of analysis. As seen in Figure~\ref{fig:usecase}, there are three actors who interact with the platform, each of them having their own access rights and specific interests in it:
+
+\begin{itemize}
+\item \textbf{Manager}: corresponds to the role of hospital management and data administration and is the primary beneficiary of the analytical layer. The Manager actor controls the analytics workflow, accesses the statistical dashboards, maintains and updates provider records, and accesses the patient data in read-only mode. The Manager also collaborates with clinical personnel to examine the identified patient phenotypes, care pathways, and the database through natural-language queries.
+\item \textbf{Doctor}: focuses on everyday clinical practice, by managing the records of patients and adding new clinical encounters data. For clinical decision making purposes, the Doctor can also investigate patient clusters and sequential patterns, and query the database using natural-language questions limited only to their own patients.
+\item \textbf{Patient}: has the smallest scope of interests, checking his or her own medical record and natural language queries for its personal health data.
+\end{itemize}
+
+As stated in Chapter~\ref{ch:introduction}, the three actors mentioned above form the demonstration layer illustrating how the interface and data scope vary from one user to another.
+
+The analysis found eleven use cases. Four of them carry the contribution of this thesis and are detailed below, together with their flows. The other seven are listed briefly.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.70\linewidth]{figs/use_case.png}
+\caption{Use case diagram}
+\label{fig:usecase}
+\end{figure}
+
+\vspace{1em}
+
+\begin{enumerate}
+
+\item \textbf{Use Case Title: Run the analytics pipeline}
+\begin{itemize}
+    \item \textbf{Brief description}: The Manager starts the end-to-end analytics pipeline. It loads the dataset on the first run, executes the K-Prototypes clustering, and mines sequential patterns both globally and within every cluster. The Manager can watch start the pipeline anytime, but it is by default automatically started once a month.
+    \item \textbf{Primary actor}: Manager
+    \item \textbf{Pre-conditions}: The actor is logged into the application as the Manager and there are no other pipeline executions running.
+    \item \textbf{Post-conditions}: The updated results of clustering and sequential pattern mining get available in the corresponding views.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor visits the Pipeline page.
+        \item The system displays the current status of the pipeline along with the number of data, clusters, and mined sequences available.
+        \item The actor starts a new pipeline execution.
+        \item The system executes the stages sequentially: data loading (only if the database is empty), clustering, global sequence mining, and sequence mining per cluster.
+        \item The system reports the stage of the pipeline execution until the execution completes.
+        \item Upon completion, the system completes the pipeline execution successfully.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[3a.] \textit{A pipeline run is already in progress.}
+        \begin{enumerate}
+            \item The system rejects the request and keeps showing the progress of the ongoing run.
+        \end{enumerate}
+        \item[4a.] \textit{A stage fails.}
+        \begin{enumerate}
+            \item The system stops the run and records the failure together with the stage that caused it.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Discover sequential patterns}
+\begin{itemize}
+    \item \textbf{Brief description}: The Manager or Doctor access the sequential care patterns identified through the PrefixSpan algorithm applied to the longitudinal histories of the patients in each cluster.
+    \item \textbf{Primary actor}: Manager, Doctor
+    \item \textbf{Pre-conditions}: The actor is logged in under the Manager or Doctor user role. The analytics pipeline has been run, which means that the clustering and sequential patterns mining per cluster has been done.
+    \item \textbf{Post-conditions}: The closed sequential patterns are presented, both globally and divided per clusters.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor goes to the Sequences page.
+        \item The actor can select specific cluster and minimum support.
+        \item The system presents the closed patterns left after mining, sorted according to the support (descending order). The selected cluster, the support and the sorting order can be changed in the UI.
+        \item The actor picks a sequence pattern to see the clinical interpretation provided by the AI.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[3a.] \textit{No pattern with support above the threshold is found for the chosen cluster.}
+        \begin{enumerate}
+            \item The system presents an empty state message.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Explore patient clusters}
+\begin{itemize}
+    \item \textbf{Brief description}: The Manager or Doctor reviews the clustering analysis result by K-Prototypes algorithm: a cluster list, cluster prototypes, feature distributions, comparative heatmaps, PCA scatter plots, and summaries provided by AI.
+    \item \textbf{Primary actor}: Manager, Doctor
+    \item \textbf{Pre-conditions}: The actor is logged into the system as a Manager or Doctor and the analytics process is finished with storing the clustering result into the database.
+    \item \textbf{Post-conditions}: Cluster views appear.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor moves to the Clusters tab.
+        \item The system displays the list of clusters and the cluster general info.
+        \item The actor selects one of the clusters.
+        \item The system displays the selected cluster prototype with feature distributions and the AI summary of the cluster (+ insights and recommendations).
+        \item The actor opens cluster comparison plots (heatmap and PCA scatter plot) or feature-specific plots.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[1a.] \textit{There are no cluster results yet.}
+        \begin{enumerate}
+            \item The system displays the empty state message.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}
+
+\item \textbf{Use Case Title: Query data in natural language}
+\begin{itemize}
+    \item \textbf{Brief description}: The actor types a natural-language question. It is turned into a read-only SQL query, run against the database, and the result comes back as a natural-language answer.
+    \item \textbf{Primary actor}: Manager, Doctor, Patient
+    \item \textbf{Pre-conditions}: The actor is logged in and has the Manager, Doctor or Patient role.
+    \item \textbf{Post-conditions}: The natural-language answer extracted from the query result is delivered to the UI. The created SQL query is logged server-side and is not shown to the actor.
+    \item \textbf{Basic flow}:
+    \begin{enumerate}
+        \item The actor goes to the Ask AI page by pressing the button from the right side.
+        \item The actor inputs a natural-language question.
+        \item The actor submits the question.
+        \item The system creates an SQL query out of the provided question using the LLM agent.
+        \item The system checks the generated query against the read-only fragment and database schema. In the case of a Doctor actor, the query is limited to his/her provider records, and in the case of Patient actors, it is limited to his/her medical record only.
+        \item The system executes the query.
+        \item The system outputs the natural-language answer based on the result.
+    \end{enumerate}
+    \item \textbf{Alternate flows}:
+    \begin{itemize}
+        \item[5a.] \textit{Query is rejected by validation.}
+        \begin{enumerate}
+            \item Query is requested to be created again by the system up to three times from the agent.
+            \item When the query can’t be validated after three attempts, the system notifies the user that the question cannot be answered safely.
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\end{enumerate}
+
+\vspace{1cm}
+
+The other seven use cases are create/read/update/delete/access use cases which have no inherent analysis logic behind them, so they are presented here briefly.
+
+\begin{itemize}
+    \item \textbf{Access HospitAI platform} (Manager, Doctor, Patient). The user gains access to the platform, a process which implicitly includes the \textbf{Sign in} process using one of the three pre-defined demo accounts. Since the role of the user only shows the behavior of the UI, any password with lenght >8 will be accepted and no session token will be provided.
+    \item \textbf{View statistical dashboards} (Manager). The Manager views aggregate dashboards covering all of the key clinical dimensions (patients, encounters, conditions, medications, observations, procedures, allergies, immunizations, care plans, and providers). An empty message is displayed for those dimensions having no data at all.
+    \item \textbf{Manage provider records} (Manager). The Manager can create, edit delete or view providers using the paginated list. A confirmation message is asked before deletion, inline validation is done.
+    \item \textbf{Navigate patient records} (Manager). The Manager navigates through the paginated and filterable list of patients in the read-only mode and views the patient’s longitudinal record.
+   \item \textbf{Manage patient records} (Doctor). The Doctor performs operations of browsing, filtering and also adding, modifying or deleting of patient records, where there is confirmation during deletion and inline validation.
+     \item \textbf{Register a clinical encounter} (Doctor). The Doctor adds, modifies or deletes a clinical encounter along with its sub-records (test results, condition, medication, procedures, immunizations, care plans, and allergies), where the patient and the doctor should be registered first.
+     \item \textbf{View own records} (Patient). The Patient performs read-only viewing of his/her own records and all the sub-records that belong to each record, including procedures, conditions, observations, allergies and so on.
+\end{itemize}
+
+\subsection{Functional and Non-functional Requirements}
+
+The requirements specified below refer to the functionalities of the platform. The main purpose of this thesis is not the development of a commercial quality web application, but rather the design and testing of the target analytical pipeline. The web application is needed to optionally run the pipeline and display its output. Also, it is used as a management platform, where EHR can be modified at any time. Because of this, the requirements were kept realistic on purpose, and all of them are met by the system described in Chapter~\ref{ch:design}.
+
+\subsubsection*{Functional requirements}
+
+Functional requirements cover both the analysis from this thesis, as well as the support services needed to operate within the web application. These define what needs to be done by the system, and how that is accomplished.
+
+\begin{itemize}
+\item \textbf{Execution of the Analytics Pipeline.} The solution should allow Managers to run and automate the whole analytics pipeline. This is done by introducing a user interface for manual triggers and a scheduler that will move data loading, K-Prototypes clustering, and sequential pattern mining to asynchronous tasks that are executed automatically each 1st of the month, at 2am.
+    \item \textbf{Cluster exploration.} The solution should allow the Managers and Doctors to visually understand the patient segmentation. It is accomplished through a separate page showing the results of the clusterization algorithm (individual prototypes, distribution of the features (means of the most important cluster features) and a PCA scatter plot) as well as AI-generated descriptions, insights and recommendations.
+    \item \textbf{Exploration of the Sequential Patterns.} The solution should provide the opportunity to analyze frequent care patterns among patients for clinical staff and management. It is achieved by creating an interactive panel that will show closed sequences detected by the PrefixSpan algorithm and sorted by the support value, with additional AI explanations.
+    \item \textbf{Interrogation of Medical Information in Natural Language.} It should be possible for authorized users (Manager, Doctor or Patient) to ask questions regarding medical information in natural language. This is done by integrating a Large Language Model (LLM) agent that can translate natural text into a read-only SQL query and run it on the database.
+    \item \textbf{Visualization of Statistics.} It should be possible for Managers to get aggregated graphical representations of the main clinical aspects. This is achieved through rendering dashboards with visualization of information related to patients, encounters, conditions, medications and procedures. These statistics can be queried per week, month or per year, depending the timeline managers want to consult.
+    \item \textbf{Clinical Data Management.} It should be possible for Doctors to manage clinical history of their patients. This is achieved by having a full set of CRUD interfaces that allow registering and editing encounters, observations (test results), immunizations, allergies, care plans and medications
+    \item \textbf{Provider Management.} It should be possible for Managers to keep the hospital's provider directory up to date. This feature is implemented through a management module with the ability to create, edit, delete or query providers using pagination and filtering.
+\end{itemize}
+
+\subsubsection*{Non-functional requirements}
+
+The non-functional requirements will cover the attributes of the system’s quality that will ensure its stability, responsiveness, and ease of maintenance in real-life conditions.
+
+\begin{itemize}
+    \item \textbf{Performance.} The system must stay fast even with millions of clinical records. Several mechanisms make that possible. Retrieval GET operations use server-side pagination, 20 records per page. Expensive cluster information is cached in \texttt{JSONB} columns (\texttt{cluster\_patient.features}, \texttt{cluster.detail\_cache}), so it is never recomputed on the fly. Statistics come from PostgreSQL materialized views, pre-computed over more than 14 million observation rows. Startup indexes on the large tables (encounters, procedures) keep retrieval quick and prevent bottlenecks during complex queries.
+    \item \textbf{Usability.} The interface must stay responsive and communicative even during heavy computation. To achieve this, all expensive operations, K-Prototypes on $\approx$22{,}000 patients and PrefixSpan on $\approx$4.9 million events, run in the background, outside the request handler. A two-second polling interval keeps the user informed of the pipeline's progress.
+    \item \textbf{Maintainability.} The codebase must be modular, so it is easy to update, debug, and run per environment. The backend is split into four strict top-down layers (\texttt{api} $\rightarrow$ \texttt{service} $\rightarrow$ \texttt{repository} $\rightarrow$ \texttt{domain}), with no cross-layer imports. The frontend lives in one package alongside its own styles, and environment variables are used only for database and API connections.
+\end{itemize}
+
+\section{Theoretical Foundation}
+
+Chapter~\ref{ch:introduction} described the shift from paper to Electronic Health Records and the analytical value locked inside them. This section approaches that value from the technical side. Setting aside the legal barrier of data protection, treated later in this chapter, the core obstacle is mathematical: a single patient's record mixes several kinds of events that no single model handles well. Clinical data is:
+
+\vspace{0.2em}
+
+\begin{enumerate}
+
+    \item \textbf{Of mixed types:} integer (blood pressure, blood sugar), float (body mass index, hemoglobin, quality-adjusted life years), and string (diagnoses, diagnosis codes, allergies) values coexist in the same record.
+
+    \item \textbf{On very different scales:} variables span narrow ranges (e.g., $[0.4, 4]$ mIU/L for TSH) or wide ones (e.g., $[50, 500]$ mg/dL for cholesterol), so they must be rescaled before processing.
+
+    \item \textbf{Irregularly spaced in time:} a patient may have no records for months or years while another has many interventions within days, leaving interrupted, non-uniform timelines.
+
+\end{enumerate}
+
+\vspace{1em}
+
+Because no single approach fits all of it, the solution combines several techniques, and this section is organized accordingly: it first develops clustering over mixed-type data, from the notion of distance up to the K-Prototypes algorithm, then sequential pattern mining up to PrefixSpan, and finally assembles both, together with a large language model, into the methodology proposed by this thesis.
+
+\subsection{Clustering Algorithms, Distances and Mixed-Type Data Handling}
+
+\subsubsection{Fundamentals of Clustering}
+
+Clustering is an unsupervised learning task. We are given a set of objects, each described by its attributes, and the goal is to split them into groups, called clusters. Objects in the same cluster should resemble each other, and objects in different clusters should differ as much as possible. The word ``unsupervised'' means no correct answer is available in advance. The algorithm gets no labels. It must discover the structure of the data on its own. That is exactly the situation with hospital records, where nobody has marked which patients belong together.
+
+Here, the population to be grouped is the set of hospital patients. The general population is varied, but the goal is to craft smaller cohorts of people who are highly similar. Two forces pull in opposite directions. Patients in the same cluster should look similar, so intra-cluster variance is minimized. Patients in different clusters should look different, so inter-cluster variance is maximized. In this way the complexity of the whole population is reduced to a handful of representative prototypes, which are far easier to analyze.
+
+The whole process rests on one central idea: the \emph{distance}, or equivalently the \emph{similarity}, between two objects. A distance function $d(\cdot,\cdot)$ assigns a non-negative number to every pair of objects. Identical objects sit at distance zero, the measure is symmetric ($d(x,y) = d(y,x)$), and, for proper metrics, it respects the triangle inequality $d(x,z) \leq d(x,y) + d(y,z)$. Once this function is fixed, ``similar patients'' stops being vague and becomes a measurable quantity. The quality of any grouping can then be scored by comparing distances inside clusters against distances between them.
+
+Most partitional clustering algorithms follow the same general mechanism, independently of the exact distance they use. First, a number $k$ of clusters is fixed and $k$ representatives are chosen. Then two steps alternate: an \emph{assignment step}, in which every object is attached to its closest representative, and an \emph{update step}, in which every representative is recomputed from the objects currently assigned to it. The two steps repeat until the assignments stop changing, at which point the partition is considered stable. What varies from one algorithm to another is the definition of the representative, the distance function, and the way the iteration is initialized. These differences are examined in the following subsections.
+
+\subsubsection{Different Clustering Distances}
+
+The distance function decides which objects the algorithm treats as similar, so its choice is the single most important decision in clustering. The measures relevant to this work are grouped below by the type of data they support.
+
+\textbf{Numerical data.} The standard measure is the Euclidean distance between two points $x$ and $y$ in an $m$-dimensional space:
+
+\begin{equation}
+    d_E(x, y) = \sqrt{\sum_{l=1}^{m} (x_l - y_l)^2}
+    \label{eq:euclidean}
+\end{equation}
+
+Its squared form underpins the K-Means family, where the optimal center is the arithmetic mean. This minimizes the sum of squared Euclidean distances, giving the update step a closed form. Two drawbacks come with it. First, it is scale-sensitive. An attribute in large units, such as cholesterol at $[50, 500]$ mg/dL, will dominate one in small units, such as TSH at $[0.4, 4]$ mIU/L, unless the data is normalized. Second, squaring the differences makes it sensitive to outliers. A steadier alternative is the Manhattan distance $d_M(x, y) = \sum_{l=1}^{m} |x_l - y_l|$, whose optimal center is the component-wise median. Both, though, are defined only when every attribute is a number.
+
+\textbf{Categorical data.} Categorical attributes such as gender, diagnosis codes, or dominant care plan have no numerical magnitude. The natural measure is then the Hamming distance (simple matching dissimilarity), which counts the attributes on which two objects disagree:
+
+\begin{equation}
+    d_H(x, y) = \sum_{l=1}^{m} \delta(x_l, y_l), \qquad
+    \delta(a, b) =
+    \begin{cases}
+        0 & \text{if } a = b \\
+        1 & \text{if } a \neq b
+    \end{cases}
+    \label{eq:hamming}
+\end{equation}
+
+Under this measure the best representative of a cluster is the \emph{mode}, the most frequent category of each attribute, since it minimizes the total number of mismatches.
+
+\textbf{Mixed data.} When quantitative and qualitative variables coexist, neither family above is defined on all features at once. The Gower distance \cite{gower1971} solves this by scoring each feature with a measure adapted to its type and averaging the contributions:
+
+\begin{equation}
+    d_G(i, j) = \frac{1}{p} \sum_{m=1}^{p} d_m(i, j)
+    \label{eq:gower}
+\end{equation}
+
+where the per-feature contribution is defined according to the feature type:
+
+\begin{equation}
+    d_m(i, j) =
+    \begin{cases}
+        \dfrac{|x_{im} - x_{jm}|}{R_m} & \text{if feature } m \text{ is numerical} \\[8pt]
+        \mathbf{1}[x_{im} \neq x_{jm}]  & \text{if feature } m \text{ is categorical}
+    \end{cases}
+    \label{eq:gower_dm}
+\end{equation}
+
+with $R_m=\max_i(x_{im})-\min_i(x_{im})$ the range of the variable over the data set. Each $d_m(i,j)$ then lies in $[0,1]$, and so does $d_G(i,j)$. The range normalization removes the scale-sensitivity of the Euclidean case, and the categorical term is just the per-attribute Hamming indicator. This generality has a price, and the price is computational: Gower-based methods usually need the full $n \times n$ pairwise distance matrix, which grows quadratically with the number of patients.
+
+These measures reappear later in the thesis. K-Prototypes combines the squared Euclidean and the matching term into a single dissimilarity function, while the Gower distance is the basis of the main validation metric for mixed-type partitions, presented in Chapter~\ref{ch:testing}.
+
+\subsubsection{Available Clustering Algorithms}
+\label{ch:clustering_limitations}
+
+The most popular and most studied clustering algorithm is \textbf{K-Means} \cite{macqueen1967}. It partitions a domain into $K$ predefined cohorts by minimizing the total within-cluster squared Euclidean distance. Given a dataset $X = \{x_1, x_2, \ldots, x_n\}$ of $n$ instances over a purely numerical feature space $\mathbb{R}^m$, the \textbf{K-Means} objective is:
+
+\begin{equation}
+    J_{km} = \sum_{j=1}^{k} \sum_{x_i \in C_j} \|x_i - \mu_j\|^2
+    \label{eq:kmeans}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\boldsymbol{J_{km}}$ is the total objective function value (the within-cluster sum of squared errors).
+    \item $\boldsymbol{k}$ is the predefined number of clusters.
+    \item $\boldsymbol{C_j}$ is the $j$-th cluster.
+    \item $\boldsymbol{x_i}$ is a single data point (patient instance) assigned to cluster $C_j$.
+    \item $\boldsymbol{\mu_j}$ is the centroid of cluster $C_j$, computed as the arithmetic mean of all instances assigned to it.
+    \item $\boldsymbol{m}$ is the total number of dimensions (numerical features) in the dataset.
+    \item $\boldsymbol{n}$ is the total number of instances in the dataset $X$.
+\end{itemize}
+
+\vspace{1em}
+
+Equation~\eqref{eq:kmeans} is well defined only when the data is entirely numeric and continuous. The arithmetic mean that fixes each centroid simply has no meaning for categorical variables. Encoding categories as integers does not rescue it. \textbf{K-Means} then reads the codes as an ordinal ranking with real distances between them, distances they do not have. The resulting centroids are averages of integer codes. They match no plausible clinical profile, and they distort the cluster boundaries geometrically.
+
+Beyond \textbf{K-Means}, other families rest on different structural ideas. \textbf{Hierarchical (agglomerative) clustering} \cite{kaufman1990} needs no preset cluster count. It starts with every object in its own cluster and repeatedly merges the two closest groups, building a tree of nested partitions. Because it only needs a pairwise distance matrix, it works with any measure, including the Gower distance of Equation~\eqref{eq:gower}. In theory, then, it handles mixed data. At hospital scale, though, two drawbacks are decisive: the pairwise matrix costs $O(n^2)$ in time and memory, and it leaves no prototype to summarize each cluster for later interpretation.
+
+\textbf{Density-based clustering}, represented by \textbf{DBSCAN} \cite{ester1996}, groups objects in crowded regions and marks isolated ones as noise. It finds clusters of any shape without a preset $k$. But it assumes a single global metric under which density is meaningful, and it degrades under the ``curse of dimensionality'' in the highly dispersed, high-dimensional space of encoded clinical records. \textbf{Model-based clustering}, such as the \textbf{Gaussian Mixture Model}, fits a continuous parametric distribution to each cluster, something categorical attributes simply cannot satisfy.
+
+At the opposite end, \textbf{K-Modes} was designed for purely categorical databases. To avoid undefined centers, it represents each cluster by the mode instead of the mean. It also swaps the Euclidean objective for the Hamming distance of Equation~\eqref{eq:hamming}, the count of mismatched categorical attributes between two vectors. On a mixed clinical database, though, it has to bucket every continuous measurement into categories, for example high versus low blood pressure. That approximation ignores the natural variation of numeric variables and throws away much of their information.
+
+Accordingly, none of these algorithms alone meets the theoretical requirements of Electronic Health Records:
+
+\begin{itemize}
+    \item \textbf{K-Means} fails mathematically on nominal text information;
+    \item \textbf{K-Modes} distorts the geometry of numeric variables;
+    \item \textbf{hierarchical clustering} scales quadratically and yields no prototypes;
+    \item \textbf{DBSCAN} and the \textbf{Gaussian Mixture Model} impose assumptions that mixed clinical data cannot fulfill.
+\end{itemize}
+\vspace{0.5cm}
+What is needed is a method that:
+\begin{itemize}
+    \item provides a mathematically well-defined dissimilarity over both data types at once;
+    \item offers a closed-form update for its cluster representatives; and
+    \item is guaranteed to converge.
+\end{itemize}
+\textbf{K-Prototypes}, detailed next, satisfies all three criteria, which is why it was selected for this work.
+
+\subsubsection{Mixed-Type Clustering and K-Prototypes}
+
+The \textbf{K-Prototypes} algorithm, proposed by Huang \cite{huang1998}, extends both \textbf{K-Means} and \textbf{K-Modes}. It solves the problem with a single dissimilarity function that spans the whole feature space. Assume the features of each patient split into two groups: numerical features ($N$) and categorical features ($C$). We then write the feature vector of a sample $x_i$ as $x_i = (x_i^N, x_i^C)$. A cluster prototype $q_j$ is defined as $q_j = (q_j^N, q_j^C)$, where $q_j^N$ is a numerical centroid and $q_j^C$ is a categorical mode. The mixed dissimilarity between an instance $x_i$ and a prototype $q_j$ is:
+
+\vspace{1em}
+
+\begin{equation}
+    d(x_i,\, q_j) = \underbrace{\sum_{l=1}^{|N|} \bigl(x_{il}^{N} - q_{jl}^{N}\bigr)^2}_{\text{numerical term}} + \;\gamma \underbrace{\sum_{l=1}^{|C|} \delta\bigl(x_{il}^{C},\, q_{jl}^{C}\bigr)}_{\text{categorical term}}
+    \label{eq:kproto_dist}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\boldsymbol{d(x_i, q_j)}$ is the total mixed-type dissimilarity between a single patient instance $x_i$ and the cluster prototype $q_j$.
+    \item $\boldsymbol{|N|}$ and $\boldsymbol{|C|}$ represent the total number of continuous numerical features and discrete categorical features in the dataset, respectively.
+    \item $\boldsymbol{x_{il}^N}$ is the value of the $l$-th numerical attribute for the patient instance $x_i$.
+    \item $\boldsymbol{q_{jl}^N}$ is the corresponding $l$-th numerical centroid value for the cluster prototype $q_j$.
+    \item $\boldsymbol{x_{il}^C}$ is the value of the $l$-th categorical attribute for the patient instance $x_i$.
+    \item $\boldsymbol{q_{jl}^C}$ is the corresponding $l$-th categorical mode value for the cluster prototype $q_j$.
+    \item $\boldsymbol{\delta(x_{il}^C, q_{jl}^C)}$ is the simple matching dissimilarity function of Equation~\eqref{eq:hamming}, applied per attribute. It acts as a binary indicator, returning $0$ if the categories match ($x_{il}^C = q_{jl}^C$) and $1$ if they differ ($x_{il}^C \neq q_{jl}^C$).
+    \item $\boldsymbol{\gamma}$ is the scalar weight factor ($\gamma > 0$) added to make sure the discrete feature space is not overshadowed by the continuous feature space.
+\end{itemize}
+
+The mathematical aim in K-Prototypes is to find the clustering of patients that keeps the dissimilarity among them as low as possible over the whole population. The cost function which defines this procedure is given below:
+
+\begin{equation}
+    J = \sum_{i=1}^{n} \sum_{j=1}^{k} w_{ij}\, d(x_i,\, q_j)
+    \label{eq:kproto_obj}
+\end{equation}
+
+To minimize the total error $J$, the algorithm updates two elements. First, it optimizes the set of cluster prototypes $Q = \{q_1, \ldots, q_k\}$, the mathematical representative of every patient group. Second, it optimizes the assignment matrix $W = [w_{ij}]$, a binary matrix used to track patients' assignments, with $w_{ij}=1$ when $x_i$ belongs to $q_j$ and $w_{ij}=0$ otherwise.
+
+Also, there is an additional requirement, known as a hard assignment condition, formulated in the following manner: $\sum_{j=1}^k w_{ij}=1$. In medical practice, this requirement ensures that every individual patient is clearly assigned to precisely one cluster without any ambiguous overlaps or unassigned patients.
+
+\subsubsection*{The Balancing Parameter $\boldsymbol{\gamma}$}
+
+The tuning parameter $\gamma$ in Equation~\ref{eq:kproto_dist} sets how much weight the categorical part carries against the numerical part. Make $\gamma$ very small and the numerical part dominates, over the categorical one. Make it very large and the opposite happens: the spread of the continuous features is ignored, and the algorithm collapses back into K-Modes.
+
+Huang \cite{huang1998} ties the choice of $\gamma$ to the scale of the numerical attributes, making it proportional to their average standard deviation. Here we set $\gamma$ to half that average standard deviation, a value that sits inside Huang's recommended range:
+
+\begin{equation}
+    \gamma = \frac{1}{2} \cdot \frac{1}{|N|} \sum_{l=1}^{|N|} \hat{\sigma}_l
+    \label{eq:gamma}
+\end{equation}
+
+where $\hat{\sigma}_l$ is the standard deviation of the $l$-th numerical attribute across the whole dataset. Tying $\gamma$ to the average standard deviation keeps the squared numerical term and the categorical mismatch term on comparable orders of magnitude. Neither attribute type then dominates the dissimilarity just because of its units. The $\gamma$ from Equation~\eqref{eq:gamma} is therefore data-dependent, adjusting to the scale of the clinical attributes used in clustering.
+
+\subsubsection*{Prototype Update Rules and Convergence}
+
+To optimize $J$ (cost function), which is formulated using \eqref{eq:kproto_obj}, we can use an iterative process made of two main parts: the \textbf{assignment step} and the \textbf{update step}. The algorithm iterates between the two parts such that at each cycle, the overall clustering error decreases to a point where patient groups become stable from a mathematical perspective.
+
+\vspace{0.5em}
+
+In the \textbf{assignment step}, each object $x_i$ gets assigned to the prototype $q_j^*$ that yields minimal mixed dissimilarity.
+
+\begin{equation}
+    j^* = \arg\min_{j \in \{1,\ldots,k\}} d(x_i,\, q_j)
+\end{equation}
+
+In the \textbf{update step}, prototypes are recalculated using their instances. In terms of the numerical component, the arithmetic average is the optimal option due to its optimal reduction of the squared Euclidean component:
+
+\begin{equation}
+    q_{jl}^{N} \;\leftarrow\; \frac{1}{|C_j|}\sum_{i:\, w_{ij}=1} x_{il}^{N}
+\end{equation}
+
+In the case of the categorical part, the best solution for updating is the mode, since it maximizes the simple matching dissimilarity:
+
+\begin{equation}
+    q_{jl}^{C} \;\leftarrow\; \operatorname{mode}\bigl(\{x_{il}^{C} : w_{ij} = 1\}\bigr)
+\end{equation}
+
+Each full iteration, assignment then update, is guaranteed not to increase $J$, because each step alone optimizes the objective with respect to its own variables. The series $J^{(1)} \geq J^{(2)} \geq \cdots$ is therefore monotonically non-increasing and bounded below by zero, so it converges to a local optimum of Equation~\eqref{eq:kproto_obj}.
+
+\subsubsection*{Initialization Strategies: Huang vs. Cao}
+
+A well-known weakness of all $k$-partitional methods is their sensitivity to the initial centroids. Pick the prototypes poorly, and the iteration slides into a poor local minimum, far from the global one. Random initialization is especially weak on mixed-type clinical data: a prototype dropped into a sparse region can end up with no nearby points, leaving empty clusters as the iteration runs.
+
+\vspace{1em}
+
+There are two prominent initialization techniques for the K-Prototypes algorithm proposed in literature:
+
+\begin{itemize}
+    \item \textbf{Initialization by Huang \cite{huang1998}:} Introduced with the algorithm itself, this approach is frequency-based. For the categorical components ($q_j^C$) it counts each category and picks the most common ones; the numerical component ($q_j^N$) is usually set from local means. It is fast, but from a clinical angle it has a flaw: the frequency counts are done independently, attribute by attribute. So the algorithm can start from fictitious patient profiles, building centroids out of high-frequency attributes that never actually coexist in a real clinical record. It also gives no guarantee that the centers are geometrically separated.
+
+    \item \textbf{Initialization by Cao \cite{cao2009}:} To fix that geometric problem, the authors proposed a density-based initialization. Instead of building artificial prototypes, it picks real records from the dataset. It computes the co-occurrence density of the records and takes the densest one as the first prototype. Each later prototype is chosen for both its local density and its distance from all prototypes already selected.
+\end{itemize}
+
+\vspace{1em}
+
+The Cao approach \cite{cao2009}, built on density and distance, is often called the theoretically better choice for mixed data. Theory, though, does not always win in a specific clinical setting. EHR data is very high-dimensional, sparse in categories, and clinically skewed, so an empirical check beats blind trust in the theory.
+
+So instead of assuming either scheme is better, this work adopts the frequency-based Huang initialization and checks it directly, through the internal validation procedures of Chapter~\ref{ch:testing}. Cao initialization was tested too. Across the runs, Huang gave consistently better internal validation metrics. On the Synthea data it produced more stable, non-degenerate clusters, which is why it drives the production K-Prototypes runs.
+
+\subsection{Sequential Patterns Mining}
+
+\subsubsection{Fundamentals of Sequence Mining}
+
+Static clustering divides patients into groups with similar clinical characteristics. But a cluster is only a snapshot. It captures who a patient was, not how the patient got there. To recover the time order, and the clinical processes that recur inside each subgroup, we have to look at the sequence of events. And this is the job of sequential pattern mining.
+
+Sequential pattern mining looks for subsequences of events that appear, in the same order, in a large enough share of a collection of sequences. In healthcare, that collection holds one sequence per patient. A discovered pattern like \emph{diagnosis} $\to$ \emph{medication} $\to$ \emph{procedure} then describes a care pathway many patients have followed. The rest of this subsection fixes the notation and two central notions: the support of a pattern and its anti-monotonicity.
+
+A patient's history is modeled as an ordered sequence of clinical events. Each event carries a type prefix (\texttt{C}: condition, \texttt{M}: medication, \texttt{P}: procedure, \texttt{CP}: care plan) and a description:
+
+\begin{equation}
+    S = \langle e_1,\, e_2,\, \ldots,\, e_n \rangle, \qquad t_1 \leq t_2 \leq \cdots \leq t_n
+    \label{eq:sequence}
+\end{equation}
+
+Events that take place on the same calendar day are linearized in a deterministic chronological way, so the mining process works on simple sequences of singletons. For a sequence $\alpha = \langle a_1, \ldots, a_r \rangle$, the definition $\alpha \sqsubseteq S$ implies the existence of indices $i_1 < i_2 < \cdots < i_r$ such that $a_j = e_{i_j}$. Gaps are allowed between matched events, reflecting the fact that clinical encounters are separated by other activity.
+
+For a sequence database $\mathbb{S} = \{S_1, \ldots, S_{|\mathbb{S}|}\}$ and support threshold $\sigma$, the support of a pattern $\alpha$ corresponds to the number of sequences that include it,
+
+\begin{equation}
+    \mathrm{sup}(\alpha) = \bigl|\{\, S_i \in \mathbb{S} \mid \alpha \sqsubseteq S_i \,\}\bigr|,
+    \label{eq:support}
+\end{equation}
+
+and $\alpha$ is called \emph{frequent} whenever $\mathrm{sup}(\alpha) \geq \sigma \times |\mathbb{S}|$. All the frequent patterns are collected in the set $\mathcal{F}_\sigma$. Support is said to be \emph{anti-monotonic}, since
+
+\begin{equation}
+    \mathrm{sup}(\beta) \leq \mathrm{sup}(\alpha),
+    \label{eq:antimonotone}
+\end{equation}
+
+for $\alpha \sqsubseteq \beta$. Anti-monotonicity is what allows pruning of the search space and is the basis of every efficient mining approach: if a pattern is not frequent, then no extension of it can be frequent either, so the whole branch can be discarded.
+
+\subsubsection{Available Sequence Mining Algorithms}
+
+The mining algorithms proposed in the literature differ mainly in how they organize the search for frequent patterns, and this structural difference determines their behavior on large clinical databases.
+
+The first family follows the \emph{generate-and-test} strategy inherited from association-rule mining. AprioriAll \cite{agrawal1995}, the earliest sequential miner, builds candidates level by level. It finds all frequent length-one patterns, combines them into length-two candidates, checks each candidate against the whole database, then repeats one length at a time. GSP (Generalized Sequential Patterns) \cite{srikant1996} adds time constraints and taxonomies but keeps the same skeleton. Both share two structural costs: the candidate set can grow exponentially with the event alphabet, and the whole database is re-scanned at every level. On an EHR dataset with hundreds of unique event codes, that quickly becomes impractical.
+
+SPADE \cite{zaki2001} takes a different route, storing the data in a \emph{vertical} format. For every event, an id-list records the sequences and positions where it occurs, and longer patterns are built by joining id-lists rather than re-scanning the database. Counting is then fast. But the id-lists of the intermediate candidates have to stay in memory, and for long sequences over a large clinical alphabet that overhead becomes severe.
+
+PrefixSpan \cite{pei2001} drops candidate generation entirely for a \emph{pattern-growth} strategy. Instead of proposing candidates and testing them, it grows patterns straight from the data. Each recursive step is restricted to the part of the database that can actually extend the current pattern, the so-called projected database. Two properties follow. First, every pattern it counts is guaranteed to exist in the data, so no effort is wasted on candidates that will fail. Second, the projected databases shrink as the patterns grow, so the costly early stages run on progressively smaller inputs. Table~\ref{tab:ch4_seq_algos} summarizes the comparison.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}p{2.2cm} p{3.4cm} p{3.3cm} p{3.9cm}@{}}
+\toprule
+\textbf{Algorithm} & \textbf{Search strategy} & \textbf{Database access} & \textbf{Main weakness} \\
+\midrule
+AprioriAll \cite{agrawal1995} & Level-wise generate-and-test & Full scan at every level & Exponential candidate growth \\
+GSP \cite{srikant1996} & Level-wise generate-and-test, with time constraints & Full scan at every level & Same candidate explosion as AprioriAll \\
+SPADE \cite{zaki2001} & Vertical id-list joins & Id-lists kept in memory & Severe memory overhead for long sequences \\
+PrefixSpan \cite{pei2001} & Pattern growth via prefix projection & Shrinking projected databases & Cost of building projections (mitigated by pseudo-projection) \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of the main sequential pattern mining algorithms.}
+\label{tab:ch4_seq_algos}
+\end{table}
+
+For the clinical data here, the choice follows straight from this comparison. The size of the event alphabet rules out the generate-and-test family, and SPADE's memory profile on long patient histories rules it out too. PrefixSpan generates no candidates, and its projected database only ever shrinks as the pattern grows, so effort drops off exactly where the search space would otherwise explode. Therefore, PrefixSpan is the algorithm adopted for trajectory mining in this thesis.
+
+\subsubsection{The PrefixSpan Algorithm}
+\label{ch:prefix_span_theory}
+
+The PrefixSpan algorithm \cite{pei2001} generates no candidates. It extends patterns step by step, and prunes the search space by looking only at the suffixes that can follow a given prefix, inside a \emph{projected database}. For any prefix $\alpha$,
+
+\begin{equation}
+    \mathbb{S}|_\alpha = \bigl\{\, S' \mid \exists\, S \in \mathbb{S}: \alpha \sqsubseteq S \text{ and } S' \text{ is the suffix of } S \text{ after the first occurrence of } \alpha \,\bigr\}.
+    \label{eq:projection}
+\end{equation}
+
+Mining begins with the empty prefix, mines all frequent length-1 items, performs projection, and recurses. Since the size of $\mathbb{S}|_\alpha$ is non-increasing as $\alpha$ is extended, less effort is needed on each recursion call as the pattern lengths grow. The correctness of the prefix decomposition ensures that the algorithm completely generates $\mathcal{F}_\sigma$, without any repetitions or missing items.
+
+\subsection{AI-Driven Patient Phenotyping and Pathway Discovery}
+
+The two previous subsections presented the theory behind clustering and sequential pattern mining. This subsection assembles them, together with a large language model abstraction, into the methodology proposed by this thesis. Everything here stays at the conceptual and mathematical level. The concrete software design and implementation details are the subject of Chapter~\ref{ch:design}. A proven way to manager the complexity of healthcare data is to organize the analysis as a machine-learning pipeline. That is the shape the proposed methodology takes.
+
+\subsubsection{Formal Problem Definition}
+
+The proposed system models the hospital population as a finite set $P = \{p_1, p_2, \dots, p_n\}$. Every individual patient will be modeled using two different mathematical structures:
+\begin{enumerate}
+    \item A feature vector $p_i = \langle x_i^{(1)}, \dots, x_i^{(m)} \rangle$, that belongs to the combined feature space, containing both numerical and categorical features.
+    \item A temporal event sequence $S_i = \langle e_{i,1}, e_{i,2}, \dots, e_{i,l_i} \rangle$, indicating a strict chronological order of events, as formalized in Equation~\eqref{eq:sequence}.
+\end{enumerate}
+
+\vspace{1em}
+
+On top of this double representation, the problem solved by the platform decomposes into three connected tasks:
+
+\begin{enumerate}
+    \item \textbf{Stratification:} find a partition of $P$ into $k$ homogeneous groups by minimizing the mixed-type objective of Equation~\eqref{eq:kproto_obj} over the feature vectors $p_i$.
+    \item \textbf{Trajectory extraction:} for each discovered group, mine the set of closed, frequent sequential patterns of Equation~\eqref{eq:closed} from the event sequences $S_i$ of its members, and rank them with the interestingness measure of Equation~\eqref{eq:gml}.
+    \item \textbf{Interpretation and access:} translate both the statistical outputs (prototypes, patterns, supports) and the users' natural-language questions into a form that non-technical medical staff can work with, without ever allowing the generative component to modify or invent data.
+\end{enumerate}
+
+\vspace{0.5cm}
+
+Task~1 uses the K-Prototypes theory already presented, together with the feature preparation described next. Task~2 runs PrefixSpan on the event sequences and then compresses, ranks, and de-duplicates its patterns. Task~3 is developed at the end of this subsection.
+
+
+\subsubsection{Conceptual Architecture of the Analytical Pipeline}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\linewidth]{figs/chapter_4/conceptual_pipeline.png}
+\caption{Conceptual architecture of the analytical pipeline.}
+\label{fig:ch4_pipeline}
+\end{figure}
+
+The final shape of the pipeline architecture can be seen in Figure~\ref{fig:ch4_pipeline}. The pipeline consists of four stages:
+
+\begin{itemize}
+    \item \textbf{Stage 1:} Ingests the raw records and turns them into the dual patient representation, the feature vectors and event sequences that the three analytical stages consume.
+    \item \textbf{Stage 2:} Partitions the population and, at the same time, reduces its noise.
+    \item \textbf{Stage 3:} It firstly runs with a global scope (across all patients). Then it runs once for each cluster, so the pathways it extracts are tied to the phenotype they belong to, not averaged over the entire hospital. In this way, specific sequences are not drowned out, meaning more rare and special patterns can be found.
+    \item \textbf{Stage 4:} The Semantic Stage sits on top of both outputs. It produces readable summaries of the clusters and patterns, and it offers a common natural-language interface for querying all the stored results.
+\end{itemize}
+
+The output of each stage is the input of the next: the data-preparation stage feeds the three analytical techniques, clustering, sequence mining, and language-model interpretation, and that chaining is precisely what turns them into a single analytical pipeline.
+
+\subsubsection{Feature Scaling and Outlier Handling}
+\label{ch:feature_scaling_theory}
+
+Before clustering, the numerical attributes go through two preparation steps: outlier isolation and feature scaling.
+
+First, extreme values are identified using the \textbf{z-score}:
+\begin{equation}
+    z = \frac{x - \mu}{\sigma}
+    \label{eq:zscore}
+\end{equation}
+where $\mu$ is the mean and $\sigma$ is the standard deviation of the feature. This isolation happens \emph{before} scaling and clustering. It ensures that extreme clinical cases are removed from the main dataset so they do not distort the geometry of the features or pull the cluster prototypes toward themselves. However, because these outliers carry important clinical information, they are not permanently deleted; instead, they are set aside into a dedicated cohort to be evaluated independently during the final interpretation stage.
+
+Second, the cleaned numerical features are normalized. Because the K-Prototypes distance is highly scale-sensitive, an attribute measured in large units would otherwise dominate one measured in smaller units. Three scalers are commonly considered:
+
+\begin{itemize}
+    \item \textbf{Standardization} (z-score normalization) gives the feature a zero mean and unit variance. It suits roughly bell-shaped distributions but remains vulnerable to outliers:
+    \begin{equation}
+        x' = \frac{x - \mu}{\sigma}
+        \label{eq:standardization}
+    \end{equation}
+
+    \item \textbf{Min-Max scaling} compresses the feature exactly into a bounded range, typically $[0,1]$, preserving the original shape of the distribution:
+    \begin{equation}
+        x' = \frac{x - x_{\min}}{x_{\max} - x_{\min}}
+        \label{eq:minmax}
+    \end{equation}
+
+    \item \textbf{Robust scaling} replaces the mean and standard deviation with the median and the interquartile range (IQR), making it resistant to extreme values:
+    \begin{equation}
+        x' = \frac{x - \text{median}}{\text{IQR}}
+        \label{eq:robust}
+    \end{equation}
+\end{itemize}
+
+This work implements \textbf{Min-Max scaling}. This approach forces every continuous feature onto the exact same $[0,1]$ interval as the categorical mismatch penalty (Hamming distance). The method's vulnerability to extreme boundaries is neutralized by the prior outlier isolation step.
+
+\subsubsection{Pattern Compression, Ranking, and Selection}
+
+PrefixSpan returns the full set of frequent patterns $\mathcal{F}_\sigma$, but that raw set is huge and highly redundant. Before the patterns are useful, three things have to happen: the set is compressed to its closed patterns, the survivors are ranked by how distinctive they are, and near-duplicates are filtered out. Assembling this selection stage on top of the raw mining is a contribution of this thesis, and the three steps are developed below.
+
+\subsubsection*{Closed Patterns}
+
+Enumerating every pattern in $\mathcal{F}_\sigma$ is a poor strategy. By anti-monotonicity, all the subsequences of a frequent pattern are themselves frequent. So a single trajectory of length $L$ alone yields $2^L-1$ other patterns in $\mathcal{F}_\sigma$. The usual fix is to report only the patterns that are \emph{closed}. A pattern $\alpha$ in $\mathcal{F}_\sigma$ is closed if there is no:
+
+\begin{equation}
+    \beta \sqsupset \alpha \;\text{ such that }\; \mathrm{sup}(\beta) = \mathrm{sup}(\alpha).
+    \label{eq:closed}
+\end{equation}
+
+The set $\mathcal{C}_\sigma \subseteq \mathcal{F}_\sigma$ of closed patterns is a \emph{lossless compression} of $\mathcal{F}_\sigma$. For every $\alpha \in \mathcal{F}_\sigma$ there is a $\beta \in \mathcal{C}_\sigma$ with $\alpha \sqsubseteq \beta$ and $\mathrm{sup}(\alpha) = \mathrm{sup}(\beta)$, so nothing is lost. In clinical terms, a closed pattern is the most detailed trajectory shared by a patient group.
+
+\subsubsection*{Statistical Re-ranking by Geometric Mean Lift}
+
+Closure removes structural redundancy, but not semantic redundancy. The highest-support patterns are just combinations of individually common items, so raw support keeps surfacing uninteresting interactions. To rank patterns by how distinctive they are, the closed patterns are rescored against independence, using a geometric-mean lift:
+
+\begin{equation}
+    \mathrm{gml}(\alpha) = \frac{\mathrm{sup}(\alpha)/|\mathbb{S}|}{\bigl(\prod_{i=1}^{m} \mathrm{sup}(\langle v_i \rangle)/|\mathbb{S}|\bigr)^{1/m}},
+    \label{eq:gml}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\boldsymbol{\alpha}$ is the evaluated sequential pattern.
+    \item $\boldsymbol{\mathrm{sup}(\alpha)}$ is the absolute support (frequency of occurrence) of the pattern in the dataset.
+    \item $\boldsymbol{|\mathbb{S}|}$ is the total number of sequences in the database $\mathbb{S}$.
+    \item $\boldsymbol{m}$ is the length of the pattern, representing the number of individual items it contains.
+    \item $\boldsymbol{\mathrm{sup}(\langle v_i \rangle)}$ is the support of the $i$-th individual item $v_i$ treated as a singleton sequence.
+\end{itemize}
+
+In simpler terms, this metric compares how often a pattern actually occurs against how often it would be expected to appear by pure chance. If the clinical events in a sequence were entirely unrelated, their combination would be purely coincidental. The geometric mean lift measures how far the data deviates from this random baseline, effectively isolating genuine clinical relationships from random noise.
+
+\subsubsection*{Diversity Constrained Selection}
+
+Even after re-ranking, the results can hold near-duplicates: two patterns that differ by a single item, or the same clinical events in a different order. To keep the result set $\mathcal{R}$ diverse, we run a greedy filter based on Jaccard similarity over the unordered item sets, which removes these structural permutations. For patterns $\alpha$ and $\beta$ with item sets $A$ and $B$, the Jaccard similarity is:
+
+\begin{equation}
+    J(\alpha, \beta) = \frac{|A \cap B|}{|A \cup B|}.
+    \label{eq:jaccard}
+\end{equation}
+
+Candidates are sorted by geometric-mean lift, in descending order. A pattern $\alpha$ enters $\mathcal{R}$ only if it stays below the diversity threshold against every already-accepted $\beta$, that is $J(\alpha, \beta) < \tau$. Any pattern too similar to an accepted one is dropped.
+
+\subsubsection{Bridging the Semantic Gap via Large Language Models}
+
+The clustering and sequence-mining models from earlier in this chapter produce precise mathematical output: prototype vectors, support values, ordered events. None of it can be used directly in clinical practice. This subsection describes the two components that bridge the gap with a large language model. The first is a directed-graph agent that turns natural-language queries into safe SQL. The second is a verbalized prompt that turns raw data into clinical narrative.
+
+\subsubsection*{Problem Statement}
+
+The critical aspect of this automatic process is that the natural language input ($Q_{nl}$) should be mapped to the safe and read-only database query ($Q_{safe}$):
+
+\begin{equation}
+    T(Q_{nl}) = Q_{safe}
+    \label{eq:translation}
+\end{equation}
+
+The query can only include read-only commands, to avoid any harmful actions on the clinical database by the agent.
+
+Using the LLM on its own is not enough. LLMs are stochastic, and they can hallucinate tables that do not exist or issue destructive writes. The model therefore has to sit inside a strict, deterministic control loop.
+
+\subsubsection*{The Agent as a Directed Graph}
+
+The LLM agent is built as a directed graph. Its vertices are the tasks to perform, and its edges are the deterministic order in which they run. So even when the LLM generates the content, the control path is set by the code.
+
+\vspace{1em}
+
+The state $\Psi$ passed between the nodes must be part of the below tuple:
+
+\begin{equation}
+    \Psi = \langle\, Q_{nl},\; \Sigma,\; \rho,\; Q,\; R,\; E_m,\; k \,\rangle,
+    \label{eq:state}
+\end{equation}
+
+where $Q_{nl}$ denotes the user input, $\Sigma$ denotes the schema of the database, $\rho \in \{\textsc{db}, \textsc{medical}, \textsc{other}\}$ denotes the classification label, $Q$ denotes the generated query, $R$ denotes the retrieved data, $E_m$ denotes the error feedback, and $k$ denotes the iteration number.
+
+The vertex set $V = \{\, v_{\mathrm{in}},\; v_{\mathrm{med}},\; v_{\mathrm{gen}},\; v_{\mathrm{val}},\; v_{\mathrm{exec}},\; v_{\mathrm{end}} \,\}$ defines the operational states:
+
+\begin{itemize}
+    \item $v_{\mathrm{in}}$ (\emph{classification}): The LLM classifies $Q_{nl}$ into one of three categories  (DB, MEDICAL or OTHER) and rewrites a database question (if it is the case) for clarity
+    \item $v_{\mathrm{med}}$ (\emph{medical answer}): Generates a simple medical response without querying the database
+    \item $v_{\mathrm{gen}}$ (\emph{query generation}): Drafts a candidate SQL query $Q$ based on the prompt, schema, and any previous error feedback $E_m$.
+    \item $v_{\mathrm{val}}$ (\emph{validation}): Evaluates $Q$ against strict criteria: syntactic validity, schema compliance, and read-only safety.
+    \item $v_{\mathrm{exec}}$ (\emph{execution}): Runs the validated query against the database to capture the result set $R$. Any runtime error is treated as a validation failure.
+    \item $v_{\mathrm{end}}$ (\emph{termination}): Summarizes $R$ into natural language for the user and ends the process.
+\end{itemize}
+
+From the entry node $v_{\mathrm{in}}$, the control flow branches deterministically based on the assigned classification label:
+
+\begin{equation}
+    v_{\mathrm{in}} \longrightarrow
+    \begin{cases}
+        v_{\mathrm{gen}} & \text{if } \rho = \textsc{db},\\
+        v_{\mathrm{med}} & \text{if } \rho = \textsc{medical},\\
+        v_{\mathrm{end}} & \text{if } \rho = \textsc{other}.
+    \end{cases}
+    \label{eq:branch}
+\end{equation}
+
+In database query processing, the bounded retry cycle includes generation, validation, and execution ($v_{\mathrm{gen}} \to v_{\mathrm{val}} \to v_{\mathrm{exec}}$). When validation fails or an error occurs during execution, the particular error message gets placed in $E_m$, the value of $k$ is increased, and the flow proceeds to $v_{\mathrm{gen}}$.
+
+For the bounded retry cycle to terminate, there must be a successful query result or $k$ reaches its maximum value $k_{\max}$:
+
+\begin{equation}
+    \text{exit cycle} \iff f_{\mathrm{val}}(Q,\Sigma) = \mathrm{True} \;\;\lor\;\; k \ge k_{\max}
+    \label{eq:exit}
+\end{equation}
+
+\subsubsection*{LLM Interpretation of Analytical Output}
+
+The second LLM function takes the numeric output of the clustering and pattern mining processes and generates a summary in a form readable by clinicians. To prevent hallucination, the LLM can be used only as a \emph{verbalizer} for deterministic inputs. No invention or computation of any statistics is allowed.
+
+Each cluster is then provided as input to the LLM through a pre-computed feature pack:
+
+\begin{equation}
+    F_c = \langle\, \mu_c,\; \pi_c,\; \delta_c,\; \tau_c,\; \omega_c \,\rangle,
+    \label{eq:feature_pack}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\boldsymbol{\mu_c}$ aggregates continuous clinical magnitudes (such as age and lab values).
+    \item $\boldsymbol{\pi_c}$ denotes the prevalences of categorical attributes.
+    \item $\boldsymbol{\delta_c}$ captures the demographic distributions.
+    \item $\boldsymbol{\tau_c}$ signifies the distributional mixes over ordinal risk strata.
+    \item $\boldsymbol{\omega_c}$ contains the top frequent clinical events.
+\end{itemize}
+
+This tuple encodes all necessary statistics about the cluster. The LLM's task is to identify the most discriminative signals within $F_c$ and phrase them into a natural and accurate clinical analysis.
+
+When this exact same principle is applied to the sequences, the output of the LLM process becomes strictly constrained. Use of deterministic inputs ensures high fidelity of the results produced.
+
+Taken together, the two constrained roles of the language model close the loop opened by the formal problem definition. The pipeline stratifies the population, extracts the care pathways of each stratum, and hands both results to the user in plain language.

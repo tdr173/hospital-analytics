@@ -1,0 +1,80 @@
+This is BibTeX, Version 0.99e
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: thesis.aux
+Reallocating 'name_of_file' (item size: 1) to 16 items.
+A level-1 auxiliary file: first_pages.aux
+Reallocating 'name_of_file' (item size: 1) to 14 items.
+A level-1 auxiliary file: guideline.aux
+Reallocating 'name_of_file' (item size: 1) to 17 items.
+A level-1 auxiliary file: introduction.aux
+Reallocating 'name_of_file' (item size: 1) to 15 items.
+A level-1 auxiliary file: objectives.aux
+Reallocating 'name_of_file' (item size: 1) to 17 items.
+A level-1 auxiliary file: study_biblio.aux
+Reallocating 'name_of_file' (item size: 1) to 13 items.
+A level-1 auxiliary file: analisys.aux
+Reallocating 'name_of_file' (item size: 1) to 26 items.
+A level-1 auxiliary file: design_implementation.aux
+Reallocating 'name_of_file' (item size: 1) to 18 items.
+A level-1 auxiliary file: test_validate.aux
+Reallocating 'name_of_file' (item size: 1) to 16 items.
+A level-1 auxiliary file: install_use.aux
+Reallocating 'name_of_file' (item size: 1) to 16 items.
+A level-1 auxiliary file: conclusions.aux
+Reallocating 'name_of_file' (item size: 1) to 9 items.
+The style file: IEEEtran.bst
+Reallocating 'name_of_file' (item size: 1) to 7 items.
+Reallocating 'name_of_file' (item size: 1) to 13 items.
+A level-1 auxiliary file: appendix.aux
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'wiz_functions' (item size: 4) to 6000 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Database file #1: thesis.bib
+-- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
+-- http://www.michaelshell.org/tex/ieeetran/bibtex/
+-- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
+
+Done.
+You've used 29 entries,
+            4087 wiz_defined-function locations,
+            1014 strings with 13525 characters,
+and the built_in function-call counts, 22637 in all, are:
+= -- 1864
+> -- 525
+< -- 199
++ -- 287
+- -- 96
+* -- 1079
+:= -- 3409
+add.period$ -- 62
+call.type$ -- 29
+change.case$ -- 29
+chr.to.int$ -- 438
+cite$ -- 29
+duplicate$ -- 1622
+empty$ -- 1781
+format.name$ -- 109
+if$ -- 5282
+int.to.chr$ -- 0
+int.to.str$ -- 29
+missing$ -- 284
+newline$ -- 110
+num.names$ -- 29
+pop$ -- 616
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 2
+skip$ -- 1765
+stack$ -- 0
+substring$ -- 1074
+swap$ -- 1347
+text.length$ -- 53
+text.prefix$ -- 0
+top$ -- 5
+type$ -- 29
+warning$ -- 0
+while$ -- 113
+width$ -- 31
+write$ -- 309

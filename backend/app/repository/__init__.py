@@ -5,3 +5,4 @@ from .provider_repository import *
 from .dashboard_repository import *
 from .encounter_repository import *
 from .sequence_repository import *
+from .pipeline_repository import *

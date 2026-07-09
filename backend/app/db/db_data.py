@@ -2,7 +2,7 @@ DB_SCHEMA = """
 === HOSPITAL ANALYTICS DATABASE SCHEMA ===
 
 OVERVIEW:
-- 15 tables total: 4 infrastructure (patient, organization, provider, encounter) + 7 clinical (observation, condition, medication, procedure, immunization, allergy, careplan) + 2 sequence-mining (prefix_span_pattern, prefix_span_patient_pattern) + 3 clustering (cluster_meta, cluster, cluster_patient). Observation also has five pre-aggregated mv_obs_* materialized views for fast stats.
+- 16 tables total: 4 infrastructure (patient, organization, provider, encounter) + 7 clinical (observation, condition, medication, procedure, immunization, allergy, careplan) + 2 sequence-mining (prefix_span_pattern, prefix_span_patient_pattern) + 3 clustering (cluster_meta, cluster, cluster_patient). Observation also has five pre-aggregated mv_obs_* materialized views for fast stats.
 - The central entity is Patient. Organizations and Providers form the infrastructure.
 - Encounters link Patients to Providers and Organizations (many-to-one).
 - All clinical events (allergy, condition, immunization, medication, observation, procedure, careplan) are linked to a Patient and usually to the specific Encounter where they were recorded.
@@ -19,8 +19,8 @@ TABLE: patient
   - age (int) - Pre-computed age of the patient.
   - first_name (str), last_name (str) - Patient name.
   - marital (str) - Marital status. Values: 'M' (Married), 'S' (Single), 'D' (Divorced), 'W' (Widowed).
-  - race (str) - Values: 'White', 'Black', 'Asian', 'Native', 'Other'.
-  - ethnicity (str) - Values: 'Hispanic', 'Non-Hispanic'.
+  - race (str) - lowercase, exactly as stored. Values: 'white', 'black', 'asian', 'native', 'hawaiian', 'other'. Never 'White'/'Black'/etc.
+  - ethnicity (str) - lowercase, no space or hyphen, exactly as stored. Values: 'hispanic', 'nonhispanic'. Never 'Hispanic'/'Non-Hispanic'.
   - gender (str) - Values: 'M' (Male), 'F' (Female). Do NOT use 'Male'/'Female' in queries.
   - city (str) - City of residence.
 
@@ -149,6 +149,7 @@ TABLE: prefix_span_pattern
   - length (int) - Number of events in the sequence.
   - support_count (int) - How many distinct patients contain this pattern.
   - support_pct (float) - support_count / total patients, as a percentage.
+  - cluster_label (int, nullable) - Which mining run produced this pattern: NULL = mined globally over the whole population; an integer (or -1 for the outlier group) = mined specifically for that cluster. For "how many/which patterns were mined for cluster X" filter this column directly - do NOT join through prefix_span_patient_pattern/cluster_patient for that question, since that instead finds patterns (from any run) that happen to have a member in cluster X.
   - ai_analysis (JSONB, nullable) - Cached AI-generated interpretation (not related_work for SQL queries).
 
 TABLE: prefix_span_patient_pattern
@@ -316,6 +317,10 @@ SQL: SELECT rank, pattern_str, support_count, support_pct FROM prefix_span_patte
 
 Q: "Which sequences are most common in cluster 0?"
 SQL: SELECT p.pattern_str, COUNT(DISTINCT pp.patient_id) AS cluster_support FROM prefix_span_patient_pattern pp JOIN cluster_patient cp ON pp.patient_id = cp.patient_id JOIN prefix_span_pattern p ON pp.pattern_id = p.id WHERE cp.cluster_label = 0 AND NOT cp.is_outlier GROUP BY p.id, p.pattern_str ORDER BY cluster_support DESC LIMIT 5;
+
+Q: "How many sequence patterns were mined specifically for cluster 0?"
+SQL: SELECT COUNT(*) AS total FROM prefix_span_pattern WHERE cluster_label = 0;
+-- (direct column filter, NOT a join - this counts mining-run patterns, not pattern popularity among cluster-0 patients)
 
 Q: "How many patients follow any care trajectory containing hypertension?"
 SQL: SELECT COUNT(DISTINCT pp.patient_id) AS total FROM prefix_span_patient_pattern pp JOIN prefix_span_pattern p ON pp.pattern_id = p.id WHERE p.pattern_str ILIKE '%hypertension%';

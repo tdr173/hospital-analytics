@@ -1,4 +1,11 @@
 import os
+import sys
+
+from pathlib import Path
+
+# ensure backend/app is importable so this module works both as a standalone
+# script (run from its own folder) and when imported in-process by the pipeline
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # backend/app
 
 import pandas as pd
 import numpy as np
@@ -9,14 +16,14 @@ from sklearn.decomposition import PCA
 from kmodes.kprototypes import KPrototypes
 from dotenv import load_dotenv
 
-from pathlib import Path
-
 from sqlalchemy import text
 
-from cluster_evaluation import full_evaluation_report, _fast_gower_matrix
+# package-qualified imports (not bare `from save_results import ...`) so the
+# k_prototypes and prefix_span save_results modules don't collide in sys.modules
+from clustering_algorithms.k_prototypes.cluster_evaluation import full_evaluation_report, _fast_gower_matrix
 
 from service.lllm_sql_agent_service import ask_ai
-from save_results import save_cluster_results
+from clustering_algorithms.k_prototypes.save_results import save_cluster_results
 from prompts.clusters import CLUSTER_SUMMARY_TEMPLATE
 
 current_folder = Path(__file__).parent
@@ -1184,6 +1191,116 @@ def get_clusters_summary(df_clustered, df_outliers, engine):
         prompt += f"- Top Procedures: {c_proc}\n"
 
     return ask_ai(prompt)
+
+
+def run_clustering_stage(engine) -> int:
+    """Run the single production clustering config (v55) end-to-end and persist it.
+
+    This is the pipeline entry point: it mirrors the save path of the __main__
+    benchmark harness but for exactly one deterministic config (no elbow plot, no
+    parameter sweep). Reuses build_patient_features / remove_outliers_zscore /
+    run_kprototypes / full_evaluation_report / get_clusters_summary /
+    save_cluster_results. Returns the number of clusters written.
+    """
+    load_dotenv()
+
+    from db import SessionLocal
+    from clustering_algorithms.k_prototypes.configs import CONFIGS
+
+    scaler_name = "minmax"
+    gamma = None
+    gamma_label = "auto"
+    rs = 42
+    threshold = 6
+
+    cfg = CONFIGS[0]  # v55 - the only uncommented config
+    version_tag = f"v{cfg['version']}"
+    num_cols = cfg["numerical"]
+    cat_cols = cfg["categorical"]
+    k = cfg["preferred_k"]
+
+    df = build_patient_features(engine)
+    df_cleaned, df_outliers = remove_outliers_zscore(df, threshold=threshold)
+    print(
+        f"threshold={threshold}: {len(df_cleaned)} patients after outlier removal "
+        f"({len(df_outliers)} outliers)"
+    )
+
+    run_tag = f"{version_tag}_s{scaler_name}_g{gamma_label}_rs{rs}_th{threshold}_k{k}"
+    location = current_folder / "outputs" / version_tag / run_tag
+    location.mkdir(parents=True, exist_ok=True)
+    version_name = (
+        f"{run_tag} | Huang + {scaler_name} + gamma={gamma_label} + "
+        f"k={k} + seed={rs} + threshold={threshold}"
+    )
+
+    df_result, X_num_scaled, clusters, kproto_cost, gamma_used = run_kprototypes(
+        df_cleaned,
+        numerical_cols=num_cols,
+        categorical_cols=cat_cols,
+        scaler=MinMaxScaler(),
+        init="Huang",
+        n_clusters=k,
+        version_name=version_name,
+        location=location,
+        gamma=gamma,
+        random_state=rs,
+        elbow_plot="off",
+    )
+
+    report, eval_metrics = full_evaluation_report(
+        df=df_result,
+        X_numerical_scaled=X_num_scaled,
+        clusters=clusters,
+        numerical_cols=num_cols,
+        categorical_cols=cat_cols,
+    )
+
+    metrics_row = {
+        "kproto_cost": kproto_cost,
+        "silhouette": eval_metrics["silhouette_score"],
+        "gower_silhouette": eval_metrics["gower_silhouette"],
+        "silhouette_per_cluster": eval_metrics["silhouette_per_cluster"],
+        "calinski_harabasz": eval_metrics["calinski_harabasz_score"],
+        "calinski_harabasz_famd": eval_metrics["calinski_harabasz_famd"],
+        "davies_bouldin": eval_metrics["davies_bouldin_score"],
+        "davies_bouldin_famd": eval_metrics["davies_bouldin_famd"],
+    }
+
+    summary_text = get_clusters_summary(df_result, df_outliers, engine)
+
+    # reuse the pre-rendered heatmap/FAMD images for the production config if present
+    fixed_image_folder = current_folder / "outputs" / "v55" / "v55_sminmax_gauto_rs42_th6_k4"
+    heatmap_path = fixed_image_folder / "heatmap_v55_sminmax_gauto_rs42_th6_k4.png"
+    famd_path = fixed_image_folder / "famd_v55_sminmax_gauto_rs42_th6_k4.png"
+    heatmap_bytes = heatmap_path.read_bytes() if heatmap_path.exists() else None
+    pca_image_bytes = famd_path.read_bytes() if famd_path.exists() else None
+
+    with SessionLocal() as session:
+        save_cluster_results(
+            db=session,
+            df_clustered=df_result,
+            df_outliers=df_outliers,
+            numerical_features=num_cols,
+            categorical_features=cat_cols,
+            extra_feature_cols=[
+                "avg_bmi", "avg_systolic_bp", "avg_glucose", "qaly", "daly",
+                "days_since_last_encounter",
+                "routine_care_count", "acute_care_count", "wellness_count",
+                "severe_care_count", "distinct_providers_seen",
+                "has_cancer", "has_mental_health", "is_polypharmacy", "has_respiratory_disease",
+                "marital", "dominant_encounter_class", "smoking_status",
+            ],
+            n_clusters=k,
+            params={"scaler": scaler_name, "gamma": gamma_label, "random_state": rs, "threshold": threshold},
+            metrics=metrics_row,
+            cluster_summaries=summary_text,
+            heatmap_bytes=heatmap_bytes,
+            pca_image_bytes=pca_image_bytes,
+        )
+
+    print(f"clustering stage complete: {k} clusters written")
+    return k
 
 
 if __name__ == "__main__":

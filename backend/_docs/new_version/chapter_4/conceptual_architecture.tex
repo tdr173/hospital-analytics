@@ -1,0 +1,102 @@
+% =====================================================================
+%  Figure 4.2 - Conceptual Architecture of the Analytical Pipeline
+%  (label: fig:ch4_pipeline  ->  figs/chapter_4/conceptual_pipeline.png)
+%
+%  This file only HOLDS the PlantUML source below. It is NOT \include-d
+%  in thesis.tex; it is layout guidance for the draw.io redraw.
+%  The \begin{figure} that references the rendered PNG already lives in
+%  chapter_4/analysis.tex (subsubsection "Conceptual Architecture of the
+%  Analytical Pipeline"), so nothing needs to be added there.
+%
+%  Style intent: ABSTRACT / CONCEPTUAL. No tech logos, no code, no
+%  packages. Four pipeline stages, ETL first, feeding the three
+%  analytical stages, "the output of each stage is the input of the
+%  next":
+%    Stage 1 Data Foundation (ETL) -> Stage 2 Stratification ->
+%    Stage 3 Trajectory Extraction -> Stage 4 Semantic Stage.
+% =====================================================================
+
+@startuml conceptual_pipeline
+' --- anti-spaghetti + abstract look ---------------------------------
+skinparam linetype ortho
+skinparam nodesep 45
+skinparam ranksep 55
+top to bottom direction
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam ArrowColor #9AA7BD
+skinparam ArrowThickness 1.5
+skinparam ArrowFontColor #5A6478
+skinparam ArrowFontSize 11
+
+' --- per-group colours via stereotypes (data / stage / output) ------
+skinparam rectangle {
+  RoundCorner 16
+  FontColor #101828
+  BorderThickness 1.6
+}
+skinparam rectangle<<data>> {
+  BackgroundColor #EEF3FC
+  BorderColor #2E4E8F
+}
+skinparam rectangle<<stage>> {
+  BackgroundColor #FCE7F0
+  BorderColor #B3005E
+}
+skinparam rectangle<<out>> {
+  BackgroundColor #E5F4EA
+  BorderColor #2E7D46
+}
+
+' ==================================================================
+'  INPUT  -  raw data
+' ==================================================================
+rectangle "**Electronic Health Records**\nSynthea synthetic cohort" as ehr <<data>>
+
+' ==================================================================
+'  STAGE 1 - DATA FOUNDATION (ETL)
+' ==================================================================
+rectangle "**STAGE 1  ·  Data Foundation**\n== ETL ==\nIngest the raw records and construct\nthe dual per-patient representation" as s1 <<stage>>
+
+' --- artifact produced by Stage 1: the dual patient representation ---
+rectangle "**Patient population**   P = { p_1, ..., p_n }\n====\n<b>Feature vector</b>   p_i = < x_1, ..., x_m >   //mixed-type//\n<b>Event sequence</b>   S_i = < e_1, ..., e_l >   //temporal//" as dual <<data>>
+
+' ==================================================================
+'  STAGE 2 - STRATIFICATION  (operates on the feature vectors)
+' ==================================================================
+rectangle "**STAGE 2  ·  Stratification**\n== K-Prototypes ==\nPartition P into k homogeneous phenotypes\nand isolate the outlier cohort (label -1)" as s2 <<stage>>
+
+' ==================================================================
+'  STAGE 3 - TRAJECTORY EXTRACTION  (operates on the event sequences)
+' ==================================================================
+rectangle "**STAGE 3  ·  Trajectory Extraction**\n== PrefixSpan ==\nGlobal scope, then once per phenotype\nReveals rare, phenotype-specific pathways\nClosed, ranked and de-duplicated" as s3 <<stage>>
+
+' ==================================================================
+'  STAGE 4 - SEMANTIC STAGE  (on top of both analytical outputs)
+' ==================================================================
+rectangle "**STAGE 4  ·  Semantic Stage**\n== Large Language Model ==\nReadable phenotype & pathway summaries\nConstrained natural-language query interface" as s4 <<stage>>
+
+' ==================================================================
+'  OUTPUT  -  actionable clinical knowledge
+' ==================================================================
+rectangle "**Clinical Insights & Decision Support**\nManager   ·   Doctor   ·   Patient" as out <<out>>
+
+' ------------------------------------------------------------------
+'  FLOWS  -  output of each stage is the input of the next
+' ------------------------------------------------------------------
+ehr  --> s1
+s1   --> dual : dual representation
+
+dual --> s2 : feature vectors  p_i
+dual --> s3 : event sequences  S_i
+
+s2   --> s3 : phenotypes define\nthe per-cluster scope
+s2   --> s4 : phenotypes\n(prototypes)
+s3   --> s4 : ranked care\npathways
+
+s4   --> out : plain-language\nknowledge
+
+@enduml

@@ -43,7 +43,7 @@ function MetricsRow({ s, classes }: { s: PatientSummary; classes: any }) {
   return (
     <div className={classes.metricsRow}>
       <MetricComponent label="Quality of Life" value={s.qaly} />
-      <MetricComponent label="Avg BMI" value={s.avgBmi} unit="kg/m²" />
+      <MetricComponent label="Avg BMI" value={s.avgBmi} unit="kg/m2" />
       <MetricComponent label="Active Conditions" value={s.activeConditions} />
       <MetricComponent label="Total Medications" value={s.totalMedications} />
       <MetricComponent label="Total Procedures" value={s.totalProcedures} />

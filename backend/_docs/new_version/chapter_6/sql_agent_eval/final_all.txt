@@ -1,0 +1,202 @@
+1. How many patients are in the database?
+   AGENT: There are 22,284 patients in the database.
+   GOLD : 22284
+
+2. How many male patients and how many female patients are there?
+   AGENT: There are 11,222 male patients and 11,062 female patients.
+   GOLD : gender=F, n=11062 | gender=M, n=11222
+
+3. What is the average age of the patients?
+   AGENT: The average age of the patients is 37.23 years.
+   GOLD : 37.2
+
+4. How many patients are older than 70?
+   AGENT: There are 1,887 patients older than 70.
+   GOLD : 1887
+
+5. How many patients have died?
+   AGENT: 2,284 patients have died.
+   GOLD : 2284
+
+6. Which city has the most patients?
+   AGENT: Houston has the most patients, with 2,294.
+   GOLD : city=Houston, n=2294
+
+7. How many patients are divorced?
+   AGENT: There are 1,852 divorced patients.
+   GOLD : 1852
+
+8. How many patients identify as black race?
+   AGENT: 0 patients identify as Black race.
+   GOLD : 2852
+
+9. What is the age of the oldest patient in the database?
+   AGENT: The oldest patient in the database is 110 years old.
+   GOLD : 110
+
+10. How many patients are under 18 years old?
+   AGENT: There are 5,481 patients under 18 years old.
+   GOLD : 5481
+
+11. How many distinct patients have a condition described as Gingivitis (disorder)?
+   AGENT: There are 17,104 distinct patients with a condition described as Gingivitis (disorder).
+   GOLD : 17104
+
+12. What is the most common condition recorded in the database?
+   AGENT: The most common condition recorded is **“Medication review due (situation)”**, with **147,256 records**.
+   GOLD : description=Medication review due (situation), n=147256
+
+13. How many distinct patients have Normal pregnancy recorded as a condition?
+   AGENT: There are 4,255 distinct patients with “Normal pregnancy” recorded as a condition.
+   GOLD : 4255
+
+14. How many distinct patients have more than 20 condition records each?
+   AGENT: 14,680 distinct patients have more than 20 condition records each.
+   GOLD : 14680
+
+15. How many distinct patients are prescribed lisinopril 10 MG Oral Tablet?
+   AGENT: 2,852 distinct patients are prescribed lisinopril 10 MG Oral Tablet.
+   GOLD : 2844
+
+16. What is the most frequently prescribed medication?
+   AGENT: The most frequently prescribed medication is **1 ML Epoetin Alfa 4000 UNT/ML Injection [Epogen]**, with **153,879 prescriptions**.
+   GOLD : description=1 ML Epoetin Alfa 4000 UNT/ML Injection [Epogen], n=153879
+
+17. How many medication records reference a Metformin extended release tablet?
+   AGENT: There are 23,750 medication records that reference a Metformin extended release tablet.
+   GOLD : 23750
+
+18. How many distinct patients take both lisinopril 10 MG Oral Tablet and Hydrochlorothiazide 25 MG Oral Tablet?
+   AGENT: 1,504 distinct patients take both lisinopril 10 MG Oral Tablet and Hydrochlorothiazide 25 MG Oral Tablet.
+   GOLD : 1497
+
+19. How many distinct patients underwent renal dialysis?
+   AGENT: 625 distinct patients underwent renal dialysis.
+   GOLD : 625
+
+20. What is the most common procedure performed?
+   AGENT: The most common procedure performed is **Depression screening (procedure)**, with **311,480** occurrences.
+   GOLD : description=Depression screening (procedure), n=311480
+
+21. How many distinct patients received the trivalent influenza vaccine?
+   AGENT: 22,081 distinct patients received the trivalent influenza vaccine.
+   GOLD : 22081
+
+22. How many distinct patients received a 30 mcg mRNA COVID-19 vaccine dose?
+   AGENT: 7,104 distinct patients received a 30 mcg mRNA COVID-19 vaccine dose.
+   GOLD : 7104
+
+23. What is the most administered immunization?
+   AGENT: The most administered immunization is **Influenza split virus, trivalent, PF**, with **172,551 administrations**.
+   GOLD : description=Influenza  split virus  trivalent  PF, n=172551
+
+24. How many distinct patients are allergic to aspirin?
+   AGENT: There are 796 distinct patients who are allergic to aspirin.
+   GOLD : 796
+
+25. What is the most common recorded allergy?
+   AGENT: The most commonly recorded allergy is **“Allergic disposition (finding)”**, with **3,916 records**.
+   GOLD : description=Allergic disposition (finding), n=3916
+
+26. How many patients have no recorded allergies at all?
+   AGENT: 18,368 patients have no recorded allergies at all.
+   GOLD : 18368
+
+27. How many care plans have been recorded in total?
+   AGENT: A total of 70,197 care plans have been recorded.
+   GOLD : 70197
+
+28. What is the average duration in days of care plans that have already ended?
+   AGENT: The average duration of care plans that have already ended is 190.9 days.
+   GOLD : 190.9
+
+29. What is the average systolic blood pressure recorded across all observations?
+   AGENT: The average systolic blood pressure recorded across all observations is 117.59 mmHg.
+   GOLD : 117.6
+
+30. What is the highest heart rate ever recorded in the observations?
+   AGENT: The highest heart rate recorded in the observations is 200 bpm.
+   GOLD : 200.0
+
+31. How many distinct patients have at least one BMI observation showing obesity (30 or above)?
+   AGENT: 7,541 distinct patients have at least one BMI observation in the obesity range (30 or above).
+   GOLD : 7541
+
+32. How many encounters are classified as emergency?
+   AGENT: There are 48,897 emergency encounters.
+   GOLD : 48897
+
+33. What is the average duration, in hours, of inpatient encounters?
+   AGENT: The average duration of inpatient encounters is 116.41 hours.
+   GOLD : 116.41
+
+34. How many encounters took place in 2020?
+   AGENT: There were 86,669 encounters in 2020.
+   GOLD : 86669
+
+35. Which patient has the highest number of encounters, and how many?
+   AGENT: Doug McGlynn has the highest number of encounters, with 827.
+   GOLD : first_name=Doug, last_name=McGlynn, n=827
+
+36. How many providers work at the hospital?
+   AGENT: There are 300 providers working at the hospital.
+   GOLD : 300
+
+37. What is the name of the hospital organization in the database?
+   AGENT: The hospital organization in the database is **COLLIN COUNTY ADULT CLINIC**.
+   GOLD : COLLIN COUNTY ADULT CLINIC
+
+38. How many male providers and how many female providers are there?
+   AGENT: There are:
+- **159 female providers**
+- **141 male providers**
+   GOLD : gender=F, n=159 | gender=M, n=141
+
+39. Which provider has the most encounters recorded?
+   AGENT: The provider with the most recorded encounters is Jeanett Goodwin, with 538,378 encounters.
+   GOLD : first_name=Jeanett, last_name=Goodwin, encounters=33069
+
+40. How many patient clusters were identified by the clustering pipeline, including the outlier group?
+   AGENT: The clustering pipeline identified 5 patient clusters in total, including the outlier group.
+   GOLD : 5
+
+41. What is the title of cluster number 2?
+   AGENT: The title of cluster number 2 is **Older High Risk**.
+   GOLD : Older High Risk
+
+42. How many patients belong to the Complex High Need outlier cluster?
+   AGENT: There are 285 patients in the Complex High Need outlier cluster.
+   GOLD : 285
+
+43. Which cluster has the most patients assigned to it?
+   AGENT: The cluster with the most patients is **Younger Injury Care** (cluster **0**), with **7,093 patients** assigned to it.
+   GOLD : title=Younger Injury Care, n=7093
+
+44. What percentage of patients are outliers, not part of any main cluster?
+   AGENT: 1.28% of patients are outliers and do not belong to any main cluster.
+   GOLD : 1.28
+
+45. What is the most frequent global care sequence pattern that was mined?
+   AGENT: The most frequent global care sequence pattern was **“M:sodium fluoride 0.0272 MG/MG Oral Gel → P:Dental fluoride treatment (procedure) → P:Oral health education (procedure)”**, occurring **8,051 times** and representing **36.78%** of the mined patterns.
+   GOLD : pattern_str=M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Dental fluoride treatment (procedure) -> P:Oral health education (procedure), support_count=8051
+
+46. How many sequence patterns were mined specifically for cluster 0?
+   AGENT: There were 113 sequence patterns mined specifically for cluster 0.
+   GOLD : 113
+
+47. How many patients over the age of 65 have been prescribed lisinopril 10 MG Oral Tablet?
+   AGENT: 974 patients over the age of 65 have been prescribed lisinopril 10 mg oral tablets.
+   GOLD : 968
+
+48. How many distinct patients have both a Viral sinusitis condition and take Acetaminophen 325 MG Oral Tablet?
+   AGENT: There are 6,863 distinct patients who have Viral sinusitis and take Acetaminophen 325 MG Oral Tablet.
+   GOLD : 626
+
+49. How many male patients living in Houston are there?
+   AGENT: There are 1,177 male patients living in Houston.
+   GOLD : 1171
+
+50. What is the average number of medication records per patient?
+   AGENT: The average number of medication records per patient is 42.23.
+   GOLD : 42.23
+

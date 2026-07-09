@@ -1,0 +1,95 @@
+' ================================================================
+' FIGURE 5.3 - GROUP B: Analytics / Pipeline Outputs (6 tables)
+' Abstract / keys-only view (PK + FK only, no business columns) to
+' match Group A's convention. Business columns (algorithm, metrics,
+' features, status, timestamps, ...) are already listed in the
+' surrounding text.
+' ================================================================
+@startuml er_diagram_group_b
+
+hide circle
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam nodesep 70
+skinparam ranksep 100
+
+skinparam entity {
+  BackgroundColor<<analytics>> #FCE8C8
+  BorderColor<<analytics>> #A9660F
+  BackgroundColor<<junction>> #DCEFD4
+  BorderColor<<junction>> #4C7A3E
+  BackgroundColor<<singleton>> #F6D9E4
+  BorderColor<<singleton>> #9C3A57
+  BackgroundColor<<external>> #EDEDED
+  BorderColor<<external>> #888888
+  FontSize 14
+  AttributeFontSize 13
+  BorderThickness 1.4
+}
+
+skinparam ArrowColor #555555
+skinparam ArrowFontSize 12
+skinparam ArrowThickness 1.3
+entity "patient (ref.)" as patient_ref <<external>> {
+  * patient_id : VARCHAR <<PK>>
+  --
+  full definition in Group A
+  (see Figure 5.2)
+}
+
+entity cluster_meta <<singleton>> {
+  * id : INT <<PK>>
+  --
+  SINGLETON -- exactly 1 row
+  (TRUNCATE + INSERT on every re-run)
+}
+
+entity cluster <<analytics>> {
+  * id : INT <<PK>>
+  --
+  one row per cluster label
+  (0..k-1, and -1 = outliers)
+}
+
+entity cluster_patient <<analytics>> {
+  * id : INT <<PK>>
+  --
+  # patient_id : VARCHAR <<FK>>
+}
+
+entity prefix_span_pattern <<analytics>> {
+  * id : INT <<PK>>
+  --
+  cluster_label NULL = global scope,
+  else per-cluster scope
+}
+
+entity prefix_span_patient_pattern <<junction>> {
+  * pattern_id : INT <<PK, FK>>
+  * patient_id : VARCHAR <<PK>>
+}
+
+entity pipeline_run <<singleton>> {
+  * id : INT <<PK>>
+  --
+  SINGLETON -- exactly 1 row
+  (orchestration state machine)
+}
+
+' -- hidden ordering links: pin the two "hub" pairs onto aligned
+'    rows so the four crossing links below render as a clean 2x2
+'    grid instead of a tangle --
+patient_ref     -[hidden]right-> cluster
+cluster_patient -[hidden]right-> prefix_span_pattern
+
+' -- relationships --
+prefix_span_pattern ||--o{ prefix_span_patient_pattern
+
+patient_ref ||--o{ cluster_patient
+patient_ref ||--o{ prefix_span_patient_pattern
+
+cluster ||--o{ cluster_patient
+cluster ||--o{ prefix_span_pattern
+
+@enduml

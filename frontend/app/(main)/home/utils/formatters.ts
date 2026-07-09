@@ -21,7 +21,7 @@ export function formatMonth(iso: string): string {
 }
 
 export function truncate(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+  return text.length > max ? `${text.slice(0, max - 1)}...` : text;
 }
 
 export function capitalize(s: string): string {

@@ -1,0 +1,252 @@
+[
+  {
+    "question": "How many patients are in the database?",
+    "result": "There are 22,284 patients in the database.",
+    "expected_result": "22284"
+  },
+  {
+    "question": "How many male patients and how many female patients are there?",
+    "result": "There are 11,222 male patients and 11,062 female patients.",
+    "expected_result": "gender=F, n=11062 | gender=M, n=11222"
+  },
+  {
+    "question": "What is the average age of the patients?",
+    "result": "The average age of the patients is 37.23 years.",
+    "expected_result": "37.2"
+  },
+  {
+    "question": "How many patients are older than 70?",
+    "result": "There are 1,887 patients older than 70.",
+    "expected_result": "1887"
+  },
+  {
+    "question": "How many patients have died?",
+    "result": "2,284 patients have died.",
+    "expected_result": "2284"
+  },
+  {
+    "question": "Which city has the most patients?",
+    "result": "Houston has the most patients, with 2,294 patients.",
+    "expected_result": "city=Houston, n=2294"
+  },
+  {
+    "question": "How many patients are divorced?",
+    "result": "There are 1,852 divorced patients.",
+    "expected_result": "1852"
+  },
+  {
+    "question": "How many patients identify as black race?",
+    "result": "0 patients identify as Black race.",
+    "expected_result": "2852"
+  },
+  {
+    "question": "What is the age of the oldest patient in the database?",
+    "result": "The oldest patient in the database is 110 years old.",
+    "expected_result": "110"
+  },
+  {
+    "question": "How many patients are under 18 years old?",
+    "result": "There are 5,481 patients under 18 years old.",
+    "expected_result": "5481"
+  },
+  {
+    "question": "How many distinct patients have a condition described as Gingivitis (disorder)?",
+    "result": "There are 17,104 distinct patients with a condition described as Gingivitis (disorder).",
+    "expected_result": "17104"
+  },
+  {
+    "question": "What is the most common condition recorded in the database?",
+    "result": "The most commonly recorded condition is **“Medication review due (situation)”**, with **147,256** records.",
+    "expected_result": "description=Medication review due (situation), n=147256"
+  },
+  {
+    "question": "How many distinct patients have Normal pregnancy recorded as a condition?",
+    "result": "There are 4,255 distinct patients with “Normal pregnancy” recorded as a condition.",
+    "expected_result": "4255"
+  },
+  {
+    "question": "How many distinct patients have more than 20 condition records each?",
+    "result": "14,680 distinct patients have more than 20 condition records each.",
+    "expected_result": "14680"
+  },
+  {
+    "question": "How many distinct patients are prescribed lisinopril 10 MG Oral Tablet?",
+    "result": "2,852 distinct patients are prescribed lisinopril 10 MG Oral Tablet.",
+    "expected_result": "2844"
+  },
+  {
+    "question": "What is the most frequently prescribed medication?",
+    "result": "The most frequently prescribed medication is **1 ML Epoetin Alfa 4000 UNT/ML Injection [Epogen]**, with **153,879 prescriptions**.",
+    "expected_result": "description=1 ML Epoetin Alfa 4000 UNT/ML Injection [Epogen], n=153879"
+  },
+  {
+    "question": "How many medication records reference a Metformin extended release tablet?",
+    "result": "There are 0 medication records that reference a Metformin extended release tablet.",
+    "expected_result": "23750"
+  },
+  {
+    "question": "How many distinct patients take both lisinopril 10 MG Oral Tablet and Hydrochlorothiazide 25 MG Oral Tablet?",
+    "result": "1,497 distinct patients take both lisinopril 10 MG Oral Tablet and Hydrochlorothiazide 25 MG Oral Tablet.",
+    "expected_result": "1497"
+  },
+  {
+    "question": "How many distinct patients underwent renal dialysis?",
+    "result": "625 distinct patients underwent renal dialysis.",
+    "expected_result": "625"
+  },
+  {
+    "question": "What is the most common procedure performed?",
+    "result": "The most common procedure performed is **Depression screening (procedure)**, with **311,480** recorded procedures.",
+    "expected_result": "description=Depression screening (procedure), n=311480"
+  },
+  {
+    "question": "How many distinct patients received the trivalent influenza vaccine?",
+    "result": "0 distinct patients received the trivalent influenza vaccine.",
+    "expected_result": "22081"
+  },
+  {
+    "question": "How many distinct patients received a 30 mcg mRNA COVID-19 vaccine dose?",
+    "result": "7,104 distinct patients received a 30 mcg mRNA COVID-19 vaccine dose.",
+    "expected_result": "7104"
+  },
+  {
+    "question": "What is the most administered immunization?",
+    "result": "The most administered immunization is **Influenza split virus, trivalent, PF**, with **172,551 administrations**.",
+    "expected_result": "description=Influenza  split virus  trivalent  PF, n=172551"
+  },
+  {
+    "question": "How many distinct patients are allergic to aspirin?",
+    "result": "796 distinct patients are allergic to aspirin.",
+    "expected_result": "796"
+  },
+  {
+    "question": "What is the most common recorded allergy?",
+    "result": "The most commonly recorded allergy is **“Allergic disposition (finding)”**, with **3,916 records**.",
+    "expected_result": "description=Allergic disposition (finding), n=3916"
+  },
+  {
+    "question": "How many patients have no recorded allergies at all?",
+    "result": "18,368 patients have no recorded allergies at all.",
+    "expected_result": "18368"
+  },
+  {
+    "question": "How many care plans have been recorded in total?",
+    "result": "A total of 70,197 care plans have been recorded.",
+    "expected_result": "70197"
+  },
+  {
+    "question": "What is the average duration in days of care plans that have already ended?",
+    "result": "The average duration of care plans that have already ended is about 190.9 days.",
+    "expected_result": "190.9"
+  },
+  {
+    "question": "What is the average systolic blood pressure recorded across all observations?",
+    "result": "The average systolic blood pressure across all observations is 117.59 mmHg.",
+    "expected_result": "117.6"
+  },
+  {
+    "question": "What is the highest heart rate ever recorded in the observations?",
+    "result": "The highest heart rate ever recorded in the observations was 200 bpm.",
+    "expected_result": "200.0"
+  },
+  {
+    "question": "How many distinct patients have at least one BMI observation showing obesity (30 or above)?",
+    "result": "7,541 distinct patients have at least one BMI observation in the obesity range (30 or above).",
+    "expected_result": "7541"
+  },
+  {
+    "question": "How many encounters are classified as emergency?",
+    "result": "There are 48,897 encounters classified as emergency.",
+    "expected_result": "48897"
+  },
+  {
+    "question": "What is the average duration, in hours, of inpatient encounters?",
+    "result": "I tried multiple times but couldn't build a valid query. Try simplifying your question.",
+    "expected_result": "6984.74"
+  },
+  {
+    "question": "How many encounters took place in 2020?",
+    "result": "There were 86,669 encounters in 2020.",
+    "expected_result": "86669"
+  },
+  {
+    "question": "Which patient has the highest number of encounters, and how many?",
+    "result": "Doug McGlynn has the highest number of encounters, with 827.",
+    "expected_result": "first_name=Doug, last_name=McGlynn, n=827"
+  },
+  {
+    "question": "How many providers work at the hospital?",
+    "result": "There are 300 providers working at the hospital.",
+    "expected_result": "300"
+  },
+  {
+    "question": "What is the name of the hospital organization in the database?",
+    "result": "I tried multiple times but couldn't build a valid query. Try simplifying your question.",
+    "expected_result": "COLLIN COUNTY ADULT CLINIC"
+  },
+  {
+    "question": "How many male providers and how many female providers are there?",
+    "result": "There are:\n- **159 female providers**\n- **141 male providers**",
+    "expected_result": "gender=F, n=159 | gender=M, n=141"
+  },
+  {
+    "question": "Which provider has the most encounters recorded?",
+    "result": "The provider with the most recorded encounters is Jeanett Goodwin, with 538,378 encounters.",
+    "expected_result": "first_name=Jeanett, last_name=Goodwin, encounters=33069"
+  },
+  {
+    "question": "How many patient clusters were identified by the clustering pipeline, including the outlier group?",
+    "result": "The clustering pipeline identified 5 patient clusters in total, including the outlier group.",
+    "expected_result": "5"
+  },
+  {
+    "question": "What is the title of cluster number 2?",
+    "result": "The title of cluster number 2 is **Older High Risk**.",
+    "expected_result": "Older High Risk"
+  },
+  {
+    "question": "How many patients belong to the Complex High Need outlier cluster?",
+    "result": "There are 285 patients in the Complex High Need outlier cluster.",
+    "expected_result": "285"
+  },
+  {
+    "question": "Which cluster has the most patients assigned to it?",
+    "result": "The cluster with the most patients assigned to it is **Younger Injury Care** (cluster **0**), with **7,093 patients**.",
+    "expected_result": "title=Younger Injury Care, n=7093"
+  },
+  {
+    "question": "What percentage of patients are outliers, not part of any main cluster?",
+    "result": "1.28% of patients are outliers and not part of any main cluster.",
+    "expected_result": "1.28"
+  },
+  {
+    "question": "What is the most frequent global care sequence pattern that was mined?",
+    "result": "The most frequent global care sequence pattern was **“M:sodium fluoride 0.0272 MG/MG Oral Gel → P:Dental fluoride treatment (procedure) → P:Oral health education (procedure)”**, occurring **8,051 times** and representing **36.78%** of the mined patterns.",
+    "expected_result": "pattern_str=C:Laceration - injury (disorder) -> CP:Wound care (regime/therapy) -> P:Suture open wound (procedure), support_count=590"
+  },
+  {
+    "question": "How many sequence patterns were mined specifically for cluster 0?",
+    "result": "329 sequence patterns were mined specifically for cluster 0.",
+    "expected_result": "113"
+  },
+  {
+    "question": "How many patients over the age of 65 have been prescribed lisinopril 10 MG Oral Tablet?",
+    "result": "974 patients over the age of 65 have been prescribed lisinopril 10 MG oral tablet.",
+    "expected_result": "968"
+  },
+  {
+    "question": "How many distinct patients have both a Viral sinusitis condition and take Acetaminophen 325 MG Oral Tablet?",
+    "result": "6,243 distinct patients have both Viral sinusitis and take Acetaminophen 325 MG Oral Tablet.",
+    "expected_result": "626"
+  },
+  {
+    "question": "How many male patients living in Houston are there?",
+    "result": "There are 1,177 male patients living in Houston.",
+    "expected_result": "1171"
+  },
+  {
+    "question": "What is the average number of medication records per patient?",
+    "result": "The average number of medication records per patient is 42.23.",
+    "expected_result": "42.23"
+  }
+]

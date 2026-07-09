@@ -488,7 +488,7 @@ export default function EncounterDetailPage() {
               </span>
             )}
             <span className={classes.dateText}>
-              {formatDate(encounter.startDate)} →{" "}
+              {formatDate(encounter.startDate)} -&gt;{" "}
               {formatDate(encounter.endDate)}
             </span>
           </div>

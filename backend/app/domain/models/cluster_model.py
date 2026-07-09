@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
@@ -11,6 +12,8 @@ class ClusterModel(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
     cluster_label: int = Field(index=True)   # 0, 1, 2 or -1 for outliers
+
+    created_at: datetime = Field(default_factory=datetime.now)   # timestamp of the clustering run
 
     color: str = Field(default="#006780")
     title: str

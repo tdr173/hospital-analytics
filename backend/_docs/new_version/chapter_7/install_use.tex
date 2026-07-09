@@ -1,0 +1,246 @@
+\chapter{User's Manual}
+\label{ch:manual}
+\pagestyle{fancy}
+
+This chapter has two parts: Section~\ref{sec:installation} explains how to install and run the platform from scratch, and Section~\ref{sec:user_manual} is a user manual that walks through the interface, role by role.
+
+\section{Installation}
+\label{sec:installation}
+
+The platform relies on modern, cross-platform technologies, so the steps below install and run it the same way on Windows, Linux, or macOS. It amounts to a Next.js frontend, a FastAPI backend, and one PostgreSQL database, with no container, message broker, or external worker to configure.
+
+\subsection{Software Requirements}
+
+The following software must be installed beforehand:
+
+\begin{itemize}
+    \item \textbf{Python 3.11 or newer} for the backend.
+    \item \textbf{Node.js 20 or newer} and \texttt{npm} for the frontend (Next.js~16 needs this version).
+    \item \textbf{PostgreSQL 14 or newer}, which must allow the \texttt{pg\_trgm} extension used for fast text search.
+    \item \textbf{Java 11 or newer}, only if the synthetic dataset is generated locally with Synthea. It is not needed if the CSV files are already available.
+    \item A valid \textbf{OpenAI API key} (for the SQL agent and the cluster/sequence interpretation) and, optionally, a \textbf{Google Gemini API key}.
+\end{itemize}
+
+\subsection{Step-by-Step Installation}
+
+\paragraph{1. Get the source code.} Copy the project onto the machine. It contains two top-level folders, \texttt{backend/} and \texttt{frontend/}.
+
+\paragraph{2. Configure the backend environment.} Create a file named \texttt{.env} inside \texttt{backend/} pointing to an existing PostgreSQL database and providing the LLM keys. These values are the only thing that changes between a local, testing, or production deployment:
+
+\begin{lstlisting}[style=basestyle]
+POSTGRES_USERNAME=hospitai_user
+POSTGRES_PASSWORD=your_password
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=hospitai
+GPT_KEY=sk-...             # OpenAI key
+GEMINI_API_KEY=...         # optional
+\end{lstlisting}
+
+\noindent The application tables, indexes, and materialized views are created automatically the first time the backend starts, so no schema script has to be run by hand.
+
+\paragraph{3. Install the backend dependencies.} From the \texttt{backend/} folder, create a virtual environment and install the pinned dependencies:
+
+\begin{lstlisting}[style=basestyle]
+python -m venv .venv
+.venv\Scripts\activate            # Windows  (use source .venv/bin/activate on Linux/macOS)
+pip install -r requirements.txt
+\end{lstlisting}
+
+\paragraph{4. Get the dataset.} The ETL stage reads the Synthea CSV export (\texttt{patients.csv}, \texttt{encounters.csv}, \texttt{observations.csv}, and the other clinical files) from the expected dataset directory. Either generate it with the open-source Synthea patient generator (which needs Java) or place a previously generated export at that location. This step is only needed for the very first data load.
+
+\paragraph{5. Start the backend.} Still inside \texttt{backend/}, launch the API server:
+
+\begin{lstlisting}[style=basestyle]
+uvicorn app.main:app --reload
+\end{lstlisting}
+
+\noindent On its first start, the backend creates every table, applies the additive index and constraint migrations, builds the observation materialized views, seeds the pipeline state, and starts the monthly scheduler. The API is then served on \texttt{http://localhost:8000}.
+
+\paragraph{6. Start the frontend.} In a separate terminal, from the \texttt{frontend/} folder, install the packages and run the development server:
+
+\begin{lstlisting}[style=basestyle]
+npm install
+npm run dev
+\end{lstlisting}
+
+\noindent The interface becomes available at \texttt{http://localhost:3000}.
+
+\paragraph{7. Run the analytics from the terminal (optional).} Besides the Pipeline page described below, each analytical stage can also be launched directly, which is how the benchmarking in Chapter~\ref{ch:testing} was produced:
+
+\begin{lstlisting}[style=pythonstyle]
+python app/clustering_algorithms/k_prototypes/k_prototypes.py
+
+python app/clustering_algorithms/prefix_span/prefix_span.py
+python app/clustering_algorithms/prefix_span/prefix_span.py --n-clusters 4
+\end{lstlisting}
+
+\noindent The first command runs K-Prototypes clustering. The other two run PrefixSpan sequence mining, globally and per cluster.
+
+\paragraph{8. Load the data and compute the results.} Open the interface, sign in as the Manager (see the next section), go to the Pipeline page, and start a run. On this first run the pipeline ingests the dataset, computes the clusters, and mines the sequential patterns. Once it finishes, every analytical view is populated and the platform is ready to use. On later runs the ingested data is reused and only the analytics are recomputed.
+
+\section{User Manual}
+\label{sec:user_manual}
+
+This section describes the application from the user's point of view, one role at a time: Patient, Doctor, and Manager.
+
+\subsection{Signing In}
+
+The entry point is the sign-in page (Figure~\ref{fig:ch7_login}). The platform ships with three demonstration accounts, one per role:
+
+\begin{itemize}
+    \item \texttt{manager@hospitai.com} - the Manager,
+    \item \texttt{doctor@hospitai.com} - the Doctor,
+    \item \texttt{patient@hospitai.com} - the Patient.
+\end{itemize}
+
+\noindent To sign in with a role, the user only has to enter a password of at least 8 characters, since the roles exist to illustrate how the interface changes per user rather than to enforce real security. After signing in, the user lands on the home page of their role and navigates through the menu to the pages that the role exposes.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/login.png}
+\caption{Sign-in page with the three demonstration accounts}
+\label{fig:ch7_login}
+\end{figure}
+
+\subsection{Patient}
+
+The Patient role sees only its own data, read-only. On the Home page it can view its complete medical history: conditions, medications, procedures, vaccinations, allergies, and the other clinical categories recorded for it.
+
+The Patient can also open its list of past visits and, for a particular visit, see the test results, conditions, medications, and procedures recorded during that encounter (Figures~\ref{fig:ch7_patient_visits_list} and~\ref{fig:ch7_patient_particular_visit}).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/patient_visits_list.png}
+\caption{Patient view - list of past visits}
+\label{fig:ch7_patient_visits_list}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/patient_particular_visit.png}
+\caption{Patient view - detail of a particular visit}
+\label{fig:ch7_patient_particular_visit}
+\end{figure}
+
+\subsection{Doctor}
+
+On its Home page, the Doctor sees a dashboard with statistics over its own patients (Figure~\ref{fig:ch7_home_doctor}).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/home_doctor.png}
+\caption{Doctor - home dashboard}
+\label{fig:ch7_home_doctor}
+\end{figure}
+
+The Doctor can browse the list of its patients, open a patient, and add, remove, or update entries in its record, such as conditions, medications, or procedures (Figure~\ref{fig:ch7_doctor_add_condition}).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/doctor_patinent_add_condition.png}
+\caption{Doctor - adding a condition to a patient's record}
+\label{fig:ch7_doctor_add_condition}
+\end{figure}
+
+The Doctor can also see all of a patient's visits and add, delete, or update a visit (Figure~\ref{fig:ch7_doctor_visits}). Within a particular visit, the Doctor can add, edit, or delete its specific values, such as conditions, medications, procedures, and test results (Figure~\ref{fig:ch7_doctor_specific_visit}).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/doctor_patients_visits.png}
+\caption{Doctor - managing a patient's visits}
+\label{fig:ch7_doctor_visits}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/doctor_specific_visit.png}
+\caption{Doctor - editing the values of a particular visit}
+\label{fig:ch7_doctor_specific_visit}
+\end{figure}
+
+The Doctor can also inspect the patient groups (clusters) and the mined care sequences, either for the whole population or for a particular patient from that patient's profile. Unlike the Manager, though, the Doctor cannot start the analytics pipeline.
+
+\subsection{Manager}
+
+The Manager is the only role that can start and stop the analytics pipeline (Figure~\ref{fig:ch7_pipeline_start}), which by default also runs automatically on the 1st of every month.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/pipeline_start.png}
+\caption{Manager - starting and stopping the analytics pipeline}
+\label{fig:ch7_pipeline_start}
+\end{figure}
+
+Both the Manager and the Doctor can investigate the resulting clusters (Figure~\ref{fig:ch7_clusters_list}), request an AI interpretation of a specific cluster (Figures~\ref{fig:ch7_cluster_ai_1} and~\ref{fig:ch7_cluster_ai_2}), and open a specific cluster to see its detail (Figures~\ref{fig:ch7_cluster_1} and~\ref{fig:ch7_cluster_2}).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/clusters_list.png}
+\caption{Cluster overview}
+\label{fig:ch7_clusters_list}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/cluster_ai_1.png}
+\caption{AI interpretation of a specific cluster (1)}
+\label{fig:ch7_cluster_ai_1}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/cluster_ai_2.png}
+\caption{AI interpretation of a specific cluster (2)}
+\label{fig:ch7_cluster_ai_2}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/cluster_1.png}
+\caption{Detail of a specific cluster (1)}
+\label{fig:ch7_cluster_1}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/cluster_2.png}
+\caption{Detail of a specific cluster (2)}
+\label{fig:ch7_cluster_2}
+\end{figure}
+
+Both roles can likewise search the mined sequential patterns, either globally or per cluster (Figure~\ref{fig:ch7_sequences_list}), and see the AI interpretation of a specific sequence (Figures~\ref{fig:ch7_sequence_ai_1} and~\ref{fig:ch7_sequence_ai_2}).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/sequences_list.png}
+\caption{Sequential patterns, searchable globally or per cluster}
+\label{fig:ch7_sequences_list}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/sequence_ai_1.png}
+\caption{AI interpretation of a specific sequence (1)}
+\label{fig:ch7_sequence_ai_1}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/sequence_ai_2.png}
+\caption{AI interpretation of a specific sequence (2)}
+\label{fig:ch7_sequence_ai_2}
+\end{figure}
+
+Beyond the analytical views, the Manager can read (but not edit) the patients and their visits, and has full create, read, update, and delete access over the providers.
+
+\subsection{Natural-Language Query Agent}
+
+The Ask~AI page lets the user query the database in everyday language instead of SQL. Figure~\ref{fig:ch7_llm_agent} shows the agent answering a question grounded in the clinical data, as well as its response to a question that falls outside what the data can answer.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_7/llm_agent.png}
+\caption{LLM agent answering a data-grounded question and an out-of-scope question}
+\label{fig:ch7_llm_agent}
+\end{figure}

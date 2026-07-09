@@ -13,7 +13,7 @@ export const SequenceFiltersStyles = (theme: Theme) => ({
     // as a flex item of the scroll container, min-width:auto would let the bar
     // grow to its content's min size (so the fields widen when a clear icon
     // appears). Pinning it to 0 keeps the bar at container width and forces the
-    // minmax(0, …fr) tracks to absorb the change instead.
+    // minmax(0, ...fr) tracks to absorb the change instead.
     width: "100%",
     minWidth: 0,
     maxWidth: "100%",

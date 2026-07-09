@@ -46,7 +46,7 @@ function TruncatedTick({
   const maxLen = rotated ? 15 : 20;
   const label =
     payload.value.length > maxLen
-      ? payload.value.slice(0, maxLen - 2) + "…"
+      ? payload.value.slice(0, maxLen - 2) + "..."
       : payload.value;
 
   return (

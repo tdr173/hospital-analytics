@@ -1,0 +1,31 @@
+Top 29 patterns (ranked by geometric mean lift)
+
+    1. [  462 pts,   7.2%, gml=0.18] [dental] P:Dental fluoride treatment (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Examination of gingivae (procedure)
+    2. [  464 pts,   7.2%, gml=0.18] [dental] P:Dental fluoride treatment (procedure) -> P:Oral health education (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+    3. [  428 pts,   6.7%, gml=0.17] [dental] P:Dental consultation and report (procedure) -> P:Dental fluoride treatment (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+    4. [  427 pts,   6.7%, gml=0.17] [dental] P:Dental fluoride treatment (procedure) -> P:Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+    5. [  426 pts,   6.6%, gml=0.17] [dental] P:Dental fluoride treatment (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)
+    6. [  411 pts,   6.4%, gml=0.16] [dental] P:Dental fluoride treatment (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Dental care (regime/therapy)
+    7. [  497 pts,   7.8%, gml=0.16] [dental] P:Oral health education (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Examination of gingivae (procedure)
+    8. [  478 pts,   7.5%, gml=0.16] [dental] P:Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Examination of gingivae (procedure)
+    9. [  477 pts,   7.4%, gml=0.16] [dental] P:Oral health education (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)
+   10. [  380 pts,   5.9%, gml=0.16] [dental] P:Patient referral for dental care (procedure) -> P:Dental fluoride treatment (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+   11. [  472 pts,   7.4%, gml=0.15] [dental] P:Oral health education (procedure) -> P:Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+   12. [  465 pts,   7.3%, gml=0.15] [dental] P:Dental consultation and report (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Examination of gingivae (procedure)
+   13. [  467 pts,   7.3%, gml=0.15] [dental] P:Dental consultation and report (procedure) -> P:Oral health education (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+   14. [  463 pts,   7.2%, gml=0.15] [dental] M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Examination of gingivae (procedure) -> P:Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)
+   15. [  458 pts,   7.1%, gml=0.15] [dental] P:Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)
+   16. [  314 pts,   4.9%, gml=0.09] P:Assessment of substance use (procedure) -> P:Depression screening (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+   17. [  244 pts,   3.8%, gml=0.08] C:Gingivitis (disorder) -> P:Assessment of substance use (procedure) -> P:Depression screening (procedure)
+   18. [  255 pts,   4.0%, gml=0.08] M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Assessment of anxiety (procedure) -> P:Depression screening (procedure)
+   19. [  194 pts,   3.0%, gml=0.08] M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure) -> P:Assessment of substance use (procedure)
+   20. [  194 pts,   3.0%, gml=0.08] P:Assessment of substance use (procedure) -> P:Screening for drug abuse (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+   21. [  172 pts,   2.7%, gml=0.07] P:Depression screening (procedure) -> P:Depression screening (procedure) -> C:Viral sinusitis (disorder)
+   22. [  186 pts,   2.9%, gml=0.07] P:Assessment of substance use (procedure) -> P:Depression screening (procedure) -> C:Viral sinusitis (disorder)
+   23. [  197 pts,   3.1%, gml=0.07] P:Depression screening (procedure) -> P:Assessment of anxiety (procedure) -> C:Gingivitis (disorder)
+   24. [  190 pts,   3.0%, gml=0.07] M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Assessment of substance use (procedure) -> P:Assessment of anxiety (procedure)
+   25. [  167 pts,   2.6%, gml=0.06] C:Viral sinusitis (disorder) -> P:Depression screening (procedure) -> P:Assessment of anxiety (procedure)
+   26. [  181 pts,   2.8%, gml=0.06] P:Screening for drug abuse (procedure) -> P:Depression screening (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+   27. [  176 pts,   2.7%, gml=0.06] P:Screening for domestic abuse (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Depression screening (procedure)
+   28. [  160 pts,   2.5%, gml=0.06] P:Assessment of anxiety (procedure) -> P:Assessment of substance use (procedure) -> C:Gingivitis (disorder)
+   29. [  170 pts,   2.7%, gml=0.06] M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure) -> P:Depression screening (procedure)

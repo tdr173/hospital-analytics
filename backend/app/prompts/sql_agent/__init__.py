@@ -15,6 +15,13 @@ Classification rules - return EXACTLY one of the three outputs below:
    Output: a single standalone English sentence describing what data to retrieve.
    - Resolve any references to prior turns so the sentence is self-contained with no history needed.
    - Preserve specific entities (names, ids, numbers, date ranges) exactly.
+   - This includes vague or elliptical follow-ups that only make sense next to the conversation
+     history - "besides that", "what else", "and other than X", "what about the rest", "next one",
+     etc. If the previous turn was a DB_RETRIEVAL/MEDICAL_GENERAL exchange, treat these as a
+     continuation of that same topic and rewrite them into a concrete, standalone question (e.g.
+     excluding the previously returned top result, or asking for the next rank). Do NOT classify a
+     short/vague message as NOT_MEDICAL just because it has no content of its own - check the
+     conversation history first.
 
 2. MEDICAL_GENERAL - the user is asking a general medical/health question that does NOT require
    querying the database (e.g. "what is diabetes?", "how is hypertension treated?",
@@ -22,13 +29,15 @@ Classification rules - return EXACTLY one of the three outputs below:
    Output the literal token followed by a colon and the standalone question in English:
    MEDICAL_GENERAL: <question>
 
-3. NOT_MEDICAL - the input is completely unrelated to medicine or the hospital database
+3. NOT_MEDICAL - the input is completely unrelated to medicine or the hospital database, AND
+   cannot be resolved into a medical/DB topic using the conversation history either
    (greetings, small talk, coding help, math, opinions, commands to modify data, etc.).
    Output the literal token: NOT_MEDICAL
 
 Examples (input -> output):
 - "how many patients have diabetes?" -> How many patients have a diabetes condition recorded?
 - "and how many of them are women?" (prior turn was about diabetes) -> How many female patients have a diabetes condition recorded?
+- "ok, but besides that" (prior turn: most common condition for under-10s in Dec 2025 was "Medication review due" with 220 cases) -> What was the second most common condition for patients younger than 10 in December 2025, excluding "Medication review due"?
 - "what is hypertension?" -> MEDICAL_GENERAL: What is hypertension?
 - "hi there" -> NOT_MEDICAL
 
@@ -74,13 +83,13 @@ Output rules:
 6. ORDER BY so the answer is obvious (e.g. ORDER BY count DESC for "most common", ORDER BY date DESC for "last").
 
 Filtering rules:
-7. Descriptive / free-text fields (description, first_name, last_name, city, reason_description, pattern_str) - use ILIKE with %...% wildcards.
+7. Descriptive / free-text fields (description, first_name, last_name, city, reason_description, pattern_str) - use ILIKE with %...% wildcards. Clinical descriptions are stored in their own specific wording and word order (e.g. drug strength before form, SNOMED-style suffixes like "(disorder)"), which rarely matches a question's exact phrasing. Never wrap the whole user phrase in one ILIKE pattern - split it into its distinct keywords (drug/condition name, strength, form) and AND together one ILIKE '%keyword%' per keyword instead, e.g. description ILIKE '%metformin%' AND description ILIKE '%extended release%' rather than description ILIKE '%metformin extended release tablet%'.
 8. Categorical codes - use `=` with these exact values:
    - gender: 'M', 'F' (never 'Male'/'Female')
    - marital: 'M', 'S', 'D', 'W'
    - encounter_class: 'inpatient', 'ambulatory', 'outpatient', 'wellness', 'emergency', 'urgentcare', 'home', 'virtual', 'snf', 'hospice'
-   - race: 'White', 'Black', 'Asian', 'Native', 'Other'
-   - ethnicity: 'Hispanic', 'Non-Hispanic'
+   - race: 'white', 'black', 'asian', 'native', 'hawaiian', 'other' (lowercase, exactly as stored)
+   - ethnicity: 'hispanic', 'nonhispanic' (lowercase, no space or hyphen)
 9. Alive vs deceased is encoded by deathdate: `deathdate IS NULL` (alive) / `deathdate IS NOT NULL` (deceased).
 10. Dates - use EXTRACT(YEAR FROM col) for year, DATE_TRUNC for month/week aggregation, BETWEEN or `>=`/`<` for explicit ranges.
 11. Active vs ended for timestamped tables (condition, medication, careplan, allergy) - `end_date IS NULL` means still active.
@@ -94,9 +103,10 @@ Clustering rules (cluster_meta, cluster, cluster_patient):
 15. If the user asks about clusters, derive per-cluster metrics from cluster_patient.features - do NOT join clinical tables. If the user asks about raw clinical facts (how many patients have X), use the clinical tables directly.
 
 Sequence-mining rules (prefix_span_pattern, prefix_span_patient_pattern):
-16. prefix_span_pattern holds the mined sequences (pattern_str, length, support_count, support_pct). prefix_span_patient_pattern is the (pattern_id, patient_id) junction.
-17. To find patients following a pattern → JOIN on pattern_id. To restrict a pattern's membership to a specific cluster → JOIN prefix_span_patient_pattern to cluster_patient on patient_id.
-18. Use support_count / support_pct for overall frequency. For cluster-specific frequency use COUNT(DISTINCT pp.patient_id) after joining with cluster_patient.
+16. prefix_span_pattern holds the mined sequences (pattern_str, length, support_count, support_pct, rank, cluster_label). prefix_span_patient_pattern is the (pattern_id, patient_id) junction.
+17. prefix_span_pattern.cluster_label already identifies which mining run produced each pattern: NULL means it was mined globally (whole population), an integer or -1 means it was mined specifically for that cluster. For "how many/which patterns were mined for cluster X" - filter prefix_span_pattern.cluster_label = X directly. Do NOT infer this via a join with cluster_patient, since that instead returns any pattern (global or from any other cluster) that happens to have a member in cluster X, which answers a different question.
+18. To find which patients follow a given pattern → JOIN prefix_span_patient_pattern on pattern_id. To further restrict that patient set to a specific cluster → additionally JOIN cluster_patient on patient_id.
+19. Use support_count / support_pct for a pattern's raw frequency ("how many patients follow this exact pattern"). Use rank when the question asks for the "top"/"most important"/"most representative" pattern(s) - rank reflects the pipeline's clinical-relevance scoring after filtering out repetitive/near-duplicate sequences, and is not the same ordering as support_count DESC. If the question literally says "most frequent" or "highest support", order by support_count instead.
 """
 
 PROMPT_VALIDATE_SQL = """
@@ -117,7 +127,7 @@ Validation checklist (reject if ANY item fails):
 4. Query logic must answer THIS specific question (right table, right filter, right aggregation). Querying 'patient' when the user asked about 'providers' = NO.
 5. For cluster questions: reject if it forgot `NOT is_outlier` (unless the user asked about outliers) or mixed cluster_patient.features with raw clinical tables.
 6. For counts of patients/providers across clinical tables: reject if it uses COUNT(*) instead of COUNT(DISTINCT patient_id) when duplicates are likely.
-7. If a MANDATORY ROLE SCOPE is present above: reject if the query does not include the required provider_id filter exactly as specified.
+7. If a MANDATORY ROLE SCOPE is present above: reject if the query does not include the required scope filter (provider_id for a DOCTOR scope, patient_id for a PATIENT scope) exactly as specified.
 
 Do NOT flag:
 - ILIKE vs = (both valid).
@@ -151,4 +161,12 @@ MANDATORY ROLE SCOPE - DOCTOR (provider_id = '{provider_id}'):
 - Every SQL query you generate MUST restrict results to encounters where provider_id = '{provider_id}'.
 - When the question is about patients, restrict to patients who have at least one encounter with that provider_id. Use: patient.patient_id IN (SELECT DISTINCT patient_id FROM encounter WHERE provider_id = '{provider_id}').
 - Never expose other doctors' patients, encounters, or aggregate counts. If the question cannot be answered under this scope, say so in the final answer.
+"""
+
+PATIENT_SCOPE_CLAUSE = """\
+
+MANDATORY ROLE SCOPE - PATIENT (patient_id = '{patient_id}'):
+- Every SQL query you generate MUST restrict results to this single patient using patient_id = '{patient_id}'.
+- The patient table is keyed by patient_id (PK); every clinical table (encounter, condition, medication, procedure, observation, immunization, allergy, careplan, cluster_patient, prefix_span_patient_pattern) carries a patient_id column. Filter on the patient_id of whichever table(s) the query touches.
+- Never expose other patients' records or hospital-wide aggregates. If the question is not about this patient's own data, say so in the final answer.
 """

@@ -1,0 +1,51 @@
+@startuml package_diagram
+title Backend Package Diagram - Hospital Analytics Platform
+
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam DefaultFontSize 22
+skinparam PackageFontSize 24
+skinparam ArrowFontSize 18
+skinparam TitleFontSize 26
+skinparam nodesep 25
+skinparam ranksep 40
+skinparam wrapWidth 300
+skinparam maxMessageSize 300
+
+package "main.py" as main_module
+
+package "api\n----\npatients, clusters, sequences,\nstatistics, encounters,\norganizations, providers,\ndashboard, pipeline" as api
+
+package "service\n----\npatient, cluster, sequence,\nstatistics, encounter,\norganization, provider,\ndashboard, pipeline,\nlllm_sql_agent, _helpers" as service
+
+package "repository\n----\npatient, cluster, sequence,\nstatistics, encounter,\norganization, provider,\ndashboard, pipeline, _helpers" as repository
+
+package "domain\n----\nmodels\nschemas (per domain)" as domain
+
+package "prompts\n----\nclusters, sequences,\ndashboard, sql_agent" as prompts
+
+package "clustering_algorithms\n----\nk_prototypes, prefix_span" as clustering
+
+package "db\n----\ndb_connector, etl_script" as db
+
+main_module ..> api
+main_module ..> service
+main_module ..> repository
+main_module ..> domain
+main_module ..> db
+
+api ..> service
+service ..> repository
+repository ..> domain
+service ..> domain
+api ..> domain
+
+repository ..> db
+clustering ..> db
+clustering ..> domain
+clustering ..> prompts
+
+service ..> prompts
+service ..> clustering
+
+@enduml

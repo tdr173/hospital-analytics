@@ -8,6 +8,12 @@ Hospital analytics platform with a **Next.js 16 frontend** and **FastAPI backend
 
 ---
 
+## Writing
+
+- Editing for AI patterns → read `SKILL.md`
+
+---
+
 ## Commands
 
 ### Frontend (`/frontend`)

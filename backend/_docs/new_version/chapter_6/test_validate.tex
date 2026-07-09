@@ -1,0 +1,639 @@
+\chapter{Testing and Validation}
+\label{ch:testing}
+
+\section{Used Dataset}
+\label{ch:used_dataset}
+
+The full analytical population is the 22{,}284 patients produced by the single-hospital ETL reduction of Section~\ref{ch:etl_impl} (Table~\ref{tab:ch5_synthea_csv} gives the source row counts). Table~\ref{tab:ch6_dataset_overview} summarizes it at the population level. These are the same statistics the platform's own \texttt{/statistics} endpoints (Chapter~\ref{ch:design}) surface on the dashboard, the same figures every cluster in Section~\ref{ch:results_clustering} is compared against, and every ``population average'' injected into the AI interpretation prompts of Section~\ref{ch:ai_results}.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lr}
+\hline
+\textbf{Statistic} & \textbf{Value} \\
+\hline
+Patients                 & 22{,}284 \\
+Mean age                 & 37.2 years \\
+Female                   & 49.6\% \\
+Alive / Deceased         & 89.8\% / 10.2\% \\
+Diabetes prevalence      & 11.9\% \\
+Hypertension prevalence  & 19.5\% \\
+Heart disease prevalence & 15.3\% \\
+\hline
+\end{tabular}
+\caption{Population-level descriptive statistics for the full analytical cohort}
+\label{tab:ch6_dataset_overview}
+\end{table}
+
+The recorded encounters span from 1916 to 2026, a roughly 110-year synthetic timeline. Mining full patient lifetimes over such a span would mix events with no clinical relationship to each other, which is exactly why PrefixSpan (Section~\ref{ch:prefixspan_impl}) restricts each sequence to the 730 most recent days of a patient's own history rather than their entire record.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lr}
+\hline
+\textbf{Race} & \textbf{Share} \\
+\hline
+White            & 79.5\% \\
+Black            & 12.8\% \\
+Asian            & 4.8\% \\
+Native American  & 1.0\% \\
+Native Hawaiian  & 1.0\% \\
+Other            & 0.9\% \\
+\hline
+\textbf{Ethnicity} & \textbf{Share} \\
+\hline
+Non-Hispanic     & 59.6\% \\
+Hispanic         & 40.4\% \\
+\hline
+\end{tabular}
+\caption{Race and ethnicity distribution across the full population}
+\label{tab:ch6_race_ethnicity}
+\end{table}
+
+Table~\ref{tab:ch6_race_ethnicity} shows the population is not demographically balanced: patients are 79.5\% White and 40.4\% Hispanic, with every other race category in the low single digits. This is precisely the kind of skew the bias-mitigation rules in the AI interpretation prompts of Section~\ref{ch:ai_results} guard against, so that a cluster's higher-than-average risk is attributed to its clinical profile and never to its demographic composition.
+
+The patients accumulate 1{,}211{,}523 encounters, concentrated in routine care: Table~\ref{tab:ch6_encounter_mix} shows that ambulatory and wellness visits alone account for more than three-quarters of them, with emergency and inpatient care making up a small minority. This skew is exactly why \texttt{preventive\_to\_reactive\_ratio} (Section~\ref{ch:kproto_impl}) is a useful clustering feature: most patients sit on the preventive end of the spectrum, and the numerator/denominator split is what separates them from the smaller acute-care-heavy groups.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lr}
+\hline
+\textbf{Encounter class} & \textbf{Share} \\
+\hline
+Ambulatory  & 55.1\% \\
+Wellness    & 21.6\% \\
+Outpatient  & 12.8\% \\
+Emergency   & 4.0\% \\
+Urgent care & 3.8\% \\
+Inpatient   & 1.6\% \\
+\hline
+\end{tabular}
+\caption{Encounter class distribution across the full population}
+\label{tab:ch6_encounter_mix}
+\end{table}
+
+The 727{,}499 raw condition records span only 311 distinct descriptions, and the five most frequent are ``Medication review due'' (147{,}256), ``Stress (finding)'' (53{,}885), ``Gingivitis (disorder)'' (52{,}681), ``Full-time employment (finding)'' (49{,}706), and ``Part-time employment (finding)'' (30{,}620). None of these is a disease. Four of them, the medication-review entry and the employment/stress screening findings, are administrative or socioeconomic annotations that Synthea attaches to nearly every visit. This is precisely the noise that \texttt{ITEM\_BLACKLIST\_SUBSTRINGS} and \texttt{SOCIAL\_STATUS\_SUBSTRINGS} (Section~\ref{ch:prefixspan_impl}) were built to filter out of the mined sequences before mining even starts. The fifth, gingivitis, is routine dental noise instead, handled separately by the dental cap of the same section. Their sheer frequency here is the empirical justification for both filters, rather than an arbitrary design choice.
+
+Table~\ref{tab:ch5_synthea_csv} gives the total row count for every clinical table, but says nothing about how those events are spread across patients. Table~\ref{tab:ch6_per_patient} fills that gap: on average a patient accumulates 32.65 conditions, 42.23 medications, 145.09 procedures, 15.08 immunizations, 5.56 allergies, and 3.49 care plans over their lifetime. The maximum column, though, shows the distribution is heavily right-tailed, exactly the skew that motivated the \texttt{log1p} transform of Section~\ref{ch:kproto_impl}.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrr}
+\hline
+\textbf{Event type} & \textbf{Avg. / patient} & \textbf{Max / patient} \\
+\hline
+Condition     & 32.65  & 538 \\
+Medication    & 42.23  & 2{,}618 \\
+Procedure     & 145.09 & 1{,}955 \\
+Immunization  & 15.08  & 40 \\
+Allergy       & 5.56   & 13 \\
+Careplan      & 3.49   & 14 \\
+Encounter     & 54.37  & 827 \\
+\hline
+\end{tabular}
+\caption{Per-patient event volume across all clinical event tables}
+\label{tab:ch6_per_patient}
+\end{table}
+
+This volume is also sharply age-dependent (Table~\ref{tab:ch6_age_burden}). Mean conditions per patient rise from 13.93 in the 0--18 group to 67.54 in the 65+ group, nearly a five-fold increase. Mean medications rise from 8.26 to 139.86 over the same range, more than a sixteen-fold increase. This holds even though the population is not skewed toward older patients: the 0--18 group is in fact the largest, at 25.9\%. This gradient is the empirical basis for the high effect sizes \texttt{age} ($\eta^2{=}0.66$) and \texttt{active\_conditions\_count} ($\eta^2{=}0.74$) attain as clustering features in Section~\ref{ch:results_clustering}. Age is not just a demographic label here. It is a strong proxy for clinical burden.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrr}
+\hline
+\textbf{Age group} & \textbf{\% of patients} & \textbf{Avg. conditions} & \textbf{Avg. medications} \\
+\hline
+0--18  & 25.9\% & 13.93 & 8.26 \\
+19--35 & 23.7\% & 25.34 & 13.87 \\
+36--50 & 19.8\% & 31.07 & 26.56 \\
+51--65 & 17.9\% & 46.32 & 71.67 \\
+65+    & 12.7\% & 67.54 & 139.86 \\
+\hline
+\end{tabular}
+\caption{Age-group distribution and mean conditions/medications per patient}
+\label{tab:ch6_age_burden}
+\end{table}
+
+\section{K-Prototypes Validation Metrics}
+
+Chapter~\ref{ch:analysis} showed that the K-Prototypes method can successfully partition mixed-type Electronic Health Records data. Still, since the algorithm does not need labels, it will automatically generate clusters whether or not a natural grouping exists. Since no ground truth data exists, internal validation measures are needed. The following paragraphs introduce six such measures and their ranges, which are the ones used to select the final configuration in Section~\ref{ch:results_clustering}.
+
+These metrics fall into three groups, chosen so they give different, complementary information. The Silhouette and Gower Silhouette Scores assess geometric cohesion and separation at the level of individual data points. The Calinski-Harabasz and Davies-Bouldin Indices evaluate, at the macro level, the ratio of inter-cluster to intra-cluster dispersion, with Davies-Bouldin specifically exposing the worst overlaps that averaging may hide. And, because geometric distances cannot isolate feature-level importance, Cramér's $V$ and Eta Squared ($\eta^2$) quantify the statistical effect size of individual categorical and numerical features on cluster membership.
+
+\subsubsection*{Silhouette Score}
+
+The Silhouette Score, introduced by Rousseeuw~\cite{rousseeuw1987}, measures how well an item fits into the cluster it belongs to. A high score means that the patient is close to other patients in the same cluster and far away from patients in neighboring clusters. For a data point $i$ assigned to cluster $C_a$, two quantities are defined.
+
+\vspace{1em}
+
+The \emph{intra-cluster distance} $a(i)$ is the mean distance from point $i$ to all other points in its own cluster:
+
+\begin{equation}
+    a(i) = \frac{1}{|C_a| - 1} \sum_{j \in C_a,\; j \neq i} d(i, j)
+    \label{eq:silhouette_a}
+\end{equation}
+
+\vspace {1em}
+
+The \emph{inter-cluster distance} $b(i)$ evaluates the proximity of point $i$ to its closest neighboring group. It is defined as the minimum average distance between $i$ and all instances belonging to any other cluster $C_b \neq C_a$:
+
+\begin{equation}
+    b(i) = \min_{C_b \neq C_a} \frac{1}{|C_b|} \sum_{j \in C_b} d(i, j)
+    \label{eq:silhouette_b}
+\end{equation}
+
+The silhouette coefficient of point $i$ is then:
+
+\begin{equation}
+    s(i) = \frac{b(i) - a(i)}{\max\bigl(a(i),\; b(i)\bigr)}
+    \label{eq:silhouette_si}
+\end{equation}
+
+The global Silhouette Score $\bar{s}$ is the arithmetic mean over all $n$ points:
+
+\begin{equation}
+    \bar{s} = \frac{1}{n} \sum_{i=1}^{n} s(i)
+    \label{eq:silhouette_global}
+\end{equation}
+
+$s(i)$ is bounded in $[-1, 1]$. When the result for $s(i)$ is near $+1$, this means that data point $i$ has been matched to its proper cluster and is far away from other clusters. If the result is near $0$, it shows that data point $i$ belongs to the border of clusters. Lastly, when the result is near $-1$, it means that the data point has been misclassified. Similarly, $\bar{s}$ is interpreted in the same way. Values greater than $0.5$ for $\bar{s}$ suggest a reasonable clustering process, while those above $0.7$ imply very good clustering results, as pointed out by Kaufman et al.~\cite{kaufman1990}.
+
+In its standard form, the Silhouette Score uses Euclidean distance as $d(i,j)$, which restricts its applicability to purely numerical data.
+
+\subsubsection*{Gower Silhouette Score}
+\label{ch:gower}
+
+In the case where we have mixed types in the feature space, the Euclidean distance used in the conventional Silhouette Score is no longer defined on all features. The Gower distance introduced in Equation~\eqref{eq:gower} is used instead. It is defined for any mixture of quantitative and qualitative variables, and it treats the two attribute types in the same spirit as K-Prototypes itself: numerical values are range-scaled and categorical values are compared by binary agreement.
+
+The $n\times n$ pairwise distance matrix is built using equation~\eqref{eq:gower}, and the silhouette formulae of Equations~\eqref{eq:silhouette_a}~-~\eqref{eq:silhouette_global} are directly used on it. While the calculated value of the Gower Silhouette Score $\bar{s}_G$ still lies within the theoretical interval of [-1, 1], the standard textbook conditions (where scores $\bar{s} > 0.7$ are needed for successful clustering) do not apply to clinical data. As said before, clinical datasets naturally contain noise and sparsity, and their clusters overlap in biological features. Given the extreme multidimensional nature of these datasets, in practice, scores of $\bar{s}_G > 0.5$ are rarely observed.
+
+\subsubsection*{Calinski-Harabasz Index}
+
+The Calinski-Harabasz (CH) index \cite{calinski1974} measures a clustering based on the ratio of the between-cluster variance and the within-cluster variance. Assuming the dataset contains a total of $n$ data points partitioned into $k$ clusters, we define $\boldsymbol{\mu}$ as the centroid of the entire dataset, and $\boldsymbol{\mu}_j$ as the centroid of cluster $C_j$. The between-cluster scatter matrix trace is:
+
+\begin{equation}
+    \mathrm{tr}(B_k) = \sum_{j=1}^{k} |C_j| \cdot \|\boldsymbol{\mu}_j - \boldsymbol{\mu}\|^2
+    \label{eq:ch_between}
+\end{equation}
+
+The within-cluster scatter matrix trace is:
+
+\begin{equation}
+    \mathrm{tr}(W_k) = \sum_{j=1}^{k} \sum_{i \in C_j} \|\mathbf{x}_i - \boldsymbol{\mu}_j\|^2
+    \label{eq:ch_within}
+\end{equation}
+
+The CH Index is the normalized ratio of these two quantities:
+
+\begin{equation}
+    \mathrm{CH} = \frac{\mathrm{tr}(B_k)}{\mathrm{tr}(W_k)} \cdot \frac{n - k}{k - 1}
+    \label{eq:ch}
+\end{equation}
+
+Ranging between $[0, +\infty)$, the higher the value of CH, the more clearly defined the clusters are with greater separation and less variation within themselves. Without any clear defined cutoff value, its only use is for comparison purposes.
+
+\subsubsection*{Davies-Bouldin Index}
+
+The Davies-Bouldin (DB) Index \cite{davies1979} measures clustering quality by quantifying the worst-case overlap between every cluster and its most similar neighbor. For each cluster $C_i$, the internal scatter $\sigma_i$ is the mean distance from points in $C_i$ to the centroid $\boldsymbol{\mu}_i$:
+
+\begin{equation}
+    \sigma_i = \frac{1}{|C_i|} \sum_{j \in C_i} \|\mathbf{x}_j - \boldsymbol{\mu}_i\|
+    \label{eq:db_sigma}
+\end{equation}
+
+The similarity score between two clusters $C_i$ and $C_j$ can be formulated as:
+
+\begin{equation}
+    R_{ij} = \frac{\sigma_i + \sigma_j}{\|\boldsymbol{\mu}_i - \boldsymbol{\mu}_j\|}
+    \label{eq:db_Rij}
+\end{equation}
+
+For each $C_i$, the most similar neighbor is the cluster $C_j$ that maximizes $R_{ij}$:
+
+\begin{equation}
+    D_i = \max_{j \neq i}\; R_{ij}
+    \label{eq:db_Di}
+\end{equation}
+
+The DB Index is the mean of these worst-case similarity values over all $k$ clusters:
+
+\begin{equation}
+    \mathrm{DB} = \frac{1}{k} \sum_{i=1}^{k} D_i
+    \label{eq:db}
+\end{equation}
+
+The DB index ranges between $[0, +\infty)$. In contrast to the CH index, a smaller value is desirable because it suggests small clusters and high separation between different clusters. However, there is no predetermined upper bound to determine poor clustering results, but as a general rule of thumb, a value greater than $1$ suggests overlapping clusters.
+
+\subsubsection*{Cramér's $V$}
+
+In contrast with the previous geometric measures, the following two metrics evaluate the strength of association between cluster membership and individual attributes in terms of effect size.
+
+Cramér's $V$ measure \cite{cramer1946} evaluates the strength of association for categorical attributes. The $\chi^2$ statistic is defined for the contingency table of observed frequencies $O_{ij}$ for $k$ clusters and $q$ categories as follows:
+
+\begin{equation}
+    \chi^2 = \sum_{i=1}^{k} \sum_{j=1}^{q} \frac{(O_{ij} - E_{ij})^2}{E_{ij}}, \qquad E_{ij} = \frac{R_i \cdot C_j}{n}
+    \label{eq:chisq}
+\end{equation}
+
+where $E_{ij}$ is the expected frequency, $R_i$ and $C_j$ are the corresponding row and column totals, and $n$ is the total number of observations. The $\chi^2$ statistic is converted into a range $[0, 1]$ using Cramér's $V$ measure, regardless of the table dimensions:
+
+\begin{equation}
+    V = \sqrt{\frac{\chi^2}{n \cdot \min(k-1,\; q-1)}}
+    \label{eq:cramer_v}
+\end{equation}
+
+The boundaries are easy to read: $V=0$ implies no association, while $V=1$ implies a perfect association. In line with Cohen's guidelines \cite{cohen1988}, the effect size is considered weak ($V<0.10$), moderate ($0.10 \leq V<0.30$), or strong ($V \geq 0.30$).
+
+\subsubsection*{Eta Squared}
+
+Eta Squared ($\eta^2$) represents the relationship between clustering and the numeric attribute. This statistic captures the degree to which the variation in the feature can be attributed to the clusters and is based on a one-way analysis of variance (ANOVA).
+
+Let $\bar{x}$ denote the overall mean of the numeric attribute, $\bar{x}_j$ the intra-cluster mean of cluster $C_j$, and $x_{ij}$ the numeric attribute value of individual $i$ in cluster $j$. The inter-cluster sum of squares and the total sum of squares are defined as follows:
+
+\begin{equation}
+    \mathrm{SS}_{\mathrm{between}} = \sum_{j=1}^{k} |C_j| \cdot (\bar{x}_j - \bar{x})^2, \qquad
+    \mathrm{SS}_{\mathrm{total}} = \sum_{j=1}^{k} \sum_{i \in C_j} (x_{ij} - \bar{x})^2
+    \label{eq:ss}
+\end{equation}
+
+Eta Squared is the ratio:
+
+\begin{equation}
+    \eta^2 = \frac{\mathrm{SS}_{\mathrm{between}}}{\mathrm{SS}_{\mathrm{total}}}
+    \label{eq:eta_squared}
+\end{equation}
+
+The value of $\eta^2$ lies in the interval [0, 1]. An $\eta^2$ value of 0 indicates that there is no relationship between the partitioning and the variance of the feature, while an $\eta^2$ value of 1 implies that the numeric attribute value depends entirely on the cluster assignment. Based on Cohen's guidelines \cite{cohen1988}, an effect size of $\eta^2 < 0.01$ is considered trivial, $0.01 \leq \eta^2 < 0.06$ small, $0.06 \leq \eta^2 < 0.14$ medium, and $\eta^2 \geq 0.14$ large.
+
+\section{K-Prototypes Results}
+\label{ch:results_clustering}
+
+The objective of clustering is to partition the patients into distinct groups based on their clinical profiles so that each group can be used as a scope for pattern mining. After removing outliers using the IQR criterion described in Section~\ref{ch:z_score}, exactly 21,995 (out of a total of 22,284) patients remained for the K-Prototypes clustering. Patients marked as outliers (\texttt{is\_outlier = TRUE}) are included in the analysis but not included in the model fitting phase.
+
+\subsubsection*{Benchmark Protocol}
+
+We benchmarked \textbf{63 feature-engineering versions} (\texttt{v1}\,$\ldots$\,\texttt{v63}), each a different subset of the 11 numerical and 10 categorical features from Section~\ref{ch:feature_construction}. These 63 were not chosen upfront. We first ran a few dozen candidate configurations, then repeatedly recombined whichever numerical and categorical features scored highest. We arrived at the final 63 through iterative refinement, not an exhaustive search of every possible subset.
+
+For every version, we swept five K-Prototypes hyperparameters: \texttt{scaler}~$\in$~\{\texttt{minmax}, \texttt{robust}\}, \texttt{gamma}~$\in$~\{\texttt{auto}, 0.07, 0.13, 0.17\}, \texttt{random\_state}~$\in$~\{7, 42, 100\}, \texttt{threshold}~$\in$~\{4, 6\}, and \texttt{k}~$\in$~\{4, 5, 6, 7\}, using the same nested loop described in Section~\ref{ch:kproto_impl}. Each of the resulting 629 runs wrote a \texttt{conclusions.txt} with six diagnostic metrics (Silhouette, Gower Silhouette, Calinski-Harabasz, its FAMD variant, Davies-Bouldin, its FAMD variant), per-cluster Gower silhouette, and feature importance ($\eta^2$, Cramer's V). All 629 rows were then collected into one \texttt{general\_conclusion.xlsx} sheet and ranked.
+
+\subsubsection*{Composite Score and Why the Top Result Was Discarded}
+\label{ch:composite_score}
+
+Only three of the six diagnostic metrics feed the ranking itself. Let $g$, $c$, and $d$ denote the Gower Silhouette, the FAMD Calinski-Harabasz, and the FAMD Davies-Bouldin scores after each has been min-max normalized to the $[0,1]$ range across all 629 runs, using $(x - \min x)/(\max x - \min x)$. The composite score is then their weighted sum:
+
+\begin{equation}
+    \mathrm{score} = 0.5\,g \;+\; 0.3\,c \;+\; 0.2\,(1 - d)
+    \label{eq:composite_score}
+\end{equation}
+
+\noindent The $(1 - d)$ term flips the Davies-Bouldin direction, since a lower raw score is better there. This weighting is empirical, not derived from theory. Its bias toward the Gower Silhouette, though, follows directly from Section~\ref{ch:gower}: it is the only one of the three that respects the mixed numerical/categorical geometry natively. The FAMD variants, by contrast, only see that structure through a lossy 2-D projection. Plain Silhouette, plain Calinski-Harabasz, plain Davies-Bouldin, $\eta^2$, and Cramer's V are still computed and reported per run, but play no part in the ranking. They exist only to sanity-check the winner after the fact.
+
+Sorting all 629 runs by Equation~\eqref{eq:composite_score} does not hand back a usable answer directly. The single highest-scoring row was \texttt{v42}, a configuration with only \texttt{age} as its numerical feature and \texttt{gender}, \texttt{pregnancy\_history}, \texttt{race}, and \texttt{ethnicity} as categoricals. With so few, mostly binary categorical values to split on, K-Prototypes finds a geometrically tight partition (inflating both Gower silhouette and FAMD-CH) that is clinically empty. It is a coarse demographic split, not a group of patients defined by a distinct clinical profile, so it cannot serve as a scope for the pattern mining in Section~\ref{ch:results_sequences}. We therefore discarded every top-ranked run of this kind and instead took, for each $k$, the highest-scoring configuration whose features included a real clinical signal (disease flags, utilization counts, or care plan), not just demographics.
+
+\subsubsection*{Feature Tuning per $k$}
+
+Applying that filter and scanning the upper end of the ranking gives the leaderboard in Table~\ref{tab:ch6_per_k_winners}. The top block lists the highest-scoring rows in the neighborhood of the three winners; the intervening ranks that were skipped are collapsed to $\cdots$, and the recurring \texttt{v42} rows are shown in red. The three columns reported are exactly the ones that feed Equation~\eqref{eq:composite_score}: the Gower silhouette $g$, the FAMD Calinski-Harabasz $c$, and the FAMD Davies-Bouldin $d$. Scaler, seed, and threshold are omitted since all three winners share the same \texttt{minmax} scaler, seed~42, and \texttt{threshold=6}.
+
+The red \texttt{v42} rows make the discard rule concrete. This demographic-only configuration (a single numerical feature, \texttt{age}, plus four low-cardinality categoricals) recurs at ranks 1, 3, 6, and 11 across different $k$. It even takes the overall top spot, with a score of 0.873. Its metrics are not the problem. They look competitive precisely because a coarse split on \texttt{age} and demographics is geometrically easy to separate, which inflates the Gower silhouette. What it lacks is any clinical signal, so it cannot scope the pattern mining of Section~\ref{ch:results_sequences} and is skipped. The first row carrying real clinical features is \texttt{v55} at rank 2, our final pick for $k{=}4$. \texttt{v40} (rank 12) and \texttt{v60} (rank 16) are the corresponding best clinical configurations for $k{=}5$ and $k{=}6$.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{@{}l l c c r r r r@{}}
+\toprule
+\# & Config & $k$ & Feat. ($n{+}c$) & Gower $g$ & CH$_{\mathrm{F}}$ $c$ & DB$_{\mathrm{F}}$ $d$ & Score \\
+\midrule
+\textcolor{red}{1}  & \textcolor{red}{v42} & \textcolor{red}{5} & \textcolor{red}{1 + 4} & \textcolor{red}{0.547} & \textcolor{red}{16475} & \textcolor{red}{0.99} & \textcolor{red}{0.873} \\
+\textbf{2}          & \textbf{v55} (final pick) & \textbf{4} & 5 + 8 & \textbf{0.350} & 26813 & 0.72 & \textbf{0.818} \\
+\textcolor{red}{3}  & \textcolor{red}{v42} & \textcolor{red}{4} & \textcolor{red}{1 + 4} & \textcolor{red}{0.494} & \textcolor{red}{15898} & \textcolor{red}{1.14} & \textcolor{red}{0.816} \\
+\multicolumn{8}{c}{$\cdots$} \\
+\textcolor{red}{6}  & \textcolor{red}{v42} & \textcolor{red}{7} & \textcolor{red}{1 + 4} & \textcolor{red}{0.506} & \textcolor{red}{12826} & \textcolor{red}{1.47} & \textcolor{red}{0.786} \\
+\multicolumn{8}{c}{$\cdots$} \\
+\textcolor{red}{11} & \textcolor{red}{v42} & \textcolor{red}{6} & \textcolor{red}{1 + 4} & \textcolor{red}{0.466} & \textcolor{red}{12959} & \textcolor{red}{1.84} & \textcolor{red}{0.747} \\
+12                  & v40 (best $k{=}5$)        & 5 & 4 + 8 & 0.324 & 22547 & 0.87 & 0.741 \\
+\multicolumn{8}{c}{$\cdots$} \\
+16                  & v60 (best $k{=}6$)        & 6 & 4 + 8 & 0.287 & 22273 & 0.95 & 0.703 \\
+\midrule
+\multicolumn{8}{l}{\textit{Per-cluster Gower silhouette}} \\
+\textbf{v55} ($k{=}4$) & \multicolumn{7}{l}{$c_0{=}0.423$,\quad $c_1{=}0.199$,\quad $c_2{=}0.320$,\quad $c_3{=}0.396$} \\
+v40 ($k{=}5$)         & \multicolumn{7}{l}{$c_0{=}0.277$,\quad $c_1{=}0.225$,\quad $c_2{=}0.311$,\quad $c_3{=}0.186$,\quad $c_4{=}0.484$} \\
+v60 ($k{=}6$)         & \multicolumn{7}{l}{$c_0{=}0.166$,\quad $c_1{=}0.132$,\quad $c_2{=}0.469$,\quad $c_3{=}0.210$,\quad $c_4{=}0.384$,\quad $c_5{=}0.271$} \\
+\midrule
+% Titlurile coloanelor pentru features
+\multicolumn{3}{@{}l}{\textbf{v55}} & \multicolumn{3}{l}{v40} & \multicolumn{2}{l@{}}{v60} \\
+\cmidrule(r){1-3} \cmidrule(lr){4-6} \cmidrule(l){7-8}
+
+\multicolumn{8}{l}{\textit{Numerical Features}} \\
+\multicolumn{3}{@{}l}{\begin{tabular}[t]{@{}l@{}}
+\texttt{age} \\ \texttt{active\_conditions\_count} \\ \texttt{total\_medications} \\ \texttt{total\_procedures} \\ \texttt{preventive\_to\_reactive\_ratio}
+\end{tabular}} &
+\multicolumn{3}{l}{\begin{tabular}[t]{@{}l@{}}
+\texttt{age} \\ \texttt{active\_conditions\_count} \\ \texttt{total\_medications} \\ \texttt{lifetime\_medication\_days}
+\end{tabular}} &
+\multicolumn{2}{l@{}}{\begin{tabular}[t]{@{}l@{}}
+\texttt{age} \\ \texttt{active\_conditions\_count} \\ \texttt{total\_medications} \\ \texttt{preventive\_to\_reactive\_ratio}
+\end{tabular}} \\
+
+\addlinespace % Adaugă puțin spațiu între blocul numeric și cel categoric
+
+\multicolumn{8}{l}{\textit{Categorical Features}} \\
+\multicolumn{3}{@{}l}{\begin{tabular}[t]{@{}l@{}}
+\texttt{gender} \\ \texttt{pregnancy\_history} \\ \texttt{has\_heart\_disease} \\ \texttt{has\_diabetes} \\ \texttt{has\_hypertension} \\ \texttt{condition\_burden} \\ \texttt{bmi\_type} \\ \texttt{dominant\_careplan}
+\end{tabular}} &
+\multicolumn{3}{l}{\begin{tabular}[t]{@{}l@{}}
+\texttt{gender} \\ \texttt{pregnancy\_history} \\ \texttt{has\_heart\_disease} \\ \texttt{has\_diabetes} \\ \texttt{has\_hypertension} \\ \texttt{condition\_burden} \\ \texttt{bmi\_type} \\ \texttt{cholesterol\_risk\_category}
+\end{tabular}} &
+\multicolumn{2}{l@{}}{\begin{tabular}[t]{@{}l@{}}
+\texttt{gender} \\ \texttt{pregnancy\_history} \\ \texttt{has\_heart\_disease} \\ \texttt{has\_diabetes} \\ \texttt{has\_hypertension} \\ \texttt{condition\_burden} \\ \texttt{bmi\_type} \\ \texttt{cholesterol\_risk\_category}
+\end{tabular}} \\
+\bottomrule
+\end{tabular}
+\caption{Composite-score leaderboard and the three winning configurations.}
+\label{tab:ch6_per_k_winners}
+\end{table}
+
+Below the leaderboard, the table also reports each winner's per-cluster Gower silhouettes and its full feature set. Base feature sets are nearly identical across the three winners, with minor substitutions in secondary numerical metrics and categorical variables (e.g., \texttt{v55} uses \texttt{dominant\_careplan} instead of \texttt{cholesterol\_risk\_category}).
+
+\subsubsection*{Final Configuration}
+
+\texttt{v55} uses \texttt{age}, \texttt{active\_conditions\_count}, \texttt{total\_medications}, \texttt{total\_procedures}, and \texttt{preventive\_to\_reactive\_ratio} numerically, and \texttt{gender}, \texttt{pregnancy\_history}, \texttt{has\_heart\_disease}, \texttt{has\_diabetes}, \texttt{has\_hypertension}, \texttt{condition\_burden}, \texttt{bmi\_type}, and \texttt{dominant\_careplan} categorically (Table~\ref{tab:ch6_per_k_winners}). With that feature set fixed, the remaining sweep axes were searched the same way, following the loop of Section~\ref{ch:kproto_impl}, to land on \texttt{minmax} scaling, auto gamma ($\approx$0.084), seed 42, and threshold 6.
+
+\texttt{v55} ($k{=}4$) posts the highest overall Gower silhouette of the three clinical winners (0.350, versus 0.324 for \texttt{v40} at $k{=}5$ and 0.287 for \texttt{v60} at $k{=}6$). All four of its clusters sit at or above the 0.20 stability heuristic (min $=$~0.199, max $=$~0.423). Cohesion degrades as $k$ grows: at $k{=}5$ one of \texttt{v40}'s clusters drops below the heuristic (0.186), and at $k{=}6$ two of \texttt{v60}'s do (0.132 and 0.166). Since these clusters become the mining scopes for PrefixSpan, we picked the smallest $k$ for which every cluster stays cohesive rather than the highest raw score. \texttt{active\_conditions\_count} ($\eta^2{=}0.74$) and \texttt{age} ($\eta^2{=}0.66$) dominate the numerical side. \texttt{condition\_burden} (Cramer's V $=$~0.80), \texttt{gender} (0.70), \texttt{has\_diabetes} (0.69), and \texttt{has\_heart\_disease} (0.66) dominate the categorical side.
+
+The cluster archetypes themselves confirm this choice: all three winners describe the same population at different resolutions rather than genuinely different partitions. Each recovers the same stable groups, namely the ``Complex High Need'' outliers, a ``Pregnancy Care'' cluster, a chronically ill high-utilizer group (``Many Chronic Illnesses'' in \texttt{v55} and \texttt{v40}, ``High Need Chronic'' in \texttt{v60}), and a pediatric ``Kids and Well'' cluster. The only substantive difference is the large general-adult group that \texttt{v55} keeps whole as ``Everyday Care''. \texttt{v40} splits it into ``Injury and Recovery'' and ``Ongoing Health Needs'', while \texttt{v60} fragments it further into ``Young Low Need'', ``Routine Adult Care'', and ``Midlife Mixed Needs''. These added sub-clusters are exactly the ones that fall below the 0.20 stability heuristic (0.186 for \texttt{v40}, and 0.132 and 0.166 for \texttt{v60}), so they carve one coherent group into arbitrary slices instead of surfacing new clinical archetypes. We therefore selected \texttt{v55}, the coarsest partition whose every cluster remains both cohesive and clinically distinct.
+
+Figure~\ref{fig:ch6_clu_famd} plots every patient at the two FAMD coordinates of Section~\ref{ch:kproto_impl}, colored by cluster. Each cluster occupies its own region, but the boundaries visibly bleed into one another, especially between clusters~0 and~1. This is expected for two reasons, not a sign of a bad partition. First, FAMD compresses 13 mixed-type features into 2 dimensions for the sole purpose of plotting. K-Prototypes itself never sees this projection and clusters on the full feature space, so some structure that separates patients in 13 dimensions is necessarily lost when flattened to 2. Second, real patients are not 100\% distinct. A patient can share some characteristics with one cluster's typical profile and other characteristics with another's, so a degree of visual overlap near the boundaries is exactly what clinically fuzzy category edges should look like.
+
+\subsubsection*{Visual Inspection of the Final Partition}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_6/clustering_famd_scatter_plot.png}
+\caption{FAMD 2-D projection of the four clusters (\texttt{v55}, $k{=}4$).}
+\label{fig:ch6_clu_famd}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_6/clustering_heatmap.png}
+\caption{Heatmap of z-scored numerical feature means per cluster.}
+\label{fig:ch6_clu_heatmap}
+\end{figure}
+
+Figure~\ref{fig:ch6_clu_heatmap} reads as a small table: one row per cluster, one column per numerical feature. Each cell is that cluster's mean re-expressed as a z-score against the whole population, that is, how many standard deviations above (red) or below (blue) the population average that cluster sits on that feature. Read this way, the heatmap shows a clear morbidity gradient. Cluster~2 is the extreme on one end: strongly positive on age, active conditions, medications, and procedures, and the only cluster below average on \texttt{preventive\_to\_reactive\_ratio}, i.e., older, high-burden patients. Cluster~3 is the opposite extreme, strongly negative on every burden measure and strongly positive on the preventive ratio, consistent with the pediatric, mostly-wellness-visit profile discussed in Section~\ref{ch:results_sequences}. Clusters~0 and~1 sit in between, with cluster~1 skewing slightly older and sicker than cluster~0.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_6/clustering_numerical_graphs.png}
+\caption{Per-cluster means of the five numerical features.}
+\label{fig:ch6_clu_numerical}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{figs/chapter_6/clustering_categorical_graphs.png}
+\caption{Per-cluster proportions of the eight categorical features.}
+\label{fig:ch6_clu_categorical}
+\end{figure}
+
+Figure~\ref{fig:ch6_clu_numerical} shows the same five features, but as raw, unstandardized means rather than z-scores, one panel per feature. It is the natural-units complement to the heatmap: where the heatmap ranks clusters relative to each other, this figure gives the actual scale of the gap. Cluster~2's average age and active-condition count are both roughly nine times cluster~3's, and its average medication count is over an order of magnitude higher. This confirms that the heatmap's gradient corresponds to a large real difference in clinical burden, not a small one stretched by normalization.
+
+Figure~\ref{fig:ch6_clu_categorical} gives one panel per categorical feature. Within a panel, each cluster is a single bar split into stacked, colored segments whose heights are the proportion of that cluster in each category, so every bar sums to 1.0. Three patterns stand out. \texttt{condition\_burden} cleanly separates cluster~2 (almost entirely ``high'') from cluster~3 (almost entirely the lowest tier), mirroring the numerical panels above. \texttt{has\_diabetes}, \texttt{has\_hypertension}, and \texttt{has\_heart\_disease} all concentrate their ``Yes'' segment inside cluster~2. And \texttt{gender} together with \texttt{pregnancy\_history} isolates cluster~1, which is almost entirely female and carries nearly all of the ``Active''/``Past'' pregnancy history in the dataset, identifying it as the reproductive-age-women cluster used in Section~\ref{ch:results_sequences}.
+
+\label{ch:cluster_results}
+
+\section{Sequence Mining Results}
+\label{ch:results_sequences}
+
+Tables~\ref{tab:ch6_seq_c0}--\ref{tab:ch6_seq_outliers} report the ten highest-ranked sequences mined for each of the four clusters and for the outlier scope, out of the several hundred patterns retained per scope. Each row gives the number of patients carrying the sequence (\textbf{pts}), its share of the scope (\textbf{\%}), the geometric-mean-lift score (\textbf{gml}, Section~\ref{ch:prefixspan_impl}), and the ordered pattern itself, with every event prefixed by its source table (\texttt{C} condition, \texttt{M} medication, \texttt{P} procedure, \texttt{CP} care plan). Rows tagged \texttt{[dental]} are majority-dental trajectories, kept but flagged as routine dental care rather than distinctive pathways.
+
+No clinician labeled this data, and Synthea provides no ground-truth set of ``correct'' pathways to score against. We therefore validate the mined sequences along three empirical axes rather than a single clinical gold standard. The first is a statistical bar: a retained sequence must occur far more often than the frequencies of its individual events would predict. The second is clinical face-validity: the top-ranked sequences of each scope must recover recognizable standard-of-care pathways, and do so in the clinically appropriate cluster. The third is an order-sensitivity null test: a genuine sequence must lose its score once the temporal order that defines it is destroyed. The per-scope tables that follow are read against these three axes in turn.
+
+\begingroup
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{xltabular}{\textwidth}{@{}r r r r >{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{\#} & \textbf{pts} & \textbf{\%} & \textbf{gml} & \textbf{Pattern} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{5}{r}{\footnotesize\itshape continued on next page}\\
+\endfoot
+\bottomrule
+\caption{Cluster~0 (young / low-burden) - top 10 patterns out of 238.}\label{tab:ch6_seq_c0}\\
+\endlastfoot
+1  &  252 &  3.6 & 0.97 & C:Laceration $\to$ CP:Wound care $\to$ P:Suture open wound \\
+2  &  113 &  1.6 & 0.78 & C:Fracture of bone $\to$ CP:Fracture care $\to$ P:Bone immobilization \\
+3  &  106 &  1.5 & 0.96 & M:Fluticasone/salmeterol DPI $\to$ M:albuterol $\to$ P:Spirometry \\
+4  &  432 &  6.1 & 0.70 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ M:Acetaminophen \\
+5  & 2766 & 39.0 & 0.82 & [dental] M:sodium fluoride gel $\to$ P:Dental fluoride treatment $\to$ P:Oral health education \\
+6  &  295 &  4.2 & 0.62 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ P:Measurement of respiratory function \\
+7  & 2705 & 38.1 & 0.73 & [dental] P:Examination of gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+8  &  127 &  1.8 & 0.73 & C:Sprain $\to$ C:Sprain of ankle $\to$ CP:Physiotherapy care plan \\
+9  &  229 &  3.2 & 0.44 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ P:Measurement resp. function $\to$ M:Acetaminophen \\
+10 &  104 &  1.5 & 0.47 & C:Streptococcal sore throat $\to$ M:Penicillin V $\to$ P:Throat culture \\
+\end{xltabular}
+\endgroup
+
+\begingroup
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{xltabular}{\textwidth}{@{}r r r r >{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{\#} & \textbf{pts} & \textbf{\%} & \textbf{gml} & \textbf{Pattern} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{5}{r}{\footnotesize\itshape continued on next page}\\
+\endfoot
+\bottomrule
+\caption{Cluster~1 (women of reproductive age) - top 10 patterns out of 252.}\label{tab:ch6_seq_c1}\\
+\endlastfoot
+1  &  154 &  2.4 & 0.97 & C:Laceration $\to$ CP:Wound care $\to$ P:Suture open wound \\
+2  &  121 &  1.9 & 0.92 & C:Sterilization requested $\to$ P:Sterilization education $\to$ C:Hist. tubal ligation $\to$ CP:Minor surgery $\to$ P:Postoperative care \\
+3  &  123 &  1.9 & 0.90 & C:History of tubal ligation $\to$ CP:Minor surgery care $\to$ P:Postoperative care \\
+4  &  107 &  1.7 & 0.81 & P:Sterilization ed. $\to$ C:Hist. tubal ligation $\to$ CP:Minor surgery $\to$ P:Ligation of fallopian tubes $\to$ P:Postoperative care \\
+5  &  147 &  2.3 & 0.96 & M:Fluticasone/salmeterol DPI $\to$ M:albuterol $\to$ P:Spirometry \\
+6  &   99 &  1.5 & 0.96 & P:Prone position $\to$ M:Furosemide $\to$ P:Oxygen by mask $\to$ P:Prone position $\to$ M:Furosemide \\
+7  &  308 &  4.8 & 0.71 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ M:Acetaminophen \\
+8  & 2058 & 32.1 & 0.82 & [dental] M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+9  &  109 &  1.7 & 0.79 & CP:Minor surgery $\to$ P:Ligation of fallopian tubes $\to$ P:Postoperative care \\
+10 &  432 &  6.7 & 0.72 & C:Normal pregnancy $\to$ P:Standard pregnancy test $\to$ P:Ultrasound fetal viability \\
+\end{xltabular}
+\endgroup
+
+\begingroup
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{xltabular}{\textwidth}{@{}r r r r >{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{\#} & \textbf{pts} & \textbf{\%} & \textbf{gml} & \textbf{Pattern} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{5}{r}{\footnotesize\itshape continued on next page}\\
+\endfoot
+\bottomrule
+\caption{Cluster~2 (hypertensive adults, polypharmacy) - top 10 patterns out of 202.}\label{tab:ch6_seq_c2}\\
+\endlastfoot
+1  &  154 &  4.5 & 0.95 & M:Fluticasone/salmeterol DPI $\to$ M:albuterol $\to$ P:Spirometry \\
+2  &  164 &  4.8 & 0.89 & M:Furosemide $\to$ P:Oxygen by mask $\to$ P:Prone position $\to$ M:Furosemide \\
+3  &  138 &  4.0 & 0.81 & M:Epoetin Alfa $\to$ P:Renal dialysis $\to$ M:Epoetin Alfa \\
+4  & 1222 & 35.6 & 0.80 & [dental] M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+5  & 1163 & 33.9 & 0.77 & [dental] P:Examination of gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride \\
+6  &  105 &  3.1 & 0.74 & M:albuterol $\to$ P:Pulmonary rehabilitation $\to$ P:Spirometry \\
+7  &  101 &  2.9 & 0.70 & M:Fluticasone/salmeterol DPI $\to$ M:albuterol $\to$ P:Pulmonary rehab $\to$ P:Spirometry \\
+8  & 1162 & 33.8 & 0.69 & [dental] P:Examination gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+9  & 1111 & 32.3 & 0.68 & [dental] P:Removal subgingival plaque $\to$ P:Examination gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride \\
+10 &   97 &  2.8 & 0.67 & P:Prone position $\to$ M:Furosemide $\to$ P:Heart failure education \\
+\end{xltabular}
+\endgroup
+
+\begingroup
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{xltabular}{\textwidth}{@{}r r r r >{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{\#} & \textbf{pts} & \textbf{\%} & \textbf{gml} & \textbf{Pattern} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{5}{r}{\footnotesize\itshape continued on next page}\\
+\endfoot
+\bottomrule
+\caption{Cluster~3 (pediatric) - top 10 patterns out of 175.}\label{tab:ch6_seq_c3}\\
+\endlastfoot
+1  &   73 &  1.6 & 1.00 & C:Acute allergic reaction $\to$ P:Injection of epinephrine $\to$ M:prednisone \\
+2  &  137 &  2.9 & 0.98 & C:Laceration $\to$ CP:Wound care $\to$ P:Suture open wound \\
+3  &  134 &  2.9 & 0.84 & CP:Self-care interventions $\to$ P:Allergy screening test $\to$ M:Epinephrine auto-injector \\
+4  &  169 &  3.6 & 0.81 & C:Fracture of bone $\to$ CP:Fracture care $\to$ P:Bone immobilization \\
+5  &  459 &  9.8 & 0.78 & C:Acute bronchitis $\to$ CP:Respiratory therapy $\to$ M:Acetaminophen \\
+6  &   48 &  1.0 & 0.91 & C:Fracture of clavicle $\to$ P:Admission to orthopedic dept. $\to$ P:Plain X-ray of clavicle \\
+7  &   93 &  2.0 & 0.91 & C:History of seizure $\to$ C:Seizure disorder $\to$ P:Electroencephalogram \\
+8  & 1873 & 40.1 & 0.83 & [dental] M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+9  & 1856 & 39.8 & 0.83 & [dental] P:Examination of gingivae $\to$ M:sodium fluoride $\to$ P:Dental fluoride \\
+10 &   87 &  1.9 & 0.80 & C:Concussion injury $\to$ C:Concussion no LOC $\to$ CP:Head injury rehabilitation \\
+\end{xltabular}
+\endgroup
+
+\begingroup
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{xltabular}{\textwidth}{@{}r r r r >{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{\#} & \textbf{pts} & \textbf{\%} & \textbf{gml} & \textbf{Pattern} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{5}{r}{\footnotesize\itshape continued on next page}\\
+\endfoot
+\bottomrule
+\caption{Cluster -1 (oncology / renal / heart failure) - top 10 patterns out of 224.}\label{tab:ch6_seq_outliers}\\
+\endlastfoot
+1  &    7 &  2.5 & 1.00 & P:Oxygen by mask $\to$ P:Prone position $\to$ M:Furosemide $\to$ P:Oxygen by mask $\to$ P:Prone $\to$ M:Furosemide \\
+2  &    6 &  2.1 & 1.00 & M:Fluticasone/salmeterol DPI $\to$ M:albuterol $\to$ P:Pulmonary rehab $\to$ P:Spirometry \\
+3  &  142 & 49.8 & 0.97 & P:Combined chemotherapy + radiation $\to$ M:Cisplatin $\to$ P:Combined chemotherapy + radiation \\
+4  &    9 &  3.2 & 0.90 & P:Renal disorder medication review $\to$ M:tacrolimus [Prograf] $\to$ P:Transplantation of kidney \\
+5  &  116 & 40.7 & 0.85 & M:Cisplatin $\to$ M:Paclitaxel $\to$ P:Combined chemotherapy + radiation \\
+6  &  132 & 46.3 & 0.85 & M:Cisplatin $\to$ P:Combined chemotherapy + radiation $\to$ P:Hospice care \\
+7  &   31 & 10.9 & 0.78 & P:Renal dialysis $\to$ M:Epoetin Alfa $\to$ P:Renal dialysis $\to$ M:Epoetin Alfa \\
+8  &   35 & 12.3 & 0.76 & [dental] M:sodium fluoride $\to$ P:Dental fluoride $\to$ P:Oral health education \\
+9  &  105 & 36.8 & 0.72 & P:Combined chemo+radiation $\to$ M:Cisplatin $\to$ M:Paclitaxel $\to$ P:Combined chemo+radiation $\to$ P:Hospice \\
+10 &   81 & 28.4 & 0.67 & P:Combined chemo+radiation $\to$ P:Hearing examination $\to$ M:Cisplatin $\to$ P:Combined chemo+radiation \\
+\end{xltabular}
+\endgroup
+
+\subsection{Statistical Bar: Lift over Chance}
+
+The first axis is built directly into the ranking. GML (Section~\ref{ch:prefixspan_impl}) is bounded above by 1 and measures how much more often a pattern's events co-occur, in order, than the geometric mean of their individual frequencies would predict. A value near 1 marks a near-deterministic association, a value near 0 an incidental one. Together with the 1\% support floor, this is the retention rule, since a sequence is reported only if it clears both a minimum prevalence and a minimum lift. The leading rows of every table sit in the 0.7--1.0 band, well clear of chance, which is the first, and weakest, evidence that they are not artifacts of a few very common codes.
+
+\subsection{Clinical Face-Validity and Per-Cluster Relevance}
+
+The second axis asks whether these high-lift sequences are clinically meaningful, and specifically whether each cluster's top pathways match the clinical identity the clustering assigned it in Section~\ref{ch:results_clustering}. They do, and this alignment is itself empirical evidence: the sequence layer, mined independently of the K-Prototypes partition, agrees with it on the same patient structure. The leading pathways of each scope are valuable \emph{for that scope in particular}, and they surface most strongly exactly where they belong.
+
+Cluster~0 (Table~\ref{tab:ch6_seq_c0}), the young, low-burden group, is dominated by self-limiting acute care. The laceration-to-wound-care-to-suture chain (\texttt{gml}~0.97), fracture-to-immobilization (0.78), and streptococcal-sore-throat-to-penicillin (0.47) are textbook single-episode responses, precisely what a low-comorbidity population accumulates. Cluster~1 (Table~\ref{tab:ch6_seq_c1}), women of reproductive age, surfaces tubal-ligation and normal-pregnancy pathways at the top (\texttt{gml} up to 0.92). These pathways are meaningful only for this cohort, and they would be diluted to nothing in the global pool. Cluster~2 (Table~\ref{tab:ch6_seq_c2}), hypertensive adults on polypharmacy, recovers the furosemide/prone-position/oxygen sequence of acute decompensated heart failure (0.89) and the dialysis/epoetin-alfa loop of renal-anemia management (0.81), the two regimens that define a high-burden cardiometabolic group. Cluster~3 (Table~\ref{tab:ch6_seq_c3}), the pediatric group, is led by the acute-allergic-reaction-to-epinephrine-to-prednisone chain (\texttt{gml}~1.00) and the allergy-screening/auto-injector pathway (0.84), reflecting the allergy-and-injury profile typical of children. Finally, the outlier scope (Table~\ref{tab:ch6_seq_outliers}) isolates the most intensive protocols: cisplatin/paclitaxel chemoradiation (0.85), the kidney-transplant/tacrolimus sequence (0.90), and repeated dialysis and heart-failure loops. These are the oncology, transplant, and end-stage regimens that justified separating these patients as outliers in the first place.
+
+Each scope's leading pathways are therefore not merely valid in isolation. They are the pathways one would expect from that particular cohort, and they rank highest precisely in the cluster to which they belong. That the mining recovers the clinical logic Synthea used to synthesize the data, in the correct scope, closes the loop between generator and discovery.
+
+\subsection{Order-Sensitivity Null Test}
+
+The third axis is the sharpest. Face-validity confirms that a pattern is clinically sensible, but not that its \emph{order} carries information: three drugs that always co-occur would score highly whether or not they follow a fixed sequence. To isolate the contribution of order, we re-mine each scope after randomly permuting every patient's event timeline (the shuffle hook of Section~\ref{ch:prefixspan_impl}), averaged over three seeds. Because the permutation is within-patient, it preserves every patient's \emph{set} of events, and therefore every single-item frequency and the entire GML denominator. Only chronological order is destroyed. A genuine sequence must lose its score under this shuffle. An incidental co-occurrence must not.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}l r r r r r@{}}
+\toprule
+\textbf{Scope} & \textbf{real} & \textbf{shuffled} & \textbf{drop} & \textbf{real$\geq$0.5} & \textbf{shuf.$\geq$0.5} \\
+\midrule
+Cluster 0 (young / low-burden)         & 0.73 & 0.18 & 4.0$\times$ & 8  & 0  \\
+Cluster 1 (reproductive age)           & 0.87 & 0.17 & 5.2$\times$ & 10 & 0  \\
+Cluster 2 (hypertensive polypharmacy)  & 0.77 & 0.49 & 1.6$\times$ & 10 & 4  \\
+Cluster 3 (pediatric)                  & 0.87 & 0.21 & 4.2$\times$ & 10 & 0  \\
+Cluster -1 (oncology / renal / HF)     & 0.86 & 0.72 & 1.2$\times$ & 10 & 10 \\
+\bottomrule
+\end{tabular}
+\caption{Temporal-shuffle null test: mean top-ten \texttt{gml} of the real run versus the order-shuffled run (averaged over three seeds), with the count of top-ten patterns still clearing \texttt{gml}~$\geq0.5$. Acute-care clusters collapse; chronic-regimen clusters survive.}
+\label{tab:ch6_seq_nulltest}
+\end{table}
+
+The test discriminates cleanly (Table~\ref{tab:ch6_seq_nulltest}). For the acute-care clusters~0, 1, and~3, the mean top-ten \texttt{gml} collapses by 4.0--5.2$\times$, from 0.73--0.87 down to 0.17--0.21, and \emph{no} pattern clears the 0.5 mark. Under shuffling, the top spots are taken over by generic dental co-occurrences at \texttt{gml}~$\approx$~0.18, while the ordered pathways vanish. For these cohorts, order \emph{is} the pattern, since a laceration must precede its suture.
+
+The chronic-regimen clusters~2 and~-1 behave differently, and revealingly. Their scores barely move (a 1.2--1.6$\times$ drop), and most patterns survive. These small cohorts are dominated by a few agents repeated in tight loops, such as chemotherapy cycles, dialysis/epoetin loops, and heart-failure furosemide/prone/oxygen loops, which co-occur in nearly every member regardless of order. Their signature is the repeated item: two to four of the surviving top-ten sequences literally repeat an event (\texttt{A$\to$A$\to$B}), a structure shuffling cannot break. This is not a defect of the miner but the correct clinical distinction: an acute pathway \emph{is} its order, whereas a chronic regimen is a recurring bundle in which order is secondary. The null test recovers exactly that difference. In doing so, it confirms that GML behaves as intended: destroyed by shuffling wherever order genuinely matters, and persistent only where the ``pattern'' is really a co-occurrence set.
+
+\section{LLM Validation}
+\label{ch:llm_validation}
+
+The platform uses large language models in two roles: the cluster and sequence interpretation of Section~\ref{ch:ai_results}, and the SQL agent of Section~\ref{ch:sql_agent_impl}. Each one needs a different way to validate it.
+
+\subsection{Cluster and Sequence Interpretation}
+
+No qualified clinician reviewed the AI-generated cluster and sequence narratives. Checking them against real medical judgment is future work (Chapter~\ref{ch:conclusions}). Until then, we validated the text against the data, not against clinical correctness. For a sample of clusters and mined sequences, we checked that every claim matched the number it was meant to summarize: the right prevalence, the right centroid feature, the right support count. We also checked that no number was invented or assigned to the wrong group. On this narrower test the interpretations held up. They restated the underlying numbers correctly, and we saw no invented figure. This shows that the text agrees with its own numbers. It does not show that the text is medically correct, and the reader should keep that difference in mind in Sections~\ref{ch:results_clustering} and~\ref{ch:results_sequences}.
+
+\subsection{SQL Agent}
+\label{ch:sql_agent_validation}
+
+Unlike the narrative interpreter, the SQL agent (Section~\ref{ch:sql_agent_impl}) can be checked objectively. Once a question is translated into SQL, its answer is either right or wrong. We evaluated it from the perspective of a hospital manager, the role the agent is intended for, on a benchmark of \textbf{50 natural-language questions} of mixed difficulty. The questions span three levels. The easy ones are single-table lookups, such as patient counts or the most common condition. The medium ones are filtered aggregates, such as obesity prevalence or the average inpatient stay. The hard ones are true analytical queries: multi-table joins across the provider, encounter, and clinical tables, per-cluster analytics, a thirty-day-readmission self-join, and cross-table set intersections. For each question, we wrote a gold SQL query by hand and ran it directly on the database. We then scored the agent's final answer against that result.
+
+We scored the answers two ways. Under a strict exact match, the agent got 42 of the 50 right. Under a looser rule, which accepts an answer within a one-percent counting tolerance or under a reasonable reading of an unclear question, it got \textbf{48 of the 50 correct (96\%)}. The six-question gap between the two is small and easy to explain. Four are count differences below one percent, and two are questions that allow more than one reasonable answer. Only two answers are wrong under any reading. Table~\ref{tab:ch6_sql_agent_sample} lists the ten hardest questions with the agent's answer and the hand-computed truth. Both real errors and both interpretation differences appear there. In the Expected column, \emph{(miss)} marks a real error, and \emph{(interpretation)} marks a difference that comes only from a reasonable reading of the question.
+
+\begingroup
+\footnotesize
+\renewcommand{\arraystretch}{1.3}
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash\hsize=1.08\hsize}X >{\raggedright\arraybackslash\hsize=0.92\hsize}X >{\raggedright\arraybackslash}p{2.6cm}@{}}
+\toprule
+\textbf{Question} & \textbf{Agent Answer} & \textbf{Expected} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\footnotesize\itshape continued on next page}\\
+\endfoot
+\bottomrule
+\caption{The ten most complex questions from the 50-question manager benchmark.}\label{tab:ch6_sql_agent_sample}\\
+\endlastfoot
+Which patient has the highest number of encounters, and how many? & Doug McGlynn, 827 encounters. & Doug McGlynn, 827 \\
+Which medical speciality performed the most procedures, and how many? & General Practice, 0 procedures. & General Practice, 3{,}225{,}114 (miss) \\
+Which provider has seen the most distinct patients, and how many? & Jeanett Goodwin, 21,832. & Jeanett Goodwin, 21{,}832 \\
+Which speciality prescribed the most medications, and how many? & General Practice, 913,099. & General Practice, 913{,}099 \\
+What is the most common procedure performed during inpatient encounters? & Combined chemotherapy and radiation therapy, 34,890. & 34{,}890 \\
+How many patients were readmitted to inpatient care within 30 days of discharge? & 345 patients. & 591 (interpretation) \\
+How many distinct patients have both a Viral sinusitis condition and take Acetaminophen 325~MG Oral Tablet? & 6,863 patients. & 626 (miss) \\
+What is the average age of patients in the ``Many Chronic Illnesses'' cluster? & 67.3 years. & 67.3 \\
+Which cluster has the highest average number of inpatient encounters per patient? & Many Chronic Illnesses, 1.71. & Complex High Need, 21.0 (interpretation) \\
+What is the most common medication in the ``Complex High Need'' cluster? & Cisplatin 50 MG Injection, 32,894. & Cisplatin, 32{,}894 \\
+\end{xltabular}
+\endgroup
+
+The six differences from the strict-match gold fall into three groups: two real errors, two reasonable readings, and four differences below one percent.
+
+\textbf{Two real errors.} Only two answers are wrong under any reading, and both fall on the hardest queries. The first is the speciality that performed the most procedures. Here the agent summed the pre-computed \texttt{provider.procedures} column instead of counting the \texttt{procedure} table through the encounter join. That column is empty in this extract, so the count dropped to zero, even though the speciality label was right. The base-table join used by the gold query returns 3.2~million. This is a gap in the schema description. The model was never told the column is unreliable. The second error is worse, and it is about free-text name matching. We asked for patients with a \emph{Viral sinusitis} condition who also take \emph{Acetaminophen 325~MG Oral Tablet}. The agent split the drug name into separate keyword filters and matched any product that shared those tokens, including an unrelated opioid-acetaminophen combination. That pushed the count from 626 up to 6{,}863. Checking the filter against the actual list of stored medication names, instead of keyword matching, would fix it. We leave that as future work.
+
+\textbf{Two reasonable readings.} Two more answers differ from the gold, but not because the agent mistranslated the question. The question itself allows more than one reading, so we count these as correct. The first is thirty-day readmissions. The agent counted only consecutive admissions, that is, the next inpatient stay within thirty days of discharge. This is the standard clinical definition, and it returned 345. Our gold counted any later admission within thirty days of any earlier discharge, and returned 591. The second is the cluster with the most inpatient encounters per patient. The agent read ``cluster'' as the main clusters only and excluded the outlier group with \texttt{WHERE NOT is\_outlier}, so it reported \emph{Many Chronic Illnesses} (1.71). Our gold kept the outlier group, whose members are the heaviest inpatient users, and returned \emph{Complex High Need} (21.0). In both cases the agent's SQL is correct for one valid reading of the request.
+
+\textbf{Four differences below one percent.} The last four are the mild form of the name-matching problem above, and all stay within a one-percent tolerance: a lisinopril patient count of 2{,}852 against 2{,}844, a two-drug intersection of 1{,}504 against 1{,}497, an over-65 lisinopril count of 974 against 968, and a Houston male-patient count of 1{,}177 against 1{,}171. Each is close enough to be the right answer for a manager, which is why the looser rule accepts them. They share the same literal-matching root as the severe case, and the same fix would remove them.
+
+On a benchmark built around multi-table joins and analytics, the agent is correct in practice on 48 of 50 manager questions. Its two hard failures are specific and well understood. The rest of its differences from a hand-written gold are either reasonable readings of unclear wording or count gaps below one percent.

@@ -1,5 +1,6 @@
 # python app/clustering_algorithms/prefix_span/prefix_span.py
 # python app/clustering_algorithms/prefix_span/prefix_span.py --n-clusters 4
+# python app/clustering_algorithms/prefix_span/prefix_span.py --n-clusters 4 --shuffle --shuffle-seed 42   # temporal null test (no DB write)
 
 # custom optimizations:
 # - GML scoring: rank patterns by geometric mean lift instead of raw support
@@ -32,7 +33,9 @@ from prefixspan import PrefixSpan
 from sqlalchemy import text
 
 from db import engine, SessionLocal
-from save_results import save_prefix_span_results
+# package-qualified so this save_results module doesn't collide with the
+# k_prototypes save_results module when both are imported in-process
+from clustering_algorithms.prefix_span.save_results import save_prefix_span_results
 
 
 MIN_SUPPORT_PCT = 0.01  # how many patients have the sequence (22.284 x 0.01)
@@ -130,6 +133,7 @@ def _load_events(engine) -> pd.DataFrame:
 def build_sequences(
     engine,
     cluster_label: Optional[int] = None,
+    shuffle_seed: Optional[int] = None,
 ) -> tuple[list[list[str]], list[str]]:
     events = _load_events(engine)
     if events.empty:
@@ -188,6 +192,16 @@ def build_sequences(
     grouped = events.groupby("patient_id", sort=False)["item"].apply(list)
     sequences = grouped.tolist()
     patient_ids = [str(p) for p in grouped.index.tolist()]
+
+    # temporal-shuffle null test: permute each patient's timeline in place. The item
+    # set per patient stays the same (single-item supports, and so the GML denominator,
+    # are unchanged), only order is destroyed -> any GML drop is due purely to ordering.
+    if shuffle_seed is not None:
+        rng = np.random.default_rng(shuffle_seed)
+        for seq in sequences:
+            rng.shuffle(seq)
+        print(f"  [null test] permuted each patient's event order (seed={shuffle_seed})")
+
     print(f"  built {len(sequences):,} patient sequences")
     return sequences, patient_ids
 
@@ -235,6 +249,7 @@ def mine_patterns(
     max_pattern_length: int = MAX_PATTERN_LENGTH,
     top_k: int = TOP_K,
     cluster_label: Optional[int] = None,
+    shuffle_seed: Optional[int] = None,
 ) -> list[tuple[int, list[str]]]:
     if not sequences:
         return []
@@ -455,7 +470,9 @@ def mine_patterns(
         lines.append(line)
     print("--- end of pattern list ---\n")
 
-    out_path = "patterns_global.txt" if cluster_label is None else f"patterns_cluster_{cluster_label}.txt"
+    scope = "global" if cluster_label is None else f"cluster_{cluster_label}"
+    shuffle_tag = "" if shuffle_seed is None else f"_shuffled_seed{shuffle_seed}"
+    out_path = f"patterns_{scope}{shuffle_tag}.txt"
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
     print(f"  saved to {out_path}")
@@ -524,10 +541,10 @@ def _drop_global_duplicates(
     return kept
 
 
-def _run_single(engine, db_session, cluster_label: Optional[int]) -> None:
+def _run_single(engine, db_session, cluster_label: Optional[int], shuffle_seed: Optional[int] = None) -> None:
     label_tag = "global" if cluster_label is None else f"cluster {cluster_label}"
     print(f"\nloading sequences ({label_tag})...")
-    sequences, patient_ids = build_sequences(engine, cluster_label=cluster_label)
+    sequences, patient_ids = build_sequences(engine, cluster_label=cluster_label, shuffle_seed=shuffle_seed)
     n_patients = len(sequences)
     print(f"  {n_patients} patients with events")
     if n_patients == 0:
@@ -538,8 +555,14 @@ def _run_single(engine, db_session, cluster_label: Optional[int]) -> None:
     print(f"  avg sequence length: {avg_len:.1f}")
 
     print(f"mining patterns (minsup={MIN_SUPPORT_PCT:.0%}, top_k={TOP_K})...")
-    mined = mine_patterns(sequences, cluster_label=cluster_label)
+    mined = mine_patterns(sequences, cluster_label=cluster_label, shuffle_seed=shuffle_seed)
     print(f"  {len(mined)} patterns kept")
+
+    # null test is read-only: it saves the shuffled top-K to a file but must not
+    # touch dedup, memberships or the DB, or it would overwrite the real results
+    if shuffle_seed is not None:
+        print("  [null test] shuffle run: skipping global-dedup, membership attribution and DB write")
+        return
 
     # Per-cluster runs only keep patterns that are distinctive to the cluster:
     # anything already mined globally is dropped so the two scopes never repeat
@@ -571,15 +594,15 @@ def _run_single(engine, db_session, cluster_label: Optional[int]) -> None:
     save_prefix_span_results(db_session, rows, memberships, cluster_label=cluster_label)
 
 
-def run(engine, db_session, n_clusters: Optional[int] = None) -> None:
+def run(engine, db_session, n_clusters: Optional[int] = None, shuffle_seed: Optional[int] = None) -> None:
     if n_clusters is None:
-        _run_single(engine, db_session, cluster_label=None)
+        _run_single(engine, db_session, cluster_label=None, shuffle_seed=shuffle_seed)
     else:
         labels = list(range(n_clusters)) + [-1]
         print(f"per-cluster mining: {labels}")
         for label in labels:
             print(f"\n{'='*60}  cluster {label}  {'='*60}")
-            _run_single(engine, db_session, cluster_label=label)
+            _run_single(engine, db_session, cluster_label=label, shuffle_seed=shuffle_seed)
 
 
 if __name__ == "__main__":
@@ -592,7 +615,22 @@ if __name__ == "__main__":
         dest="n_clusters",
         help="mine per-cluster (0..N-1 plus -1 for outliers); reads cluster_patient table",
     )
+    parser.add_argument(
+        "--shuffle",
+        action="store_true",
+        help="temporal-shuffle null test: permute each patient's event order, re-mine, and "
+             "write the shuffled top-K to patterns_*_shuffled_seed*.txt WITHOUT touching the "
+             "database, so the GML collapse vs. the real run can be compared",
+    )
+    parser.add_argument(
+        "--shuffle-seed",
+        type=int,
+        default=42,
+        dest="shuffle_seed",
+        help="RNG seed for --shuffle; re-run with several seeds to average the null (default 42)",
+    )
     args = parser.parse_args()
     load_dotenv()
+    shuffle_seed = args.shuffle_seed if args.shuffle else None
     with SessionLocal() as db:
-        run(engine, db, n_clusters=args.n_clusters)
+        run(engine, db, n_clusters=args.n_clusters, shuffle_seed=shuffle_seed)

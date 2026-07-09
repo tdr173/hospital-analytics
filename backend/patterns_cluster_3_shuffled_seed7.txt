@@ -1,0 +1,20 @@
+Top 18 patterns (ranked by geometric mean lift)
+
+    1. [  501 pts,  10.7%, gml=0.22] [dental] P:Dental fluoride treatment (procedure) -> P:Oral health education (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+    2. [  465 pts,  10.0%, gml=0.21] [dental] P:Dental fluoride treatment (procedure) -> P:Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+    3. [  464 pts,   9.9%, gml=0.21] [dental] P:Examination of gingivae (procedure) -> P:Dental fluoride treatment (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+    4. [  460 pts,   9.9%, gml=0.20] [dental] P:Dental fluoride treatment (procedure) -> P:Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+    5. [  452 pts,   9.7%, gml=0.20] [dental] P:Dental fluoride treatment (procedure) -> P:Dental consultation and report (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+    6. [  448 pts,   9.6%, gml=0.20] [dental] P:Dental fluoride treatment (procedure) -> P:Dental care (regime/therapy) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+    7. [  537 pts,  11.5%, gml=0.20] [dental] P:Examination of gingivae (procedure) -> P:Oral health education (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+    8. [  531 pts,  11.4%, gml=0.20] [dental] M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Examination of gingivae (procedure) -> P:Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)
+    9. [  531 pts,  11.4%, gml=0.20] [dental] P:Oral health education (procedure) -> P:Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+   10. [  440 pts,   9.4%, gml=0.20] [dental] P:Dental fluoride treatment (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Patient referral for dental care (procedure)
+   11. [  527 pts,  11.3%, gml=0.20] [dental] P:Examination of gingivae (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)
+   12. [  526 pts,  11.3%, gml=0.20] [dental] M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure) -> P:Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)
+   13. [  527 pts,  11.3%, gml=0.20] [dental] P:Oral health education (procedure) -> P:Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+   14. [  511 pts,  10.9%, gml=0.19] [dental] P:Dental care (regime/therapy) -> P:Oral health education (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+   15. [  511 pts,  10.9%, gml=0.19] [dental] P:Oral health education (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Dental consultation and report (procedure)
+   16. [  145 pts,   3.1%, gml=0.10] P:Depression screening using Patient Health Questionnaire Nine Item score (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Depression screening (procedure)
+   17. [  126 pts,   2.7%, gml=0.09] P:Assessment of substance use (procedure) -> P:Assessment using Car  Relax  Alone  Forget  Friends  Trouble Screening Test (procedure) -> M:sodium fluoride 0.0272 MG/MG Oral Gel
+   18. [  127 pts,   2.7%, gml=0.09] M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Depression screening (procedure) -> P:Assessment of substance use (procedure)

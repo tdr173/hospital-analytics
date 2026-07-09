@@ -1,0 +1,25 @@
+\chapter{Conclusions}
+\label{ch:conclusions}
+\pagestyle{fancy}
+
+Electronic Health Records hold analytical value that is hard to reach because the data is heterogeneous and longitudinal. This thesis addressed that problem with HospitAI, a web platform that ties patient segmentation, care-pathway mining, and large-language-model interpretation into a single pipeline. This chapter summarizes what was built, evaluates the results critically, and outlines future work.
+
+\section{Summary of Contributions}
+
+The main contribution is an end-to-end analytical pipeline over mixed-type clinical data, wrapped in a platform that someone without a data-science background can operate.
+
+An ETL process takes a regional synthetic Synthea dataset, reduces it to a single hospital, and normalizes it into eleven relational tables in third normal form, computing the derived attributes the later analysis depends on along the way. Segmentation is handled by K-Prototypes, chosen because it works on numerical and categorical features at once. Around it we added feature engineering, outlier isolation, severity compression through PCA, and FAMD-based visualization, and selected the final model by benchmarking 63 feature configurations against six internal validation metrics.
+
+Care-pathway discovery uses PrefixSpan, extended with six clinically motivated customizations that turn its raw, noise-dominated output into a small set of distinctive closed pathways, mined both globally and within each cluster. A two-tier prompting scheme turns these numeric results into narratives a clinician can read, and a LangGraph-based SQL agent answers plain-language questions with safe, read-only, role-scoped queries. An in-process orchestration job chains all of this into one monitored flow, triggered by a manager or on a monthly schedule, and exposed through a role-aware Next.js frontend.
+
+\section{Critical Analysis of the Results}
+
+The three analytical layers do not carry the same evidentiary weight. Clustering quality was validated the most rigorously: K-Prototypes was scored against six internal validation metrics established in the clustering literature, so the choice of final configuration rests on a recognized, reproducible basis. Sequence mining was evaluated more loosely. PrefixSpan itself is a settled algorithm, but the six customizations on top of it were tuned by reranking and empirically checking that the surfaced pathways stayed relevant to the cluster they came from, not against a formal benchmark. The AI-generated interpretations sit on the weakest ground of the three: their soundness was likewise checked empirically, by inspecting whether the narratives matched the numbers they were given, but no doctor or other qualified clinician reviewed them for medical validity.
+
+The data itself is a further limitation. The platform runs on synthetic Synthea records, which copy the shape of real EHRs but not the underlying epidemiological signal, so the clusters and pathways found illustrate the method rather than establish clinical fact. The role separation is a demonstration of per-role behavior, not a real security boundary, and clustering sees only a static, frozen snapshot of each patient. The language-model interpretations remain a decision-support draft that a clinician would still have to check, not a diagnosis.
+
+\section{Future Work}
+
+The step that matters most is validating the whole pipeline, clusters, sequences, and AI narratives alike, on real, de-identified clinical data together with domain experts, since that is the only way to close the evaluation gaps described above. That move would also justify replacing the demonstration roles with genuine authentication, role-based access control, and auditing.
+
+On the analytical side, moving from a static snapshot to temporal or dynamic clustering, and adding time gaps and concurrency to the sequence model, would let the system show how a patient changes over time rather than only who they resemble at one point. The resulting clusters could also seed a supervised outcome-prediction model. From an engineering angle, an incremental pipeline and some distributed computation would let the platform grow past a single hospital, and a side-by-side comparison of several language models would help pin down how far the automated interpretations can be trusted.

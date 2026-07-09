@@ -33,16 +33,16 @@ export default function SequenceAiModal({ colors }: Props) {
         <div className={classes.header}>
           <div className={classes.titleArea}>
             <p className={classes.label}>
-              AI Analysis · Sequence #{sequence.rank}
+              AI Analysis - Sequence #{sequence.rank}
             </p>
             <h2 className={classes.title}>Care Trajectory Pattern</h2>
             <p className={classes.meta}>
-              {sequence.supportCount.toLocaleString()} patients · {sequence.supportPct}% ·{" "}
+              {sequence.supportCount.toLocaleString()} patients - {sequence.supportPct}% -{" "}
               {sequence.length} nodes
             </p>
           </div>
           <button className={classes.closeBtn} onClick={close} type="button">
-            ✕
+            X
           </button>
         </div>
 

@@ -1,0 +1,352 @@
+[
+  {
+    "n": 1,
+    "question": "How many patients are in the database?",
+    "sql": "SELECT COUNT(*) AS n FROM patient",
+    "expected_result": "22284",
+    "result": "There are 22,284 patients in the database."
+  },
+  {
+    "n": 2,
+    "question": "What is the average age of the patients?",
+    "sql": "SELECT ROUND(AVG(age)::numeric, 1) AS avg_age FROM patient",
+    "expected_result": "37.2",
+    "result": "The average age of the patients is 37.23 years."
+  },
+  {
+    "n": 3,
+    "question": "How many patients have died?",
+    "sql": "SELECT COUNT(*) AS n FROM patient WHERE deathdate IS NOT NULL",
+    "expected_result": "2284",
+    "result": "2,284 patients have died."
+  },
+  {
+    "n": 4,
+    "question": "How many patients identify as black race?",
+    "sql": "SELECT COUNT(*) AS n FROM patient WHERE race = 'black'",
+    "expected_result": "2852",
+    "result": "2,852 patients identify as Black race."
+  },
+  {
+    "n": 5,
+    "question": "Which city has the most patients?",
+    "sql": "SELECT city, COUNT(*) AS n FROM patient GROUP BY city ORDER BY n DESC LIMIT 1",
+    "expected_result": "city=Houston, n=2294",
+    "result": "Houston has the most patients, with 2,294."
+  },
+  {
+    "n": 6,
+    "question": "How many female patients are there?",
+    "sql": "SELECT COUNT(*) AS n FROM patient WHERE gender = 'F'",
+    "expected_result": "11062",
+    "result": "There are 11,062 female patients."
+  },
+  {
+    "n": 7,
+    "question": "What is the age of the oldest patient in the database?",
+    "sql": "SELECT MAX(age) AS max_age FROM patient",
+    "expected_result": "110",
+    "result": "The oldest patient in the database is 110 years old."
+  },
+  {
+    "n": 8,
+    "question": "How many encounters are classified as emergency?",
+    "sql": "SELECT COUNT(*) AS n FROM encounter WHERE encounter_class = 'emergency'",
+    "expected_result": "48897",
+    "result": "There are 48,897 emergency encounters."
+  },
+  {
+    "n": 9,
+    "question": "How many care plans have been recorded in total?",
+    "sql": "SELECT COUNT(*) AS n FROM careplan",
+    "expected_result": "70197",
+    "result": "A total of 70,197 care plans have been recorded."
+  },
+  {
+    "n": 10,
+    "question": "How many providers work at the hospital?",
+    "sql": "SELECT COUNT(*) AS n FROM provider",
+    "expected_result": "300",
+    "result": "There are 300 providers working at the hospital."
+  },
+  {
+    "n": 11,
+    "question": "What is the most common condition recorded in the database?",
+    "sql": "SELECT description, COUNT(*) AS n FROM condition GROUP BY description ORDER BY n DESC LIMIT 1",
+    "expected_result": "description=Medication review due (situation), n=147256",
+    "result": "The most commonly recorded condition is **“Medication review due (situation)”**, with **147,256 records**."
+  },
+  {
+    "n": 12,
+    "question": "What is the most frequently prescribed medication?",
+    "sql": "SELECT description, COUNT(*) AS n FROM medication GROUP BY description ORDER BY n DESC LIMIT 1",
+    "expected_result": "description=1 ML Epoetin Alfa 4000 UNT/ML Injection [Epogen], n=153879",
+    "result": "The most frequently prescribed medication is **1 ML Epoetin Alfa 4000 UNT/ML Injection [Epogen]**, with **153,879 prescriptions**."
+  },
+  {
+    "n": 13,
+    "question": "What is the most common procedure performed?",
+    "sql": "SELECT description, COUNT(*) AS n FROM procedure GROUP BY description ORDER BY n DESC LIMIT 1",
+    "expected_result": "description=Depression screening (procedure), n=311480",
+    "result": "The most common procedure performed is **Depression screening (procedure)**, with **311,480** performed."
+  },
+  {
+    "n": 14,
+    "question": "How many distinct patients underwent renal dialysis?",
+    "sql": "SELECT COUNT(DISTINCT patient_id) AS n FROM procedure WHERE description = 'Renal dialysis (procedure)'",
+    "expected_result": "625",
+    "result": "625 distinct patients underwent renal dialysis."
+  },
+  {
+    "n": 15,
+    "question": "What is the highest heart rate ever recorded in the observations?",
+    "sql": "SELECT MAX(value_numeric) AS max_hr FROM observation WHERE description = 'Heart rate'",
+    "expected_result": "200.0",
+    "result": "The highest heart rate recorded in the observations is 200 bpm."
+  },
+  {
+    "n": 16,
+    "question": "How many patients are older than 70?",
+    "sql": "SELECT COUNT(*) AS n FROM patient WHERE age > 70",
+    "expected_result": "1887",
+    "result": "There are 1,887 patients older than 70."
+  },
+  {
+    "n": 17,
+    "question": "How many distinct patients have more than 20 condition records each?",
+    "sql": "SELECT COUNT(*) AS n FROM (SELECT patient_id FROM condition GROUP BY patient_id HAVING COUNT(*) > 20) t",
+    "expected_result": "14680",
+    "result": "14,680 distinct patients have more than 20 condition records each."
+  },
+  {
+    "n": 18,
+    "question": "How many patients have no recorded allergies at all?",
+    "sql": "SELECT COUNT(*) AS n FROM patient WHERE patient_id NOT IN (SELECT DISTINCT patient_id FROM allergy)",
+    "expected_result": "18368",
+    "result": "18,368 patients have no recorded allergies at all."
+  },
+  {
+    "n": 19,
+    "question": "What is the average systolic blood pressure recorded across all observations?",
+    "sql": "SELECT ROUND(AVG(value_numeric)::numeric, 1) AS avg_sbp FROM observation WHERE description = 'Systolic Blood Pressure'",
+    "expected_result": "117.6",
+    "result": "The average systolic blood pressure across all observations is 117.59 mmHg."
+  },
+  {
+    "n": 20,
+    "question": "How many distinct patients have at least one BMI observation showing obesity (30 or above)?",
+    "sql": "SELECT COUNT(DISTINCT patient_id) AS n FROM observation WHERE description = 'Body mass index (BMI) [Ratio]' AND value_numeric >= 30",
+    "expected_result": "7541",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 21,
+    "question": "What is the average duration, in hours, of inpatient encounters?",
+    "sql": "SELECT ROUND((AVG(duration) / 60.0)::numeric, 2) AS avg_hours FROM encounter WHERE encounter_class = 'inpatient'",
+    "expected_result": "116.41",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 22,
+    "question": "How many encounters took place in 2020?",
+    "sql": "SELECT COUNT(*) AS n FROM encounter WHERE EXTRACT(YEAR FROM start_date) = 2020",
+    "expected_result": "86669",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 23,
+    "question": "How many male patients living in Houston are there?",
+    "sql": "SELECT COUNT(*) AS n FROM patient WHERE city = 'Houston' AND gender = 'M'",
+    "expected_result": "1171",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 24,
+    "question": "What is the average number of medication records per patient?",
+    "sql": "SELECT ROUND((SELECT COUNT(*)::numeric FROM medication) / (SELECT COUNT(DISTINCT patient_id)::numeric FROM medication), 2) AS avg_meds",
+    "expected_result": "42.23",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 25,
+    "question": "How many distinct patients are prescribed lisinopril 10 MG Oral Tablet?",
+    "sql": "SELECT COUNT(DISTINCT patient_id) AS n FROM medication WHERE description = 'lisinopril 10 MG Oral Tablet'",
+    "expected_result": "2844",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 26,
+    "question": "How many distinct patients received a 30 mcg mRNA COVID-19 vaccine dose?",
+    "sql": "SELECT COUNT(DISTINCT patient_id) AS n FROM immunization WHERE description = 'COVID-19  mRNA  LNP-S  PF  30 mcg/0.3 mL dose'",
+    "expected_result": "7104",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 27,
+    "question": "What is the average duration in days of care plans that have already ended?",
+    "sql": "SELECT ROUND(AVG(duration_days)::numeric, 1) AS avg_days FROM careplan WHERE end_date IS NOT NULL",
+    "expected_result": "190.9",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 28,
+    "question": "How many patients had more than one inpatient encounter?",
+    "sql": "SELECT COUNT(*) AS n FROM (SELECT patient_id FROM encounter WHERE encounter_class = 'inpatient' GROUP BY patient_id HAVING COUNT(*) > 1) t",
+    "expected_result": "3010",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 29,
+    "question": "What is the name of the hospital organization in the database?",
+    "sql": "SELECT name FROM organization LIMIT 1",
+    "expected_result": "COLLIN COUNTY ADULT CLINIC",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 30,
+    "question": "Which patient has the highest number of encounters, and how many?",
+    "sql": "SELECT p.first_name, p.last_name, t.n FROM (SELECT patient_id, COUNT(*) AS n FROM encounter GROUP BY patient_id ORDER BY n DESC LIMIT 1) t JOIN patient p ON p.patient_id = t.patient_id",
+    "expected_result": "first_name=Doug, last_name=McGlynn, n=827",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 31,
+    "question": "Which medical speciality performed the most procedures, and how many?",
+    "sql": "SELECT pr.speciality, COUNT(*) AS n FROM procedure pc JOIN encounter e ON e.encounter_id = pc.encounter_id JOIN provider pr ON pr.provider_id = e.provider_id GROUP BY pr.speciality ORDER BY n DESC LIMIT 1",
+    "expected_result": "speciality=GENERAL PRACTICE, n=3225114",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 32,
+    "question": "Which provider has seen the most distinct patients, and how many?",
+    "sql": "SELECT pr.first_name, pr.last_name, COUNT(DISTINCT e.patient_id) AS n FROM encounter e JOIN provider pr ON pr.provider_id = e.provider_id GROUP BY pr.provider_id, pr.first_name, pr.last_name ORDER BY n DESC LIMIT 1",
+    "expected_result": "first_name=Jeanett, last_name=Goodwin, n=21832",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 33,
+    "question": "Which provider handled the most emergency encounters, and how many?",
+    "sql": "SELECT pr.first_name, pr.last_name, COUNT(*) AS n FROM encounter e JOIN provider pr ON pr.provider_id = e.provider_id WHERE e.encounter_class = 'emergency' GROUP BY pr.provider_id, pr.first_name, pr.last_name ORDER BY n DESC LIMIT 1",
+    "expected_result": "first_name=Jeanett, last_name=Goodwin, n=40400",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 34,
+    "question": "Which speciality prescribed the most medications, and how many?",
+    "sql": "SELECT pr.speciality, COUNT(*) AS n FROM medication m JOIN encounter e ON e.encounter_id = m.encounter_id JOIN provider pr ON pr.provider_id = e.provider_id GROUP BY pr.speciality ORDER BY n DESC LIMIT 1",
+    "expected_result": "speciality=GENERAL PRACTICE, n=913099",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 35,
+    "question": "Which speciality has the longest average encounter duration, in minutes?",
+    "sql": "SELECT pr.speciality, ROUND(AVG(e.duration)::numeric, 1) AS avg_min FROM encounter e JOIN provider pr ON pr.provider_id = e.provider_id GROUP BY pr.speciality ORDER BY avg_min DESC LIMIT 1",
+    "expected_result": "speciality=GENERAL PRACTICE, avg_min=320.1",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 36,
+    "question": "Which speciality has seen the most distinct patients, and how many?",
+    "sql": "SELECT pr.speciality, COUNT(DISTINCT e.patient_id) AS n FROM encounter e JOIN provider pr ON pr.provider_id = e.provider_id GROUP BY pr.speciality ORDER BY n DESC LIMIT 1",
+    "expected_result": "speciality=GENERAL PRACTICE, n=22284",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 37,
+    "question": "What is the most common procedure performed during inpatient encounters?",
+    "sql": "SELECT pc.description, COUNT(*) AS n FROM procedure pc JOIN encounter e ON e.encounter_id = pc.encounter_id WHERE e.encounter_class = 'inpatient' GROUP BY pc.description ORDER BY n DESC LIMIT 1",
+    "expected_result": "description=Combined chemotherapy and radiation therapy (procedure), n=34890",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 38,
+    "question": "What is the most common condition recorded during emergency encounters?",
+    "sql": "SELECT co.description, COUNT(*) AS n FROM condition co JOIN encounter e ON e.encounter_id = co.encounter_id WHERE e.encounter_class = 'emergency' GROUP BY co.description ORDER BY n DESC LIMIT 1",
+    "expected_result": "description=Medication review due (situation), n=4218",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 39,
+    "question": "How many patients were readmitted to inpatient care within 30 days of a previous inpatient discharge?",
+    "sql": "SELECT COUNT(DISTINCT e1.patient_id) AS n FROM encounter e1 JOIN encounter e2 ON e2.patient_id = e1.patient_id WHERE e1.encounter_class = 'inpatient' AND e2.encounter_class = 'inpatient' AND e2.start_date > e1.end_date AND e2.start_date <= e1.end_date + INTERVAL '30 days'",
+    "expected_result": "591",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 40,
+    "question": "How many distinct patients take both lisinopril 10 MG Oral Tablet and Hydrochlorothiazide 25 MG Oral Tablet?",
+    "sql": "SELECT COUNT(*) AS n FROM (SELECT patient_id FROM medication WHERE description = 'lisinopril 10 MG Oral Tablet' INTERSECT SELECT patient_id FROM medication WHERE description = 'Hydrochlorothiazide 25 MG Oral Tablet') t",
+    "expected_result": "1497",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 41,
+    "question": "How many distinct patients have both a Viral sinusitis condition and take Acetaminophen 325 MG Oral Tablet?",
+    "sql": "SELECT COUNT(*) AS n FROM (SELECT patient_id FROM condition WHERE description = 'Viral sinusitis (disorder)' INTERSECT SELECT patient_id FROM medication WHERE description = 'Acetaminophen 325 MG Oral Tablet [Tylenol]') t",
+    "expected_result": "626",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 42,
+    "question": "How many patients over the age of 65 have been prescribed lisinopril 10 MG Oral Tablet?",
+    "sql": "SELECT COUNT(DISTINCT p.patient_id) AS n FROM patient p JOIN medication m ON m.patient_id = p.patient_id WHERE p.age > 65 AND m.description = 'lisinopril 10 MG Oral Tablet'",
+    "expected_result": "968",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 43,
+    "question": "What is the average age of patients in the 'Many Chronic Illnesses' cluster?",
+    "sql": "SELECT ROUND(AVG(p.age)::numeric, 1) AS avg_age FROM cluster_patient cp JOIN patient p ON p.patient_id = cp.patient_id JOIN cluster c ON c.cluster_label = cp.cluster_label WHERE c.title = 'Many Chronic Illnesses'",
+    "expected_result": "67.3",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 44,
+    "question": "Which cluster has the highest average number of inpatient encounters per patient?",
+    "sql": "SELECT c.title, ROUND(AVG(t.cnt)::numeric, 2) AS avg_ip FROM (SELECT cp.patient_id, cp.cluster_label, COUNT(e.encounter_id) AS cnt FROM cluster_patient cp LEFT JOIN encounter e ON e.patient_id = cp.patient_id AND e.encounter_class = 'inpatient' GROUP BY cp.patient_id, cp.cluster_label) t JOIN cluster c ON c.cluster_label = t.cluster_label GROUP BY c.title ORDER BY avg_ip DESC LIMIT 1",
+    "expected_result": "title=Complex High Need, avg_ip=21.00",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 45,
+    "question": "How many patients in the 'Complex High Need' outlier cluster have had at least one emergency encounter?",
+    "sql": "SELECT COUNT(DISTINCT cp.patient_id) AS n FROM cluster_patient cp JOIN encounter e ON e.patient_id = cp.patient_id JOIN cluster c ON c.cluster_label = cp.cluster_label WHERE c.title = 'Complex High Need' AND e.encounter_class = 'emergency'",
+    "expected_result": "283",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 46,
+    "question": "What is the most common medication prescribed to patients in the 'Complex High Need' outlier cluster?",
+    "sql": "SELECT m.description, COUNT(*) AS n FROM medication m JOIN cluster_patient cp ON cp.patient_id = m.patient_id JOIN cluster c ON c.cluster_label = cp.cluster_label WHERE c.title = 'Complex High Need' GROUP BY m.description ORDER BY n DESC LIMIT 1",
+    "expected_result": "description=Cisplatin 50 MG Injection, n=32894",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 47,
+    "question": "Which cluster has the most patients assigned to it?",
+    "sql": "SELECT c.title, t.n FROM (SELECT cluster_label, COUNT(*) AS n FROM cluster_patient GROUP BY cluster_label ORDER BY n DESC LIMIT 1) t JOIN cluster c ON c.cluster_label = t.cluster_label",
+    "expected_result": "title=Everyday Care, n=6574",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 48,
+    "question": "How many patient clusters were identified by the clustering pipeline, including the outlier group?",
+    "sql": "SELECT COUNT(DISTINCT cluster_label) AS n FROM cluster",
+    "expected_result": "5",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 49,
+    "question": "What is the most frequent global care sequence pattern that was mined?",
+    "sql": "SELECT pattern_str, support_count FROM prefix_span_pattern WHERE cluster_label IS NULL ORDER BY support_count DESC LIMIT 1",
+    "expected_result": "pattern_str=M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Dental fluoride treatment (procedure) -> P:Oral health education (procedure), support_count=8051",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  },
+  {
+    "n": 50,
+    "question": "How many sequence patterns were mined specifically for cluster 0?",
+    "sql": "SELECT COUNT(*) AS n FROM prefix_span_pattern WHERE cluster_label = 0",
+    "expected_result": "113",
+    "result": "AGENT ERROR: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+  }
+]

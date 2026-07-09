@@ -1,0 +1,73 @@
+@startuml PipelineOrchestrationStateMachine
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #000000
+skinparam defaultFontName "Arial"
+skinparam defaultFontSize 13
+skinparam ArrowColor #000000
+skinparam ArrowFontColor #000000
+skinparam ArrowFontSize 11
+skinparam shadowing false
+skinparam roundcorner 4
+skinparam monochrome true
+
+hide stereotype
+hide circle
+
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+  BorderThickness 1.3
+}
+skinparam object {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+  BorderThickness 1.3
+}
+
+top to bottom direction
+
+' ════════════════════════════════════════════════════════════
+'  TRIGGERS AND CONCURRENCY GUARD
+' ════════════════════════════════════════════════════════════
+
+rectangle "Manual Trigger\n(Manager clicks Start,\nPOST /pipeline/run)" as MANUAL
+rectangle "Scheduled Trigger\n(monthly cron,\nday 1, 02:00)" as CRON
+
+rectangle "Concurrency Guard\n(atomic UPDATE:\nstatus != RUNNING ?)" as GUARD
+
+rectangle "Rejected\n(HTTP 409,\nno state change)" as REJECT
+
+MANUAL --> GUARD
+CRON   --> GUARD
+GUARD  --> REJECT : already RUNNING
+
+' ════════════════════════════════════════════════════════════
+'  TOP-LEVEL STATE MACHINE
+' ════════════════════════════════════════════════════════════
+
+rectangle "IDLE" as IDLE
+
+object "RUNNING" as RUNNING {
+  ETL  (skipped if the patient table is not empty)
+  --
+  CLUSTERING  (K-Prototypes + AI cluster cards)
+  --
+  SEQUENCES_GLOBAL  (PrefixSpan, full population)
+  --
+  SEQUENCES_CLUSTERS  (PrefixSpan per cluster 0..k-1, outliers -1)
+  --
+  DONE
+}
+
+rectangle "SUCCESS\n(last_run_at updated)" as SUCCESS
+rectangle "FAILED\n(error message recorded)" as FAILED
+
+GUARD   --> RUNNING : wins race\n(status -> RUNNING)
+RUNNING --> SUCCESS : all stages complete
+RUNNING --> FAILED  : any stage raises
+
+SUCCESS --> IDLE : next trigger
+FAILED  --> IDLE : next trigger
+
+@enduml

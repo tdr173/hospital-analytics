@@ -1,0 +1,268 @@
+\chapter{Bibliographic Research}\label{ch:research}
+
+\pagestyle{fancy}
+
+This chapter provides a review of the existing state of the art related to the three pillars that HospitAI relies on for its analysis: the stratification of the patient population using clustering, the discovery of clinical pathways using sequential pattern mining, and the interpretation of the resulting models using large language models (LLMs).
+For every work we first explain, in plain terms, the problem the authors solve and how their method works, then compare it to the solution of this thesis. Each subsection closes with a concise comparison table.
+Every reviewed study succeeds at its own objective. This chapter reads them through one specific lens, that of building a single integrated analytical platform, and points out where each stops short of that particular goal. Those gaps are what HospitAI sets out to fill.
+
+\section{Clustering and Sequence Mining in the Context of Patient Data}\label{sec:rw_clustering_seq}
+
+Both of these methods are discussed together in this section, not only because they are often combined in the existing literature, but also because in the context of this thesis one is used as an input for the other.
+
+\subsection{Patient Clustering Methodologies}\label{sec:rw_clustering}
+
+Unsupervised stratification of patients into groups with similar clinical phenotypes is an old and extensively researched problem in healthcare analytics.
+The five sources presented below address the issues that are relevant for HospitAI, including an algorithm selection survey, an application for decision support, a couple of generalizations for heterogeneous data, and an application for mixed-type data on a specific disease.
+
+\paragraph{Aljohani (2024).}
+Aljohani~\cite{aljohani2024} treats the choice of a clustering algorithm for patient stratification from electronic health records (EHRs) as a decision with many competing criteria, not a single accuracy score.
+A panel of experts scores eight of the usual algorithms, from K-Means and DBSCAN to Gaussian Mixture Models and Self-Organizing Maps.
+They are judged on eight practical qualities, cluster quality, scalability, robustness to noise, interpretability, and stability among them.
+The scores are then combined with Fuzzy TOPSIS, a multi-criteria method that folds many weighted expert judgments into a single ranking.
+That ranking is cross-checked with a second method, the Analytic Hierarchy Process, and K-Means comes out on top, ahead of hierarchical clustering and DBSCAN.
+The study is a careful map of how mainstream algorithms behave on EHR data. But every one of the eight works only on purely numerical inputs.
+Clinical records are not purely numerical. Attributes such as diagnostic codes, gender, or careplan type are categorical, and handing them to these algorithms means encoding them as numbers first. That inflates the dimensionality and introduces the geometric distortions discussed in Chapter~\ref{ch:analysis}.
+HospitAI avoids that step by clustering with K-Prototypes. It measures numerical and categorical attributes each with its own native distance and then combines them, so a patient's diagnoses and vitals are compared together without either being forced onto a single artificial numeric scale.
+
+\paragraph{Yang et al. (2024).}
+Yang et al.~\cite{yang2024} build an intelligent healthcare system that clusters medical records to track patient risks and trends over time.
+The clusters are meant to support hospital-management decisions, and they are paired with the idea of evidence-based medicine: groups of patients are compared across diseases, time periods, and patient counts, so managers can weigh options against documented outcomes.
+The aim of making analytics useful to hospital managers, and not only to statisticians, is close in spirit to HospitAI.
+The difference lies in how the patients are grouped.
+Yang et al. cluster on data that has been encoded into numbers beforehand, so the categorical side of a record is flattened before any grouping happens.
+HospitAI keeps categorical attributes as categories and clusters them directly with K-Prototypes.
+This is what lets a group be defined collectively by, say, a dominant careplan category and an average number of active medications, without either being converted into the other.
+
+\paragraph{Novidianto et al. (2021).}
+Novidianto et al.~\cite{novidianto2021} use the same algorithm as this thesis, K-Prototypes, to group heart-failure patients by attributes linked to mortality.
+Their cohort is real but small: 299 patients described by eleven mixed attributes.
+These combine numeric measurements, such as ejection fraction and serum creatinine, with categorical flags, such as diabetes and hypertension.
+They pick the number of clusters with the silhouette coefficient, which is highest at $k=2$, giving two groups that they read as low and high mortality risk.
+The study is useful confirmation that K-Prototypes handles clinical mixed data well and that a simple internal index can choose the number of groups. HospitAI validates its own clustering the same way.
+The scope, however, is deliberately narrow: one disease, eleven curated attributes, two clusters.
+HospitAI applies the same native mixed-type clustering to a far broader problem.
+It covers more than $22{,}000$ patients from the whole population rather than one pathology, described by dozens of engineered numeric and categorical features. It also adds an explicit outlier pass that sets atypical patients aside as a separate group, instead of letting them distort the cluster centers.
+
+\paragraph{Najjar and Gagné (2014).}
+Najjar and Gagné~\cite{najjar2018kproto} generalize K-Prototypes to a kind of data the standard algorithm cannot handle: \emph{multivalued} categorical attributes.
+These are single fields that hold a whole set of values at once, such as all the diagnostic codes recorded for one admission.
+Collapsing such a set to a single code would throw away most of it, so the authors borrow the bag-of-words idea from text analysis.
+For each multivalued attribute, the Apriori algorithm finds the frequent combinations of codes, and those combinations become the vocabulary.
+Each patient's codes are then weighted by tf--idf, so common codes count for less and distinctive ones for more, and a cosine comparison between these weight vectors and the cluster centers is added to the K-Prototypes distance.
+The extension keeps the algorithm's linear running time. It also makes the case for handling clinical attributes in their natural form rather than through reductive encodings.
+HospitAI shares that philosophy but draws the line differently.
+Instead of feeding raw sets of codes into the clustering distance, it engineers a patient's multivalued history into compact single-valued features first: disease flags such as \emph{has-diabetes}, counts such as the number of active conditions, and one dominant careplan category.
+The standard K-Prototypes distance then applies directly, and the full ordered set of clinical events is reserved for the separate mining stage described in the next section.
+
+\paragraph{José-García et al. (2022).}
+José-García et al.~\cite{josegarcia2022} attack the mixed-data problem from the opposite direction.
+Instead of finding one distance that fits every attribute type, they avoid committing to any single distance at all.
+Their method, MVMC, treats each kind of data as a separate ``view'' with its own dissimilarity measure.
+It then runs a multi-objective evolutionary search over a systemic-sclerosis cohort to find a consensus grouping that holds up across all the views at once.
+Because the search optimizes several objectives together, it returns not one clustering but a Pareto set, a family of trade-off solutions in which no member is strictly better than the others.
+The strength of this design is that it never merges the different attribute types early, so no view can dominate the rest by accident.
+The cost is that the evolutionary search is heavy to run, and its output is a set of trade-off partitions described by their members rather than by compact, readable cluster centers.
+HospitAI makes the opposite trade.
+It accepts a single distance, the K-Prototypes mix of numeric and categorical measures, in exchange for one definite partition whose clusters are summarized by prototype centers.
+That partition is the concrete, inspectable grouping the later stages of the platform build on.
+
+\medskip
+Table~\ref{tab:ch3_clustering} summarizes the five clustering methodologies along the aspects that matter for HospitAI.
+
+\begingroup
+\footnotesize
+\renewcommand{\arraystretch}{1.3}
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.7cm} >{\raggedright\arraybackslash\hsize=0.80\hsize}X >{\raggedright\arraybackslash\hsize=1.05\hsize}X >{\raggedright\arraybackslash\hsize=1.15\hsize}X@{}}
+\toprule
+\textbf{Reference (approach)} & \textbf{Data types} & \textbf{Advantages} & \textbf{How HospitAI clusters differently} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{4}{r}{\footnotesize\itshape continued on next page}\\
+\endfoot
+\bottomrule
+\caption{Comparison of the reviewed patient-clustering methodologies.}\label{tab:ch3_clustering}\\
+\endlastfoot
+Aljohani~\cite{aljohani2024} \newline (8-algorithm Fuzzy TOPSIS comparison) &
+Only numerical &
+Multi-criteria rigorous approach to EHR clustering &
+All eight algorithms are numeric-only; categoricals need lossy encoding that distorts distances. HospitAI clusters mixed types natively with K-Prototypes \\
+
+Yang et al.~\cite{yang2024} \newline (Applied clustering DSS) &
+Numerical (encoded) &
+Management-oriented. Integrates clustering with evidence-based medicine &
+Clusters on pre-encoded numbers, flattening categoricals first. HospitAI keeps categories as categories \\
+
+Novidianto et al.~\cite{novidianto2021} \newline (ClusterMix K-Prototypes) &
+Mixed (numeric + categorical) &
+Natural mixed-type distance measure. Silhouette-based $k$ optimization on real data &
+Small single-pathology cohort ($n{=}299$), $k{=}2$, few curated attributes. HospitAI scales the same distance to 22k patients and dozens of engineered features with outlier handling \\
+
+Najjar and Gagné~\cite{najjar2018kproto} \newline (multivalued K-Prototypes) &
+Mixed + multivalued categorical &
+Handles sets of codes via bag-of-words. Linear time &
+Multivalued codes handled inside the distance via Apriori/tf--idf. HospitAI engineers such history into single-valued flags and counts instead \\
+
+José-García et al.~\cite{josegarcia2022} \newline (multi-view MVMC) &
+Mixed (per view) &
+Avoids early integration. Consensus clusters across views &
+Costly evolutionary search yielding a Pareto set of partitions. HospitAI produces one prototype-based partition from a single combined distance \\
+\end{xltabular}
+\endgroup
+
+Across these papers the same lesson recurs: clinical data is heterogeneous, and native mixed-type clustering, which HospitAI performs with K-Prototypes, fits it better than forcing every attribute onto one numeric scale.
+What a clustering cannot show, though, is the order in which a patient's clinical events unfold. A cluster is a snapshot of who a patient is, not a timeline of what happened to them.
+Reading care as a sequence over time is the job of the methods in the next section.
+
+\subsection{Sequential Pattern Mining Methods}\label{sec:rw_sequences}
+
+While clustering helps us understand \emph{who} our patients are at a particular time point, it is incapable of conveying the \emph{sequence} in which these clinical events happen.
+The following five papers have been selected, ranging from visual analytics and efficiency studies to a pipeline that actually couples sequence mining with clustering.
+
+\paragraph{Perer et al. (2015).}
+Perer et al.~\cite{perer2015} build Care Pathway Explorer, a system that mines frequent sequences of clinical events from electronic medical records and lays them out in an interactive visual interface.
+Their miner is adapted to the awkward realities of EMR data: events that happen on the same day, events recorded at different levels of detail, and outcomes attached to a pathway. The discovered patterns are then shown in a combined overview-and-flow view.
+Applied to a group of hyperlipidemia patients, it surfaces care patterns that are useful and occasionally new to clinicians.
+HospitAI mines sequences for the same reason but differs in two ways that matter for this thesis.
+First, Care Pathway Explorer hands the discovered patterns to an experienced analyst, who reads them off the visualization by hand. HospitAI instead turns each pattern into a written clinical narrative automatically, so it does not need a trained analyst in front of a chart to become readable.
+Second, Care Pathway Explorer mines the whole cohort at once. HospitAI mines each patient cluster separately, and the outlier group on its own, so a rare but expensive pathway confined to one small group is not drowned out by the majority.
+
+\paragraph{Edman (2018).}
+Edman's work~\cite{edman2018} is about efficiency: can clinical-pathway sequences be mined at a lower support threshold, so that rarer patterns come into view?
+In earlier work the author had used PrefixSpan, the same family of algorithm as HospitAI. But PrefixSpan was too slow to run at the low support levels needed, so the expected pathways could only be partly confirmed.
+The remedy here is CSpan, reported to be about two orders of magnitude faster, which does reach those lower thresholds.
+The important finding is a negative one: pushing the threshold down and mining many more patterns did not improve their quality by much.
+That result is part of the motivation behind HospitAI's design. Mining more sequences is not the goal in itself. What decides whether the output is useful is what happens to the patterns afterwards: how they are ranked, filtered, scoped to the right patients, and explained.
+HospitAI therefore spends its effort not on squeezing out ever-rarer patterns, but on ranking the ones it finds by a statistical interestingness score and turning them into readable narratives.
+
+\paragraph{Botas (2019).}
+Botas~\cite{botas2019} mines a national e-prescription database, using a case study on anticoagulants.
+The work combines two families of pattern mining. Association rules, via Apriori and FP-Growth, find drugs that co-occur. Sequential pattern mining, via PrefixSpan, finds the order in which prescriptions follow one another.
+The raw patterns are not taken at face value. They are scored with a battery of measures for how interesting, novel, and semantically meaningful they are, and the results are broken down along fixed axes such as age group, gender, and health district.
+HospitAI is close to this work in two respects: it also uses PrefixSpan, and it also ranks patterns by interestingness rather than raw frequency. But it differs in structure.
+Botas mines a single type of event, drug prescriptions. HospitAI mines four types together, conditions, medications, procedures, and careplans, so a pattern can cross from a diagnosis to a treatment to a procedure.
+Botas also slices results along predefined demographic strata. HospitAI instead mines within clusters it has learned from the data. It then applies closed-pattern selection, a geometric-mean-lift interestingness score, and a Jaccard overlap filter, all described in Chapter~\ref{ch:analysis}, to keep the surviving patterns distinct rather than near-duplicates.
+
+\paragraph{Baudrier et al. (2022).}
+Baudrier et al.~\cite{baudrier2022} take the step this thesis cares about most: they explicitly combine clustering with sequence mining.
+They work on a French medico-administrative dataset of kidney-cancer patients on oral anticancer therapy.
+First they mine each patient's healthcare-utilization sequence with the CP-SPAM algorithm. Then they run hierarchical clustering on the principal components of those mined sequences, ending with three groups that differ markedly in mortality and resource use.
+Of all the works reviewed here, this pipeline is the closest to HospitAI's idea of cluster-scoped pathway analytics.
+The differences are in the order of operations and in how the patterns are handled.
+Baudrier et al. mine first and cluster afterwards, so their clusters are groups of similar sequences. HospitAI clusters patients first and then mines each cluster, so the sequences are read within an already-established patient phenotype.
+Baudrier et al. also keep every mined pattern without a statistical interestingness ranking, and their sequences are read by domain experts by hand. HospitAI ranks patterns by geometric mean lift and generates their interpretation automatically.
+
+\paragraph{Najjar et al.~(2018)}
+The pipeline by Najjar et al.~\cite{najjar2018} is, in overall shape, the closest of all to HospitAI.
+It clusters heterogeneous clinical visits with K-Prototypes, sharing this thesis's commitment to native mixed-type clustering. It then assembles the resulting clusters into treatment pathways and clusters those pathways again to find common trajectories, all evaluated on a real cohort of elderly heart-failure patients.
+Two differences remain central.
+Najjar et al. model the time dimension with Hidden Markov Models, which produce probabilistic transition matrices between hidden states. HospitAI instead produces explicit sequences of actual clinical events, ranked by support and interestingness. A clinician can read one directly as ``this, then this, then this'' rather than as a state-transition probability.
+Najjar et al. also stop at the mined models, leaving a clinician to interpret them. HospitAI passes each pattern through a constraint-based language-model verbalizer that writes the interpretation.
+These two gaps, explicit ranked sequences and automatic verbalization, are what the mining and language-model components of HospitAI are built to fill.
+
+\medskip
+Table~\ref{tab:ch3_sequences} contrasts the five sequence-mining works along the algorithm they use, the scope over which they mine, and their limitations relative to HospitAI.
+
+\begingroup
+\footnotesize
+\renewcommand{\arraystretch}{1.3}
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.7cm} >{\raggedright\arraybackslash\hsize=0.75\hsize}X >{\raggedright\arraybackslash\hsize=1.05\hsize}X >{\raggedright\arraybackslash\hsize=1.20\hsize}X@{}}
+\toprule
+\textbf{Reference (algorithm)} & \textbf{Mining scope} & \textbf{Advantages} & \textbf{Limitations (vs.\ HospitAI)} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{4}{r}{\footnotesize\itshape continued on next page}\\
+\endfoot
+\bottomrule
+\caption{Comparison of the reviewed sequential-pattern-mining methods.}\label{tab:ch3_sequences}\\
+\endlastfoot
+Perer et al.~\cite{perer2015} \newline (frequent sequence mining) &
+Whole cohort &
+EMR-aware mining. Rich interactive visual analytics &
+Visual reading needed. No phenotype scope. No automation of narrative \\
+
+Edman~\cite{edman2018} \newline (CSpan vs.\ PrefixSpan) &
+Whole cohort &
+More efficient mining. Achieves lower support limits &
+Efficiency only. Lower support improved output little. No re-ranking, scope or interpretation \\
+
+Botas~\cite{botas2019} \newline (Apriori, FP-Growth, PrefixSpan) &
+Pre-defined demographic segments &
+Combines rules and sequences. Thorough interestingness assessment &
+One event type (medications). Segments fixed, not learned. No cluster conditioning or LLM \\
+
+Baudrier et al.~\cite{baudrier2022} \newline (CP-SPAM + HCPC) &
+Post-analysis trajectory clusters &
+Couples clustering with mining. Outcome-related groups &
+Clustering follows mining. No interestingness re-ranking. Manual interpretation \\
+
+Najjar et al.~\cite{najjar2018} \newline (K-Prototypes + HMM) &
+Per visit-cluster &
+Full two-step pipeline on mixed data. Closest overall shape &
+Probabilistic HMM rather than explicit ranked sequences. Interpretation left to clinicians \\
+\end{xltabular}
+\endgroup
+
+All components of HospitAI's second pillar already exist in the literature, though not combined in the form this thesis proposes: mining based on learned phenotypes, ranking patterns by their statistical interestingness, and, above all, a way to connect mined sequences automatically into a story a clinician can read.
+That is the topic of the third pillar.
+
+\section{Large Language Models and Prompt Engineering in Health Care}\label{sec:rw_llm}
+
+The third pillar of HospitAI is about translation. The clustering and mining stages output raw numbers, and those numbers must become language a clinician can read. In the other direction, a clinician's plain-language question must become a safe database query.
+The two references here cover, in turn, prompt engineering and a responsible-deployment framework.
+
+\paragraph{Liu et al. (2025).}
+Liu et al.~\cite{liu2025} offer a tutorial on prompt engineering aimed at clinicians who are not NLP specialists.
+Their premise is that with models like the GPT series the quality of the answer depends heavily on the quality of the prompt. Small changes in wording can produce very different outputs, and in a medical context that is a safety problem, not just an inconvenience.
+The tutorial works through the main techniques: zero-, one-, and few-shot prompting, chain-of-thought, self-consistency, and meta-prompting. It adds practical advice on stating objectives clearly and refining a prompt step by step, always with an eye on limiting hallucinations and protecting patients.
+HospitAI puts these principles to work directly. Its cluster- and sequence-interpretation prompts state an explicit objective and require every claim to be grounded in the numbers provided. They anchor risks and recommendations to recognized clinical guidelines, for example ADA for diabetes or ACC/AHA for hypertension. They also carry bias-mitigation instructions and reason through the case in internal chain-of-thought steps that stay out of the final answer.
+Where the tutorial stops is at free-text clinical interaction. It does not cover how to interpret structured machine-learning output, or how to turn a natural-language question into a safe database query. That is exactly what HospitAI adds, through deterministic control graphs and read-only SQL filters.
+
+\paragraph{Al-Garadi et al. (2024).}
+Al-Garadi et al.~\cite{algaradi2024} give a broad review of how large language models are being used in healthcare and, more useful for this thesis, a framework for deploying them responsibly.
+They survey the ways an LLM is adapted to a specific task: fine-tuning, prompt engineering, and multimodal adaptation to EHR data. The whole effort is organized into a five-stage lifecycle, running from planning to maintenance.
+The framework rests on general principles: accountability, privacy, fairness, interpretability, keeping a clinician in the loop, and preventing hallucinations.
+Several of these map onto concrete mechanisms in HospitAI. Hallucination prevention corresponds to the deterministic, read-only SQL filter that every generated query must pass through. Keeping a clinician in the loop corresponds to HospitAI's framing of its output as decision support to be verified, not a diagnosis to be trusted.
+Being a review, though, the article stops at principles. It does not provide a working pipeline that connects the output of an unsupervised model to an LLM and a natural-language query interface. That is the gap HospitAI's third pillar fills.
+
+\medskip
+Table~\ref{tab:ch3_llm} compares the two LLM-related works along their focus and their treatment of structured data and safety guardrails.
+
+\begingroup
+\footnotesize
+\renewcommand{\arraystretch}{1.3}
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.7cm} >{\raggedright\arraybackslash\hsize=0.95\hsize}X >{\raggedright\arraybackslash\hsize=0.95\hsize}X >{\raggedright\arraybackslash\hsize=1.10\hsize}X@{}}
+\toprule
+\textbf{Reference} & \textbf{Focus} & \textbf{Advantages} & \textbf{Limitations (vs.\ HospitAI)} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{4}{r}{\footnotesize\itshape continued on next page}\\
+\endfoot
+\bottomrule
+\caption{Comparison of the reviewed LLM and prompt-engineering works.}\label{tab:ch3_llm}\\
+\endlastfoot
+Liu et al.~\cite{liu2025} &
+Tutorial on prompting for clinicians &
+Unified methods. Focus on hallucinations and safety &
+Controls free text only. Does not address structured ML output. No query control \\
+
+Al-Garadi et al.~\cite{algaradi2024} &
+Review and responsibility framework &
+End-to-end lifecycle. Accountability, fairness, clinician involvement &
+Guidance only. No structured-ML-to-LLM pipeline or NL querying \\
+\end{xltabular}
+\endgroup
+
+\section{Conclusions}\label{sec:rw_synthesis}
+
+The discussion of the three pillars leads to one observation.
+The present body of literature solves each task well on its own, but none of the frameworks under review connect structured data mining to automated, guardrail-based interpretation of the resulting medical conclusions.
+The clustering papers end with the clustering itself and the interpretation of results is left for human specialists. The pathway-mining papers provide sequences either without considering learned phenotypes or without re-ranking the results using a statistical interestingness metric. And the LLM papers control the generation of free-form interactions or predict outcomes without linking to the results of unsupervised interpretable pipelines.
+A single overall comparison matrix is deliberately avoided, since a clustering algorithm and a prompt-engineering paper cannot be judged by the same criteria. Still, read together, the per-section tables all point to the same conclusion: the gap is not inside each pillar, but between them.
+
+That gap is what HospitAI addresses, and it is why the platform exists.
+The thesis does not introduce a new clustering algorithm or sequence miner. Its contribution is integration. It brings native mixed-type clustering, constrained sequence mining, and statistically re-ranked, constraint-based LLM interpretation into one platform, where each component feeds the next. The final patient-facing layer is generated automatically and is safe by design.
+The theoretical framework of these components is established in Chapter~\ref{ch:analysis}, while their practical implementation is detailed in Chapter~\ref{ch:design}.

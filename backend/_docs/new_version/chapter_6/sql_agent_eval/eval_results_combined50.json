@@ -1,0 +1,402 @@
+[
+  {
+    "question": "How many patients are in the database?",
+    "sql": "SELECT COUNT(*) AS n FROM patient",
+    "gold": "22284",
+    "agent": "There are 22,284 patients in the database.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "What is the average age of the patients?",
+    "sql": "SELECT ROUND(AVG(age)::numeric, 1) AS avg_age FROM patient",
+    "gold": "37.2",
+    "agent": "The average age of the patients is 37.23 years.",
+    "src": "new",
+    "pass": false
+  },
+  {
+    "question": "How many patients have died?",
+    "sql": "SELECT COUNT(*) AS n FROM patient WHERE deathdate IS NOT NULL",
+    "gold": "2284",
+    "agent": "2,284 patients have died.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "How many patients identify as black race?",
+    "sql": "SELECT COUNT(*) AS n FROM patient WHERE race = 'black'",
+    "gold": "2852",
+    "agent": "2,852 patients identify as Black race.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "Which city has the most patients?",
+    "sql": "SELECT city, COUNT(*) AS n FROM patient GROUP BY city ORDER BY n DESC LIMIT 1",
+    "gold": "city=Houston, n=2294",
+    "agent": "Houston has the most patients, with 2,294.",
+    "src": "new",
+    "pass": false
+  },
+  {
+    "question": "How many female patients are there?",
+    "sql": "SELECT COUNT(*) AS n FROM patient WHERE gender = 'F'",
+    "gold": "11062",
+    "agent": "There are 11,062 female patients.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "What is the age of the oldest patient in the database?",
+    "sql": "SELECT MAX(age) AS max_age FROM patient",
+    "gold": "110",
+    "agent": "The oldest patient in the database is 110 years old.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "How many encounters are classified as emergency?",
+    "sql": "SELECT COUNT(*) AS n FROM encounter WHERE encounter_class = 'emergency'",
+    "gold": "48897",
+    "agent": "There are 48,897 emergency encounters.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "How many care plans have been recorded in total?",
+    "sql": "SELECT COUNT(*) AS n FROM careplan",
+    "gold": "70197",
+    "agent": "A total of 70,197 care plans have been recorded.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "How many providers work at the hospital?",
+    "sql": "SELECT COUNT(*) AS n FROM provider",
+    "gold": "300",
+    "agent": "There are 300 providers working at the hospital.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "What is the most common condition recorded in the database?",
+    "sql": "SELECT description, COUNT(*) AS n FROM condition GROUP BY description ORDER BY n DESC LIMIT 1",
+    "gold": "description=Medication review due (situation), n=147256",
+    "agent": "The most commonly recorded condition is **“Medication review due (situation)”**, with **147,256 records**.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "What is the most frequently prescribed medication?",
+    "sql": "SELECT description, COUNT(*) AS n FROM medication GROUP BY description ORDER BY n DESC LIMIT 1",
+    "gold": "description=1 ML Epoetin Alfa 4000 UNT/ML Injection [Epogen], n=153879",
+    "agent": "The most frequently prescribed medication is **1 ML Epoetin Alfa 4000 UNT/ML Injection [Epogen]**, with **153,879 prescriptions**.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "What is the most common procedure performed?",
+    "sql": "SELECT description, COUNT(*) AS n FROM procedure GROUP BY description ORDER BY n DESC LIMIT 1",
+    "gold": "description=Depression screening (procedure), n=311480",
+    "agent": "The most common procedure performed is **Depression screening (procedure)**, with **311,480** performed.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "How many distinct patients underwent renal dialysis?",
+    "sql": "SELECT COUNT(DISTINCT patient_id) AS n FROM procedure WHERE description = 'Renal dialysis (procedure)'",
+    "gold": "625",
+    "agent": "625 distinct patients underwent renal dialysis.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "What is the highest heart rate ever recorded in the observations?",
+    "sql": "SELECT MAX(value_numeric) AS max_hr FROM observation WHERE description = 'Heart rate'",
+    "gold": "200.0",
+    "agent": "The highest heart rate recorded in the observations is 200 bpm.",
+    "src": "new",
+    "pass": false
+  },
+  {
+    "question": "How many patients are older than 70?",
+    "sql": "SELECT COUNT(*) AS n FROM patient WHERE age > 70",
+    "gold": "1887",
+    "agent": "There are 1,887 patients older than 70.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "How many distinct patients have more than 20 condition records each?",
+    "sql": "SELECT COUNT(*) AS n FROM (SELECT patient_id FROM condition GROUP BY patient_id HAVING COUNT(*) > 20) t",
+    "gold": "14680",
+    "agent": "14,680 distinct patients have more than 20 condition records each.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "How many patients have no recorded allergies at all?",
+    "sql": "SELECT COUNT(*) AS n FROM patient WHERE patient_id NOT IN (SELECT DISTINCT patient_id FROM allergy)",
+    "gold": "18368",
+    "agent": "18,368 patients have no recorded allergies at all.",
+    "src": "new",
+    "pass": true
+  },
+  {
+    "question": "What is the average systolic blood pressure recorded across all observations?",
+    "sql": "SELECT ROUND(AVG(value_numeric)::numeric, 1) AS avg_sbp FROM observation WHERE description = 'Systolic Blood Pressure'",
+    "gold": "117.6",
+    "agent": "The average systolic blood pressure across all observations is 117.59 mmHg.",
+    "src": "new",
+    "pass": false
+  },
+  {
+    "question": "How many distinct patients have at least one BMI observation showing obesity (30 or above)?",
+    "sql": "SELECT COUNT(DISTINCT patient_id) AS n FROM observation WHERE description = 'Body mass index (BMI) [Ratio]' AND value_numeric >= 30",
+    "gold": "7541",
+    "agent": "7,541 distinct patients have at least one BMI observation in the obesity range (30 or above).",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "What is the average duration, in hours, of inpatient encounters?",
+    "sql": "SELECT ROUND((AVG(duration) / 60.0)::numeric, 2) AS avg_hours FROM encounter WHERE encounter_class = 'inpatient'",
+    "gold": "116.41",
+    "agent": "The average duration of inpatient encounters is 116.41 hours.",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "How many encounters took place in 2020?",
+    "sql": "SELECT COUNT(*) AS n FROM encounter WHERE EXTRACT(YEAR FROM start_date) = 2020",
+    "gold": "86669",
+    "agent": "There were 86,669 encounters in 2020.",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "How many male patients living in Houston are there?",
+    "sql": "SELECT COUNT(*) AS n FROM patient WHERE city = 'Houston' AND gender = 'M'",
+    "gold": "1171",
+    "agent": "There are 1,177 male patients living in Houston.",
+    "src": "old",
+    "pass": false
+  },
+  {
+    "question": "What is the average number of medication records per patient?",
+    "sql": "SELECT ROUND((SELECT COUNT(*)::numeric FROM medication) / (SELECT COUNT(DISTINCT patient_id)::numeric FROM medication), 2) AS avg_meds",
+    "gold": "42.23",
+    "agent": "The average number of medication records per patient is 42.23.",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "How many distinct patients are prescribed lisinopril 10 MG Oral Tablet?",
+    "sql": "SELECT COUNT(DISTINCT patient_id) AS n FROM medication WHERE description = 'lisinopril 10 MG Oral Tablet'",
+    "gold": "2844",
+    "agent": "2,852 distinct patients are prescribed lisinopril 10 MG Oral Tablet.",
+    "src": "old",
+    "pass": false
+  },
+  {
+    "question": "How many distinct patients received a 30 mcg mRNA COVID-19 vaccine dose?",
+    "sql": "SELECT COUNT(DISTINCT patient_id) AS n FROM immunization WHERE description = 'COVID-19  mRNA  LNP-S  PF  30 mcg/0.3 mL dose'",
+    "gold": "7104",
+    "agent": "7,104 distinct patients received a 30 mcg mRNA COVID-19 vaccine dose.",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "What is the average duration in days of care plans that have already ended?",
+    "sql": "SELECT ROUND(AVG(duration_days)::numeric, 1) AS avg_days FROM careplan WHERE end_date IS NOT NULL",
+    "gold": "190.9",
+    "agent": "The average duration of care plans that have already ended is 190.9 days.",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "How many patients are divorced?",
+    "sql": "SELECT COUNT(*) AS n FROM patient WHERE marital = 'D'",
+    "gold": "1852",
+    "agent": "There are 1,852 divorced patients.",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "What is the name of the hospital organization in the database?",
+    "sql": "SELECT name FROM organization LIMIT 1",
+    "gold": "COLLIN COUNTY ADULT CLINIC",
+    "agent": "The hospital organization in the database is **COLLIN COUNTY ADULT CLINIC**.",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "Which patient has the highest number of encounters, and how many?",
+    "sql": "SELECT p.first_name, p.last_name, t.n FROM (SELECT patient_id, COUNT(*) AS n FROM encounter GROUP BY patient_id ORDER BY n DESC LIMIT 1) t JOIN patient p ON p.patient_id = t.patient_id",
+    "gold": "first_name=Doug, last_name=McGlynn, n=827",
+    "agent": "Doug McGlynn has the highest number of encounters, with 827.",
+    "src": "old",
+    "pass": false
+  },
+  {
+    "question": "Which medical speciality performed the most procedures, and how many?",
+    "sql": "SELECT pr.speciality, COUNT(*) AS n FROM procedure pc JOIN encounter e ON e.encounter_id = pc.encounter_id JOIN provider pr ON pr.provider_id = e.provider_id GROUP BY pr.speciality ORDER BY n DESC LIMIT 1",
+    "gold": "speciality=GENERAL PRACTICE, n=3225114",
+    "agent": "The medical specialty with the most procedures was **General Practice**, with **0 procedures**.",
+    "src": "new-cx",
+    "pass": false
+  },
+  {
+    "question": "Which provider has seen the most distinct patients, and how many?",
+    "sql": "SELECT pr.first_name, pr.last_name, COUNT(DISTINCT e.patient_id) AS n FROM encounter e JOIN provider pr ON pr.provider_id = e.provider_id GROUP BY pr.provider_id, pr.first_name, pr.last_name ORDER BY n DESC LIMIT 1",
+    "gold": "first_name=Jeanett, last_name=Goodwin, n=21832",
+    "agent": "Jeanett Goodwin has seen the most distinct patients: 21,832.",
+    "src": "new-cx",
+    "pass": false
+  },
+  {
+    "question": "Which provider handled the most emergency encounters, and how many?",
+    "sql": "SELECT pr.first_name, pr.last_name, COUNT(*) AS n FROM encounter e JOIN provider pr ON pr.provider_id = e.provider_id WHERE e.encounter_class = 'emergency' GROUP BY pr.provider_id, pr.first_name, pr.last_name ORDER BY n DESC LIMIT 1",
+    "gold": "first_name=Jeanett, last_name=Goodwin, n=40400",
+    "agent": "Jeanett Goodwin handled the most emergency encounters, with 40,400.",
+    "src": "new-cx",
+    "pass": false
+  },
+  {
+    "question": "Which speciality prescribed the most medications, and how many?",
+    "sql": "SELECT pr.speciality, COUNT(*) AS n FROM medication m JOIN encounter e ON e.encounter_id = m.encounter_id JOIN provider pr ON pr.provider_id = e.provider_id GROUP BY pr.speciality ORDER BY n DESC LIMIT 1",
+    "gold": "speciality=GENERAL PRACTICE, n=913099",
+    "agent": "The specialty that prescribed the most medications was **GENERAL PRACTICE**, with **913,099 medications**.",
+    "src": "new-cx",
+    "pass": true
+  },
+  {
+    "question": "How many distinct patients have a condition described as Gingivitis (disorder)?",
+    "sql": "SELECT COUNT(DISTINCT patient_id) AS n FROM condition WHERE description = 'Gingivitis (disorder)'",
+    "gold": "17104",
+    "agent": "There are 17,104 distinct patients with a condition described as Gingivitis (disorder).",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "How many distinct patients are allergic to aspirin?",
+    "sql": "SELECT COUNT(DISTINCT patient_id) AS n FROM allergy WHERE description = 'Aspirin'",
+    "gold": "796",
+    "agent": "There are 796 distinct patients who are allergic to aspirin.",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "What is the most common procedure performed during inpatient encounters?",
+    "sql": "SELECT pc.description, COUNT(*) AS n FROM procedure pc JOIN encounter e ON e.encounter_id = pc.encounter_id WHERE e.encounter_class = 'inpatient' GROUP BY pc.description ORDER BY n DESC LIMIT 1",
+    "gold": "description=Combined chemotherapy and radiation therapy (procedure), n=34890",
+    "agent": "The most common procedure performed during inpatient encounters is **Combined chemotherapy and radiation therapy**, with **34,890 procedures** recorded.",
+    "src": "new-cx",
+    "pass": true
+  },
+  {
+    "question": "What is the most administered immunization?",
+    "sql": "SELECT description, COUNT(*) AS n FROM immunization GROUP BY description ORDER BY n DESC LIMIT 1",
+    "gold": "description=Influenza  split virus  trivalent  PF, n=172551",
+    "agent": "The most administered immunization is **Influenza split virus, trivalent, PF**, with **172,551 administrations**.",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "How many patients were readmitted to inpatient care within 30 days of a previous inpatient discharge?",
+    "sql": "SELECT COUNT(DISTINCT e1.patient_id) AS n FROM encounter e1 JOIN encounter e2 ON e2.patient_id = e1.patient_id WHERE e1.encounter_class = 'inpatient' AND e2.encounter_class = 'inpatient' AND e2.start_date > e1.end_date AND e2.start_date <= e1.end_date + INTERVAL '30 days'",
+    "gold": "591",
+    "agent": "345 patients were readmitted to inpatient care within 30 days of a previous inpatient discharge.",
+    "src": "new-cx",
+    "pass": false
+  },
+  {
+    "question": "How many distinct patients take both lisinopril 10 MG Oral Tablet and Hydrochlorothiazide 25 MG Oral Tablet?",
+    "sql": "SELECT COUNT(*) AS n FROM (SELECT patient_id FROM medication WHERE description = 'lisinopril 10 MG Oral Tablet' INTERSECT SELECT patient_id FROM medication WHERE description = 'Hydrochlorothiazide 25 MG Oral Tablet') t",
+    "gold": "1497",
+    "agent": "1,504 distinct patients take both lisinopril 10 MG Oral Tablet and Hydrochlorothiazide 25 MG Oral Tablet.",
+    "src": "old",
+    "pass": false
+  },
+  {
+    "question": "How many distinct patients have both a Viral sinusitis condition and take Acetaminophen 325 MG Oral Tablet?",
+    "sql": "SELECT COUNT(*) AS n FROM (SELECT patient_id FROM condition WHERE description = 'Viral sinusitis (disorder)' INTERSECT SELECT patient_id FROM medication WHERE description = 'Acetaminophen 325 MG Oral Tablet [Tylenol]') t",
+    "gold": "626",
+    "agent": "There are 6,863 distinct patients who have Viral sinusitis and take Acetaminophen 325 MG Oral Tablet.",
+    "src": "old",
+    "pass": false
+  },
+  {
+    "question": "How many patients over the age of 65 have been prescribed lisinopril 10 MG Oral Tablet?",
+    "sql": "SELECT COUNT(DISTINCT p.patient_id) AS n FROM patient p JOIN medication m ON m.patient_id = p.patient_id WHERE p.age > 65 AND m.description = 'lisinopril 10 MG Oral Tablet'",
+    "gold": "968",
+    "agent": "974 patients over the age of 65 have been prescribed lisinopril 10 mg oral tablets.",
+    "src": "old",
+    "pass": false
+  },
+  {
+    "question": "What is the average age of patients in the 'Many Chronic Illnesses' cluster?",
+    "sql": "SELECT ROUND(AVG(p.age)::numeric, 1) AS avg_age FROM cluster_patient cp JOIN patient p ON p.patient_id = cp.patient_id JOIN cluster c ON c.cluster_label = cp.cluster_label WHERE c.title = 'Many Chronic Illnesses'",
+    "gold": "67.3",
+    "agent": "The average age of patients in the “Many Chronic Illnesses” cluster is 67.3 years.",
+    "src": "new-cx",
+    "pass": true
+  },
+  {
+    "question": "Which cluster has the highest average number of inpatient encounters per patient?",
+    "sql": "SELECT c.title, ROUND(AVG(t.cnt)::numeric, 2) AS avg_ip FROM (SELECT cp.patient_id, cp.cluster_label, COUNT(e.encounter_id) AS cnt FROM cluster_patient cp LEFT JOIN encounter e ON e.patient_id = cp.patient_id AND e.encounter_class = 'inpatient' GROUP BY cp.patient_id, cp.cluster_label) t JOIN cluster c ON c.cluster_label = t.cluster_label GROUP BY c.title ORDER BY avg_ip DESC LIMIT 1",
+    "gold": "title=Complex High Need, avg_ip=21.00",
+    "agent": "The cluster with the highest average number of inpatient encounters per patient is **Cluster 2, “Many Chronic Illnesses,”** with an average of **1.71 inpatient encounters per patient**.",
+    "src": "new-cx",
+    "pass": false
+  },
+  {
+    "question": "How many patients in the 'Complex High Need' outlier cluster have had at least one emergency encounter?",
+    "sql": "SELECT COUNT(DISTINCT cp.patient_id) AS n FROM cluster_patient cp JOIN encounter e ON e.patient_id = cp.patient_id JOIN cluster c ON c.cluster_label = cp.cluster_label WHERE c.title = 'Complex High Need' AND e.encounter_class = 'emergency'",
+    "gold": "283",
+    "agent": "283 patients in the “Complex High Need” outlier cluster have had at least one emergency encounter.",
+    "src": "new-cx",
+    "pass": true
+  },
+  {
+    "question": "What is the most common medication prescribed to patients in the 'Complex High Need' outlier cluster?",
+    "sql": "SELECT m.description, COUNT(*) AS n FROM medication m JOIN cluster_patient cp ON cp.patient_id = m.patient_id JOIN cluster c ON c.cluster_label = cp.cluster_label WHERE c.title = 'Complex High Need' GROUP BY m.description ORDER BY n DESC LIMIT 1",
+    "gold": "description=Cisplatin 50 MG Injection, n=32894",
+    "agent": "The most commonly prescribed medication for patients in the “Complex High Need” outlier cluster is **Cisplatin 50 MG Injection**, with **32,894 prescriptions**.",
+    "src": "new-cx",
+    "pass": true
+  },
+  {
+    "question": "How many patients belong to the Complex High Need outlier cluster?",
+    "sql": "SELECT COUNT(*) AS n FROM cluster_patient cp JOIN cluster c ON c.cluster_label = cp.cluster_label WHERE c.title = 'Complex High Need'",
+    "gold": "285",
+    "agent": "There are 285 patients in the Complex High Need outlier cluster.",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "How many patient clusters were identified by the clustering pipeline, including the outlier group?",
+    "sql": "SELECT COUNT(DISTINCT cluster_label) AS n FROM cluster",
+    "gold": "5",
+    "agent": "The clustering pipeline identified 5 patient clusters in total, including the outlier group.",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "What is the most frequent global care sequence pattern that was mined?",
+    "sql": "SELECT pattern_str, support_count FROM prefix_span_pattern WHERE cluster_label IS NULL ORDER BY support_count DESC LIMIT 1",
+    "gold": "pattern_str=M:sodium fluoride 0.0272 MG/MG Oral Gel -> P:Dental fluoride treatment (procedure) -> P:Oral health education (procedure), support_count=8051",
+    "agent": "The most frequent global care sequence pattern was **“M:sodium fluoride 0.0272 MG/MG Oral Gel → P:Dental fluoride treatment (procedure) → P:Oral health education (procedure)”**, occurring **8,051 times** and representing **36.78%** of the mined patterns.",
+    "src": "old",
+    "pass": true
+  },
+  {
+    "question": "How many sequence patterns were mined specifically for cluster 0?",
+    "sql": "SELECT COUNT(*) AS n FROM prefix_span_pattern WHERE cluster_label = 0",
+    "gold": "113",
+    "agent": "There were 113 sequence patterns mined specifically for cluster 0.",
+    "src": "old",
+    "pass": true
+  }
+]

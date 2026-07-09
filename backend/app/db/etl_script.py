@@ -522,4 +522,5 @@ def run_etl(engine):
     _refresh_observation_views(engine)
 
 
-run_etl(db_engine)
+if __name__ == "__main__":
+    run_etl(db_engine)

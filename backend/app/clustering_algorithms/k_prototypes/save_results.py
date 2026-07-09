@@ -24,6 +24,8 @@ def save_cluster_results(
     pca_image_bytes: bytes | None = None,
     extra_feature_cols: list[str] | None = None,
 ) -> None:
+    run_timestamp = datetime.now()
+
     db.execute(text("DELETE FROM cluster_patient"))
     db.execute(text("DELETE FROM cluster"))
     db.execute(text("TRUNCATE cluster_meta RESTART IDENTITY"))
@@ -39,7 +41,7 @@ def save_cluster_results(
         """),
         {
             "id": 1,
-            "created_at": datetime.now(),
+            "created_at": run_timestamp,
             "algorithm": algorithm,
             "n_clusters": n_clusters,
             "n_patients": len(df_clustered),
@@ -101,10 +103,12 @@ def save_cluster_results(
     parsed = _deduped
 
     if parsed:
+        for row in parsed:
+            row["created_at"] = run_timestamp
         db.execute(
             text("""
-                INSERT INTO cluster (cluster_label, color, title, description, insight, recommendation)
-                VALUES (:cluster_label, :color, :title, :description, :insight, :recommendation)
+                INSERT INTO cluster (cluster_label, color, title, description, insight, recommendation, created_at)
+                VALUES (:cluster_label, :color, :title, :description, :insight, :recommendation, :created_at)
             """),
             parsed,
         )

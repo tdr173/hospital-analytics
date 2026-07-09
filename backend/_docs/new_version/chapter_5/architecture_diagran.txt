@@ -1,0 +1,71 @@
+@startuml system_architecture
+skinparam linetype ortho
+skinparam nodesep 45
+skinparam ranksep 55
+left to right direction
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam rectangle {
+  BorderColor #1F3B73
+  BorderThickness 1.5
+  FontColor #101828
+}
+skinparam database {
+  BorderColor #1F3B73
+  BorderThickness 1.5
+}
+skinparam ArrowColor #B3005E
+skinparam ArrowThickness 1.4
+skinparam ArrowFontColor #7A0040
+
+actor "Manager" as manager
+actor "Doctor"  as doctor
+actor "Patient" as patient
+
+rectangle "FRONTEND COMPONENT" as FE #EAF0FB {
+  rectangle "COMMON COMPONENTS  (all roles)\n---\n- Demo sign-in (role select)\n- Home dashboard\n- Ask AI (role-scoped SQL chat)\n- Role-gated navigation\n- Redux store" as fe_common #FDE7F1
+  rectangle "MANAGER & DOCTOR COMPONENTS\n---\n- Clusters dashboard\n- Sequences dashboard\n- Patient management\n- Encounter management\n- Provider directory" as fe_md #FDE7F1
+  rectangle "MANAGER-ONLY COMPONENTS\n---\n- Statistics dashboard\n- Pipeline management" as fe_manager #FDE7F1
+  rectangle "PATIENT COMPONENTS\n---\n- Own medical record & encounters" as fe_patient #FDE7F1
+  fe_common  -[hidden]down- fe_md
+  fe_md      -[hidden]down- fe_manager
+  fe_manager -[hidden]down- fe_patient
+}
+
+rectangle "BACKEND COMPONENT  (single FastAPI process)" as BE #EAF0FB {
+  rectangle "REST API\napi/ routers" as be_api #DCEAF7
+  rectangle "Service layer\nservice/" as be_service #DCEAF7
+  rectangle "Repository layer\nrepository/" as be_repo #DCEAF7
+  rectangle "Domain\n---\n- Models (SQLModel)\n- Schemas (Pydantic)" as be_domain #DCEAF7
+  rectangle "Analytics Pipeline\n---\n- ETL ingestion\n- K-Prototypes clustering\n- PrefixSpan sequence mining\n- AI interpretation" as be_pipeline #E7F5EA
+  rectangle "LLM SQL Agent\nLangGraph\n---\n- NL to safe read-only SQL\n- role-scoped queries" as be_agent #E7F5EA
+  rectangle "Scheduler\n---\n- APScheduler monthly cron\n- daemon threads" as be_sched #E7F5EA
+}
+
+database "HOSPITAL DATABASE\n---\nRaw relations (11 + junction)\nAnalytics relations (6)\nMaterialized views" as DB #EAF0FB
+
+rectangle "EXTERNAL SERVICES\n---\nSynthea Generator\nGoogle Gemini\nOpenAI" as EXT #F3F0FA
+
+manager --> FE
+doctor  --> FE
+patient --> FE
+
+FE --> be_api : HTTPS / REST
+
+be_api     --> be_service
+be_service --> be_repo
+be_repo    --> be_domain
+be_repo    --> DB : SQL (SQLAlchemy pool)
+be_service ..> be_pipeline
+be_service ..> be_agent
+be_sched   ..> be_pipeline
+
+be_pipeline --> DB      : read raw / write analytics
+be_pipeline --> EXT     : cluster narratives (Gemini)
+be_agent    --> EXT     : LLM calls
+EXT         ..> be_pipeline : CSV export (ETL)
+
+@enduml

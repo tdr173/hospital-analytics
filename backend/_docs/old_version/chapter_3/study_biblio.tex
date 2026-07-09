@@ -1,0 +1,86 @@
+\chapter{Bibliographic Research}\label{ch:research}
+
+\pagestyle{fancy}
+
+This chapter consists of a literature review and analysis of the current state-of-the-art in EHR analytics, patient clustering and clinical sequence mining. This literature review aims at studying how the current methodologies stratify patients, identify clinical paths and interpret the corresponding models, pointing out advantages and drawbacks of these methodologies compared to the proposed HospitAI platform. The literature review follows the organization of the three pillars of the analysis that form the HospitAI platform, namely population stratification by clustering, clinical path extraction via sequential pattern mining, and LLM-based interpretation and querying, which are described in detail in Chapter~\ref{ch:analysis}. For each work reviewed in this chapter, we outline the addressed problem, methodology used and the current gap in the solution offered compared to our proposed one.
+
+\section{Patient Clustering and Phenotyping Methodologies}\label{sec:rw_clustering}
+
+Unsupervised patient stratification by clustering into homogeneous phenotypes is an old and well-researched problem in healthcare analytics, where clustering is traditionally employed as the tool for solving it. Below, we present two papers representative of the most recent research trend in the field: the systematic comparison of clustering algorithms for EHRs and an applied patient clustering decision support system. Finally, the third paper, where patient clustering is coupled with pathways construction, presents the most similar pipeline to the one offered in this thesis.
+
+Aljohani \cite{aljohani2024} solves the challenge of choosing a suitable clustering algorithm for patient stratification on the basis of EHRs. In particular, the choice of algorithm is viewed as a multi-criteria decision-making task, and a benchmarking of eight popular clustering algorithms is carried out: K-Means, DBSCAN, hierarchical clustering, Mean Shift, Affinity Propagation, Spectral Clustering, Gaussian Mixture Models, and Self-Organizing Maps.
+
+The analysis of algorithms is based on a Fuzzy Technique for Order of Preference by Similarity to Ideal Solution (Fuzzy TOPSIS), based on the aggregation of expert opinions about a number of factors that characterize the performance of the considered algorithms, such as cluster quality measures, scalability, robustness, the shape and density of clusters, interpretation of results, and stability.
+
+The principal limitation of this work, with respect to the present thesis, is that every one of the eight evaluated algorithms operates natively only on numerical feature spaces. Clinical records, however, are intrinsically mixed: they combine continuous physiological measurements with categorical attributes such as diagnostic codes, drug classes, and gender. Consequently, when using these algorithms for the analysis of clinical information, we have to represent the categories as numerical attributes, which causes higher dimensionality and distortion effects outlined in Chapter~\ref{ch:analysis}. Additionally, the work is limited to the selection of an appropriate algorithm only, without considering any further processing step, like temporal pattern extraction or automated interpretation of the obtained clusters.
+
+Yang et al. \cite{yang2024} focus on practical applications, offering a smart healthcare system based on clustering analysis of medical data to study possible risks and tendencies among patient groups during a specified period of time. In this way, the developed system targets the needs of hospital administration, where the clusters can be used for comparing health characteristics between different patient populations, e.g., indigenous vs. non-indigenous, in terms of diseases, time, and numbers.
+
+This methodology combines the clustering analysis and evidence-based medicine to study the similarities and discrepancies between the identified clusters so as to obtain personalized medical services and help managers to make their decisions. From this perspective, it should be noted that the idea is similar to the concept of HospitAI because the outcome of the analysis is designed not only for statisticians but also for other members of the team.
+
+However, this stage of the process remains completely manual because the clustering analysis works with homogeneous numerical features. As a result, the clinical context remains unused and should be encoded manually, and the clusters are provided to the users in the form of static reports, which are interpreted through expert analysis. At the same time, there is no feature that allows the automatic interpretation of the outcomes or conversation with the machine about the results.
+
+The pipeline that is closest to the one presented in this thesis is the one by Najjar et al. \cite{najjar2018} which extracts patient care treatment pathways from administrative healthcare databases. Importantly, this paper has already utilized the K-Prototypes algorithm for clustering heterogeneous visits in clinical care, thus recognizing the necessity to cluster mixed numerical-categorical medical data in HospitAI. The generated clusters are then combined into treatment pathways that are further clustered to identify common pathways, and the methodology was tested using a real-world sample of heart-failure elderly patients.
+
+However, even this sophisticated pipeline still lacks two key elements which the current work aims at developing. First, temporal patterns in care are modeled via Hidden Markov Models instead of sequence mining, so the result is a probabilistic transition model as opposed to explicit sequences of clinical activities ranked according to their support. Second, interpretation of the results is not done automatically and is left for clinicians. There is no automated procedure for interpreting the results via the constraint-based verbalizer to get meaningful and clinically relevant summaries. These two issues lead to the need for sequential pattern mining and LLM interpretation pillars described in the following sections.
+
+\section{Sequential Pattern Mining in Clinical Pathways}\label{sec:rw_sequences}
+
+Although clustering analysis reveals who the patients are at a particular static time point, it fails to represent the order of clinical events. In this regard, the identification of recurring sequences of ordered events, or care pathways, forms the second key method in the research of this thesis. Both the following studies reflect current practices in the field since the first one uses care pathway mining and visualization directly from EMR data, while the second study combines sequence pattern mining with trajectory clustering, the weaknesses of which are exactly what HospitAI aims to improve.
+
+Perer et al. \cite{perer2015} develop a system named Care Pathway Explorer for the extraction of common event sequences from EMRs of patients and their visualization using interactive visual analytics.
+
+In terms of technical aspects, the system uses the adaptation of the frequent sequence mining algorithm in order to account for the features of EMR data: concurrence of events, several levels of granularity, context-awareness and outcome association. The resulting patterns are presented using the dedicated visual overview and flow interface, and the method is evaluated using a cohort of hyperlipidemic patients with pre-conditions of hypertension and diabetes, in which it is demonstrated that the discovered patterns reflect meaningful, and in certain cases previously unknown knowledge.
+
+There are two distinctions between this research and the proposed thesis. First, the patterns are discovered using visualization, which requires the manual examination by an experienced analyst; therefore, there is no mechanism to translate the sequence of the events into the clinical narrative automatically. Second, the patterns are mined within the entire cohort, not conditioned on the patient sub-phenotypes. In the HospitAI system, sequence mining takes place within each phenotype cluster separately, and the outliers, who are not clustered due to the high acuity, are mined separately in order to discover the pathways of high cost and rare occurrence, see Chapter~\ref{ch:design}.
+
+Baudrier et al. \cite{baudrier2022} make an important step towards integration by explicitly combining sequence pattern mining with clustering. Their case study identifies homogeneous healthcare-use profiles and treatment sequences in kidney cancer patients on oral anticancer drugs, retrieved from a French medico-administrative database.
+
+The methodology applies a sequence pattern mining algorithm (CP-SPAM) to healthcare-use sequences and then performs hierarchical clustering on principal components over the mined representation, yielding three patient groups that differ significantly in terms of mortality at six and twelve months and in healthcare resource use. This coupling of pattern mining and clustering is conceptually the closest in the literature to the cluster-scoped pathway analytics of HospitAI.
+
+The interpretation step, however, again relies entirely on clinical experts manually examining the resulting clusters and their representative sequences. There is no LLM layer that automatically generates clinical narrative summaries from the mined sequences, and no conversational interface through which a Manager could query the analytical output in natural language. In addition, the patterns are not re-ranked by a statistical interestingness measure that suppresses globally frequent but uninformative items; HospitAI addresses this directly through the closed-pattern compression, geometric-mean-lift re-ranking, and Jaccard-based diversity selection formalized in Chapter~\ref{ch:analysis}.
+
+\section{Large Language Models and Prompt Engineering in Healthcare}\label{sec:rw_llm}
+
+The third pillar of the proposed platform concerns the translation of statistical output into clinician-readable language and the translation of natural-language questions into safe database queries. Both rely on large language models, whose behavior in clinical settings is critically dependent on prompt design. The work reviewed here provides the most rigorous recent treatment of that dependency.
+
+Liu et al. \cite{liu2025} present a tutorial framework for prompt engineering in clinical practice, aimed at clinicians who are not experts in natural language processing. The authors observe that the effectiveness of LLMs such as the GPT series and Google PaLM hinges on the quality of the prompt, since small changes in wording or structure can substantially alter output quality, which is a particularly dangerous property in a medical context.
+
+The framework consolidates a range of prompting techniques, including zero-shot, one-shot, and few-shot prompting, chain-of-thought, self-consistency, generated-knowledge, and meta-prompting, and provides actionable guidance on defining objectives, applying core principles, iteratively refining prompts, and integrating LLMs into interoperable EHR systems. A central concern of the tutorial is the mitigation of hallucination and the preservation of ethical standards and patient safety, which is exactly the risk class that HospitAI must control when an LLM is placed in front of a clinical database.
+
+Although the framework proposed by Liu et al.\ \cite{liu2025} is essential for direct textual clinical interactions, unlike the solution proposed in this thesis (HospitAI) it does not cover the interpretation of structured data produced by unsupervised machine learning algorithms. HospitAI extends this framework by applying it directly to the centroids extracted through K-Prototypes and the sequences produced by PrefixSpan, creating an automated bridge between data mining and constraint-based clinical interpretation. Furthermore, the tutorial treats the LLM as a free-form text generator, whereas HospitAI encloses the stochastic model inside a deterministic control graph in which every generated SQL query is validated by a deterministic read-only filter before execution, with a bounded retry loop on failure, as formalized in Chapter~\ref{ch:analysis} and implemented in Chapter~\ref{ch:design}.
+
+\section{Comparative Analysis and Conclusions}\label{sec:rw_synthesis}
+
+To conclude this chapter, a comparative synthesis is performed between the analyzed state-of-the-art papers and the approach designed in this thesis. While the current literature excels at individual tasks, namely mixed-type clustering, sequence mining, or prompt-based interpretation, there is a visible gap in frameworks that bridge structured data mining directly with automated, guardrailed medical interpretation. The reviewed works tend to solve one pillar in isolation: the clustering studies stop at the partition and leave interpretation to experts, the pathway-mining studies surface sequences without conditioning them on phenotype or interpreting them automatically, and the prompt-engineering tutorial governs free-text clinical interaction without connecting to the output of unsupervised models.
+
+Table~\ref{tab:ch3_comparison} summarizes this comparison along the dimensions that characterize HospitAI as an end-to-end platform: native support for mixed numerical-categorical data, temporal sequence mining, conditioning of mined pathways on the discovered clusters, automated LLM interpretation of the statistical output, and a guardrailed natural-language querying interface. Each reviewed work satisfies only a subset of these dimensions, whereas the proposed platform is designed to satisfy all of them within a single pipeline.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}l c c c c c@{}}
+\toprule
+Reference & \begin{tabular}[b]{@{}c@{}}Mixed\\ data\end{tabular}
+          & \begin{tabular}[b]{@{}c@{}}Sequence\\ mining\end{tabular}
+          & \begin{tabular}[b]{@{}c@{}}Per-cluster\\ scope\end{tabular}
+          & \begin{tabular}[b]{@{}c@{}}Automated LLM\\ interpretation\end{tabular}
+          & \begin{tabular}[b]{@{}c@{}}Guardrailed\\ NL querying\end{tabular} \\
+\midrule
+Aljohani \cite{aljohani2024}   & No        & No            & No  & No  & No \\
+Yang et al.\ \cite{yang2024}   & No        & No            & No  & No  & No \\
+Najjar et al.\ \cite{najjar2018} & Yes     & Yes (HMM)     & No  & No  & No \\
+Perer et al.\ \cite{perer2015} & No        & Yes           & No  & No  & No \\
+Baudrier et al.\ \cite{baudrier2022} & Partial & Yes (CP-SPAM) & No & No  & No \\
+Liu et al.\ \cite{liu2025}     & N/A       & No            & N/A & Yes & Partial \\
+\midrule
+\textbf{HospitAI (this work)}  & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} \\
+\bottomrule
+\end{tabular}
+\caption{Synthesis of existing approaches versus HospitAI}
+\label{tab:ch3_comparison}
+\end{table}
+
+The comparison makes the contribution of this thesis explicit. HospitAI does not propose a new clustering algorithm or a new sequence miner in isolation; rather, its novelty lies in unifying mixed-type clustering, cluster-scoped sequential pattern mining, and constraint-based LLM interpretation into a single platform in which the output of each stage feeds the next, and in which the final, clinician-facing layer is both automatically generated and protected by deterministic safety guarantees. The theoretical foundations of each of these components are developed in Chapter~\ref{ch:analysis}, and their concrete realization is described in Chapter~\ref{ch:design}.
+

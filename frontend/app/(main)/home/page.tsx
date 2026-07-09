@@ -66,7 +66,7 @@ export default function HomePage() {
 
         <DailyEncounterChart
           data={data.encountersTimeline}
-          title={`Visit Volume – ${rangeLabel}`}
+          title={`Visit Volume - ${rangeLabel}`}
           monthly={selectedRange === "year"}
           hideXLabels={selectedRange === "month"}
         />
@@ -74,11 +74,11 @@ export default function HomePage() {
         <div className={classes.splitRow}>
           <TopConditionsBar
             data={data.topConditions}
-            title={`Top 10 Conditions – ${rangeLabel}`}
+            title={`Top 10 Conditions - ${rangeLabel}`}
           />
           <LastWeekClassPie
             data={data.encounterByClass}
-            title={`${rangeLabel} – Visits by Type`}
+            title={`${rangeLabel} - Visits by Type`}
           />
         </div>
 
@@ -101,13 +101,13 @@ export default function HomePage() {
         <SecondaryKpiGrid kpis={data.kpis} periodLabel={rangeLabel} />
         <LastWeekClassPie
           data={data.encounterByClass}
-          title={`${rangeLabel} – Visits by Type`}
+          title={`${rangeLabel} - Visits by Type`}
         />
       </div>
 
       <DailyEncounterChart
         data={data.encountersTimeline}
-        title="Visit Volume – Last Year"
+        title="Visit Volume - Last Year"
         monthly
       />
 
@@ -126,7 +126,7 @@ export default function HomePage() {
         <>
           <TopConditionsBar
             data={data.topConditions}
-            title={`Top 10 Conditions – ${rangeLabel}`}
+            title={`Top 10 Conditions - ${rangeLabel}`}
           />
           <ClusterDistributionCard data={data.clusterDistribution} />
         </>
