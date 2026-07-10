@@ -31,7 +31,7 @@ def run_pipeline(triggered_by: str) -> None:
             return
 
     try:
-        # --- Stage 1: ETL (first-run only) ---
+        # Stage 1: ETL, first run only
         with SessionLocal() as db:
             patient_table_empty = PipelineRepository(db).is_patient_table_empty()
             PipelineRepository(db).set_stage("ETL", etl_skipped=not patient_table_empty)
@@ -47,7 +47,7 @@ def run_pipeline(triggered_by: str) -> None:
             _mark_stopped()
             return
 
-        # --- Stage 2: Clustering ---
+        # Stage 2: clustering
         with SessionLocal() as db:
             PipelineRepository(db).set_stage("CLUSTERING")
         from clustering_algorithms.k_prototypes.k_prototypes import run_clustering_stage
@@ -58,7 +58,7 @@ def run_pipeline(triggered_by: str) -> None:
             _mark_stopped()
             return
 
-        # --- Stage 3a: Sequence mining, global scope ---
+        # Stage 3a: sequence mining, global scope
         with SessionLocal() as db:
             PipelineRepository(db).set_stage("SEQUENCES_GLOBAL")
         from clustering_algorithms.prefix_span import prefix_span
@@ -70,7 +70,7 @@ def run_pipeline(triggered_by: str) -> None:
             _mark_stopped()
             return
 
-        # --- Stage 3b: Sequence mining, per cluster (0..k-1 plus -1 outliers) ---
+        # Stage 3b: sequence mining, per cluster (0..k-1 plus -1 outliers)
         with SessionLocal() as db:
             repo = PipelineRepository(db)
             repo.set_stage("SEQUENCES_CLUSTERS")

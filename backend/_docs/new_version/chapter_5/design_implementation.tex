@@ -10,7 +10,7 @@ Following the theoretical framework from Chapter~\ref{ch:analysis}, this chapter
 \subsection{System Architecture}
 \label{ch:system_architecture}
 
-Figure~\ref{fig:system_architecture} presents the high-level architecture of the platform. Four kinds of components cooperate: a \textbf{Frontend} that renders the interface and consumes data, a \textbf{Backend} that exposes the API and hosts the analytical logic, a \textbf{Database} that persists both the raw clinical records and every analytical result, and a small set of \textbf{external services} that feed the pipeline or extend it with generative capabilities.
+Figure~\ref{fig:system_architecture} presents the high-level architecture of the platform. Four kinds of components cooperate: a \textbf{Frontend} that renders the interface and cosnumes data, a \textbf{Backend} that exposes the API and hosts the analytical logic, a \textbf{Database} that persists both the raw clinical records and every analytical result, and a small set of \textbf{external services} that feed the pipeline or extend it with generative capabilities.
 
 The \textbf{Frontend} is a single \textbf{Next.js} application. It never talks to the database or to any external service directly. Every piece of data it renders, patient records, cluster dashboards, sequence dashboards, statistics, and the pipeline management page, is fetched over REST from the Backend.
 
@@ -29,7 +29,7 @@ Finally, the platform relies on a few \textbf{external services}. The Synthea ge
 
 \subsubsection*{Why a Monolithic, Client-Server Architecture}
 
-The platform is built as a single \textbf{monolithic} application rather than a set of distributed microservices. This is deliberate: the object of this thesis is not a production-grade, independently-scalable web platform, but the analytics pipeline itself (Section~\ref{ch:analysis}). A microservice split would add network hops, service discovery, a message broker, and duplicated deployment infrastructure, none of which improves the clustering, the mined patterns, or the LLM narratives. A single backend sharing one database engine and one set of domain models removes that overhead without giving up any capability the platform needs.
+The platform is built as a single \textbf{monolithic} application rather than a set of distributed microservices. This is deliberate: the object of this thesis is not a production-grade, independently-scalable web platform, but the analytics pipeline itself (Section~\ref{ch:analysis}). A microservice split woudl add network hops, service discovery, a message broker, and duplicated deployment infrastructure, none of which improves the clustering, the mined patterns, or the LLM narratives. A single backend sharing one database engine and one set of domain models removes that overhead without giving up any capability the platform needs.
 
 \textbf{FastAPI} was chosen because it lets Python serve the REST API directly. Python is the language of the whole machine-learning stack used here (\texttt{scikit-learn}, \texttt{kmodes}, \texttt{prefixspan}, \texttt{pandas}), so the clustering and mining modules are called in-process rather than over the network. \textbf{PostgreSQL} and \textbf{Next.js} are justified in Sections~\ref{ch:database_design} and~\ref{ch:frontend_design}. Long-running and scheduled work, such as the monthly analytics job, runs inside the same backend process through an in-process scheduler, so no external worker or message queue is needed.
 
@@ -42,7 +42,7 @@ The schemas below show eighteen tables split into two groups. The \emph{normaliz
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth]{figs/chapter_5/er_diagram_a.png}
+\includegraphics[width=0.9\linewidth]{figs/chapter_5/er_diagram_a.png}
 \caption{Entity--Relationship diagram of the database schema (1)}
 \label{fig:ch5_er_a}
 \end{figure}
@@ -72,7 +72,7 @@ Every table has its own primary key, and foreign keys such as \texttt{encounter.
 
 \subsubsection*{Normal Form and Its Limits}
 
-The raw-data group satisfies the third normal form (3NF): every non-key attribute depends on the whole key and, with the two exceptions below, on nothing else. First, a few columns are computed and stored rather than derived on demand (patient age, medication/careplan duration, provider/organization counters). A stored \texttt{age} is strictly transitively dependent on the non-key \texttt{birthdate}, which 3NF forbids. But recomputing it on every query would be far costlier than the redundancy. And it cannot drift, since it is written once at ETL time.
+The raw-data group satisfies the third normal form (3NF): every non-key attribute depends on whole key and, with the two exceptions below, on nothing else. First, a few columns are computed and stored rather than derived on demand (patient age, medication/careplan duration, provider/organization counters). A stored \texttt{age} is strictly transitively dependent on the non-key \texttt{birthdate}, which 3NF forbids. But recomputing it on every query would be far costlier than the redundancy. And it cannot drift, since it is written once at ETL time.
 
 Second, the analytics tables keep several attributes inside JSONB columns instead of one column each, a departure from first normal form's atomicity requirement. This is accepted because those tables are regenerated on every run. Their shape must evolve freely across the 63 clustering configurations of Section~\ref{ch:kproto_impl}. A rigid, one-column-per-feature schema would not allow that without a migration per experiment.
 
@@ -107,7 +107,7 @@ Two processing modes coexist behind the same API. Ordinary CRUD and dashboard en
 
 \subsubsection*{Middleware: Validation and the Demonstration Role Layer}
 
-The only cross-cutting concerns are input validation and the demonstration role layer. There is no session, token, or authentication middleware, since the three roles exist purely to demonstrate a per-role interface over synthetic data (Chapter~\ref{ch:analysis}). Validation is enforced declaratively through the Pydantic schemas above, not custom middleware. The one place role awareness reaches into query logic is the SQL Agent, which injects a \texttt{DOCTOR\_SCOPE\_CLAUSE} or a \texttt{PATIENT\_SCOPE\_CLAUSE} into the prompt depending on the caller's role, restricting a doctor's questions to their own \texttt{provider\_id} and a patient's to their own \texttt{patient\_id}; a Manager gets neither clause and so queries unscoped. This is a demonstration of role-aware behavior, not an access-control boundary.
+The only cross-cutting concerns are input validation and the demonstration role layer. There is no session, token, or authentication middleware, since the three roles exist purely to demonstrate a per-role interface over synthetic data (Chapter~\ref{ch:analysis}). Validation is enforced declaratively through the Pydantic schemas above, not custom middleware. The one place role awareness reaches into query logic is the SQL Agent, which injects a \texttt{DOCTOR\_SCOPE\_CLAUSE} or a \texttt{PATIENT\_SCOPE\_CLAUSE} into the prompt depending on the caller's role, restricting a doctor's questions to their own \texttt{provider\_id} and a patient's to their own \texttt{patient\_id}. A Manager gets neither clause and so queries unscoped. This is a demonstration of role-aware behavior, not an access-control boundary.
 
 
 \section{System Implementation}
@@ -163,7 +163,7 @@ A component never calls \texttt{fetch} itself. It dispatches a thunk, renders a 
 
 The patient pages exercise the full read/write cycle over this same pattern. The list page dispatches \texttt{fetchPatients} with the current filters, page, and sort order, and renders the response in a \texttt{StyledTable}. Opening a record dispatches \texttt{fetchPatientDetail} for the detail view. Creating, editing, and deleting all go through three further thunks, \texttt{createPatient}, \texttt{updatePatient}, and \texttt{deletePatient}, which \texttt{POST}/\texttt{PATCH}/\texttt{DELETE} to \texttt{/patients} through small wrappers around \texttt{fetch} analogous to \texttt{get}.
 
-The \texttt{patients} slice's \texttt{extraReducers}, shown in Listing~\ref{lst:fe-patients-slice}, is where these thunks actually change state. \texttt{fetchPatients.fulfilled} replaces the page of \texttt{items} wholesale. \texttt{createPatient.fulfilled} and \texttt{updatePatient.fulfilled} patch that same array in place instead, either prepending or finding and replacing by \texttt{patientId}. This way, the table reflects a create or an edit without a second round trip. \texttt{deletePatient} is the exception. Its reducer has no dedicated case. Instead, the page dispatches \texttt{fetchPatients} again once the delete resolves successfully, since removing a row can shift page boundaries and pagination totals in a way that is simpler to re-fetch than to patch locally.
+The \texttt{patients} slice's \texttt{extraReducers}, shown in Listing~\ref{lst:fe-patients-slice}, is where these thunks actually change  state. \texttt{fetchPatients.fulfilled} replaces the page of \texttt{items} wholesale. \texttt{createPatient.fulfilled} and \texttt{updatePatient.fulfilled} patch that same array in place instead, either prepending or finding and replacing by \texttt{patientId}. This way, the table reflects a create or an edit without a second round tripp. \texttt{deletePatient} is the exception. Its reducer has no dedicated case. Instead, the page dispatches \texttt{fetchPatients} again once the delete resolves successfully, since removing a row can shift page boundaries and pagination totals in a way that is simpler to re-fetch than to patch locally.
 
 \begin{lstlisting}[style=tsxstyle, caption={Patients slice: reducer state changes driven by the CRUD thunks}, label={lst:fe-patients-slice}]
 const patientsSlice = createSlice({
@@ -355,14 +355,14 @@ def get_db():
         db.close()
 \end{lstlisting}
 
-\subsubsection{ETL Pipeline and Used Dataset}
+\subsubsection{ETL Pipeline}
 \label{ch:etl_impl}
 
-This thesis uses the open-source Synthea generator to produce a synthetic but realistic electronic-health-record dataset. It generates patient demographics together with the clinical events (conditions, medications, procedures, immunizations, allergies, care plans, and observations) of 20{,}000 living patients, each with a decades-long history. Table~\ref{tab:ch5_synthea_csv} summarizes the size of each source file.
+This thesis uses the open-source Synthea generator to produce a synthetic but realistic electronic-health-record dataset, generating patient demographics together with the clinical events (conditions, medications, procedures, immunizations, allergies, care plans, and observations) of 20{,}000 living patients, each with a decades-long history (Section~\ref{ch:used_dataset} gives the row counts of every source file).
 
 The Ingestion Script (\texttt{db/etl\_script.py}) loads this CSV output into the normalized schema of Section~\ref{ch:database_design} via SQLModel, following Figure~\ref{fig:etl_pipeline}. It reuses the \texttt{engine}/\texttt{get\_db()} connectivity of Section~\ref{ch:backend_impl}, runs once per database refresh, and can be run standalone or through the orchestration job.
 
-Only the eleven tables listed there are kept. Financial, imaging, and device files (\texttt{claims}, \texttt{payers}, \texttt{devices}, \texttt{imaging\_studies}, \texttt{supplies}, and similar) are dropped as out of scope.
+Only eleven of Synthea's output tables are kept. Financial, imaging, and device files (\texttt{claims}, \texttt{payers}, \texttt{devices}, \texttt{imaging\_studies}, \texttt{supplies}, and similar) are dropped as out of scope.
 
 \begin{figure}[H]
 \centering
@@ -370,30 +370,6 @@ Only the eleven tables listed there are kept. Financial, imaging, and device fil
 \caption{ETL Pipeline Diagram}
 \label{fig:etl_pipeline}
 \end{figure}
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{lr}
-\hline
-\textbf{Synthea CSV} & \textbf{Rows} \\
-\hline
-\texttt{patients.csv}        &        22,284 \\
-\texttt{organizations.csv}   &         5,833 \\
-\texttt{providers.csv}       &         5,833 \\
-\texttt{encounters.csv}      &     1,211,526 \\
-\texttt{allergies.csv}       &        21,761 \\
-\texttt{procedures.csv}      &     3,225,114 \\
-\texttt{medications.csv}     &       913,100 \\
-\texttt{immunizations.csv}   &       335,814 \\
-\texttt{careplans.csv}       &        70,197 \\
-\texttt{conditions.csv}      &       727,501 \\
-\texttt{observations.csv}    &    14,250,746 \\
-\hline
-\end{tabular}
-\caption{Row counts of the ingested Synthea CSV files}
-\label{tab:ch5_synthea_csv}
-\end{table}
 
 \subsubsection*{Reducing Synthea to a Single Hospital}
 
@@ -477,20 +453,9 @@ def run_clustering_stage(engine):
     return cfg.k
 \end{lstlisting}
 
-\subsubsection*{Selecting the Number of Clusters}
-
-The optimal $k$ was chosen with the "Elbow" method over the within-cluster cost for $k \in \{2, \ldots, 9\}$. Figure~\ref{fig:ch5_elbow_plot} shows a clear diminishing-returns point at $k=4$: the cost drop from $k{=}3$ to $4$ is almost 900 points, versus about 350 from $4$ to $5$. The choice is corroborated by the 63-configuration benchmark of Chapter~\ref{ch:testing}.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.80\linewidth]{figs/chapter_5/elbow_plot.png}
-\caption{Elbow plot used to select the number of clusters}
-\label{fig:ch5_elbow_plot}
-\end{figure}
-
 \subsubsection*{Feature Engineering}
 
-Many candidate features were tried across 629 K-Prototypes runs before settling on the list below, split into \textbf{direct attributes} (age, gender) and \textbf{clinical signals} derived from the raw event tables. Figure~\ref{fig:ch5_feature_pipeline} traces this derivation: raw data in, features extracted, high-cardinality/numeric variables bucketed, and a feature vector out for K-Prototypes.
+Many candidate features were tried across 628 K-Prototypes runs before settling on the list below, split into \textbf{direct attributes} (age, gender) and \textbf{clinical signals} derived from the raw event tables. Figure~\ref{fig:ch5_feature_pipeline} traces this derivation: raw data in, features extracted, high-cardinality/numeric variables bucketed, and a feature vector out for K-Prototypes.
 
 \begin{figure}[H]
 \centering
@@ -578,7 +543,7 @@ The same technique produces the other derived categories: \texttt{substance\_use
 
 \subsubsection*{Feature Bucketing}
 
-Once merged, sparse clinical features are deliberately bucketed rather than mean-imputed, to avoid distorting the numerical centroids K-Prototypes assumes are real measurements. Missing values fall into an explicit \texttt{"Unknown"} bucket instead. Count-type features are simply filled with zero, since that correctly represents an absence of events.
+Once merged, sparse clinical features are deliberately bucketed rather than mean-imputed, to avoid distorting the numerical centroids K-Prototypes assumes are real measurements. Missing values fall into an explict \texttt{"Unknown"} bucket instead. Count-type features are simply filled with zero, since that correctly represents an absence of events.
 
 \begin{lstlisting}[style=pythonstyle]
 for col in ["wellness_count", "inpatient_count", ...]:
@@ -746,7 +711,7 @@ Plain PrefixSpan only ranks patterns by support, and on clinical data that raw r
     \item \label{cust:typediversity} \textbf{Type-diversity bonus and same-type-run filter}: patterns spanning several event types (condition, medication, procedure, care plan) are boosted, while patterns that repeat the same type three times in a row are dropped.
     \item \label{cust:fullspectrum} \textbf{Full-spectrum quota}: a fixed number of slots is reserved up front for patterns that touch all four event types, so this small but clinically rich group is never crowded out by the far more common two-type patterns.
     \item \label{cust:jaccard} \textbf{Jaccard deduplication}: a greedy pass rejects any candidate that shares most of its items with an already accepted pattern.
-    \item \label{cust:caps} \textbf{Prefix, suffix, and dental caps}: only a fixed number of accepted patterns may start or end with the same item, and majority-dental patterns are capped so routine dental care cannot fill the whole result set.
+    \item \label{cust:caps} \textbf{Prefix, suffix, and dental caps}: only a fixed number of accepted patterns may start or eend with the same item, and majority-dental patterns are capped so routine dental care cannot fill the whole result set.
     \item \label{cust:dualscope} \textbf{Dual-scope mining with cross-scope deduplication}: the miner runs once globally and once per cluster (including the outlier group), and each per-cluster run drops any pattern already found globally, so cluster results only show what is distinctive to that cluster.
 \end{enumerate}
 
@@ -855,7 +820,7 @@ if shuffle_seed is not None:
         rng.shuffle(seq)       # item set unchanged, order destroyed
 \end{lstlisting}
 
-\noindent Because the permutation stays inside a single patient, every patient keeps the same \emph{set} of items, so single-item supports, and therefore the geometric-mean-lift denominator introduced below, are left unchanged; only chronological order is destroyed. Exposed on the CLI as \texttt{--shuffle}, this run is deliberately read-only: it writes its top-$k$ to a separate \texttt{patterns\_*\_shuffled\_*.txt} file and never touches the database or the real mined results.
+\noindent Because the permutation stays inside a single patient, every patient keeps the same \emph{set} of items, so single-item supports, and therefore the geometric-mean-lift denominator introduced below, are left unchanged. Only chronological order is destroyed. Exposed on the CLI as \texttt{--shuffle}, this run is deliberately read-only: it writes its top-$k$ to a separate \texttt{patterns\_*\_shuffled\_*.txt} file and never touches the database or the real mined results.
 
 \subsubsection*{Execution: the Mining Core}
 
@@ -893,7 +858,7 @@ For each frequent prefix, PrefixSpan then builds a projected sub-database of onl
 
 A deliberate design choice here is to keep all the clinical-quality logic (scoring, filtering, capping) as a post-processing step \emph{after} PrefixSpan runs, rather than wiring it into the mining loop itself. This keeps the mining step a plain, well-tested library call, and lets every scoring rule below be tuned or replaced without re-running PrefixSpan.
 
-Before mining, sequences are encoded to integers by a one-pass vocabulary builder (\texttt{\_encode}), since \texttt{prefixspan.PrefixSpan} works on integers, and this is the single biggest speedup in the pipeline. The call itself uses the closed top-$k$ operator (customization~\ref{cust:overmining} in the list above), asking for a pool twenty times larger than the final result:
+Before mining, sequences are encoded to integers by a one-pass vocabulary builder (\texttt{\_encode}), since \texttt{prefixspan.PrefixSpan} works on integers, and this is the single biggest speedup in the pipeline.The call itself uses the closed top-$k$ operator (customization~\ref{cust:overmining} in the list above), asking for a pool twenty times larger than the final result:
 
 \vspace{0.25cm}
 
@@ -1179,13 +1144,13 @@ Validation checklist (reject if ANY fails):
 Do NOT flag: ILIKE vs =, aliasing, ordering, whitespace.
 \end{lstlisting}
 
-\paragraph{Expected output.} Line 1: \texttt{YES} or \texttt{NO}. Line 2, only if \texttt{NO}: a one-sentence reason, which becomes the feedback for the next \texttt{generate\_query} attempt.
+\paragraph{Expected output.} Line 1: \texttt{YES} or \texttt{NO}. Line 2, only if \texttt{NO}: a one sentence reason, which becomes the feedback for the next \texttt{generate\_query} attempt.
 
 \subsubsection*{The Remaining Prompts}
 
 The other four prompts are simpler variations on the same idea. \texttt{PROMPT\_TRANSLATE} does the classification described above, and rewrites data questions into one clean English sentence, using the chat history and the schema only to resolve ambiguous terms. \texttt{PROMPT\_MEDICAL\_ANSWER} answers general health questions directly: grounded in established clinical knowledge, never inventing a statistic or a personal diagnosis, and always closing with a disclaimer to consult a licensed professional. \texttt{PROMPT\_GENERATE\_SQL} writes the actual query, carrying every project-specific rule: \texttt{LIMIT}, exact-cased enums for categorical codes (matching how Synthea actually stores them, e.g. lowercase \texttt{race}/\texttt{ethnicity} values), \texttt{COUNT(DISTINCT patient\_id)}, the JSONB accessors for \texttt{cluster\_patient.features}, and the mandatory \texttt{NOT is\_outlier} filter. For free-text columns such as \texttt{description} it uses \texttt{ILIKE}, but rather than wrapping the user's whole phrase in one pattern, it is instructed to split it into its distinct keywords (drug or condition name, strength, form) and \texttt{AND} together one \texttt{ILIKE '\%keyword\%'} per keyword, since clinical names rarely share the exact word order of a question (e.g. ``Metformin extended release tablet'' versus the stored ``24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet''). For sequence-mining questions it distinguishes a pattern's raw \texttt{support\_count} (``most frequent'') from its curated \texttt{rank} (``most representative''), and, for ``how many patterns were mined for cluster $X$'', filters \texttt{prefix\_span\_pattern.cluster\_label} directly instead of joining through \texttt{prefix\_span\_patient\_pattern}, which instead answers the different question of which patterns have a member in cluster $X$. On a retry, it also receives the previous query and exactly why it failed. \texttt{PROMPT\_RESULT} phrases the final row set the way a data analyst would, never mentioning SQL, tables, or columns.
 
-All three query-facing prompts share one static resource, \texttt{DB\_SCHEMA} (\texttt{db/db\_data.py}): a description of all 16 tables with every column, type, foreign key, and JSONB access convention, so the model never has to guess the schema.
+All three query-facing prompts share one static resource, \texttt{DB\_SCHEMA} (\texttt{db/db\_data.py}): a description of the 16 tables the agent may query (the \texttt{patient\_provider} junction and the \texttt{pipeline\_run} state table are deliberately left out), with every column, type, foreign key, and JSONB access convention, so the model never has to guess the schema.
 
 \vspace{0.25cm}
 

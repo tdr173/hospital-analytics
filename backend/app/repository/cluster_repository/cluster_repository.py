@@ -183,7 +183,7 @@ class ClusterRepository:
                 data.append(ChartEntry(
                     name=f"Cluster {label}",
                     value=mean_val,
-                    tooltip=f"Cluster {label} · Mean: {mean_val}",
+                    tooltip=f"Cluster {label} - Mean: {mean_val}",
                 ))
             result.append(FeatureChartData(feature=feature, data=data))
 

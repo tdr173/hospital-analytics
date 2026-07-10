@@ -18,8 +18,6 @@ class ObservationRepository:
         self.range_str = range_str
         self.min_date = compute_min_date(db, ObservationModel.date, range_str)
 
-    # ---------------------------------------------------------------- totals
-
     def get_total_observations(self) -> int:
         if self.min_date is None:
             row = self.db.execute(text("SELECT total_observations FROM mv_obs_totals")).first()
@@ -50,8 +48,6 @@ class ObservationRepository:
         ).first()
         return int(row.c) if row else 0
 
-    # ------------------------------------------------------- per-patient avg
-
     def get_per_patient_stats(self):
         if self.min_date is None:
             row = self.db.execute(text(
@@ -78,8 +74,6 @@ class ObservationRepository:
             "max": row.max_cnt or 0,
         }
 
-    # ------------------------------------------------------------- top types
-
     def get_top_observation_types(self, limit: int = 15, total: Optional[int] = None):
         if total is None:
             total = self.get_total_observations()
@@ -97,8 +91,6 @@ class ObservationRepository:
             ), {"limit": limit, "min_date": self.min_date}).all()
 
         return with_percentage(rows, total)
-
-    # ---------------------------------------------------- numeric categories
 
     def get_numeric_stats(self, limit: int = 25, total_patients: Optional[int] = None):
         if total_patients is None:

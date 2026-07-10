@@ -12,10 +12,6 @@ from sqlalchemy import text
 from domain.models.cluster_patient_model import ClusterPatientModel
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
 def _cluster_filters(cluster_id: int) -> list:
     if cluster_id == -1:
         return [ClusterPatientModel.is_outlier == True]
@@ -43,7 +39,6 @@ def _f(row, attr) -> float:
 
 
 def _where(cluster_id: int) -> str:
-    """SQL WHERE fragment for cluster membership."""
     if cluster_id == -1:
         return "cp.is_outlier = true"
     return "cp.cluster_label = :cluster_id AND cp.is_outlier = false"
@@ -56,10 +51,6 @@ def _params(cluster_id: int) -> dict:
 def _row_float(row, key: str) -> float:
     return float(row[key] or 0) if row else 0.0
 
-
-# ---------------------------------------------------------------------------
-# Size
-# ---------------------------------------------------------------------------
 
 def cluster_size(db: Session, cluster_id: int) -> dict:
     filters = _cluster_filters(cluster_id)
@@ -80,10 +71,6 @@ def cluster_size(db: Session, cluster_id: int) -> dict:
         )
     return {"count": count, "percentage": round(count * 100.0 / total, 2) if total else 0.0}
 
-
-# ---------------------------------------------------------------------------
-# Vitals - patient + observation tables
-# ---------------------------------------------------------------------------
 
 def get_vitals(db: Session, cluster_id: int) -> dict:
     sql = text(f"""
@@ -131,10 +118,6 @@ def get_vitals(db: Session, cluster_id: int) -> dict:
     return {k: _row_float(row, k) for k in keys}
 
 
-# ---------------------------------------------------------------------------
-# Utilization - condition, medication, procedure, encounter tables
-# ---------------------------------------------------------------------------
-
 def get_utilization(db: Session, cluster_id: int) -> dict:
     sql = text(f"""
         SELECT
@@ -181,10 +164,6 @@ def get_utilization(db: Session, cluster_id: int) -> dict:
     row = db.execute(sql, _params(cluster_id)).mappings().first()
     return {**{k: _row_float(row, k) for k in keys}, "avg_clinical_severity_score": None}
 
-
-# ---------------------------------------------------------------------------
-# Disease prevalence - condition + medication tables
-# ---------------------------------------------------------------------------
 
 def get_disease_prevalence(db: Session, cluster_id: int) -> dict:
     sql = text(f"""
@@ -243,10 +222,8 @@ def get_disease_prevalence(db: Session, cluster_id: int) -> dict:
     return {k: _row_float(row, k) for k in keys}
 
 
-# ---------------------------------------------------------------------------
-# Dominant categoricals - JSONB for careplan, source tables for the rest
-# ---------------------------------------------------------------------------
-
+# dominant_careplan comes from cached JSONB; the other two need a join since
+# they aren't part of the per-patient feature snapshot.
 def get_dominant_categoricals(db: Session, cluster_id: int) -> dict:
     filters = _cluster_filters(cluster_id)
     careplan_row = (
@@ -282,10 +259,6 @@ def get_dominant_categoricals(db: Session, cluster_id: int) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
-# Gender - JSONB (always stored in every run)
-# ---------------------------------------------------------------------------
-
 def get_gender_distribution(db: Session, cluster_id: int) -> dict:
     filters = _cluster_filters(cluster_id)
     row = (
@@ -301,10 +274,6 @@ def get_gender_distribution(db: Session, cluster_id: int) -> dict:
         return {"F": 0.0, "M": 0.0}
     return {"F": _f(row, "female_pct"), "M": _f(row, "male_pct")}
 
-
-# ---------------------------------------------------------------------------
-# Marital distribution - patient table
-# ---------------------------------------------------------------------------
 
 def get_marital_distribution(db: Session, cluster_id: int) -> dict:
     sql = text(f"""
@@ -331,10 +300,6 @@ def get_marital_distribution(db: Session, cluster_id: int) -> dict:
         "W": float(row["widowed"]  or 0),
     }
 
-
-# ---------------------------------------------------------------------------
-# Smoking distribution - observation table
-# ---------------------------------------------------------------------------
 
 def get_smoking_distribution(db: Session, cluster_id: int) -> dict:
     sql = text(f"""
@@ -372,10 +337,6 @@ def get_smoking_distribution(db: Session, cluster_id: int) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
-# Condition burden - JSONB (always stored in every run)
-# ---------------------------------------------------------------------------
-
 def get_condition_burden_distribution(db: Session, cluster_id: int) -> dict:
     filters = _cluster_filters(cluster_id)
     row = (
@@ -393,10 +354,8 @@ def get_condition_burden_distribution(db: Session, cluster_id: int) -> dict:
     return {"low": _f(row, "low"), "medium": _f(row, "medium"), "high": _f(row, "high")}
 
 
-# ---------------------------------------------------------------------------
-# Population stats - for AI prompt baseline (non-outlier patients only)
-# ---------------------------------------------------------------------------
-
+# baseline for the AI prompt to compare a cluster against; outliers excluded
+# so extreme patients don't skew the population averages.
 def get_population_stats(db: Session) -> dict:
     sql = text("""
         SELECT

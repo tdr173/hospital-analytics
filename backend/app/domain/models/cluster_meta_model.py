@@ -6,11 +6,7 @@ from datetime import datetime
 
 
 class ClusterMetaModel(SQLModel, table=True):
-    """
-    Singleton table - always exactly one row (id=1).
-    Stores the metadata for the current (latest) clustering run.
-    On re-run: DELETE then INSERT replaces it.
-    """
+    """Singleton table (one row, id=1) holding metadata for the current clustering run. Re-run truncates and re-inserts."""
     __tablename__ = "cluster_meta"
     __table_args__ = {"extend_existing": True}
 

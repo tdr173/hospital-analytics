@@ -179,7 +179,7 @@ def pattern_to_str(pattern: Iterable[str]) -> str:
     return " -> ".join(pattern)
 
 
-# measures how similar 2 sets are: Jaccard(A, B) = |A ∩ B| / |A ∪ B|
+# measures how similar 2 sets are: Jaccard(A, B) = |A and B| / |A or B|
 def _jaccard(a: frozenset, a_len: int, b: frozenset, b_len: int) -> float:
     inter = len(a & b)
     denom = a_len + b_len - inter

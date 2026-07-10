@@ -246,7 +246,7 @@ def _is_subsequence(pattern: list[str], sequence: list[str]) -> bool:
     return all(any(item == p for item in it) for p in pattern)
 
 
-# measures how similar 2 sets are: Jaccard(A, B) = |A ∩ B| / |A ∪ B|
+# measures how similar 2 sets are: Jaccard(A, B) = |A and B| / |A or B|
 def _jaccard(a: frozenset, a_len: int, b: frozenset, b_len: int) -> float:
     inter = len(a & b)
     denom = a_len + b_len - inter

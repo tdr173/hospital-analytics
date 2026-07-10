@@ -465,7 +465,7 @@ def load_observations(engine):
             index=True,
             index_label="id",
         )
-        print(f"  Inserted rows {i:,} – {min(i + chunk_size, total):,} / {total:,}")
+        print(f"  Inserted rows {i:,} - {min(i + chunk_size, total):,} / {total:,}")
 
     print(f"Loaded {total:,} observations.")
 

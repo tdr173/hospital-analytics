@@ -213,7 +213,7 @@ def compute_famd_metrics(df, numerical_cols, categorical_cols, clusters, n_compo
 def compute_feature_importance(df, numerical_cols, categorical_cols, clusters):
     # Per-feature contribution to the clustering, all on a [0, 1] scale.
     # Numerical: eta-squared = between-cluster variance / total variance (ANOVA effect size).
-    # Categorical: Cramér's V from a cluster x category contingency table.
+    # Categorical: Cramer's V from a cluster x category contingency table.
     # Higher = the feature separates clusters more strongly.
     labels = np.asarray(clusters)
     if len(np.unique(labels)) < 2:

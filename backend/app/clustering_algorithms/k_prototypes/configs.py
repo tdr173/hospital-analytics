@@ -15,7 +15,7 @@ CONFIGS = [
 #     # v2 - Raw severity, no CSS  (5+6)
 #     # Hypothesis: does active_conditions_count + lifetime_medication_days beat the
 #     # PCA compression of clinical_severity_score at separating chronic archetypes?
-#     # Utilization: severe_care_count + distinct_providers_seen = 2  ✓
+#     # Utilization: severe_care_count + distinct_providers_seen = 2
 #     {
 #         "version": 2,
 #         "numerical": [
@@ -38,7 +38,7 @@ CONFIGS = [
 #     # v3 - Behavioral + readmission focus  (5+7)
 #     # Hypothesis: substance use, pain tier, and out-of-hours behaviour separate
 #     # high-risk patients more cleanly than utilization counts alone.
-#     # Utilization: acute_care_count = 1  ✓
+#     # Utilization: acute_care_count = 1
 #     {
 #         "version": 3,
 #         "numerical": [
@@ -62,7 +62,7 @@ CONFIGS = [
 #     # v4 - Cardiometabolic deep-dive  (5+7)
 #     # Hypothesis: combining the three chronic disease flags with cholesterol risk
 #     # and care focus separates the cardio-metabolic patient spectrum cleanly.
-#     # Utilization: distinct_providers_seen + total_encounter_duration_hours = 2  ✓
+#     # Utilization: distinct_providers_seen + total_encounter_duration_hours = 2
 #     {
 #         "version": 4,
 #         "numerical": [
@@ -86,7 +86,7 @@ CONFIGS = [
 #     # v5 - Respiratory + behavioral, lean numerical  (4+7)
 #     # Hypothesis: a thin numerical side lets 7 strong categoricals dominate;
 #     # respiratory profile and substance use should split the acute cluster.
-#     # Utilization: acute_care_count = 1  ✓
+#     # Utilization: acute_care_count = 1
 #     {
 #         "version": 5,
 #         "numerical": [
@@ -109,7 +109,7 @@ CONFIGS = [
 #     # v6 - QALY replaces age  (5+6)
 #     # Hypothesis: quality-adjusted life-years carries a different life-stage signal
 #     # than raw age and may produce better separation for elderly/frail patients.
-#     # Utilization: severe_care_count + distinct_providers_seen = 2  ✓
+#     # Utilization: severe_care_count + distinct_providers_seen = 2
 #     {
 #         "version": 6,
 #         "numerical": [
@@ -132,7 +132,7 @@ CONFIGS = [
 #     # v7 - Care-continuity / system engagement  (5+6)
 #     # Hypothesis: how patients interact with the system (fragmented vs. loyal,
 #     # preventive vs. reactive) is a stronger clustering axis than disease flags.
-#     # Utilization: distinct_providers_seen + total_encounter_duration_hours = 2  ✓
+#     # Utilization: distinct_providers_seen + total_encounter_duration_hours = 2
 #     {
 #         "version": 7,
 #         "numerical": [
@@ -155,7 +155,7 @@ CONFIGS = [
 #     # v8 - Dense categorical  (4+8)
 #     # Hypothesis: 4 strong numericals + 8 well-chosen categoricals give the
 #     # categorical side enough weight to drive richer clinical archetypes.
-#     # Utilization: acute_care_count = 1  ✓
+#     # Utilization: acute_care_count = 1
 #     {
 #         "version": 8,
 #         "numerical": [
@@ -179,7 +179,7 @@ CONFIGS = [
 #     # v9 - Chronic disease flags + raw burden  (5+7)
 #     # Hypothesis: raw active_conditions_count + disease flags (no CSS) combined
 #     # with metabolic categoricals separates chronic subtypes better than PCA.
-#     # Utilization: total_encounter_duration_hours + distinct_providers_seen = 2  ✓
+#     # Utilization: total_encounter_duration_hours + distinct_providers_seen = 2
 #     {
 #         "version": 9,
 #         "numerical": [
@@ -204,7 +204,7 @@ CONFIGS = [
 #     # Hypothesis: chronic pain management tier and cholesterol risk have not been
 #     # combined before; this tests whether metabolic-behavioral overlap forms a
 #     # distinct archetype separate from the standard chronic cluster.
-#     # Utilization: severe_care_count + total_encounter_duration_hours = 2  ✓
+#     # Utilization: severe_care_count + total_encounter_duration_hours = 2
 #     {
 #         "version": 10,
 #         "numerical": [
@@ -228,7 +228,7 @@ CONFIGS = [
 #     # v11 - Lean categorical, rich numerical  (6+4)
 #     # Hypothesis: tests the opposite extreme of v8 - 6 numericals drive separation
 #     # while 4 strong categoricals anchor interpretation.
-#     # Utilization: acute_care_count + distinct_providers_seen = 2  ✓
+#     # Utilization: acute_care_count + distinct_providers_seen = 2
 #     {
 #         "version": 11,
 #         "numerical": [
@@ -697,10 +697,10 @@ CONFIGS = [
 #         ],
 #     },
 #
-#     # v31 - v29 + condition_burden bucketed (swap active_conditions_count → condition_burden categorical)
+#     # v31 - v29 + condition_burden bucketed (swap active_conditions_count -> condition_burden categorical)
 #     {
 #         "version": 31,
-#         "description": "v29 + condition_burden bucketed (swap active_conditions_count → condition_burden categorical)",
+#         "description": "v29 + condition_burden bucketed (swap active_conditions_count -> condition_burden categorical)",
 #         "numerical": [
 #             "age",
 #             "lifetime_medication_days",

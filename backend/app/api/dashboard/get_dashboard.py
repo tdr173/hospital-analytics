@@ -9,11 +9,9 @@ from service import DashboardService
 from .dashboard_router import dashboard_router
 
 
-# NOTE: plain `def` (not `async def`) on purpose. This handler runs ~10
-# synchronous SQLAlchemy queries. An `async def` runs them on the single
-# event-loop thread, so a slow query freezes the WHOLE server (every other
-# endpoint, including Swagger). As a plain `def`, FastAPI runs it in the
-# threadpool, so a slow dashboard can't block unrelated requests.
+# plain `def` on purpose, not `async def`: this runs ~10 sync SQLAlchemy
+# queries, and async would run them on the event loop thread, blocking
+# every other request while the dashboard is slow. def gets the threadpool.
 @dashboard_router.get("", response_model=DashboardResponse)
 def get_dashboard(
     range: Literal["week", "month", "year", "all"] = Query(default="month"),

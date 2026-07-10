@@ -18,7 +18,7 @@ The following software must be installed beforehand:
     \item \textbf{Node.js 20 or newer} and \texttt{npm} for the frontend (Next.js~16 needs this version).
     \item \textbf{PostgreSQL 14 or newer}, which must allow the \texttt{pg\_trgm} extension used for fast text search.
     \item \textbf{Java 11 or newer}, only if the synthetic dataset is generated locally with Synthea. It is not needed if the CSV files are already available.
-    \item A valid \textbf{OpenAI API key} (for the SQL agent and the cluster/sequence interpretation) and, optionally, a \textbf{Google Gemini API key}.
+    \item A valid \textbf{OpenAI API key} (for the SQL agent and the cluster/sequence intepretation) and, optionally, a \textbf{Google Gemini API key}.
 \end{itemize}
 
 \subsection{Step-by-Step Installation}
@@ -105,7 +105,7 @@ The entry point is the sign-in page (Figure~\ref{fig:ch7_login}). The platform s
 
 \subsection{Patient}
 
-The Patient role sees only its own data, read-only. On the Home page it can view its complete medical history: conditions, medications, procedures, vaccinations, allergies, and the other clinical categories recorded for it.
+The Patient role sees only its ownn data, read-only. On the Home page it can view its complete medical history: conditions, medications, procedures, vaccinations, allergies, and the other clinical categories recorded for it.
 
 The Patient can also open its list of past visits and, for a particular visit, see the test results, conditions, medications, and procedures recorded during that encounter (Figures~\ref{fig:ch7_patient_visits_list} and~\ref{fig:ch7_patient_particular_visit}).
 
@@ -172,7 +172,7 @@ The Manager is the only role that can start and stop the analytics pipeline (Fig
 \label{fig:ch7_pipeline_start}
 \end{figure}
 
-Both the Manager and the Doctor can investigate the resulting clusters (Figure~\ref{fig:ch7_clusters_list}), request an AI interpretation of a specific cluster (Figures~\ref{fig:ch7_cluster_ai_1} and~\ref{fig:ch7_cluster_ai_2}), and open a specific cluster to see its detail (Figures~\ref{fig:ch7_cluster_1} and~\ref{fig:ch7_cluster_2}).
+Both the Manager and the Doctor can investigate the resulting clusers (Figure~\ref{fig:ch7_clusters_list}), request an AI interpretation of a specific cluster (Figures~\ref{fig:ch7_cluster_ai_1} and~\ref{fig:ch7_cluster_ai_2}), and open a specific cluster to see its detail (Figures~\ref{fig:ch7_cluster_1} and~\ref{fig:ch7_cluster_2}).
 
 \begin{figure}[H]
 \centering

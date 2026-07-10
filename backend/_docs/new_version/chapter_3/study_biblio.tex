@@ -10,7 +10,7 @@ Every reviewed study succeeds at its own objective. This chapter reads them thro
 
 Both of these methods are discussed together in this section, not only because they are often combined in the existing literature, but also because in the context of this thesis one is used as an input for the other.
 
-\subsection{Patient Clustering Methodologies}\label{sec:rw_clustering}
+\subsection{Patient Clustering Methods}\label{sec:rw_clustering}
 
 Unsupervised stratification of patients into groups with similar clinical phenotypes is an old and extensively researched problem in healthcare analytics.
 The five sources presented below address the issues that are relevant for HospitAI, including an algorithm selection survey, an application for decision support, a couple of generalizations for heterogeneous data, and an application for mixed-type data on a specific disease.
@@ -68,7 +68,7 @@ It accepts a single distance, the K-Prototypes mix of numeric and categorical me
 That partition is the concrete, inspectable grouping the later stages of the platform build on.
 
 \medskip
-Table~\ref{tab:ch3_clustering} summarizes the five clustering methodologies along the aspects that matter for HospitAI.
+Table~\ref{tab:ch3_clustering} summarizes the five clustering methods along the aspects that matter for HospitAI.
 
 \begingroup
 \footnotesize
@@ -82,7 +82,7 @@ Table~\ref{tab:ch3_clustering} summarizes the five clustering methodologies alon
 \multicolumn{4}{r}{\footnotesize\itshape continued on next page}\\
 \endfoot
 \bottomrule
-\caption{Comparison of the reviewed patient-clustering methodologies.}\label{tab:ch3_clustering}\\
+\caption{Comparison of the reviewed patient-clustering methods.}\label{tab:ch3_clustering}\\
 \endlastfoot
 Aljohani~\cite{aljohani2024} \newline (8-algorithm Fuzzy TOPSIS comparison) &
 Only numerical &
@@ -102,7 +102,7 @@ Small single-pathology cohort ($n{=}299$), $k{=}2$, few curated attributes. Hosp
 Najjar and Gagné~\cite{najjar2018kproto} \newline (multivalued K-Prototypes) &
 Mixed + multivalued categorical &
 Handles sets of codes via bag-of-words. Linear time &
-Multivalued codes handled inside the distance via Apriori/tf--idf. HospitAI engineers such history into single-valued flags and counts instead \\
+Multivalued codes handled inside the distance via Apriori/tf--idf. HospitAI engineers such history into single valued flags and counts instead \\
 
 José-García et al.~\cite{josegarcia2022} \newline (multi-view MVMC) &
 Mixed (per view) &
@@ -138,10 +138,10 @@ HospitAI therefore spends its effort not on squeezing out ever-rarer patterns, b
 
 \paragraph{Botas (2019).}
 Botas~\cite{botas2019} mines a national e-prescription database, using a case study on anticoagulants.
-The work combines two families of pattern mining. Association rules, via Apriori and FP-Growth, find drugs that co-occur. Sequential pattern mining, via PrefixSpan, finds the order in which prescriptions follow one another.
+The work combines two families of pattern mining. Association rules, via Apriori, find drugs that co-occur. Sequential pattern mining, via PrefixSpan, finds the order in which prescriptions follow one another.
 The raw patterns are not taken at face value. They are scored with a battery of measures for how interesting, novel, and semantically meaningful they are, and the results are broken down along fixed axes such as age group, gender, and health district.
 HospitAI is close to this work in two respects: it also uses PrefixSpan, and it also ranks patterns by interestingness rather than raw frequency. But it differs in structure.
-Botas mines a single type of event, drug prescriptions. HospitAI mines four types together, conditions, medications, procedures, and careplans, so a pattern can cross from a diagnosis to a treatment to a procedure.
+Botas mines a single type of event, drug prescriptions. HospitAI mines four types together, conditions, medications, procedures, and careplans, so a pattern can cross from a diagnosys to a treatment to a procedure.
 Botas also slices results along predefined demographic strata. HospitAI instead mines within clusters it has learned from the data. It then applies closed-pattern selection, a geometric-mean-lift interestingness score, and a Jaccard overlap filter, all described in Chapter~\ref{ch:analysis}, to keep the surviving patterns distinct rather than near-duplicates.
 
 \paragraph{Baudrier et al. (2022).}
@@ -158,7 +158,7 @@ The pipeline by Najjar et al.~\cite{najjar2018} is, in overall shape, the closes
 It clusters heterogeneous clinical visits with K-Prototypes, sharing this thesis's commitment to native mixed-type clustering. It then assembles the resulting clusters into treatment pathways and clusters those pathways again to find common trajectories, all evaluated on a real cohort of elderly heart-failure patients.
 Two differences remain central.
 Najjar et al. model the time dimension with Hidden Markov Models, which produce probabilistic transition matrices between hidden states. HospitAI instead produces explicit sequences of actual clinical events, ranked by support and interestingness. A clinician can read one directly as ``this, then this, then this'' rather than as a state-transition probability.
-Najjar et al. also stop at the mined models, leaving a clinician to interpret them. HospitAI passes each pattern through a constraint-based language-model verbalizer that writes the interpretation.
+Najjar et al. also stop at the mined models, leaving a clinician to interpret them. HospitAI passes each pattern through a constraint based language model verbalizer that writes the interpretation.
 These two gaps, explicit ranked sequences and automatic verbalization, are what the mining and language-model components of HospitAI are built to fill.
 
 \medskip
@@ -188,7 +188,7 @@ Whole cohort &
 More efficient mining. Achieves lower support limits &
 Efficiency only. Lower support improved output little. No re-ranking, scope or interpretation \\
 
-Botas~\cite{botas2019} \newline (Apriori, FP-Growth, PrefixSpan) &
+Botas~\cite{botas2019} \newline (Apriori, PrefixSpan) &
 Pre-defined demographic segments &
 Combines rules and sequences. Thorough interestingness assessment &
 One event type (medications). Segments fixed, not learned. No cluster conditioning or LLM \\
@@ -205,7 +205,7 @@ Probabilistic HMM rather than explicit ranked sequences. Interpretation left to 
 \end{xltabular}
 \endgroup
 
-All components of HospitAI's second pillar already exist in the literature, though not combined in the form this thesis proposes: mining based on learned phenotypes, ranking patterns by their statistical interestingness, and, above all, a way to connect mined sequences automatically into a story a clinician can read.
+All components of HospitAI's second pillar already exist in the literature, though not combined in the form this thesis proposes: mining based on learned phenotypes, ranking patterns by their statistical interestingnes, and, above all, a way to connect mined sequences automatically into a story a clinician can read.
 That is the topic of the third pillar.
 
 \section{Large Language Models and Prompt Engineering in Health Care}\label{sec:rw_llm}
@@ -224,7 +224,7 @@ Where the tutorial stops is at free-text clinical interaction. It does not cover
 Al-Garadi et al.~\cite{algaradi2024} give a broad review of how large language models are being used in healthcare and, more useful for this thesis, a framework for deploying them responsibly.
 They survey the ways an LLM is adapted to a specific task: fine-tuning, prompt engineering, and multimodal adaptation to EHR data. The whole effort is organized into a five-stage lifecycle, running from planning to maintenance.
 The framework rests on general principles: accountability, privacy, fairness, interpretability, keeping a clinician in the loop, and preventing hallucinations.
-Several of these map onto concrete mechanisms in HospitAI. Hallucination prevention corresponds to the deterministic, read-only SQL filter that every generated query must pass through. Keeping a clinician in the loop corresponds to HospitAI's framing of its output as decision support to be verified, not a diagnosis to be trusted.
+Several of these map onto concrete mechanisms in HospitAI. Hallucination prevention corresponds to the deterministic, read-only SQL filter that every generated query must pass through. Keeping a clinician in the loop corresponds to HospitAI's framing of its output as decision support to be verified, not a diagnosys to be trusted.
 Being a review, though, the article stops at principles. It does not provide a working pipeline that connects the output of an unsupervised model to an LLM and a natural-language query interface. That is the gap HospitAI's third pillar fills.
 
 \medskip
@@ -260,7 +260,7 @@ Guidance only. No structured-ML-to-LLM pipeline or NL querying \\
 
 The discussion of the three pillars leads to one observation.
 The present body of literature solves each task well on its own, but none of the frameworks under review connect structured data mining to automated, guardrail-based interpretation of the resulting medical conclusions.
-The clustering papers end with the clustering itself and the interpretation of results is left for human specialists. The pathway-mining papers provide sequences either without considering learned phenotypes or without re-ranking the results using a statistical interestingness metric. And the LLM papers control the generation of free-form interactions or predict outcomes without linking to the results of unsupervised interpretable pipelines.
+The clustering papers end with the clustering itself and the interpretation of results is left for human specialists. The pathway-mining papers provide sequences either without considering learned phenotypes or without re-ranking the results using a statistical interestingnes metric. And the LLM papers control the generation of free-form interactions or predict outcomes without linking to the results of unsupervised interpretable pipelines.
 A single overall comparison matrix is deliberately avoided, since a clustering algorithm and a prompt-engineering paper cannot be judged by the same criteria. Still, read together, the per-section tables all point to the same conclusion: the gap is not inside each pillar, but between them.
 
 That gap is what HospitAI addresses, and it is why the platform exists.

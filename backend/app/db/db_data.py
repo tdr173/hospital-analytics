@@ -33,7 +33,7 @@ TABLE: organization
 
 TABLE: provider
   - provider_id (str, PK) - UUID.
-  - organization_id (str, FK → organization) - The organization the provider works at.
+  - organization_id (str, FK -> organization) - The organization the provider works at.
   - first_name (str), last_name (str) - Provider name.
   - gender (str, nullable) - Provider gender.
   - speciality (str) - Medical specialty (e.g. 'General Practice', 'Cardiology', 'Internal Medicine', 'Surgery').
@@ -44,9 +44,9 @@ TABLE: provider
 TABLE: encounter
   PURPOSE: Represents a patient visit/interaction with the healthcare system.
   - encounter_id (str, PK) - UUID.
-  - patient_id (str, FK → patient).
-  - organization_id (str, FK → organization).
-  - provider_id (str, FK → provider).
+  - patient_id (str, FK -> patient).
+  - organization_id (str, FK -> organization).
+  - provider_id (str, FK -> provider).
   - start_date (datetime) - When the visit started.
   - end_date (datetime) - When the visit ended.
   - duration (float) - Length of visit in minutes.
@@ -67,8 +67,8 @@ TABLE: encounter
 TABLE: observation
   PURPOSE: Clinical measurements and lab results recorded during encounters.
   - id (int, PK).
-  - patient_id (str, FK → patient).
-  - encounter_id (str, FK → encounter, nullable).
+  - patient_id (str, FK -> patient).
+  - encounter_id (str, FK -> encounter, nullable).
   - date (datetime) - Date of measurement.
   - observation_code (str) - LOINC code (e.g. '8310-5' = Body Temperature, '8480-6' = Systolic BP, '39156-5' = BMI, '2093-3' = Cholesterol).
   - description (str) - Human-readable name (e.g. 'Body Temperature', 'Hemoglobin A1c'). Use ILIKE for searching.
@@ -79,8 +79,8 @@ TABLE: observation
 TABLE: condition
   PURPOSE: Diagnosed medical conditions/diseases.
   - id (int, PK).
-  - patient_id (str, FK → patient).
-  - encounter_id (str, FK → encounter).
+  - patient_id (str, FK -> patient).
+  - encounter_id (str, FK -> encounter).
   - start_date (datetime) - When the condition was diagnosed.
   - end_date (datetime, nullable) - When resolved. NULL = ongoing/chronic.
   - condition_code (str) - SNOMED-CT code.
@@ -89,8 +89,8 @@ TABLE: condition
 TABLE: medication
   PURPOSE: Prescribed medications/drugs.
   - id (int, PK).
-  - patient_id (str, FK → patient).
-  - encounter_id (str, FK → encounter).
+  - patient_id (str, FK -> patient).
+  - encounter_id (str, FK -> encounter).
   - start_date (datetime) - When the medication was started.
   - end_date (datetime, nullable) - When stopped.
   - duration_days (float) - Pre-computed treatment length in days.
@@ -101,8 +101,8 @@ TABLE: medication
 TABLE: procedure
   PURPOSE: Medical procedures performed on patients.
   - id (int, PK).
-  - patient_id (str, FK → patient).
-  - encounter_id (str, FK → encounter).
+  - patient_id (str, FK -> patient).
+  - encounter_id (str, FK -> encounter).
   - start_date (datetime) - When the procedure was performed.
   - end_date (datetime, nullable) - When the procedure ended.
   - procedure_code (str) - SNOMED-CT code.
@@ -112,8 +112,8 @@ TABLE: procedure
 TABLE: immunization
   PURPOSE: Vaccinations administered to patients.
   - id (int, PK).
-  - patient_id (str, FK → patient).
-  - encounter_id (str, FK → encounter).
+  - patient_id (str, FK -> patient).
+  - encounter_id (str, FK -> encounter).
   - date (datetime) - When the vaccine was given.
   - immunization_code (str) - CVX code (e.g. '140' = Influenza).
   - description (str) - Vaccine name (e.g. 'Influenza', 'COVID-19', 'Hepatitis B'). Use ILIKE.
@@ -121,8 +121,8 @@ TABLE: immunization
 TABLE: allergy
   PURPOSE: Patient allergies.
   - id (int, PK).
-  - patient_id (str, FK → patient).
-  - encounter_id (str, FK → encounter, nullable).
+  - patient_id (str, FK -> patient).
+  - encounter_id (str, FK -> encounter, nullable).
   - start_date (date) - When the allergy was first recorded.
   - end_date (date, nullable) - When resolved. NULL = still active.
   - allergy_code (str) - SNOMED-CT code.
@@ -131,8 +131,8 @@ TABLE: allergy
 TABLE: careplan
   PURPOSE: Longitudinal care plans assigned to patients (e.g. 'Diabetes self management plan', 'Cardiac care plan').
   - id (int, PK).
-  - patient_id (str, FK → patient).
-  - encounter_id (str, FK → encounter).
+  - patient_id (str, FK -> patient).
+  - encounter_id (str, FK -> encounter).
   - start_date (datetime) - When the care plan started.
   - end_date (datetime, nullable) - When concluded. NULL = still active.
   - duration_days (float, nullable) - Pre-computed plan length in days.
@@ -154,8 +154,8 @@ TABLE: prefix_span_pattern
 
 TABLE: prefix_span_patient_pattern
   PURPOSE: Junction table - which patients contain which mined sequence.
-  - pattern_id (int, PK, FK → prefix_span_pattern.id).
-  - patient_id (str, PK, FK → patient).
+  - pattern_id (int, PK, FK -> prefix_span_pattern.id).
+  - patient_id (str, PK, FK -> patient).
   USAGE: JOIN to find patients who follow a pattern, or to count pattern frequency within a cluster.
 
 TABLE: cluster_meta
@@ -191,7 +191,7 @@ TABLE: cluster_patient
   PURPOSE: Maps each patient to their assigned cluster. One row per patient.
            Fully replaced on every clustering run.
   - id (int, PK, serial).
-  - patient_id (str, FK → patient).
+  - patient_id (str, FK -> patient).
   - cluster_label (int) - Which cluster this patient belongs to (-1 = outlier).
   - is_outlier (bool) - TRUE if the patient was excluded as a statistical outlier.
   - pca_x (float, nullable) - X coordinate from PCA 2D projection (for scatter plot).
@@ -215,14 +215,14 @@ TABLE: cluster_patient
 
 --- KEY RELATIONSHIPS ---
 
-patient (1) → (N) encounter → (1) organization
-patient (1) → (N) encounter → (1) provider
-encounter (1) → (N) observation, condition, medication, procedure, immunization, allergy, careplan
-provider (N) → (1) organization
+patient (1) -> (N) encounter -> (1) organization
+patient (1) -> (N) encounter -> (1) provider
+encounter (1) -> (N) observation, condition, medication, procedure, immunization, allergy, careplan
+provider (N) -> (1) organization
 cluster_meta (1) - singleton run metadata
 cluster (N) - one row per cluster label
-patient (1) → (0..1) cluster_patient - current cluster assignment
-prefix_span_pattern (1) → (N) prefix_span_patient_pattern → (1) patient
+patient (1) -> (0..1) cluster_patient - current cluster assignment
+prefix_span_pattern (1) -> (N) prefix_span_patient_pattern -> (1) patient
 
 To find which hospital a patient visited: JOIN encounter ON patient_id, then JOIN organization ON organization_id.
 To find which doctor treated a patient: JOIN encounter ON patient_id, then JOIN provider ON provider_id.
@@ -233,40 +233,40 @@ To count how many patients in a cluster share a sequence: JOIN prefix_span_patie
 
 --- CLUSTERING SEMANTIC MAPPINGS ---
 
-"cluster" / "segment" / "grup de pacienti" → cluster table (summaries) + cluster_patient (membership)
-"outlier" / "exceptie" → cluster_patient WHERE is_outlier = TRUE (or cluster_label = -1)
-"which cluster is patient X in" → SELECT cluster_label FROM cluster_patient WHERE patient_id = 'X'
-"patients in cluster N" → SELECT patient_id FROM cluster_patient WHERE cluster_label = N AND NOT is_outlier
-"cluster quality" / "calitatea clusteringului" → SELECT metrics FROM cluster_meta LIMIT 1
-"feature value for patient" → SELECT features->>'<feature_name>' FROM cluster_patient WHERE patient_id = '...'
+"cluster" / "segment" / "grup de pacienti" -> cluster table (summaries) + cluster_patient (membership)
+"outlier" / "exceptie" -> cluster_patient WHERE is_outlier = TRUE (or cluster_label = -1)
+"which cluster is patient X in" -> SELECT cluster_label FROM cluster_patient WHERE patient_id = 'X'
+"patients in cluster N" -> SELECT patient_id FROM cluster_patient WHERE cluster_label = N AND NOT is_outlier
+"cluster quality" / "calitatea clusteringului" -> SELECT metrics FROM cluster_meta LIMIT 1
+"feature value for patient" -> SELECT features->>'<feature_name>' FROM cluster_patient WHERE patient_id = '...'
 
 --- SEMANTIC MAPPINGS (multilingual) ---
 
 These map common natural-language terms to the correct database concepts:
 
-"hospitalization" / "internare" / "admission" → encounter WHERE encounter_class = 'inpatient'
-"visit" / "vizita" / "consultatie" → encounter (any encounter_class, or 'ambulatory' if outpatient)
-"emergency" / "urgenta" → encounter WHERE encounter_class = 'emergency'
-"checkup" / "control" → encounter WHERE encounter_class = 'wellness'
-"last" / "most recent" / "ultima" / "cel mai recent" → ORDER BY date DESC LIMIT 1
-"first" / "earliest" / "prima" → ORDER BY date ASC LIMIT 1
-"how many" / "cati" / "cate" / "numar" → COUNT(*)
-"average" / "medie" → AVG()
-"disease" / "boala" / "diagnostic" → condition table
-"treatment" / "tratament" / "medicament" → medication table
-"surgery" / "operatie" / "interventie" → procedure table
-"vaccine" / "vaccin" → immunization table
-"allergy" / "alergie" → allergy table
-"care plan" / "plan de ingrijire" / "plan de tratament" → careplan table
-"doctor" / "medic" → provider table
-"hospital" / "spital" / "clinica" → organization table
-"patient" / "pacient" → patient table
-"sequence" / "trajectory" / "pattern" / "traseu" / "secventa" → prefix_span_pattern table (mining results) + prefix_span_patient_pattern (membership)
-"blood pressure" / "tensiune" → observation WHERE description ILIKE '%blood pressure%'
-"temperature" / "temperatura" → observation WHERE description ILIKE '%body temperature%'
-"BMI" → observation WHERE observation_code = '39156-5'
-"alive" / "in viata" → patient WHERE deathdate IS NULL
-"deceased" / "decedat" → patient WHERE deathdate IS NOT NULL
+"hospitalization" / "internare" / "admission" -> encounter WHERE encounter_class = 'inpatient'
+"visit" / "vizita" / "consultatie" -> encounter (any encounter_class, or 'ambulatory' if outpatient)
+"emergency" / "urgenta" -> encounter WHERE encounter_class = 'emergency'
+"checkup" / "control" -> encounter WHERE encounter_class = 'wellness'
+"last" / "most recent" / "ultima" / "cel mai recent" -> ORDER BY date DESC LIMIT 1
+"first" / "earliest" / "prima" -> ORDER BY date ASC LIMIT 1
+"how many" / "cati" / "cate" / "numar" -> COUNT(*)
+"average" / "medie" -> AVG()
+"disease" / "boala" / "diagnostic" -> condition table
+"treatment" / "tratament" / "medicament" -> medication table
+"surgery" / "operatie" / "interventie" -> procedure table
+"vaccine" / "vaccin" -> immunization table
+"allergy" / "alergie" -> allergy table
+"care plan" / "plan de ingrijire" / "plan de tratament" -> careplan table
+"doctor" / "medic" -> provider table
+"hospital" / "spital" / "clinica" -> organization table
+"patient" / "pacient" -> patient table
+"sequence" / "trajectory" / "pattern" / "traseu" / "secventa" -> prefix_span_pattern table (mining results) + prefix_span_patient_pattern (membership)
+"blood pressure" / "tensiune" -> observation WHERE description ILIKE '%blood pressure%'
+"temperature" / "temperatura" -> observation WHERE description ILIKE '%body temperature%'
+"BMI" -> observation WHERE observation_code = '39156-5'
+"alive" / "in viata" -> patient WHERE deathdate IS NULL
+"deceased" / "decedat" -> patient WHERE deathdate IS NOT NULL
 
 --- EXAMPLE QUERIES ---
 

@@ -22,8 +22,6 @@ class PipelineRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    # --- state -----------------------------------------------------------------
-
     def ensure_singleton(self) -> PipelineRunModel:
         state = self.db.get(PipelineRunModel, 1)
         if state is None:
@@ -147,8 +145,6 @@ class PipelineRepository:
             synchronize_session=False,
         )
         self.db.commit()
-
-    # --- stats -----------------------------------------------------------------
 
     def is_patient_table_empty(self) -> bool:
         count = self.db.query(func.count()).select_from(PatientModel).scalar()

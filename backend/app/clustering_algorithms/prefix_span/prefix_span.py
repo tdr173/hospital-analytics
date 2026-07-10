@@ -2,15 +2,18 @@
 # python app/clustering_algorithms/prefix_span/prefix_span.py --n-clusters 4
 # python app/clustering_algorithms/prefix_span/prefix_span.py --n-clusters 4 --shuffle --shuffle-seed 42   # temporal null test (no DB write)
 
-# custom optimizations:
-# - GML scoring: rank patterns by geometric mean lift instead of raw support
-# - type diversity bonus: multiply GML by (1 + 0.3 * (n_types - 1)) to boost patterns spanning C, M, P, CP together
-# - Jaccard dedup: skip a candidate if it shares >= 80% of items with an already-chosen pattern
-# - run-of-3-same-type filter: drop patterns like P->P->P that repeat the same event type 3 times in a row
-# - per-prefix/suffix cap: at most 6 patterns starting with the same item, 20 ending with the same item
-# - dental cap: at most 15 patterns where >= 50% of unique items are dental
-# - multi-type quota (Phase A): reserve 25 slots for patterns spanning all 4 event types before normal fill
-# - cross-scope dedup: per-cluster results drop patterns already mined globally
+# custom optimizations (7):
+# 1. over-mining: mine a candidate pool 20x larger than the final result set (closed=True,
+#    TOP_K * OVERMINE_MULTIPLIER), so later filters can prune aggressively without running out of candidates
+# 2. GML re-ranking: rank patterns by geometric mean lift instead of raw support
+# 3. type diversity bonus + same-type-run filter: multiply GML by (1 + 0.3 * (n_types - 1)) to boost
+#    patterns spanning C, M, P, CP together, and drop patterns like P->P->P that repeat the same event type
+#    3 times in a row
+# 4. full-spectrum quota (Phase A): reserve 25 slots for patterns spanning all 4 event types before normal fill
+# 5. Jaccard dedup: skip a candidate if it shares >= 80% of items with an already-chosen pattern
+# 6. prefix/suffix/dental caps: at most 6 patterns starting with the same item, 20 ending with the same
+#    item, and at most 15 patterns where >= 50% of unique items are dental
+# 7. cross-scope dedup: per-cluster results drop patterns already mined globally
 
 # GML is always < 1 for sequential patterns:
 # every patient who has the pattern also has each item individually -> P(pattern) <= P(any item)
@@ -235,7 +238,7 @@ def _is_subsequence(pattern: list[str], sequence: list[str]) -> bool:
     return all(any(item == p for item in it) for p in pattern)
 
 
-# measures how similar 2 sets are: Jaccard(A, B) = |A ∩ B| / |A ∪ B|
+# measures how similar 2 sets are: Jaccard(A, B) = |A and B| / |A or B|
 def _jaccard(a: frozenset, a_len: int, b: frozenset, b_len: int) -> float:
     inter = len(a & b)
     denom = a_len + b_len - inter

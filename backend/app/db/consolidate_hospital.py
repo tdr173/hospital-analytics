@@ -20,10 +20,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# ---------------------------------------------------------------------------
-# Config
-# ---------------------------------------------------------------------------
-
 ACTIVE_DOCTORS_PER_YEAR = 50
 CAREER_MIN_YEARS = 20
 CAREER_MAX_YEARS = 30
@@ -40,12 +36,8 @@ logging.basicConfig(
 log = logging.getLogger("consolidate_hospital")
 
 
-# ---------------------------------------------------------------------------
-# Steps
-# ---------------------------------------------------------------------------
-
 def pick_hospital(orgs: pd.DataFrame) -> pd.Series:
-    """Return the single org row with the highest UTILIZATION (tie → first)."""
+    """Return the single org row with the highest UTILIZATION (tie -> first)."""
     top = orgs.sort_values("UTILIZATION", ascending=False, kind="stable").iloc[0]
     log.info(
         "Chosen hospital: %s (%s) - UTILIZATION=%s",
@@ -113,7 +105,7 @@ def build_doctor_generations(
     out["ORGANIZATION"] = hospital_id
 
     log.info(
-        "Generated %d doctors covering %d–%d (target %d active/year)",
+        "Generated %d doctors covering %d-%d (target %d active/year)",
         len(out), min_year, max_year, ACTIVE_DOCTORS_PER_YEAR,
     )
     return out
@@ -154,17 +146,13 @@ def reassign_encounters(
     return enc.drop(columns="_year")
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
 def main() -> None:
     log.info("Source: %s", SOURCE_DIR)
     log.info("Output: %s", OUTPUT_DIR)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(RANDOM_SEED)
 
-    log.info("Loading CSVs …")
+    log.info("Loading CSVs...")
     orgs = pd.read_csv(SOURCE_DIR / "organizations.csv")
     providers = pd.read_csv(SOURCE_DIR / "providers.csv")
     encounters = pd.read_csv(SOURCE_DIR / "encounters.csv")
@@ -178,7 +166,7 @@ def main() -> None:
 
     years = pd.to_datetime(encounters["START"], utc=True, errors="coerce").dt.year
     min_year, max_year = int(years.min()), int(years.max())
-    log.info("Encounter years: %d – %d (%d years)", min_year, max_year, max_year - min_year + 1)
+    log.info("Encounter years: %d - %d (%d years)", min_year, max_year, max_year - min_year + 1)
 
     doctors = build_doctor_generations(
         providers, hospital_id, min_year, max_year, rng,
@@ -186,7 +174,7 @@ def main() -> None:
 
     new_encounters = reassign_encounters(encounters, doctors, hospital_id, rng)
 
-    # -- write outputs -------------------------------------------------------
+    # write outputs
     new_orgs = hospital.to_frame().T.reset_index(drop=True)
     new_orgs.to_csv(OUTPUT_DIR / "organizations.csv", index=False)
 
@@ -199,14 +187,14 @@ def main() -> None:
 
     new_encounters.to_csv(OUTPUT_DIR / "encounters.csv", index=False)
 
-    # -- sanity report -------------------------------------------------------
+    # sanity report
     active_hist = {
         y: int(((doctors["career_start"] <= y) & (doctors["career_end"] >= y)).sum())
         for y in (min_year, (min_year + max_year) // 2, max_year)
     }
     distinct_used = new_encounters["PROVIDER"].nunique()
 
-    log.info("--- summary ---")
+    log.info("summary:")
     log.info("organizations.csv rows : %d", len(new_orgs))
     log.info("providers.csv rows     : %d", len(doctors))
     log.info("encounters.csv rows    : %d", len(new_encounters))

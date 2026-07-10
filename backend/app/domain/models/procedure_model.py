@@ -13,7 +13,6 @@ class ProcedureModel(SQLModel, table=True):
     start_date: datetime
     end_date: Optional[datetime] = None
 
-    # Clinical fields (Used for K-Prototypes clustering)
     procedure_code: str = Field(index=True)
     description: str = Field(index=True)
     reason_description: Optional[str] = None

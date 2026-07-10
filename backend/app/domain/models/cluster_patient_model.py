@@ -12,10 +12,10 @@ class ClusterPatientModel(SQLModel, table=True):
 
     patient_id: str = Field(index=True, foreign_key="patient.patient_id")
 
-    cluster_label: int = Field(index=True)   # 0, 1, 2, ... or -1 for outliers
+    cluster_label: int = Field(index=True)   # -1 marks outliers
     is_outlier: bool = Field(default=False)
 
     pca_x: Optional[float] = Field(default=None)
     pca_y: Optional[float] = Field(default=None)
 
-    features: dict = Field(sa_column=Column(JSONB))   # all numerical + categorical features, dynamic
+    features: dict = Field(sa_column=Column(JSONB))   # feature keys vary by clustering run

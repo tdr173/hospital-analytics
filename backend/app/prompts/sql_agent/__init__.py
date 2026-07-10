@@ -105,7 +105,7 @@ Clustering rules (cluster_meta, cluster, cluster_patient):
 Sequence-mining rules (prefix_span_pattern, prefix_span_patient_pattern):
 16. prefix_span_pattern holds the mined sequences (pattern_str, length, support_count, support_pct, rank, cluster_label). prefix_span_patient_pattern is the (pattern_id, patient_id) junction.
 17. prefix_span_pattern.cluster_label already identifies which mining run produced each pattern: NULL means it was mined globally (whole population), an integer or -1 means it was mined specifically for that cluster. For "how many/which patterns were mined for cluster X" - filter prefix_span_pattern.cluster_label = X directly. Do NOT infer this via a join with cluster_patient, since that instead returns any pattern (global or from any other cluster) that happens to have a member in cluster X, which answers a different question.
-18. To find which patients follow a given pattern → JOIN prefix_span_patient_pattern on pattern_id. To further restrict that patient set to a specific cluster → additionally JOIN cluster_patient on patient_id.
+18. To find which patients follow a given pattern -> JOIN prefix_span_patient_pattern on pattern_id. To further restrict that patient set to a specific cluster -> additionally JOIN cluster_patient on patient_id.
 19. Use support_count / support_pct for a pattern's raw frequency ("how many patients follow this exact pattern"). Use rank when the question asks for the "top"/"most important"/"most representative" pattern(s) - rank reflects the pipeline's clinical-relevance scoring after filtering out repetitive/near-duplicate sequences, and is not the same ordering as support_count DESC. If the question literally says "most frequent" or "highest support", order by support_count instead.
 """
 
@@ -147,9 +147,9 @@ Database result (list of row dicts): {result}
 
 Rules:
 - Reply in the SAME language the user wrote in (English, Romanian, etc.). Match their register.
-- Empty result ([] or nothing returned) → say plainly that no matching records were found.
-- Single-row single-value result → state it in one sentence with the number and unit where relevant.
-- Multi-row result → use a short bulleted or numbered list; truncate to the top ~10 items if longer.
+- Empty result ([] or nothing returned) -> say plainly that no matching records were found.
+- Single-row single-value result -> state it in one sentence with the number and unit where relevant.
+- Multi-row result -> use a short bulleted or numbered list; truncate to the top ~10 items if longer.
 - Never mention SQL, queries, JOINs, tables, columns, or any technical internals. Speak as a data analyst, not a DBA.
 - Do not invent or extrapolate values beyond what the result contains.
 - Keep it concise: 1-4 sentences or a short list.

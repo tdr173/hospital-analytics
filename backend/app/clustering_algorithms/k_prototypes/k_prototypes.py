@@ -297,9 +297,9 @@ def build_patient_features(engine) -> pd.DataFrame:
                       > 0
                     AND description NOT ILIKE '%%percentile%%'
                     AND description NOT ILIKE '%%z-score%%') sub
-            WHERE rn <= 3 -- Redus la 3 pentru a fi mai aproape de starea curentă
+            WHERE rn <= 3 -- Redus la 3 pentru a fi mai aproape de starea curenta
               AND desc_key IS NOT NULL
-              -- Filtru de siguranță pentru date aberante
+              -- Filtru de siguranta pentru date aberante
               AND NOT (desc_key = 'bmi' AND value_norm > 100)
               AND NOT (desc_key = 'glucose' AND value_norm > 1000)
             GROUP BY patient_id;
@@ -346,7 +346,7 @@ def build_patient_features(engine) -> pd.DataFrame:
                                                  WHEN LOWER(description) ~ '(diabetes|hyperlipidemia|heart|hypertension|weight|cardiac|coronary)'
                     THEN 'Chronic Cardio-Metabolic'
 
-                                                 ELSE 'General Rehab & Routine' -- Aici vor intra acum și cei cu Mental Health
+                                                 ELSE 'General Rehab & Routine' -- Aici vor intra acum si cei cu Mental Health
                                                  END AS care_plan_category,
 
                                              CASE
@@ -684,7 +684,7 @@ def build_patient_features(engine) -> pd.DataFrame:
         labels=["Normal", "Elevated", "Hypertensive"],
     ).astype(object).where(df["avg_systolic_bp"].notna(), "Unknown").astype(str)
 
-    # Standard fasting-glucose thresholds: <100 Normal, 100–125 Prediabetic, >=126 Diabetic.
+    # Standard fasting-glucose thresholds: <100 Normal, 100-125 Prediabetic, >=126 Diabetic.
     df["glucose_risk_category"] = pd.cut(
         df["avg_glucose"],
         bins=[-float("inf"), 99.9, 125.9, float("inf")],
