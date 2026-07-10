@@ -508,7 +508,7 @@ def _truncate_all_tables(engine):
 def run_etl(engine):
     _truncate_all_tables(engine)
     load_patients(engine)
-    load_organizations(engine)  # <--- Added this line
+    load_organizations(engine)
     load_providers(engine)
     load_encounters(engine)
     load_patient_providers(engine)

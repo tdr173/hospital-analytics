@@ -44,7 +44,7 @@ export default function PatientFormModal({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [birthdate, setBirthdate] = useState("");
-  const [deathdate, setDeathdate] = useState(""); // <-- Added state
+  const [deathdate, setDeathdate] = useState("");
   const [gender, setGender] = useState("");
   const [race, setRace] = useState("");
   const [ethnicity, setEthnicity] = useState("");
@@ -82,7 +82,7 @@ export default function PatientFormModal({
     setFirstName(initial?.firstName ?? "");
     setLastName(initial?.lastName ?? "");
     setBirthdate(initial?.birthdate ?? "");
-    setDeathdate((initial as PatientDetail)?.deathdate ?? ""); // <-- Set initial value
+    setDeathdate((initial as PatientDetail)?.deathdate ?? "");
     setGender(genderValue);
     setRace(raceValue);
     setEthnicity(initial?.ethnicity ?? "");
@@ -124,7 +124,7 @@ export default function PatientFormModal({
       lastName: lastName.trim(),
       age: deriveAge(birthdate),
       birthdate: birthdate || null,
-      deathdate: deathdate || null, // <-- Added to payload
+      deathdate: deathdate || null,
       gender,
       race,
       ethnicity: ethnicity.trim(),

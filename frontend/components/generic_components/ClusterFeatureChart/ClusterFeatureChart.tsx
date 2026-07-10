@@ -66,7 +66,7 @@ export default function ClusterFeatureChart({
                 const entry = payload[0].payload as ClusterChartEntry;
                 return (
                   <div className={classes.tooltipBox}>
-                    {entry.tooltip.split(" · ").map((line, i) => (
+                    {entry.tooltip.split(" | ").map((line, i) => (
                       <div
                         key={i}
                         className={

@@ -16,7 +16,7 @@ interface FormModalProps {
   onSubmit: () => void;
   children: ReactNode;
   layout?: "grid" | "single";
-  type?: "two" | "three"; // <-- Added type prop here
+  type?: "two" | "three";
   destructive?: boolean;
   errorMessage?: string | null;
 }
@@ -31,7 +31,7 @@ export default function FormModal({
   onSubmit,
   children,
   layout = "grid",
-  type = "two", // <-- Defaulting to "two"
+  type = "two",
   destructive = false,
   errorMessage,
 }: FormModalProps) {
@@ -56,14 +56,13 @@ export default function FormModal({
 
   if (!open) return null;
 
-  // Helper to figure out the right CSS class
   const getBodyClass = () => {
     if (layout === "single") return classes.bodySingle;
     if (type === "three") return classes.bodyThree;
     return classes.body; // Defaults to the 2-column grid
   };
 
-  // Optional: If 3 columns feel too squished, we can slightly widen the modal
+  // three columns need a wider modal
   const modalStyle = type === "three" ? { maxWidth: "800px" } : {};
 
   return (
