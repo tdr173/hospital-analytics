@@ -18,7 +18,7 @@ The \textbf{Backend} is a single \textbf{FastAPI} process with three cooperating
 
 The \textbf{Database} is a single \textbf{PostgreSQL} instance, detailed in Section~\ref{ch:database_design}: eleven relations are populated once by the ETL step from the Synthea dataset, and the rest record the junctions and analytical outputs of the pipeline.
 
-Finally, the platform relies on a few \textbf{external services}. The Synthea generator produces the source dataset offline, and the LLM providers, Google Gemini and OpenAI, sit behind the interpretation stage and the SQL Agent. The monthly re-triggering that keeps the clusters and mined pathways current as the data evolves is handled internally, by the in-process scheduler shown inside the Backend (Section~\ref{ch:pipeline_impl}), not by any external service.
+Finally, the platform relies on a few \textbf{external services}. The Synthea generator produces the source dataset offline, and the LLM provider, OpenAI, sits behind the interpretation stage and the SQL Agent. The monthly re-triggering that keeps the clusters and mined pathways current as the data evolves is handled internally, by the in-process scheduler shown inside the Backend (Section~\ref{ch:pipeline_impl}), not by any external service.
 
 \begin{figure}[H]
 \centering
@@ -120,7 +120,7 @@ This section presents the concrete realization of the design above. The backend 
 
 \subsubsection*{Routing and External Libraries}
 
-The application is a Next.js App Router project in TypeScript. Every folder under \texttt{app/} is a route. The \texttt{(auth)}/\texttt{(main)} groups introduced in Section~\ref{ch:frontend_design} are implemented as plain folders whose parentheses exclude them from the URL, while still letting each group nest its own layout. Beyond Next.js and React, the implementation relies on a small, fixed set of libraries: \textbf{Redux Toolkit} and \textbf{react-redux} for state, \textbf{MUI} and \textbf{Emotion} for components and styling. \textbf{Recharts} and \textbf{ECharts} render the analytical charts, \textbf{react-toastify} handles error notifications, and \textbf{Yup} handles form validation. No HTTP client library is used. Every call goes through the native \texttt{fetch} API, wrapped by the helper described next.
+The application is a Next.js App Router project in TypeScript. Every folder under \texttt{app/} is a route. The \texttt{(auth)}/\texttt{(main)} groups introduced in Section~\ref{ch:frontend_design} are implemented as plain folders whose parentheses exclude them from the URL, while still letting each group nest its own layout. Beyond Next.js and React, the implementaion relies on a small, fixed set of libraries: \textbf{Redux Toolkit} and \textbf{react-redux} for state, \textbf{MUI} and \textbf{Emotion} for components and styling. \textbf{Recharts} and \textbf{ECharts} render the analytical charts, \textbf{react-toastify} handles error notifications, and \textbf{Yup} handles form validation. No HTTP client library is used. Every call goes through the native \texttt{fetch} API, wrapped by the helper described next.
 
 \subsubsection*{State Management and API Access}
 
@@ -358,7 +358,7 @@ def get_db():
 \subsubsection{ETL Pipeline}
 \label{ch:etl_impl}
 
-This thesis uses the open-source Synthea generator to produce a synthetic but realistic electronic-health-record dataset, generating patient demographics together with the clinical events (conditions, medications, procedures, immunizations, allergies, care plans, and observations) of 20{,}000 living patients, each with a decades-long history (Section~\ref{ch:used_dataset} gives the row counts of every source file).
+This thesis uses the open-source Synthea generator to produce a synthetic but realistic electronic-health-record dataset, generating patient demographics together with the clinical events (conditions, medications, procedures, immunizations, allergies, care plans, and observations) of 20{,}000 living patients (plus 2{,}284 further patients who die during the simulation, for 22{,}284 patient records in total), each with a decades-long history (Section~\ref{ch:used_dataset} gives the row counts of every source file).
 
 The Ingestion Script (\texttt{db/etl\_script.py}) loads this CSV output into the normalized schema of Section~\ref{ch:database_design} via SQLModel, following Figure~\ref{fig:etl_pipeline}. It reuses the \texttt{engine}/\texttt{get\_db()} connectivity of Section~\ref{ch:backend_impl}, runs once per database refresh, and can be run standalone or through the orchestration job.
 

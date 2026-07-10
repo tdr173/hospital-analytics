@@ -18,7 +18,7 @@ This subsection describes the use cases identified in the process of analysis. A
 \item \textbf{Patient}: has the smallest scope of interests, checking his or her own medical record and natural language queries for its personal health data.
 \end{itemize}
 
-As stated in Chapter~\ref{ch:introduction}, the three actors mentioned above form the demonstration layer illustrating how the interface and data scope vary from one user to another.
+As stated in Chapter~\ref{ch:introduction}, the three actors mentioned above form the demonstration layer illustarting how the interface and data scope vary from one user to another.
 
 The analysis found eleven use cases. Four of them carry the contribution of this thesis and are detailed below, together with their flows. The other seven are listed briefly.
 
@@ -200,7 +200,7 @@ Chapter~\ref{ch:introduction} described the shift from paper to Electronic Healt
 
 \vspace{1em}
 
-Because no single approach fits all of it, the solution combines several techniques, and this section is organized accordingly: it first develops clustering over mixed-type data, from the notion of distance up to the K-Prototypes algorithm, then sequential pattern mining up to PrefixSpan, and finally assembles both, together with a large language model, into the methodology proposed by this thesis.
+Because no single approach fits all of it, the solution combines several techniques, and this section is organized accordingly: it first develops clustering over mixed-type data, from the notion of distance up to the K-Prototypes algorithm, then sequential pattern mining up to PrefixSpan. The next section then assembles both, together with a large language model, into the methodology proposed by this thesis.
 
 \subsection{Clustering Algorithms and Mixed-Type Data Handling}
 \label{ch:clustering_limitations}
@@ -242,7 +242,7 @@ Its squared form underpins the K-Means family, where the optimal center is the a
 
 Under this measure the best representative of a cluster is the \emph{mode}, the most frequent category of each attribute, since it minimizes the total number of mismatches.
 
-\textbf{Mixed data.} When quantitative and qualitative variables coexist, neither family above is defined on all features at once. The Gower distance \cite{gower1971} solves this by scoring each feature with a measure adapted to its type and averaging the contributions:
+\textbf{Mixed data.} When quantitative and qualitative variables coexist, neither family above is defined on all features at once. The Gower distance \cite{gower1971} solves this by scoring each feature with a measure adapted to its type and avearging the contributions:
 
 \begin{equation}
     d_G(i, j) = \frac{1}{p} \sum_{m=1}^{p} d_m(i, j)
@@ -349,14 +349,14 @@ Also, there is an additional requirement, known as a hard assignment condition, 
 
 The tuning parameter $\gamma$ in Equation~\ref{eq:kproto_dist} sets how much weight the categorical part carries against the numerical part. Make $\gamma$ very small and the numerical part dominates, over the categorical one. Make it very large and the opposite happens: the spread of the continuous features is ignored, and the algorithm collapses back into K-Modes.
 
-Huang \cite{huang1998} ties the choice of $\gamma$ to the scale of the numerical attributes, making it proportional to their average standard deviation. Here we set $\gamma$ to half that average standard deviation, a value that sits inside Huang's recommended range:
+Huang \cite{huang1998} ties the choice of $\gamma$ to the scale of the numerical attributes, recommending a value proportional to their average standard deviation, with half that average as a typical setting:
 
 \begin{equation}
     \gamma = \frac{1}{2} \cdot \frac{1}{|N|} \sum_{l=1}^{|N|} \hat{\sigma}_l
     \label{eq:gamma}
 \end{equation}
 
-where $\hat{\sigma}_l$ is the standard deviation of the $l$-th numerical attribute across the whole dataset. Tying $\gamma$ to the average standard deviation keeps the squared numerical term and the categorical mismatch term on comparable orders of magnitude. Neither attribute type then dominates the dissimilarity just because of its units. The $\gamma$ from Equation~\eqref{eq:gamma} is therefore data-dependent, adjusting to the scale of the clinical attributes used in clustering.
+where $\hat{\sigma}_l$ is the standard deviation of the $l$-th numerical attribute across the whole dataset. Tying $\gamma$ to the average standard deviation keeps the squared numerical term and the categorical mismatch term on comparable orders of magnitude. Neither attribute type then dominates the dissimilarity just because of its units. The $\gamma$ from Equation~\eqref{eq:gamma} is therefore data-dependent, adjusting to the scale of the clinical attributes used in clustering. This is Huang's recommended reference value, not a hand-tuned constant: in HospitAI $\gamma$ was left to the automatic selection of the \texttt{kmodes} library (reported as \texttt{auto} in the benchmark of Chapter~\ref{ch:testing}), which computes essentially this quantity, and was additionally varied empirically during that benchmark.
 
 \subsubsection*{Prototype Update Rules and Convergence}
 
@@ -480,7 +480,7 @@ Mining begins with the empty prefix, mines all frequent length-1 items, performs
 
 \section{AI-Driven Patient Phenotyping and Pathway Discovery}
 
-The two previous subsections presented the theory behind clustering and sequential pattern mining. This subsection assembles them, together with a large language model abstraction, into the methodology proposed by this thesis. Everything here stays at the conceptual and mathematical level. The concrete software design and implementation details are the subject of Chapter~\ref{ch:design}. A proven way to manager the complexity of healthcare data is to organize the analysis as a machine-learning pipeline. That is the shape the proposed methodology takes.
+The previous section presented the theory behind clustering and sequential pattern mining. This section assembles them, together with a large language model abstraction, into the methodology proposed by this thesis.Everything here stays at the conceptual and mathematical level. The concrete software design and implementation details are the subject of Chapter~\ref{ch:design}. A proven way to manager the complexity of healthcare data is to organize the analysis as a machine-learning pipeline. That is the shape the proposed methodology takes.
 
 \subsection{Formal Problem Definition}
 

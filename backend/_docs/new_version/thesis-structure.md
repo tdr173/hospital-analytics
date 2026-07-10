@@ -127,7 +127,7 @@
 ### 6.2 K-Prototypes Metrics
 * Fundamentele teoretice ale metricilor folosite pentru evaluarea calității clustering-ului pe date mixte (ex. Cost function/Inertia, Average Silhouette Width adaptat sau scoruri de stabilitate).
 ### 6.3 K-Prototypes Results
-* Analiza rezultatelor în urma testării a **60 de configurații distincte** de hyperparametri de-a lungul a **629 de rulări**. Explicarea modului în care s-a calculat un scor empiric compozit în funcție de metrici, alegându-se pentru interpretarea finală cele mai bune configurații pentru **k=4, k=5 și k=6**.
+* Analiza rezultatelor în urma testării a **63 de configurații distincte** de hyperparametri de-a lungul a **628 de rulări**. Explicarea modului în care s-a calculat un scor empiric compozit în funcție de metrici, alegându-se pentru interpretarea finală cele mai bune configurații pentru **k=4, k=5 și k=6**.
 ### 6.4 Sequence Mining Metrics
 * Definirea teoretică și practică a metricilor specifice analizei de tipare secvențiale (Support, Confidence, Lift adaptat secvențelor sau lungimea medie a secvențelor relevante).
 ### 6.5 Sequence Mining Results

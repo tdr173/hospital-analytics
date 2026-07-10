@@ -47,7 +47,7 @@ rectangle "BACKEND COMPONENT  (single FastAPI process)" as BE #EAF0FB {
 
 database "HOSPITAL DATABASE\n---\nRaw relations (11 + junction)\nAnalytics relations (6)\nMaterialized views" as DB #EAF0FB
 
-rectangle "EXTERNAL SERVICES\n---\nSynthea Generator\nGoogle Gemini\nOpenAI" as EXT #F3F0FA
+rectangle "EXTERNAL SERVICES\n---\nSynthea Generator\nOpenAI" as EXT #F3F0FA
 
 manager --> FE
 doctor  --> FE
@@ -64,7 +64,7 @@ be_service ..> be_agent
 be_sched   ..> be_pipeline
 
 be_pipeline --> DB      : read raw / write analytics
-be_pipeline --> EXT     : cluster narratives (Gemini)
+be_pipeline --> EXT     : cluster narratives (OpenAI)
 be_agent    --> EXT     : LLM calls
 EXT         ..> be_pipeline : CSV export (ETL)
 

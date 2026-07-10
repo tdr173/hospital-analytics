@@ -118,7 +118,7 @@ def save_cluster_results(
 
 
 def _parse_cluster_summaries(text_response: str) -> list[dict]:
-    # Parses Gemini's pipe-separated response into a list of dicts.
+    # Parses the LLM's pipe-separated response into a list of dicts.
     # Expected line format: [cluster_id] | Title | Description | Insight | Recommendation
 
     rows = []

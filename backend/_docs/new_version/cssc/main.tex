@@ -1,0 +1,64 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit,backgrounds}
+\usepackage[colorlinks=true, linkcolor=blue, urlcolor=blue, citecolor=blue]{hyperref}
+
+\tikzset{
+  box/.style={rectangle, rounded corners=2pt, draw=black!70, fill=blue!6,
+    align=center, minimum height=8mm, inner sep=4pt, font=\footnotesize},
+  db/.style={cylinder, shape border rotate=90, aspect=0.25, draw=black!70,
+    fill=orange!12, align=center, minimum height=10mm, font=\footnotesize},
+  llm/.style={rectangle, rounded corners=2pt, draw=black!70, fill=green!8,
+    align=center, minimum height=8mm, inner sep=4pt, font=\footnotesize},
+  flow/.style={-{Stealth[length=2mm]}, draw=black!70},
+  step/.style={rectangle, rounded corners=2pt, draw=black!70, fill=gray!8,
+    align=center, minimum height=7mm, text width=20mm, inner sep=3pt, font=\scriptsize}
+}
+
+\begin{document}
+
+\title{HospitAI: A Hospital Analytics Platform Combining Patient Clustering, Clinical Sequence Mining and AI-Generated Interpretation}
+
+\author{\IEEEauthorblockN{Ioan-Iulian Todor}
+\IEEEauthorblockA{\textit{Faculty of Automation and Computer Science} \\
+\textit{Technical University of Cluj-Napoca}\\
+Cluj-Napoca, Romania \\
+todor.io.ioan@student.utcluj.ro}
+}
+
+\maketitle
+\thispagestyle{plain}
+\pagestyle{plain}
+
+\begin{abstract}
+Many electronic health records (EHR) are generated in the healthcare environment. Unfortunately, a vast majority of this data remains underutilized, as clustering patient data to analyze longitudinal care histories is highly complex.
+
+In this paper, we present HospitAI, a platform structured around a three-stage pipeline: ETL for data ingestion, the K-Prototypes algorithm for mixed-type patient clustering, and a PrefixSpan sequence-mining framework tailored for the medical context. An AI agent also lets users query the database in natural language, without any technical knowledge. The AI is also used for interpreting our results (clusters and sequences), making them easily understandable for both medical professionals and patients.
+
+Analyzing each patient cluster separately and identifying anomalies allows for the detection of unique care pathways, such as oncology, dialysis, and heart failure treatments. Testing the system on a synthetic dataset of 22,284 patients yielded four stable clusters with distinct sequence patterns, successfully representing actual patient categories.
+
+HospitAI converts complex numerical data into accessible text, using LLMs to provide practical, easy-to-read insights into patient categories and care patterns.
+\end{abstract}
+
+\vspace{6pt}
+
+\input{01_introduction}
+\input{02_related_work}
+\input{03_system_overview}
+\input{04_methodology}
+\input{05_results}
+\input{06_conclusion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

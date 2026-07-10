@@ -4,7 +4,7 @@
 \section{Used Dataset}
 \label{ch:used_dataset}
 
-This thesis uses the open-source Synthea generator to produce a synthetic but realistic electronic-health-record dataset, generating patient demographics together with the clinical events (conditions, medications, procedures, immunizations, allergies, care plans, and observations) of 20{,}000 living patients, each with a decades-long history. Table~\ref{tab:ch6_synthea_csv} summarizes the size of each source file.
+This thesis uses the open-source Synthea generator to produce a synthetic but realistic electronic-health-record dataset, generating patient demographics together with the clinical events (conditions, medications, procedures, immunizations, allergies, care plans, and observations) of 20{,}000 living patients (with a further 2{,}284 patients who die during the simulation, giving 22{,}284 patient records in total), each with a decades-long history. Table~\ref{tab:ch6_synthea_csv} summarizes the size of each source file.
 
 \begin{table}[H]
 \centering
@@ -146,7 +146,7 @@ This volume is also sharply age-dependent (Table~\ref{tab:ch6_age_burden}). Mean
 \section{K-Prototypes Results}
 \label{ch:results_clustering}
 
-Chapter~\ref{ch:analysis} showed that the K-Prototypes method can successfully partition mixed-type Electronic Health Records data. Still, since the algoritm does not need labels, it will automatically generate clusters whether or not a natural grouping exists. Since no ground truth data exists, internal validation measures are needed. The following paragraphs introduce six such measures and their ranges, which are the ones used to select the final configuration in Section~\ref{ch:results_clustering}.
+Chapter~\ref{ch:analysis} showed that the K-Prototypes method can successfully partition mixed-type Electronic Health Records data. Still, since the algoritm does not need labels, it will automatically generate clusters whether or not a natural grouping exists. Since no ground truth data exists, internal validation measures are needed. The following paragraphs introduce six such measures and their ranges, which are the ones used to select the final configuration later in this section.
 
 These metrics fall into three groups, chosen so they give different, complementary information. The Silhouette and Gower Silhouette Scores assess geometric cohesion and separation at the level of individual data points. The Calinski-Harabasz and Davies-Bouldin Indices evaluate, at the macro level, the ratio of inter-cluster to intra-cluster dispersion, with Davies-Bouldin specifically exposing the worst overlaps that averaging may hide. And, because geometric distances cannot isolate feature-level importance, Cramér's $V$ and Eta Squared ($\eta^2$) quantify the statistical effect size of individual categorical and numerical features on cluster membership.
 
@@ -295,7 +295,8 @@ Eta Squared is the ratio:
 
 The value of $\eta^2$ lies in the interval [0, 1]. An $\eta^2$ value of 0 indicates that there is no relationship between the partitioning and the variance of the feature, while an $\eta^2$ value of 1 implies that the numeric attribute value depends entirely on the cluster assignment. Based on Cohen's guidelines \cite{cohen1988}, an effect size of $\eta^2 < 0.01$ is considered trivial, $0.01 \leq \eta^2 < 0.06$ small, $0.06 \leq \eta^2 < 0.14$ medium, and $\eta^2 \geq 0.14$ large.
 
-The objective of clustering is to partition the patients into distinct groups based on their clinical profiles so that each group can be used as a scope for pattern mining. After removing outliers using the IQR criterion described in Section~\ref{ch:z_score}, exactly 21,995 (out of a total of 22,284) patients remained for the K-Prototypes clustering. Patients marked as outliers (\texttt{is\_outlier = TRUE}) are included in the analysis but not included in the model fitting phase.
+The objective of clustering is to partition the patients into distinct groups based on there clinical profiles so that each group can be used as a scope for pattern mining. After removing outliers using the z-score criterion described in Section~\ref{ch:z_score}, exactly 21,995 (out of a total of 22,284) patients remained for the K-Prototypes
+clustering. Patients marked as outliers (\texttt{is\_outlier = TRUE}) are included in the analysis but not included in the model fitting phase.
 
 \subsubsection*{Selecting the Number of Clusters}
 
@@ -326,7 +327,7 @@ For every version, we swept \texttt{scaler} $\in$ \{\texttt{minmax}, \texttt{rob
 \subsubsection*{Composite Score and Why the Top Result Was Discarded}
 \label{ch:composite_score}
 
-Only three of the six diagnostic metrics feed the ranking itself. Let $g$, $c$, and $d$ denote the Gower Silhouette, the FAMD Calinski-Harabasz, and the FAMD Davies-Bouldin scores after each has been min-max normalized to the $[0,1]$ range across all 629 runs, using $(x - \min x)/(\max x - \min x)$. The composite score is then then their weighted sum:
+Only three of the six diagnostic metrics feed the ranking itself. Let $g$, $c$, and $d$ denote the Gower Silhouette, the FAMD Calinski-Harabasz, and the FAMD Davies-Bouldin scores after each has been min-max normalized to the $[0,1]$ range across all 628 runs, using $(x - \min x)/(\max x - \min x)$. The composite score is then then their weighted sum:
 
 \begin{equation}
     \mathrm{score} = 0.5\,g \;+\; 0.3\,c \;+\; 0.2\,(1 - d)
@@ -335,7 +336,7 @@ Only three of the six diagnostic metrics feed the ranking itself. Let $g$, $c$, 
 
 \noindent The $(1 - d)$ term flips the Davies-Bouldin direction, since a lower raw score is better there. This weighting is empirical, not derived from theory. Its bias toward the Gower Silhouette, though, follows directly from Section~\ref{ch:gower}: it is the only one of the three that respects the mixed numerical/categorical geometry natively. The FAMD variants, by contrast, only see that structure through a lossy 2-D projection. Plain Silhouette, plain Calinski-Harabasz, plain Davies-Bouldin, $\eta^2$, and Cramer's V are still computed and reported per run, but play no part in the ranking. They exist only to sanity-check the winner after the fact.
 
-Sorting all 629 runs by Equation~\eqref{eq:composite_score} does not hand back a usable answer directly. The single highest-scoring row was \texttt{v42}, a configuration with only \texttt{age} as its numerical feature and \texttt{gender}, \texttt{pregnancy\_history}, \texttt{race}, and \texttt{ethnicity} as categoricals. With so few, mostly binary categorical values to split on, K-Prototypes finds a geometrically tight partition (inflating both Gower silhouette and FAMD-CH) that is clinically empty. It is a coarse demographic split, not a group of patients defined by a distinct clinical profile, so it cannot serve as a scope for the pattern mining in Section~\ref{ch:results_sequences}. We therefore discarded every top-ranked run of this kind and instead took, for each $k$, the highest-scoring configuration whose features included a real clinical signal (disease flags, utilization counts, or care plan), not just demographics.
+Sorting all 628 runs by Equation~\eqref{eq:composite_score} does not hand back a usable answer directly. The single highest-scoring row was \texttt{v42}, a configuration with only \texttt{age} as its numerical feature and \texttt{gender}, \texttt{pregnancy\_history}, \texttt{race}, and \texttt{ethnicity} as categoricals. With so few, mostly binary categorical values to split on, K-Prototypes finds a geometrically tight partition (inflating both Gower silhouette and FAMD-CH) that is clinically empty. It is a coarse demographic split, not a group of patients defined by a distinct clinical profile, so it cannot serve as a scope for the pattern mining in Section~\ref{ch:results_sequences}. We therefore discarded every top-ranked run of this kind and instead took, for each $k$, the highest-scoring configuration whose features included a real clinical signal (disease flags, utilization counts, or care plan), not just demographics.
 
 \subsubsection*{Feature Tuning per $k$}
 
@@ -406,9 +407,10 @@ Below the leaderboard, the table also reports each winner's per-cluster Gower si
 
 \texttt{v55} uses \texttt{age}, \texttt{active\_conditions\_count}, \texttt{total\_medications}, \texttt{total\_procedures}, and \texttt{preventive\_to\_reactive\_ratio} numerically, and \texttt{gender}, \texttt{pregnancy\_history}, \texttt{has\_heart\_disease}, \texttt{has\_diabetes}, \texttt{has\_hypertension}, \texttt{condition\_burden}, \texttt{bmi\_type}, and \texttt{dominant\_careplan} categorically (Table~\ref{tab:ch6_per_k_winners}). With that feature set fixed, \texttt{v55} was run with \texttt{minmax} scaling, already established as the best of the three scalers on the first 47 versions, across the four \texttt{k} values. Gamma, random state, and threshold stayed at their fixed values throughout the benchmark (auto $\approx$0.084, seed 42, threshold 6).
 
-\texttt{v55} ($k{=}4$) posts the highest overall Gower silhouette of the three clinical winners (0.350, versus 0.324 for \texttt{v40} at $k{=}5$ and 0.287 for \texttt{v60} at $k{=}6$). All four of its clusters sit at or above the 0.199 stability heuristic (min $=$~0.199, max $=$~0.423). Cohesion degrades as $k$ grows: at $k{=}5$ one of \texttt{v40}'s clusters drops below the heuristic (0.186), and at $k{=}6$ two of \texttt{v60}'s do (0.132 and 0.166). Since these clusters become the mining scopes for PrefixSpan, we picked the smallest $k$ for which every cluster stays cohesive rather than the highest raw score. \texttt{active\_conditions\_count} ($\eta^2{=}0.74$) and \texttt{age} ($\eta^2{=}0.66$) dominate the numerical side. \texttt{condition\_burden} (Cramer's V $=$~0.80), \texttt{gender} (0.70), \texttt{has\_diabetes} (0.69), and \texttt{has\_heart\_disease} (0.66) dominate the categorical side.
+\texttt{v55} ($k{=}4$) posts the highest overall Gower silhouette of the three clinical winners (0.350, versus 0.324 for \texttt{v40} at $k{=}5$ and 0.287 for \texttt{v60} at $k{=}6$). All four of its clusters sit at the 0.20 stability heuristic or within rounding of it (min $=$~0.199, max $=$~0.423).
+ Cohesion degrades as $k$ grows: at $k{=}5$ one of \texttt{v40}'s clusters drops below the heuristic (0.186), and at $k{=}6$ two of \texttt{v60}'s do (0.132 and 0.166). Since these clusters become the mining scopes for PrefixSpan, we picked the smallest $k$ for which every cluster stays cohesive rather than the highest raw score. \texttt{active\_conditions\_count} ($\eta^2{=}0.74$) and \texttt{age} ($\eta^2{=}0.66$) dominate the numerical side. \texttt{condition\_burden} (Cramer's V $=$~0.80), \texttt{gender} (0.70), \texttt{has\_diabetes} (0.69), and \texttt{has\_heart\_disease} (0.66) dominate the categorical side.
 
-The cluster archetypes themselves confirm this choice: all three winners describe the same population at different resolutions rather than genuinely different partitions. Each recovers the same stable groups, namely the ``Complex High Need'' outliers, a ``Pregnancy Care'' cluster, a chronically ill high-utilizer group (``Many Chronic Illnesses'' in \texttt{v55} and \texttt{v40}, ``High Need Chronic'' in \texttt{v60}), and a pediatric ``Kids and Well'' cluster. The only substantive difference is the large general-adult group that \texttt{v55} keeps whole as ``Everyday Care''. \texttt{v40} splits it into ``Injury and Recovery'' and ``Ongoing Health Needs'', while \texttt{v60} fragments it further into ``Young Low Need'', ``Routine Adult Care'', and ``Midlife Mixed Needs''. These added sub-clusters are exactly the ones that fall below the 0.20 stability heuristic (0.186 for \texttt{v40}, and 0.132 and 0.166 for \texttt{v60}), so they carve one coherent group into arbitrary slices instead of surfacing new clinical archetypes. We therefore selected \texttt{v55}, the coarsest partition whose every cluster remains both cohesive and clinically distinct.
+The cluster archetypes themselves confirm this choice: all three winners describe the same population at different resolutions rather than genuinely different partitions. Each recovers the same stable groups, which the interpretation layer titles, in the final \texttt{v55} run, \emph{Younger Injury Care} (Cluster~0, the large young / low-burden adult group), \emph{Pregnancy Focused Adults} (Cluster~1), \emph{Older High Risk} (Cluster~2, the chronically ill high-utilizers), \emph{Kids and Well Visits} (Cluster~3), and the \emph{Complex High Need} outliers. \texttt{v40} and \texttt{v60} recover the same archetypes but split the large general-adult group further, \texttt{v40} into two sub-clusters and \texttt{v60} into three. These added sub-clusters are exactly the ones that fall below the 0.20 stability heuristic (0.186 for \texttt{v40}, and 0.132 and 0.166 for \texttt{v60}), so they carve one coherent group into arbitrary slices instead of surfacing new clinical archetypes. We therefore selected \texttt{v55}, the coarsest partition whose every cluster remains both cohesive and clinically distinct. These titles, together with the per-cluster description, insight, and recommendation shown on the platform, are generated by the LLM interpretation layer (Section~\ref{ch:ai_results}) at each run and are therefore not deterministic: a re-run can word them differently while describing the same groups.
 
 Figure~\ref{fig:ch6_clu_famd} plots every patient at the two FAMD coordinates of Section~\ref{ch:kproto_impl}, colored by cluster. Each cluster occupies its own region, but the boundaries visibly bleed into one another, especially between clusters~0 and~1. This is expected for two reasons, not a sign of a bad partition. First, FAMD compresses 13 mixed-type features into 2 dimensions for the sole purpose of plotting. K-Prototypes itself never sees this projection and clusters on the full feature space, so some structure that separates patients in 13 dimensions is necessarily lost when flattened to 2. Second, real patients are not 100\% distinct. A patient can share some characteristics with one cluster's typical profile and other characteristics with another's, so a degree of visual overlap near the boundaries is exactly what clinically fuzzy category edges should look like.
 
@@ -470,7 +472,7 @@ No clinician labeled this data,and Synthea provides no ground-truth set of ``cor
 \multicolumn{5}{r}{\footnotesize\itshape continued on next page}\\
 \endfoot
 \bottomrule
-\caption{Cluster~0 (young / low-burden) - top 10 patterns out of 238.}\label{tab:ch6_seq_c0}\\
+\caption{Cluster~0, ``Younger Injury Care'' (young / low-burden) - top 10 patterns out of 238.}\label{tab:ch6_seq_c0}\\
 \endlastfoot
 1  &  252 &  3.6 & 0.97 & C:Laceration $\to$ CP:Wound care $\to$ P:Suture open wound \\
 2  &  113 &  1.6 & 0.78 & C:Fracture of bone $\to$ CP:Fracture care $\to$ P:Bone immobilization \\
@@ -497,7 +499,7 @@ No clinician labeled this data,and Synthea provides no ground-truth set of ``cor
 \multicolumn{5}{r}{\footnotesize\itshape continued on next page}\\
 \endfoot
 \bottomrule
-\caption{Cluster~1 (women of reproductive age) - top 10 patterns out of 252.}\label{tab:ch6_seq_c1}\\
+\caption{Cluster~1, ``Pregnancy Focused Adults'' (women of reproductive age) - top 10 patterns out of 252.}\label{tab:ch6_seq_c1}\\
 \endlastfoot
 1  &  154 &  2.4 & 0.97 & C:Laceration $\to$ CP:Wound care $\to$ P:Suture open wound \\
 2  &  121 &  1.9 & 0.92 & C:Sterilization requested $\to$ P:Sterilization education $\to$ C:Hist. tubal ligation $\to$ CP:Minor surgery $\to$ P:Postoperative care \\
@@ -524,7 +526,7 @@ No clinician labeled this data,and Synthea provides no ground-truth set of ``cor
 \multicolumn{5}{r}{\footnotesize\itshape continued on next page}\\
 \endfoot
 \bottomrule
-\caption{Cluster~2 (hypertensive adults, polypharmacy) - top 10 patterns out of 202.}\label{tab:ch6_seq_c2}\\
+\caption{Cluster~2, ``Older High Risk'' (hypertensive adults, polypharmacy) - top 10 patterns out of 202.}\label{tab:ch6_seq_c2}\\
 \endlastfoot
 1  &  154 &  4.5 & 0.95 & M:Fluticasone/salmeterol DPI $\to$ M:albuterol $\to$ P:Spirometry \\
 2  &  164 &  4.8 & 0.89 & M:Furosemide $\to$ P:Oxygen by mask $\to$ P:Prone position $\to$ M:Furosemide \\
@@ -551,7 +553,7 @@ No clinician labeled this data,and Synthea provides no ground-truth set of ``cor
 \multicolumn{5}{r}{\footnotesize\itshape continued on next page}\\
 \endfoot
 \bottomrule
-\caption{Cluster~3 (pediatric) - top 10 patterns out of 175.}\label{tab:ch6_seq_c3}\\
+\caption{Cluster~3, ``Kids and Well Visits'' (pediatric) - top 10 patterns out of 175.}\label{tab:ch6_seq_c3}\\
 \endlastfoot
 1  &   73 &  1.6 & 1.00 & C:Acute allergic reaction $\to$ P:Injection of epinephrine $\to$ M:prednisone \\
 2  &  137 &  2.9 & 0.98 & C:Laceration $\to$ CP:Wound care $\to$ P:Suture open wound \\
@@ -578,7 +580,7 @@ No clinician labeled this data,and Synthea provides no ground-truth set of ``cor
 \multicolumn{5}{r}{\footnotesize\itshape continued on next page}\\
 \endfoot
 \bottomrule
-\caption{Cluster -1 (oncology / renal / heart failure) - top 10 patterns out of 224.}\label{tab:ch6_seq_outliers}\\
+\caption{Cluster -1, ``Complex High Need'' (oncology / renal / heart failure) - top 10 patterns out of 224.}\label{tab:ch6_seq_outliers}\\
 \endlastfoot
 1  &    7 &  2.5 & 1.00 & P:Oxygen by mask $\to$ P:Prone position $\to$ M:Furosemide $\to$ P:Oxygen by mask $\to$ P:Prone $\to$ M:Furosemide \\
 2  &    6 &  2.1 & 1.00 & M:Fluticasone/salmeterol DPI $\to$ M:albuterol $\to$ P:Pulmonary rehab $\to$ P:Spirometry \\
@@ -601,7 +603,7 @@ The first axis is built directly into the ranking. GML (Section~\ref{ch:prefixsp
 
 The second axis asks whether these high-lift sequences are clinically meaningful, and specifically whether each cluster's top pathways match the clinical identity the clustering assigned it in Section~\ref{ch:results_clustering}. They do, and this alignment is itself empirical evidence: the sequence layer, mined independently of the K-Prototypes partition, agrees with it on the same patient structure. The leading pathways of each scope are valuable \emph{for that scope in particular}, and they surface most strongly exaclty where they belong.
 
-Cluster~0 (Table~\ref{tab:ch6_seq_c0}), the young, low-burden group, is dominated by self-limiting acute care. The laceration-to-wound-care-to-suture chain (\texttt{gml}~0.97), fracture-to-immobilization (0.78), and streptococcal-sore-throat-to-penicillin (0.47) are textbook single-episode responses, precisely what a low-comorbidity population accumulates. Cluster~1 (Table~\ref{tab:ch6_seq_c1}), women of reproductive age, surfaces tubal-ligation and normal-pregnancy pathways at the top (\texttt{gml} up to 0.92). These pathways are meaningful only for this cohort, and they would be diluted to nothing in the global pool. Cluster~2 (Table~\ref{tab:ch6_seq_c2}), hypertensive adults on polypharmacy, recovers the furosemide/prone-position/oxygen sequence of acute decompensated heart failure (0.89) and the dialysis/epoetin-alfa loop of renal-anemia management (0.81), the two regimens that define a high-burden cardiometabolic group. Cluster~3 (Table~\ref{tab:ch6_seq_c3}), the pediatric group, is led by the acute-allergic-reaction-to-epinephrine-to-prednisone chain (\texttt{gml}~1.00) and the allergy-screening/auto-injector pathway (0.84), reflecting the allergy-and-injury profile typical of children. Finally, the outlier scope (Table~\ref{tab:ch6_seq_outliers}) isolates the most intensive protocols: cisplatin/paclitaxel chemoradiation (0.85), the kidney-transplant/tacrolimus sequence (0.90), and repeated dialysis and heart-failure loops. These are the oncology, transplant, and end-stage regimens that justified separating these patients as outliers in the first place.
+Cluster~0 (Table~\ref{tab:ch6_seq_c0}), \emph{Younger Injury Care}, the young, low-burden group, is dominated by self-limiting acute care. The laceration-to-wound-care-to-suture chain (\texttt{gml}~0.97), fracture-to-immobilization (0.78), and streptococcal-sore-throat-to-penicillin (0.47) are textbook single-episode responses, precisely what a low-comorbidity population accumulates. Cluster~1 (Table~\ref{tab:ch6_seq_c1}), \emph{Pregnancy Focused Adults}, women of reproductive age, surfaces tubal-ligation and normal-pregnancy pathways at the top (\texttt{gml} up to 0.92). These pathways are meaningful only for this cohort, and they would be diluted to nothing in the global pool. Cluster~2 (Table~\ref{tab:ch6_seq_c2}), \emph{Older High Risk}, hypertensive adults on polypharmacy, recovers the furosemide/prone-position/oxygen sequence of acute decompensated heart failure (0.89) and the dialysis/epoetin-alfa loop of renal-anemia management (0.81), the two regimens that define a high-burden cardiometabolic group. Cluster~3 (Table~\ref{tab:ch6_seq_c3}), \emph{Kids and Well Visits}, the pediatric group, is led by the acute-allergic-reaction-to-epinephrine-to-prednisone chain (\texttt{gml}~1.00) and the allergy-screening/auto-injector pathway (0.84), reflecting the allergy-and-injury profile typical of children. Finally, the outlier scope (Table~\ref{tab:ch6_seq_outliers}), \emph{Complex High Need}, isolates the most intensive protocols: cisplatin/paclitaxel chemoradiation (0.85), the kidney-transplant/tacrolimus sequence (0.90), and repeated dialysis and heart-failure loops. These are the oncology, transplant, and end-stage regimens that justified separating these patients as outliers in the first place.
 
 Each scope's leading pathways are therefore not merely valid in isolation. They are the pathways one would expect from that particular cohort, and they rank highest precisely in the cluster to which they belong. That the mining recovers the clinical logic Synthea used to synthesize the data, in the correct scope, closes the loop between generator and discovery.
 
@@ -617,11 +619,11 @@ The third axis is the sharpest. Face-validity confirms that a pattern is clinica
 \toprule
 \textbf{Scope} & \textbf{real} & \textbf{shuffled} & \textbf{drop} & \textbf{real$\geq$0.5} & \textbf{shuf.$\geq$0.5} \\
 \midrule
-Cluster 0 (young / low-burden)         & 0.73 & 0.18 & 4.0$\times$ & 8  & 0  \\
-Cluster 1 (reproductive age)           & 0.87 & 0.17 & 5.2$\times$ & 10 & 0  \\
-Cluster 2 (hypertensive polypharmacy)  & 0.77 & 0.49 & 1.6$\times$ & 10 & 4  \\
-Cluster 3 (pediatric)                  & 0.87 & 0.21 & 4.2$\times$ & 10 & 0  \\
-Cluster -1 (oncology / renal / HF)     & 0.86 & 0.72 & 1.2$\times$ & 10 & 10 \\
+Cluster 0 (Younger Injury Care)        & 0.73 & 0.18 & 4.0$\times$ & 8  & 0  \\
+Cluster 1 (Pregnancy Focused Adults)   & 0.87 & 0.17 & 5.2$\times$ & 10 & 0  \\
+Cluster 2 (Older High Risk)            & 0.77 & 0.49 & 1.6$\times$ & 10 & 4  \\
+Cluster 3 (Kids and Well Visits)       & 0.87 & 0.21 & 4.2$\times$ & 10 & 0  \\
+Cluster -1 (Complex High Need)         & 0.86 & 0.72 & 1.2$\times$ & 10 & 10 \\
 \bottomrule
 \end{tabular}
 \caption{Temporal-shuffle null test: mean top-ten \texttt{gml}, real vs.\ shuffled, and the count clearing \texttt{gml}~$\geq0.5$.}
@@ -669,8 +671,8 @@ Which speciality prescribed the most medications, and how many? & General Practi
 What is the most common procedure performed during inpatient encounters? & Combined chemotherapy and radiation therapy, 34,890. & 34{,}890 \\
 How many patients were readmitted to inpatient care within 30 days of discharge? & 345 patients. & 591 (interpretation) \\
 How many distinct patients have both a Viral sinusitis condition and take Acetaminophen 325~MG Oral Tablet? & 6,863 patients. & 626 (miss) \\
-What is the average age of patients in the ``Many Chronic Illnesses'' cluster? & 67.3 years. & 67.3 \\
-Which cluster has the highest average number of inpatient encounters per patient? & Many Chronic Illnesses, 1.71. & Complex High Need, 21.0 (interpretation) \\
+What is the average age of patients in the ``Older High Risk'' cluster? & 67.3 years. & 67.3 \\
+Which cluster has the highest average number of inpatient encounters per patient? & Older High Risk, 1.71. & Complex High Need, 21.0 (interpretation) \\
 What is the most common medication in the ``Complex High Need'' cluster? & Cisplatin 50 MG Injection, 32,894. & Cisplatin, 32{,}894 \\
 \end{xltabular}
 \endgroup
@@ -679,7 +681,7 @@ The six differences from the strict-match gold fall into three groups: two real 
 
 \textbf{Two real errors.} Only two answers are wrong under any reading, and both fall on the hardest queries. The first is the speciality that performed the most procedures. Here the agent summed the pre-computed \texttt{provider.procedures} column instead of counting the \texttt{procedure} table through the encounter join. That column is empty in this extract, so the count dropped to zero, even though the speciality label was right. The base-table join used by the gold query returns 3.2~million. This is a gap in the schema description. The model was never told the column is unreliable. The second error is worse, and it is about free-text name matching. We asked for patients with a \emph{Viral sinusitis} condition who also take \emph{Acetaminophen 325~MG Oral Tablet}. The agent split the drug name into separate keyword filters and matched any product that shared those tokens, including an unrelated opioid-acetaminophen combination. That pushed the count from 626 up to 6{,}863. Checking the filter against the actual list of stored medication names, instead of keyword matching, would fix it. We leave that as future work.
 
-\textbf{Two reasonable readings.} Two more answers differ from the gold, but not because the agent mistranslated the question. The question itself allows more than one reading, so we count these as correct. The first is thirty-day readmissions. The agent counted only consecutive admissions, that is, the next inpatient stay within thirty days of discharge. This is the standard clinical definition, and it returned 345. Our gold counted any later admission within thirty days of any earlier discharge, and returned 591. The second is the cluster with the most inpatient encounters per patient. The agent read ``cluster'' as the main clusters only and excluded the outlier group with \texttt{WHERE NOT is\_outlier}, so it reported \emph{Many Chronic Illnesses} (1.71). Our gold kept the outlier group, whose members are the heaviest inpatient users, and returned \emph{Complex High Need} (21.0). In both cases the agent's SQL is correct for one valid reading of the request.
+\textbf{Two reasonable readings.} Two more answers differ from the gold, but not because the agent mistranslated the question. The question itself allows more than one reading, so we count these as correct. The first is thirty-day readmissions. The agent counted only consecutive admissions, that is, the next inpatient stay within thirty days of discharge. This is the standard clinical definition, and it returned 345. Our gold counted any later admission within thirty days of any earlier discharge, and returned 591. The second is the cluster with the most inpatient encounters per patient. The agent read ``cluster'' as the main clusters only and excluded the outlier group with \texttt{WHERE NOT is\_outlier}, so it reported \emph{Older High Risk} (1.71). Our gold kept the outlier group, whose members are the heaviest inpatient users, and returned \emph{Complex High Need} (21.0). In both cases the agent's SQL is correct for one valid reading of the request.
 
 \textbf{Four differences below one percent.} The last four are the mild form of the name-matching problem above, and all stay within a one-percent tolerance: a lisinopril patient count of 2{,}852 against 2{,}844, a two-drug intersection of 1{,}504 against 1{,}497, an over-65 lisinopril count of 974 against 968, and a Houston male-patient count of 1{,}177 against 1{,}171. Each is close enough to be the right answer for a manager, which is why the looser rule accepts them. They share the same literal-matching root as the severe case, and the same fix would remove them.
 

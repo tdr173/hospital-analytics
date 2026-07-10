@@ -22,7 +22,7 @@ They are judged on eight practical qualities, cluster quality, scalability, robu
 The scores are then combined with Fuzzy TOPSIS, a multi-criteria method that folds many weighted expert judgments into a single ranking.
 That ranking is cross-checked with a second method, the Analytic Hierarchy Process, and K-Means comes out on top, ahead of hierarchical clustering and DBSCAN.
 The study is a careful map of how mainstream algorithms behave on EHR data. But every one of the eight works only on purely numerical inputs.
-Clinical records are not purely numerical. Attributes such as diagnostic codes, gender, or careplan type are categorical, and handing them to these algorithms means encoding them as numbers first. That inflates the dimensionality and introduces the geometric distortions discussed in Chapter~\ref{ch:analysis}.
+Clinical records are not purely numerical. Attributes such as diagnostic codes, gender, or careplan type are categorical, and handing them to these algorithms means encoding them as numbers first. That inflates the dimensionality and introduces geometric distortions discussed in Chapter~\ref{ch:analysis}.
 HospitAI avoids that step by clustering with K-Prototypes. It measures numerical and categorical attributes each with its own native distance and then combines them, so a patient's diagnoses and vitals are compared together without either being forced onto a single artificial numeric scale.
 
 \paragraph{Yang et al. (2024).}
@@ -141,7 +141,7 @@ Botas~\cite{botas2019} mines a national e-prescription database, using a case st
 The work combines two families of pattern mining. Association rules, via Apriori, find drugs that co-occur. Sequential pattern mining, via PrefixSpan, finds the order in which prescriptions follow one another.
 The raw patterns are not taken at face value. They are scored with a battery of measures for how interesting, novel, and semantically meaningful they are, and the results are broken down along fixed axes such as age group, gender, and health district.
 HospitAI is close to this work in two respects: it also uses PrefixSpan, and it also ranks patterns by interestingness rather than raw frequency. But it differs in structure.
-Botas mines a single type of event, drug prescriptions. HospitAI mines four types together, conditions, medications, procedures, and careplans, so a pattern can cross from a diagnosys to a treatment to a procedure.
+Botas mines a single type of event, drug presciptions. HospitAI mines four types together, conditions, medications, procedures, and careplans, so a pattern can cross from a diagnosys to a treatment to a procedure.
 Botas also slices results along predefined demographic strata. HospitAI instead mines within clusters it has learned from the data. It then applies closed-pattern selection, a geometric-mean-lift interestingness score, and a Jaccard overlap filter, all described in Chapter~\ref{ch:analysis}, to keep the surviving patterns distinct rather than near-duplicates.
 
 \paragraph{Baudrier et al. (2022).}

@@ -1,0 +1,21 @@
+\section{System Overview}
+\label{sec:system}
+
+\subsection{Architecture}
+
+The HospitAI architecture consists of two components, one that runs online via a web application, and another one which is offline analytics. In the online component, we use a frontend built with Next.js and a backend with FastAPI. The backend implements the layered approach without any bypasses between layers. The layers consist of routers which use API services, service layer which communicates with a repository layer, and repository layer which directly connects to the database. The entire persistence storage consists of a single PostgreSQL database. Figure~\ref{fig:arch} illustrates the overall architecture.
+
+The logic for analytics is separated from the online requests and represents a three-step offline pipeline implemented in a set of Python scripts: ETL cleaning of the initial export data, a clustering step and sequence mining. Each step reads its input from the database, performs its computations and stores the results back into special tables, which the web app then only reads to provide a snappy experience. Above all this sits a single large language model running on top of the OpenAI API, enabling each of the text-generation tasks, including cluster/sequence interpretation and question-answering.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\linewidth]{figs/high_level_architecture.png}
+  \caption{High-level architecture of the application}
+  \label{fig:arch}
+  \end{figure}
+
+\subsection{Data}
+
+For training and experimenting, we will use a simulated database created using the open source patient simulator Synthea. Simulated data fits well here because it avoids privacy and legal concerns while keeping a realistic database schema. Our database contains approximately 22,284 patients and standard clinical data tables such as encounters, conditions, medications, procedures, observations and care plans. The ETL process described in Section~\ref{sec:methods} filters our database down to a single hospital and fixed set of providers as well as fixing the dates and calculating some auxiliary information such as patient age and treatment duration.
+
+Both the clinical database and the analysis results are stored in the same database. The clustering algorithm creates a single row for each patient with its clustering result and a list of selected features cached in the row, while sequence mining stores patterns in a separate table along with a mapping of patterns to the patients matching them.

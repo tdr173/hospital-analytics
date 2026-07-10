@@ -18,7 +18,7 @@ The following software must be installed beforehand:
     \item \textbf{Node.js 20 or newer} and \texttt{npm} for the frontend (Next.js~16 needs this version).
     \item \textbf{PostgreSQL 14 or newer}, which must allow the \texttt{pg\_trgm} extension used for fast text search.
     \item \textbf{Java 11 or newer}, only if the synthetic dataset is generated locally with Synthea. It is not needed if the CSV files are already available.
-    \item A valid \textbf{OpenAI API key} (for the SQL agent and the cluster/sequence intepretation) and, optionally, a \textbf{Google Gemini API key}.
+    \item A valid \textbf{OpenAI API key} (for the SQL agent and the cluster/sequence interpretation).
 \end{itemize}
 
 \subsection{Step-by-Step Installation}
@@ -34,7 +34,6 @@ POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_DB=hospitai
 GPT_KEY=sk-...             # OpenAI key
-GEMINI_API_KEY=...         # optional
 \end{lstlisting}
 
 \noindent The application tables, indexes, and materialized views are created automatically the first time the backend starts, so no schema script has to be run by hand.
